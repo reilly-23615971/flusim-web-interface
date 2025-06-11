@@ -7,6 +7,7 @@ import json
 from pydantic import BaseModel, Field
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
+from modelSchema import modelGuideFile
 
 # Define structure of model configuration guide JSON files
 class modelGuideFile(BaseModel):
