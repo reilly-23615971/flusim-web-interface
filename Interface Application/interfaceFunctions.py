@@ -72,7 +72,11 @@ async def runModel():
     session = await getSession()
     async with session.post('runModel', json = parameterJSON) as response:
         textData = await response.raise_for_status().text
-    formattedData = pd.read_csv(io.StringIO(textData))
+    # TODO: Use JSON to name CSV columns with simulation names
+    formattedData = pd.read_csv(
+        io.StringIO(textData), header = 0, 
+        names = ['Day', 'Base Parameters', 'Surged']
+    )
     st.session_state.modelData = formattedData
 
     # TODO: Store different data based on the request parameters
