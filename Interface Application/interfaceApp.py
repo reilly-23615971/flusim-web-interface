@@ -24,18 +24,8 @@ pages = {
     ]
 }
 
-# Define model parameters to adjust in sidebar
-# TODO: flesh out selectable options
-# TODO: consider allowing for multiple selectable 'profiles' with 
-# different parameters to run in parallel
-parameterSidebar = st.sidebar
-beta = parameterSidebar.slider('Beta', 0.01, 10.0, 0.11, key = 'beta')
-npi = parameterSidebar.selectbox('NPI Presets', ['None', 'Low', 'Medium', 'High'], key = 'npi')
-runModel = parameterSidebar.button('Run Simulation')
-
-
-# Run model when button is pushed
-if runModel:
+# Function to run the model when sidebar button is pressed
+async def runModel():
     # TODO: Check if server is available and grey out button if not
     # TODO: Convert parameters into valid JSON file
 
@@ -92,6 +82,16 @@ if runModel:
     except requests.RequestException as e:
             # TODO: More comprehensive errors
             st.error(f'Failed to access the model server: {e}')
+
+
+# Define model parameters to adjust in sidebar
+# TODO: flesh out selectable options
+# TODO: consider allowing for multiple selectable 'profiles' with 
+# different parameters to run in parallel
+parameterSidebar = st.sidebar
+beta = parameterSidebar.slider('Beta', 0.01, 10.0, 0.11, key = 'beta')
+npi = parameterSidebar.selectbox('NPI Presets', ['None', 'Low', 'Medium', 'High'], key = 'npi')
+runModelButton = parameterSidebar.button('Run Simulation', on_click = runModel)
 
 # Initialise and run the application
 flusimPages = st.navigation(pages)
