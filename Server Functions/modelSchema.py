@@ -3,7 +3,7 @@
 # Defines structure of model configuration guide JSON files
 
 # Imports
-from typing import Annotated, Literal, Union, Optional
+from typing import Annotated, Literal, Optional
 from annotated_types import Ge, Le
 from typing_extensions import Self
 from pydantic import BaseModel, Field, model_validator, ValidationError
@@ -19,7 +19,8 @@ type TriggerCondition = Literal[
 ]
 type BoosterType = Literal['primary', 'booster']
 type Kappa = Annotated[float, Ge(0)]
-# These 3 are structurally identical, but are distinguished for readability
+# The following 3 types are structurally identical, but are 
+# distinguished for readability and documentation purposes
 type Proportion = Annotated[float, Ge(0), Le(1)]
 type Probability = Annotated[float, Ge(0), Le(1)]
 type EfficacyValue = Annotated[float, Ge(0), Le(1)]
@@ -31,84 +32,84 @@ type EfficacyValue = Annotated[float, Ge(0), Le(1)]
 # Set of scenario parameters modifying the simulation
 class scenarioParameters(BaseModel):
     # Seeding Parameters
-    seed_rate: float = Field(
+    seed_rate: Optional[float] = Field(
         title = 'Seeding Rate', default = 0.125, ge = 0.0, description = ((
             'The average number of infections to '
             'introduce into the simulation per cycle.'
         ))
     )
-    start_day_of_week: int = Field(
+    start_day_of_week: Optional[int] = Field(
         title = 'Starting Day of Week', default = 0, ge = 0, le = 6, 
         description = ((
             'The day of the week on cycle 0 of each simulation run as an '
             'integer. Zero-indexed such that Sunday is 0, Monday is 1, etc.'
         ))
     )
-    seeding_duration: int = Field(
+    seeding_duration: Optional[int] = Field(
         title = 'Seeding Duration', default = 720, ge = 0, description = (
             'The number of cycles that infection seeding will occur for.'
         )
     )
-    seeding_start_cycle: int = Field(
+    seeding_start_cycle: Optional[int] = Field(
         title = 'Seeding Starting Cycle', default = 0, ge = 0, description = (
             'The first cycle in which infection seeding should occur.'
         )
     )
 
     # Transmission Parameters
-    beta_asymptomatic: float = Field(
+    beta_asymptomatic: Optional[float] = Field(
         title = 'Beta (Asymptomatic)', default = 0.55, ge = 0.0, 
         description = ((
             'The probability of transmission from asymptomatic '
             'individuals will be multiplied by this value.'
         ))
     )
-    beta_post_symptomatic: float = Field(
+    beta_post_symptomatic: Optional[float] = Field(
         title = 'Beta (Post-Symptomatic)', default = 0.55, ge = 0.0, 
         description = ((
             'The probability of transmission from infected individuals whose '
             'symptomatic period has ended will be multiplied by this value.'
         ))
     )
-    kappa_household: Kappa = Field(
+    kappa_household: Optional[Kappa] = Field(
         title = 'Kappa (Household)', default = 2.2, description = ((
             'The probability of transmission between two individuals located '
             'in the same household will be multiplied by this value.'
         ))
     )
-    kappa_child_education: Kappa = Field(
+    kappa_child_education: Optional[Kappa] = Field(
         title = 'Kappa (Child Education)', default = 1.0, description = ((
             'The probability of transmission between two individuals located '
             'in the same child education facility will be multiplied by '
             'this value.'
         ))
     )
-    kappa_adult_education: Kappa = Field(
+    kappa_adult_education: Optional[Kappa] = Field(
         title = 'Kappa (Adult Education)', default = 1.0, description = ((
             'The probability of transmission between two individuals located '
             'in the same adult education facility will be multiplied by '
             'this value.'
         ))
     )
-    kappa_workplace: Kappa = Field(
+    kappa_workplace: Optional[Kappa] = Field(
         title = 'Kappa (Workplace)', default = 1.0, description = ((
             'The probability of transmission between two individuals located '
             'in the same workplace will be multiplied by this value.'
         ))
     )
-    kappa_child_care: Kappa = Field(
+    kappa_child_care: Optional[Kappa] = Field(
         title = 'Kappa (Childcare)', default = 1.0, description = ((
             'The probability of transmission between two individuals located '
             'in the same childcare facility will be multiplied by this value.'
         ))
     )
-    kappa_hospital: Kappa = Field(
+    kappa_hospital: Optional[Kappa] = Field(
         title = 'Kappa (Hospital)', default = 1.0, description = ((
             'The probability of transmission between two individuals located '
             'in the same hospital will be multiplied by this value.'
         ))
     )
-    kappa_background: Kappa = Field(
+    kappa_background: Optional[Kappa] = Field(
         title = 'Kappa (Background)', default = 1.0, description = ((
             'The probability of transmission between two individuals during '
             'the background phase of the simulation will be multiplied by '
@@ -117,39 +118,39 @@ class scenarioParameters(BaseModel):
     )
 
     # Infection Parameters
-    prob_asymptomatic: Probability = Field(
+    prob_asymptomatic: Optional[Probability] = Field(
         title = 'Adult Asymptomatic Probability', default = 0.35, 
         description = (
             'The probability of an infected adult being asymptomatic.'
         )
     )
-    prob_asymptomatic_young: Probability = Field(
+    prob_asymptomatic_young: Optional[Probability] = Field(
         title = 'Child Asymptomatic Probability', default = 0.35, 
         description = (
             'The probability of an infected child being asymptomatic.'
         )
     )
-    transmissibility_delay: int = Field(
+    transmissibility_delay: Optional[int] = Field(
         title = 'Transmissibility Delay', default = 10, ge = 0, 
         description = ((
             'The length of the latent period, i.e. the number of cycles '
             'before an infected individual becomes infectious themselves.'
         ))
     )
-    symptom_latency: int = Field(
+    symptom_latency: Optional[int] = Field(
         title = 'Symptom Latency', default = 12, ge = 0, description = ((
             'The length of the incubation period, i.e. the number of cycles '
             'before an infected individual begins to show symptoms.'
         ))
     )
-    generation_time: int = Field(
+    generation_time: Optional[int] = Field(
         title = 'Generation Time', default = 19, ge = 0, description = ((
             'The number of cycles before an infected individual ceases to '
             'show symptoms. Subtracting the latent period from this value '
             'provides the infectious period.'
         ))
     )
-    infection_duration: int = Field(
+    infection_duration: Optional[int] = Field(
         title = 'Infection Duration', default = 19, ge = 0, description = ((
             'The number of cycles before an infected '
             'individual is considered to have recovered.'
@@ -157,38 +158,38 @@ class scenarioParameters(BaseModel):
     )
 
     # Behaviour Parameters
-    prob_withdrawal: Probability = Field(
+    prob_withdrawal: Optional[Probability] = Field(
         title = 'Adult Withdrawal Probability', default = 0.5, description = ((
             'The probability of an infected adult withdrawing '
             'from work after becoming symptomatic.'
         ))
     )
-    prob_school_withdrawal: Probability = Field(
+    prob_school_withdrawal: Optional[Probability] = Field(
         title = 'Child Withdrawal Probability', default = 0.9, description = ((
             'The probability of an infected child withdrawing '
             'from school after becoming symptomatic.'
         ))
     )
-    prob_hospitalisation: Probability = Field(
+    prob_hospitalisation: Optional[Probability] = Field(
         title = 'Hospitalisation Probability', default = 0.0, description = ((
             'The probability of an infected individual '
             'being hospitalised if they are diagnosed.'
         ))
     )
-    prob_diagnosis: Probability = Field(
+    prob_diagnosis: Optional[Probability] = Field(
         title = 'Diagnosis Probability', default = 0.5, description = ((
             'The probability of an infected individual being formally '
             'diagnosed as a case after becoming symptomatic.'
         ))
     )
-    prob_child_supervision: Probability = Field(
+    prob_child_supervision: Optional[Probability] = Field(
         title = 'Child Supervision Probability', default = 1.0, description = ((
             'The probability of an adult remaining in a household (regardless '
             'of where they would otherwise go) if a child is present at said '
             'household but no other adults are present.'
         ))
     )
-    withdrawal_period: int = Field(
+    withdrawal_period: Optional[int] = Field(
         title = 'Adult Withdrawal Probability', default = 8, ge = 0, 
         description = ((
             'The number of cycles before an infected individual who is '
@@ -198,7 +199,7 @@ class scenarioParameters(BaseModel):
     )
 
     # Health Outcome Parameters
-    hospitalisation_rate: Probability = Field(
+    hospitalisation_rate: Optional[Probability] = Field(
         title = 'Hospitalisation Rate', default = 0.0, description = ((
             'The probability of hospitalisation occurring if an infected '
             'individual is symptomatic. Has been tagged as needing to be '
@@ -207,48 +208,48 @@ class scenarioParameters(BaseModel):
     )
 
     # Contact Parameters
-    background_contact_count: float = Field(
+    background_contact_count: Optional[float] = Field(
         title = 'Background Contact Count', default = 4.0, ge = 0.0, 
         description = ((
             'The number of other individuals that are encountered by a single '
             'individual during the background phase of the simulation.'
         ))
     )
-    max_class_size: int = Field(
+    max_class_size: Optional[int] = Field(
         title = 'Maximum Class Size', default = 10, ge = 0, description = ((
             'The maximum number of individuals that can be in a '
             'single class within a child education or childcare facility.'
         ))
     )
-    max_adult_class_size: int = Field(
+    max_adult_class_size: Optional[int] = Field(
         title = 'Maximum Adult Class Size', default = 10, ge = 0, 
         description = ((
             'The maximum number of individuals that can be '
             'in a single class within an adult education facility.'
         ))
     )
-    max_workgroup_size: int = Field(
+    max_workgroup_size: Optional[int] = Field(
         title = 'Maximum Workgroup Size', default = 10, ge = 0, 
         description = ((
             'The maximum number of individuals that can '
             'be in a single workgroup within a workplace.'
         ))
     )
-    max_neighbourgroup_size: int = Field(
+    max_neighbourgroup_size: Optional[int] = Field(
         title = 'Maximum Neighbour Group Size', default = 10, ge = 0, 
         description = ((
             'The maximum number of individuals that can be '
             'in a single neighbour group within a neighbourhood.'
         ))
     )
-    max_churchgroup_size: int = Field(
+    max_churchgroup_size: Optional[int] = Field(
         title = 'Maximum Church Group Size', default = 10, ge = 0, 
         description = ((
             'The maximum number of individuals that can '
             'be in a single church group within a church.'
         ))
     )
-    max_class_count: int = Field(
+    max_class_count: Optional[int] = Field(
         title = 'Maximum Class Count', default = 1, ge = 0, description = ((
             'The maximum number of distinct classes that '
             'can exist within a single education facility.'
@@ -256,38 +257,38 @@ class scenarioParameters(BaseModel):
     )
 
     # Intervention Parameters
-    diagnosis_delay: int = Field(
+    diagnosis_delay: Optional[int] = Field(
         title = 'Diagnosis Delay', default = 1, ge = 0, description = ((
             'The number of cycles before a '
             'symptomatic individual can be diagnosed.'
         ))
     )
-    case_trigger_threshold: int = Field(
+    case_trigger_threshold: Optional[int] = Field(
         title = 'Case Trigger Threshold', default = 1, ge = 0, description = ((
             'The minimum number of community cases that must be detected '
             'before an intervention with a case trigger will be triggered.'
         ))
     )
-    rate_trigger_threshold: int = Field(
+    rate_trigger_threshold: Optional[int] = Field(
         title = 'Rate Trigger Threshold', default = 1, ge = 0, description = ((
             'The minimum diagnosed cases per day that must be detected '
             'before an intervention with a rate trigger will be triggered.'
         ))
     )
-    rate_relaxation_threshold: int = Field(
+    rate_relaxation_threshold: Optional[int] = Field(
         title = 'Rate Relaxation Threshold', default = 1, ge = 0, 
         description = ((
             'The maximum diagnosed cases per day that must be detected before '
             'an intervention with a rate relaxation trigger will be relaxed.'
         ))
     )
-    maximum_trigger_count: int = Field(
+    maximum_trigger_count: Optional[int] = Field(
         title = 'Maximum Trigger Count', default = 10, ge = 0, description = ((
             'The maximum number of times an intervention '
             'can be triggered in a single simulation run.'
         ))
     )
-    pandemic_alert: bool = Field(
+    pandemic_alert: Optional[bool] = Field(
         title = 'Pandemic Alert', default = False, description = ((
             'If true, a pandemic alert will be active in the simulation, '
             'making groups social distance even if specific interventions '
@@ -296,19 +297,19 @@ class scenarioParameters(BaseModel):
     )
 
     # Isolation Parameters
-    social_distance_compliance: Probability = Field(
+    social_distance_compliance: Optional[Probability] = Field(
         title = 'Social Distancing Compliance', default = 0.0, description = ((
             'The probability of an individual complying '
             'with social distancing procedures.'
         ))
     )
-    diagnosed_case_isolation: bool = Field(
+    diagnosed_case_isolation: Optional[bool] = Field(
         title = 'Diagnosed Case Isolation', default = False, description = ((
             'If true, infected individuals who have been formally diagnosed '
             'as a case will be isolated at their household in the simulation.'
         ))
     )
-    class_dismissal: bool = Field(
+    class_dismissal: Optional[bool] = Field(
         title = 'Class Dismissal', default = False, description = ((
             'If true, classes at childcare and child education facilities '
             'will be dismissed when the daily diagnosed case rate exceeds '
@@ -317,14 +318,14 @@ class scenarioParameters(BaseModel):
     )
 
     # Immunity Parameters
-    infection_waning_cycle_delay: int = Field(
+    infection_waning_cycle_delay: Optional[int] = Field(
         title = 'Infection Waning Cycle Delay', default = 0, ge = 0, 
         description = ((
             'The number of cycles before an individual who has recovered from '
             'an infection will begin to lose their immunity to the disease.'
         ))
     )
-    infection_waning_rate_per_cycle: int = Field(
+    infection_waning_rate_per_cycle: Optional[int] = Field(
         title = 'Infection Waning Rate Per Cycle', default = 0.005, ge = 0.0, 
         description = ((
             'The proportion of immune individuals who will lose their '
@@ -334,44 +335,45 @@ class scenarioParameters(BaseModel):
     )
 
     # School Closure Parameters
-    close_childcare: bool = Field(
+    close_childcare: Optional[bool] = Field(
         title = 'Close Childcare', default = False, description = ((
             'If true, childcare facilities will be included in '
             'the set of facilities affected by school closure NPIs.'
         ))
     )
-    close_child_education: bool = Field(
+    close_child_education: Optional[bool] = Field(
         title = 'Close Child Education', default = True, description = ((
             'If true, child education facilities will be included in '
             'the set of facilities affected by school closure NPIs.'
         ))
     )
-    close_adult_education: bool = Field(
+    close_adult_education: Optional[bool] = Field(
         title = 'Close Adult Education', default = False, description = ((
             'If true, adult education facilities will be included in '
             'the set of facilities affected by school closure NPIs.'
         ))
     )
-    school_closure_compliance: float = Field(
+    school_closure_compliance: Optional[float] = Field(
         title = 'School Closure Compliance', default = 0.5, ge = 0, le = 1, 
         description = ((
             'The proportion of individuals in a school '
             'who will comply with school closure NPIs.'
         ))
     )
-    school_closure_trigger: TriggerCondition = Field(
-        title = 'School Closure Trigger', description = ((
+    school_closure_trigger: Optional[TriggerCondition] = Field(
+        title = 'School Closure Trigger', default = 'none', description = ((
             'The trigger condition that will enable school '
             'closure NPIs in the simulation when fulfilled.'
         ))
     )
-    school_closure_relaxation: TriggerCondition = Field(
-        title = 'School Closure Relaxation Trigger', description = ((
+    school_closure_relaxation: Optional[TriggerCondition] = Field(
+        title = 'School Closure Relaxation Trigger', default = 'none', 
+        description = ((
             'The trigger condition that will disable school '
             'closure NPIs in the simulation when fulfilled.'
         ))
     )
-    school_closure_duration: int = Field(
+    school_closure_duration: Optional[int] = Field(
         title = 'School Closure Duration', default = 0, ge = 0, 
         description = ((
             'The number of cycles before a school closure NPI is '
@@ -379,7 +381,7 @@ class scenarioParameters(BaseModel):
             'is set to "timed".'
         ))
     )
-    school_closure_delay: TriggerCondition = Field(
+    school_closure_delay: Optional[int] = Field(
         title = 'School Closure Delay', default = 0, ge = 0, description = ((
             'The number of cycles before a school closure NPI comes '
             'into effect, when school_closure_trigger is set to "timed".'
@@ -387,26 +389,28 @@ class scenarioParameters(BaseModel):
     )
 
     # Withdrawal Increase Parameters
-    withdrawal_increase_trigger: TriggerCondition = Field(
-        title = 'Withdrawal Increase Trigger', description = ((
+    withdrawal_increase_trigger: Optional[TriggerCondition] = Field(
+        title = 'Withdrawal Increase Trigger', default = 'none', 
+        description = ((
             'The trigger condition that will enable withdrawal increase NPIs '
             'in the simulation when fulfilled.'
         ))
     )
-    withdrawal_increase_relaxation: TriggerCondition = Field(
-        title = 'Withdrawal Increase Relaxation Trigger', description = ((
+    withdrawal_increase_relaxation: Optional[TriggerCondition] = Field(
+        title = 'Withdrawal Increase Relaxation Trigger', default = 'none', 
+        description = ((
             'The trigger condition that will disable withdrawal increase NPIs '
             'in the simulation when fulfilled.'
         ))
     )
-    withdrawal_increase_delay: int = Field(
+    withdrawal_increase_delay: Optional[int] = Field(
         title = 'Withdrawal Increase Delay', default = 0, ge = 0, 
         description = ((
             'The number of cycles before a withdrawal increase NPI comes into '
             'effect, when withdrawal_increase_trigger is set to "timed".'
         ))
     )
-    withdrawal_increase_duration: int = Field(
+    withdrawal_increase_duration: Optional[int] = Field(
         title = 'Withdrawal Increase Duration', default = 0, ge = 0, 
         description = ((
             'The number of cycles before a withdrawal increase NPI is '
@@ -414,7 +418,7 @@ class scenarioParameters(BaseModel):
             'is set to "timed".'
         ))
     )
-    increased_withdrawal: float = Field(
+    increased_withdrawal: Optional[float] = Field(
         title = 'Increased Adult Withdrawal Probability', default = 0.9, 
         ge = 0.0, description = ((
             'The probability of an infected adult withdrawing from '
@@ -422,7 +426,7 @@ class scenarioParameters(BaseModel):
             'NPI is in effect.'
         ))
     )
-    increased_withdrawal_child: float = Field(
+    increased_withdrawal_child: Optional[float] = Field(
         title = 'Increased Child Withdrawal Probability', default = 0.9, 
         ge = 0.0, description = ((
             'The probability of an infected child withdrawing from '
@@ -432,7 +436,7 @@ class scenarioParameters(BaseModel):
     )
 
     # Reduced Workgroup Parameters
-    reduced_workgroup_size: int = Field(
+    reduced_workgroup_size: Optional[int] = Field(
         title = 'Reduced Workgroup Size', default = 10, ge = 0, 
         description = ((
             'The maximum number of individuals that can be in a single '
@@ -440,26 +444,27 @@ class scenarioParameters(BaseModel):
             'NPI is in effect.'
         ))
     )
-    reduced_workgroup_trigger: TriggerCondition = Field(
-        title = 'Reduced Workgroup Trigger', description = ((
+    reduced_workgroup_trigger: Optional[TriggerCondition] = Field(
+        title = 'Reduced Workgroup Trigger', default = 'none', description = ((
             'The trigger condition that will enable reduced '
             'workgroup NPIs in the simulation when fulfilled.'
         ))
     )
-    reduced_workgroup_relaxation: TriggerCondition = Field(
-        title = 'Reduced Workgroup Relaxation Trigger', description = ((
+    reduced_workgroup_relaxation: Optional[TriggerCondition] = Field(
+        title = 'Reduced Workgroup Relaxation Trigger', default = 'none', 
+        description = ((
             'The trigger condition that will disable reduced '
             'workgroup NPIs in the simulation when fulfilled.'
         ))
     )
-    reduced_workgroup_delay: int = Field(
+    reduced_workgroup_delay: Optional[int] = Field(
         title = 'Reduced Workgroup Delay', default = 0, ge = 0, 
         description = ((
             'The number of cycles before a reduced workgroup NPI comes '
             'into effect, when reduced_workgroup_trigger is set to "timed".'
         ))
     )
-    reduced_workgroup_duration: int = Field(
+    reduced_workgroup_duration: Optional[int] = Field(
         title = 'Reduced Workgroup Duration', default = 56, ge = 0, 
         description = ((
             'The number of cycles before a reduced workgroup NPI is '
@@ -469,33 +474,35 @@ class scenarioParameters(BaseModel):
     )
 
     # Work Nonattendance Parameters
-    prob_work_nonattendance: Probability = Field(
+    prob_work_nonattendance: Optional[Probability] = Field(
         title = 'Work Nonattendance Probability', default = 0.5, 
         description = ((
             'The probability of an infected individual not going '
             'to work, when a work nonattendance NPI is in effect.'
         ))
     )
-    work_nonattendance_trigger: TriggerCondition = Field(
-        title = 'Work Nonattendance Trigger', description = ((
+    work_nonattendance_trigger: Optional[TriggerCondition] = Field(
+        title = 'Work Nonattendance Trigger', default = 'none', 
+        description = ((
             'The trigger condition that will enable work '
             'nonattendance NPIs in the simulation when fulfilled.'
         ))
     )
-    work_nonattendance_relaxation: TriggerCondition = Field(
-        title = 'Work Nonattendance Relaxation Trigger', description = ((
+    work_nonattendance_relaxation: Optional[TriggerCondition] = Field(
+        title = 'Work Nonattendance Relaxation Trigger', default = 'none', 
+        description = ((
             'The trigger condition that will disable work '
             'nonattendance NPIs in the simulation when fulfilled.'
         ))
     )
-    work_nonattendance_delay: int = Field(
+    work_nonattendance_delay: Optional[int] = Field(
         title = 'Work Nonattendance Delay', default = 0, ge = 0, 
         description = ((
             'The number of cycles before a work nonattendance NPI comes '
             'into effect, when work_nonattendance_trigger is set to "timed".'
         ))
     )
-    work_nonattendance_duration: int = Field(
+    work_nonattendance_duration: Optional[int] = Field(
         title = 'Work Nonattendance Duration', default = 0, ge = 0, 
         description = ((
             'The number of cycles before a work nonattendance NPI is '
@@ -505,7 +512,7 @@ class scenarioParameters(BaseModel):
     )
 
     # Background Contact Count Reduction Parameters
-    bcc_reduction: float = Field(
+    bcc_reduction: Optional[float] = Field(
         title = 'Background Contact Count Reduction', default = 1.0, ge = 0.0, 
         description = ((
             'The number of other individuals that are encountered by a single '
@@ -514,26 +521,27 @@ class scenarioParameters(BaseModel):
             'is in effect.'
         ))
     )
-    bcc_reduction_trigger: TriggerCondition = Field(
-        title = 'BCC Reduction Trigger', description = ((
+    bcc_reduction_trigger: Optional[TriggerCondition] = Field(
+        title = 'BCC Reduction Trigger', default = 'none', description = ((
             'The trigger condition that will enable BCC '
             'reduction NPIs in the simulation when fulfilled.'
         ))
     )
-    bcc_reduction_relaxation: TriggerCondition = Field(
-        title = 'BCC Reduction Relaxation Trigger', description = ((
+    bcc_reduction_relaxation: Optional[TriggerCondition] = Field(
+        title = 'BCC Reduction Relaxation Trigger', default = 'none', 
+        description = ((
             'The trigger condition that will disable BCC '
             'reduction NPIs in the simulation when fulfilled.'
         ))
     )
-    bcc_reduction_delay: int = Field(
+    bcc_reduction_delay: Optional[int] = Field(
         title = 'BCC Reduction Delay', default = 0, ge = 0, 
         description = ((
             'The number of cycles before a BCC reduction NPI comes '
             'into effect, when bcc_reduction_trigger is set to "timed".'
         ))
     )
-    bcc_reduction_duration: int = Field(
+    bcc_reduction_duration: Optional[int] = Field(
         title = 'BCC Reduction Duration', default = 0, ge = 0, 
         description = ((
             'The number of cycles before a BCC reduction NPI is '
@@ -543,9 +551,10 @@ class scenarioParameters(BaseModel):
     )
 
     # Vaccination Parameters
-    vaccination_priority: list[
+    vaccination_priority: Optional[list[
         Literal['elderly', 'healthcare', 'essential_workers','other']
-    ] = Field(
+    ]] = Field(
+        default = ['elderly', 'healthcare', 'essential_workers','other'], 
         title = 'Vaccination Priority', description = ((
             'A list of notable demographics in the population. Individuals '
             'who are part of demographics earlier on the list will receive '
@@ -553,40 +562,41 @@ class scenarioParameters(BaseModel):
             'vaccines for everyone.'
         ))
     )
-    vaccine_doses: int = Field(
+    vaccine_doses: Optional[int] = Field(
         title = 'Initial Vaccine Doses', default = 0, ge = 0, 
         description = ((
             'The number of vaccine doses available '
             'at the beginning of the simulation.'
         ))
     )
-    vaccination_first_dose_rate: int = Field(
+    vaccination_first_dose_rate: Optional[int] = Field(
         title = 'Vaccination First Dose Rate', default = 0, ge = 0, 
         description = ((
             'The daily rate at which individuals '
             'receive their first dose of the vaccine.'
         ))
     )
-    vaccination_trigger: TriggerCondition = Field(
-        title = 'Vaccination Trigger', description = ((
+    vaccination_trigger: Optional[TriggerCondition] = Field(
+        title = 'Vaccination Trigger', default = 'none', description = ((
             'The trigger condition that will enable '
             'vaccination in the simulation when fulfilled.'
         ))
     )
-    vaccination_relaxation: TriggerCondition = Field(
-        title = 'Vaccination Relaxation Trigger', description = ((
+    vaccination_relaxation: Optional[TriggerCondition] = Field(
+        title = 'Vaccination Relaxation Trigger', default = 'none', 
+        description = ((
             'The trigger condition that will disable '
             'vaccination in the simulation when fulfilled.'
         ))
     )
-    vaccination_delay: int = Field(
+    vaccination_delay: Optional[int] = Field(
         title = 'Vaccination Delay', default = 0, ge = 0, 
         description = ((
             'The number of cycles before a vaccination intervention comes '
             'into effect, when vaccination_trigger is set to "timed".'
         ))
     )
-    vaccination_duration: int = Field(
+    vaccination_duration: Optional[int] = Field(
         title = 'Vaccination Duration', default = 56, ge = 0, 
         description = ((
             'The number of cycles before a vaccination intervention is '
@@ -597,27 +607,28 @@ class scenarioParameters(BaseModel):
 
 # Set of scenario parameters set individually for a specific age group
 class ageScenarioParameters(BaseModel):
-    trans: Probability = Field(
-        title = 'Transmission', description = ((
+    trans: Optional[Probability] = Field(
+        title = 'Transmission', default = None, description = ((
             'The transmissibility for individuals in the '
             'specified age group, overriding other parameters.'
         ))
     )
-    susc: Probability = Field(
-        title = 'Susceptibility', description = ((
+    susc: Optional[Probability] = Field(
+        title = 'Susceptibility', default = None, description = ((
             'The susceptibility for individuals in the '
             'specified age group, overriding other parameters.'
         ))
     )
-    social_distance: Probability = Field(
-        title = 'Social Distancing Compliance', description = ((
+    social_distance: Optional[Probability] = Field(
+        title = 'Social Distancing Compliance', default = None, 
+        description = ((
             'The probability of complying with social distancing '
             'procedures for individuals in the specified age '
             'group, overriding other parameters.'
         ))
     )
-    mort: Probability = Field(
-        title = 'Transmission', description = ((
+    mort: Optional[Probability] = Field(
+        title = 'Transmission', default = None, description = ((
             'The mortality for individuals in the specified '
             'age group, overriding other parameters.'
         ))
@@ -625,12 +636,12 @@ class ageScenarioParameters(BaseModel):
 
 # Key-value arguments passed directly to the simulator
 class commandArgument(BaseModel):
-    n_runs: int = Field(
+    n_runs: Optional[int] = Field(
         title = 'Number of Runs', default = 24, ge = 1, description = (
             'The number of simulation runs to perform.'
         )
     )
-    n_cycles: int = Field(
+    n_cycles: Optional[int] = Field(
         title = 'Number of Cycles', default = 720, ge = 1, description = ((
             'The number of simulation cycles to '
             'run before ending the simulation.'
@@ -651,8 +662,8 @@ class crossImmunity(BaseModel):
             'recover from when recovering from the initial strain.'
         ))
     )
-    ImmunityProportion: Proportion = Field(
-        title = 'Immunity Proportion', description = ((
+    ImmunityProportion: Optional[Proportion] = Field(
+        title = 'Immunity Proportion', default = 1.0, description = ((
             'The proportion of individuals recovering from the initial strain '
             'who will also recover from the additional strain.'
         ))
@@ -678,7 +689,7 @@ class dynamicIntervention(BaseModel):
     )
     
 # Seeding of naturally immune individuals into the population
-class seededNaturalImmunity(BaseModel):
+class seededImmunity(BaseModel):
     StrainId: int = Field(
         title = 'Strain ID', description = ((
             'The ID of the infection strain that will have '
@@ -686,25 +697,25 @@ class seededNaturalImmunity(BaseModel):
         ))
     )
     Age: Optional[AgeGroup] = Field(
-        title = 'Age', description = ((
+        title = 'Age', default = None, description = ((
             'The age group which will have natural immunity seeded into it. '
-            'If None, seeds immunity into all age groups.'
+            'If not set, seeds immunity into all age groups.'
         ))
     )
-    InitialProportion: Proportion = Field(
+    InitialProportion: Optional[Proportion] = Field(
         title = 'Initial Proportion', default = 0, description = ((
             'The proportion of the population which will have natural '
             'immunity to the infection at the beginning of each '
             'simulation run (cycle 0).'
         ))
     )
-    ProportionPerCycle: Proportion = Field(
+    ProportionPerCycle: Optional[Proportion] = Field(
         title = 'Proportion Per Cycle', default = 0, description = ((
             'The proportion of the population which will gain natural '
             'immunity to the infection at each cycle.'
         ))
     )
-    TargetProportion: Proportion = Field(
+    TargetProportion: Optional[Proportion] = Field(
         title = 'Target Proportion', default = 0, description = ((
             'When this proportion of the population is immune to the '
             'infection, the simulation will stop seeding additional natural '
@@ -724,7 +735,7 @@ class strainParameters(BaseModel):
             'The transmission coefficient for this infection strain.'
         )
     )
-    SeedingWeight: float = Field(
+    SeedingWeight: Optional[float] = Field(
         title = 'Seeding Weight', default = 1, description = ((
             'The frequency at which this strain will be seeded into the '
             'population, proportional to other strains in the simulation'
@@ -734,13 +745,14 @@ class strainParameters(BaseModel):
 # Parameters for vaccine coverage across different age groups
 class vaccineCoverage(BaseModel):
     Age: Optional[AgeGroup] = Field(
-        title = 'Age', description = ((
+        title = 'Age', default = None, description = ((
             'The age group these parameters apply to. '
-            'If None, the parameters apply to all age groups.'
+            'If not set, the parameters apply to all age groups.'
         ))
     )
-    Initial: Proportion = Field(
-        title = 'Initial Vaccinated Proportion', description = ((
+    Initial: Optional[Proportion] = Field(
+        title = 'Initial Vaccinated Proportion', default = 0.0, 
+        description = ((
             'The proportion of the population which will be vaccinated at the '
             'beginning of each simulation run (cycle 0).'
         ))
@@ -794,9 +806,9 @@ class vaccineEfficacy(BaseModel):
         )
     )
     Age: Optional[AgeGroup] = Field(
-        title = 'Age', description = ((
+        title = 'Age', default = None, description = ((
             'The age group these parameters apply to. '
-            'If None, the parameters apply to all age groups.'
+            'If not set, the parameters apply to all age groups.'
         ))
     )
     Efficacy: EfficacyValue | list[EfficacyValue] = Field(
@@ -827,13 +839,69 @@ class vaccineEfficacy(BaseModel):
             )
         return self
 
-# Type union for compiling all parameter types into one object
-Parameter = Union[
-    scenarioParameters, ageScenarioParameters, commandArgument, 
-    list[crossImmunity], list[dynamicIntervention], 
-    list[seededNaturalImmunity], list[strainParameters], 
-    list[vaccineCoverage], list[vaccineDose], list[vaccineEfficacy]
-]
+# Class for compiling all parameter types into one object
+class Parameters(BaseModel):
+    Command_Argument: Optional[commandArgument] = Field(
+        title = 'Command Arguments', default = None, description = (
+            'Parameters passed to the simulation on the command line.'
+        )
+    )
+    Scenario_Parameter: Optional[scenarioParameters] = Field(
+        title = 'Scenario Parameters', default = None, description = ((
+            'General model parameters that will populate the '
+            'Scenario_Parameter table used by the simulation.'
+        ))
+    )
+    Scenario_CrossImmunity: Optional[list[crossImmunity]] = Field(
+        title = 'Cross Immunity Parameters', default = None, description = ((
+            'Parameters controlling how an individual recovering from one '
+            'infection strain can gain immunity to other infection strains.'
+        ))
+    )
+    Scenario_DynamicIntervention: Optional[list[dynamicIntervention]] = Field(
+        title = 'Dynamic Intervention Parameters', default = None, 
+        description = ((
+            'Parameters whose values will change '
+            'at specific points in the simulation.'
+        ))
+    )
+    Scenario_ParameterWithAgePrefix: Optional[ageScenarioParameters] = Field(
+        title = 'Age-Based Scenario Parameters', default = None, 
+        description = ((
+            'Parameters that will have unique values defined '
+            'for each possible age category in the simulation.'
+        ))
+    )
+    Scenario_SeededNaturalImmunity: Optional[list[seededImmunity]] = Field(
+        title = 'Seeded Natural Immunity Parameters', default = None, 
+        description = ((
+            'Parameters controlling how individuals naturally gain immunity '
+            'to the disease without requiring infection or vaccination.'
+        ))
+    )
+    Scenario_Strain: Optional[list[strainParameters]] = Field(
+        title = 'Strain Parameters', default = None, description = ((
+            'Parameters defining different strains of the '
+            'infection to simulate in the same population.'
+        ))
+    )
+    Scenario_VaccineCoverage: Optional[list[vaccineCoverage]] = Field(
+        title = 'Vaccine Coverage Parameters', default = None, description = (
+            'Parameters defining how much of the population receives vaccines.'
+        )
+    )
+    Scenario_VaccineDose: Optional[list[vaccineDose]] = Field(
+        title = 'Vaccine Dose Parameters', default = None, description = ((
+            'Parameters defining how many doses of different vaccine types '
+            'the population receives, and how often they are administered.'
+        ))
+    )
+    Scenario_VaccineDoseEfficacy: Optional[list[vaccineEfficacy]] = Field(
+        title = 'Vaccine Dose Efficacy Parameters', default = None, 
+        description = (
+            'Parameters defining the efficacy of different vaccine doses.'
+        )
+    )
 
 
 
@@ -846,7 +914,7 @@ class communityOverride(BaseModel):
             'The name of the community these parameters apply to.'
         )
     )
-    parameters: list[Parameter] = Field(
+    parameters: Parameters = Field(
         title = 'Parameters', description = (
             'Parameters to modify for this community.'
         )
@@ -859,22 +927,41 @@ class overrideTemplate(BaseModel):
             'The name of the template.'
         )
     )
-    parameters: list[Parameter] = Field(
+    description: Optional[str] = Field(
+        title = 'Description', default = None, description = (
+            'A brief description of the parameters described by the template.'
+        )
+    )
+    notes: Optional[str] = Field(
+        title = 'Description', default = None, description = (
+            'Additional information about the template.'
+        )
+    )
+    parameters: Parameters = Field(
         title = 'Parameters', description = (
             'Parameters to modify for this template.'
         )
     )
 
+# Model for defining parameters for override templates or simulations
+class overrideParams(BaseModel): 
+    parameters: Parameters = Field(
+        title = 'Parameters', description = ('The parameters to apply.')
+    )
+
 # Model for individual simulations and their parameters
 class simulation(BaseModel):
-    apply_template: list[str] = Field(
-        title = 'Applied Templates', description = ((
+    name: str = Field(
+        title = 'Name', description = ('The name of this simulation.')
+    )
+    apply_template: Optional[list[str]] = Field(
+        title = 'Applied Templates', default = None, description = ((
             'A list of names of override templates whose '
             'parameter values will be used by this simulation.'
         ))
     )
-    override_setting: Optional[list[Parameter]] = Field(
-        title = 'Override Settings', description = (
+    override_setting: Optional[overrideParams] = Field(
+        title = 'Override Settings', default = None, description = (
             'Parameters that will be applied to this simulation alone.'
         )
     )
@@ -882,14 +969,14 @@ class simulation(BaseModel):
 # Model for collections of simulations to run together
 class simulationSet(BaseModel):
     name: str = Field(title = 'Name', description = ('The name of this set.'))
-    version: float = Field(
+    version: int | float = Field(
         title = 'Version', description = ((
             'The set number that will be inserted into the names of the '
             'files generated by the simulations, after the version number.'
         ))
     )
-    skip: bool = Field(
-        title = 'Skip', description = (
+    skip: Optional[bool] = Field(
+        title = 'Skip', default = False, description = (
             'If true, the model will not run this set of simulations.'
         )
     )
@@ -901,7 +988,7 @@ class simulationSet(BaseModel):
 
 # Model for the full configuration JSON file
 class modelGuideFile(BaseModel):
-    # TODO: hardcode anything the user won't change as defaults
+    # TODO: better default values for stuff the user can't modify
     # TODO: validate that template/community names are correct
     name: str = Field(
         title = 'Name', description = (
@@ -909,7 +996,7 @@ class modelGuideFile(BaseModel):
         )
     )
     description: Optional[str] = Field(
-        title = 'Description', description = (
+        title = 'Description', default = None, description = (
             'A brief description of the simulations the guide file defines.'
         )
     )
@@ -919,7 +1006,7 @@ class modelGuideFile(BaseModel):
         )
     )
     middle_joint: Optional[str] = Field(
-        title = 'Middle Joint', default = '-interface', description = ((
+        title = 'Middle Joint', default = '-web-app', description = ((
             'A descriptive string that will be inserted into the names of the '
             'files generated by the simulations, between the community name '
             'and the version number.'
@@ -932,19 +1019,19 @@ class modelGuideFile(BaseModel):
             '"toolbox_config.json".'
         ))
     )
-    shared_overrides: Optional[list[Parameter]] = Field(
-        title = 'Shared Overrides', description = (
+    shared_overrides: Optional[overrideParams] = Field(
+        title = 'Shared Overrides', default = None, description = (
             'Parameters that will be applied to all scenarios in the file.'
         )
     )
     community_overrides: Optional[list[communityOverride]] = Field(
-        title = 'Community Overrides', description = ((
+        title = 'Community Overrides', default = None, description = ((
             'Parameters that will only be applied to '
             'simulations using specific communities'
         ))
     )
     override_templates: Optional[list[overrideTemplate]] = Field(
-        title = 'Override Templates', description = ((
+        title = 'Override Templates', default = None, description = ((
             'Templates containing a set of parameters that '
             'can be applied selectively to different scenarios.'
         ))
@@ -954,339 +1041,3 @@ class modelGuideFile(BaseModel):
             'A list of sets containing scenarios to run together.'
         )
     )
-
-'''
-Sample Guide JSON COnfig Files
-
-
-
-Minimal:
-{
-  "name": "Simple Test",
-  "output_folder": "./results/",
-  "middle_joint": "-coronaV",
-  "community_used": [
-    "newcastle"
-  ],
-  "community_overrides": [
-    {
-      "name": "newcastle",
-      "parameters": {}
-    }
-  ],
-  "shared_overrides": {
-    "parameters": {
-      "Command_Argument": {
-        "n_runs": 24,
-        "n_cycles": 720
-      },
-      "Scenario_Strain": [
-        {
-          "StrainId": 0,
-          "Beta": 0.11
-        }
-      ]
-    }
-  },
-  "override_templates": [
-    {
-      "name": "test_1",
-      "parameters": {
-        "Scenario_Parameter": {
-          "seed_rate": 0.125,
-          "school_closure_trigger": "timed",
-          "school_closure_compliance": 0.5,
-          "school_closure_delay": 28,
-          "withdrawal_increase_trigger": "timed",
-          "withdrawal_increase_delay": 28,
-          "work_nonattendance_trigger": "timed",
-          "prob_work_nonattendance": 0.5,
-          "work_nonattendance_delay": 28
-        }
-      }
-    }
-  ],
-  "simulation_sets": [
-    {
-      "name": "test_set_1",
-      "version": 230,
-      "simulations": [
-        {
-          "name": "test_sim_1",
-          "apply_template": [
-            "test_1"
-          ]
-        },
-        {
-          "name": "test_sim_2",
-          "apply_template": [
-            "test_1"
-          ]
-        }
-      ]
-    }
-  ]
-}
-
-
-
-SSG:
-{
-  "name": "Sample simulation guide",
-  "description": "A simple simulation guide that shows how the simulation runner works",
-  "output_folder": "./results/",
-  "middle_joint": "-coronaV",
-  "community_used": [
-    "newcastle"
-  ],
-  "override_templates": [
-    {
-      "name": "Perth interventions",
-      "description": "SC50+ICI+WN50+CCR80 delays 2 weeks, then have multi-phase school closure setting.",
-      "notes": "When use intervention manipulation, remember to change numbers to 3 and onwards",
-      "parameters": {
-        "Scenario_Parameter": {
-          "seed_rate": 0.125,
-          "school_closure_trigger": "timed",
-          "school_closure_compliance": 0.5,
-          "school_closure_delay": 28,
-          "withdrawal_increase_trigger": "timed",
-          "withdrawal_increase_delay": 28,
-          "work_nonattendance_trigger": "timed",
-          "prob_work_nonattendance": 0.5,
-          "work_nonattendance_delay": 28,
-          "bcc_reduction_trigger": "timed",
-          "bcc_reduction": 0.2,
-          "bcc_reduction_delay": 28
-        },
-        "Scenario_DynamicIntervention": [
-          {
-            "Name": "school_closure",
-            "CycleOffset": 78,
-            "NewValue": 1
-          },
-          {
-            "Name": "school_closure",
-            "CycleOffset": 116,
-            "NewValue": 0.75
-          },
-          {
-            "Name": "school_closure",
-            "CycleOffset": 144,
-            "NewValue": 0.55
-          }
-        ]
-      }
-    }
-  ],
-  "community_overrides": [
-    {
-      "name": "newcastle",
-      "parameters": {
-        "Scenario_ParameterWithAgePrefix": {
-          "strain_0_initial_natural_immunity": 0
-        }
-      }
-    }
-  ],
-  "shared_overrides": {
-    "parameters": {
-      "Command_Argument": {
-        "n_runs": 24,
-        "n_cycles": 720
-      },
-      "Scenario_Strain": [
-        {
-          "StrainId": 0,
-          "Beta": 0.11
-        }
-      ],
-      "Scenario_Parameter": {
-        "vaccination_trigger": "timed"
-      }
-    }
-  },
-  "simulation_sets": [
-    {
-      "name": "Surge test on SC50+WN50+CCR80 2 weeks delay",
-      "version": 96,
-      "simulations": [
-        {
-          "name": "no surge",
-          "apply_template": [
-            "Perth interventions"
-          ]
-        },
-        {
-          "name": "surged",
-          "apply_template": [
-            "Perth interventions"
-          ],
-          "override_setting": {
-            "parameters": {
-              "Scenario_DynamicIntervention": [
-                {
-                  "Name": "seed_rate",
-                  "CycleOffset": 184,
-                  "NewValue": 2.5
-                },
-                {
-                  "Name": "seed_rate",
-                  "CycleOffset": 186,
-                  "NewValue": 0.125
-                }
-              ]
-            }
-          }
-        }
-      ]
-    }
-  ]
-}
-
-
-
-Beta Increase:
-{
-    "name": "Sample simulation guide",
-    "description": "A simple simulation guide that shows how the simulation runner works",
-    "output_folder": "./results/",
-    "middle_joint": "-coronaV",
-    "community_used": ["newcastle"],
-    "override_templates": [
-        {
-            "name": "Perth interventions",
-            "description": "SC50+ICI+WN50+CCR80 delays 2 weeks, then have multi-phase school closure setting.",
-            "notes": "When use intervention manipulation, remember to change numbers to 3 and onwards",
-            "Scenario_Parameter": {
-                "seed_rate": 0.125,
-                "school_closure_trigger": "timed",
-                "school_closure_compliance": 0.5,
-                "school_closure_delay": 28,
-                "withdrawal_increase_trigger": "timed",
-                "withdrawal_increase_delay": 28,
-                "work_nonattendance_trigger": "timed",
-                "prob_work_nonattendance": 0.5,
-                "work_nonattendance_delay": 28,
-                "bcc_reduction_trigger": "timed",
-                "bcc_reduction": 0.2,
-                "bcc_reduction_delay": 28
-            },
-            "Scenario_DynamicIntervention": [
-                {
-                    "Name": "school_closure",
-                    "CycleOffset": 78,
-                    "NewValue": 1.0
-                },
-                {
-                    "Name": "school_closure",
-                    "CycleOffset": 116,
-                    "NewValue": 0.75
-                },
-                {
-                    "Name": "school_closure",
-                    "CycleOffset": 144,
-                    "NewValue": 0.55
-                }
-            ]
-        }
-    ],
-    "community_overrides": [
-        {
-            "name": "newcastle",
-            "Scenario_ParameterWithAgePrefix": {
-                "strain_0_initial_natural_immunity": 0.0
-            }
-        }
-    ],
-    "shared_overrides": {
-        "Command_Argument": {
-            "n_runs": 24,
-            "n_cycles": 720
-        },
-        "Scenario_Parameter": {
-            "vaccination_trigger": "timed"
-        }
-    },
-    "simulation_sets": [
-        {
-            "name": "Surge test on SC50+WN50+CCR80 2 weeks delay",
-            "version": 231,
-            "simulations": [
-                {
-                    "name": "beta normal",
-                    "apply_template": ["Perth interventions"],
-                    "override_setting": {
-                        "Scenario_Strain": [
-                            {
-                                "StrainId": 0,
-                                "Beta": 0.11
-                            }
-                        ]
-                    }
-                },
-                {
-                    "name": "beta increase 1",
-                    "apply_template": ["Perth interventions"],
-                    "override_setting": {
-                        "Scenario_Strain": [
-                            {
-                                "StrainId": 0,
-                                "Beta": 0.12
-                            }
-                        ]
-                    }
-                },
-                {
-                    "name": "beta increase 2",
-                    "apply_template": ["Perth interventions"],
-                    "override_setting": {
-                        "Scenario_Strain": [
-                            {
-                                "StrainId": 0,
-                                "Beta": 0.13
-                            }
-                        ]
-                    }
-                },
-                {
-                    "name": "beta increase 3",
-                    "apply_template": ["Perth interventions"],
-                    "override_setting": {
-                        "Scenario_Strain": [
-                            {
-                                "StrainId": 0,
-                                "Beta": 0.14
-                            }
-                        ]
-                    }
-                },
-                {
-                    "name": "beta increase 4",
-                    "apply_template": ["Perth interventions"],
-                    "override_setting": {
-                        "Scenario_Strain": [
-                            {
-                                "StrainId": 0,
-                                "Beta": 0.15
-                            }
-                        ]
-                    }
-                },
-                {
-                    "name": "beta increase 5",
-                    "apply_template": ["Perth interventions"],
-                    "override_setting": {
-                        "Scenario_Strain": [
-                            {
-                                "StrainId": 0,
-                                "Beta": 0.16
-                            }
-                        ]
-                    }
-                }
-            ]
-        }
-    ]
-}
-'''
