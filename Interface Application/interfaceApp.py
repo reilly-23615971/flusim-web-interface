@@ -2,18 +2,30 @@
 # Developed by Reilly Evans
 
 # Imports
+import time
+import atexit
 import numpy as np
 import pandas as pd
 import streamlit as st
 from interfaceFunctions import runModelWrapper
+from sharedResources import resultQueue, monitorSession
+
+
 
 # Initialise session variables
-if 'modelData' not in st.session_state:
-    st.session_state.modelData = None
-if 'httpSession' not in st.session_state:
-    st.session_state.httpSession = None
-if 'simulationInProgress' not in st.session_state:
-    st.session_state.simulationInProgress = None
+sessionParameters = {'modelData': None, 'simulationInProgress': False}
+for parameter, default in sessionParameters.items(): 
+    st.session_state.setdefault(parameter, default)
+
+# Start session monitoring function to ensure it's closed properly
+monitorSession()
+
+# Define callbacks for model parameter widgets
+def runSimulationButton():
+    st.session_state.simulationInProgress = True
+    runModelWrapper()
+
+
 
 # Define application pages
 # TODO: Determine ideal page layout/what goes where
@@ -33,8 +45,18 @@ pages = {
 parameterSidebar = st.sidebar
 beta = parameterSidebar.slider('Beta', 0.01, 10.0, 0.11, key = 'beta')
 npi = parameterSidebar.selectbox('NPI Presets', ['None', 'Low', 'Medium', 'High'], key = 'npi')
-runModelButton = parameterSidebar.button('Run Simulation', on_click = runModelWrapper)
+runModelButton = parameterSidebar.button('Run Simulation', on_click = runSimulationButton)
 
-# Initialise and run the application
+# Initialise and run the application pages
 flusimPages = st.navigation(pages)
 flusimPages.run()
+
+
+
+# Fragment to regularly check if model results have been received yet
+@st.fragment(run_every = 1)
+def updateData():
+    if st.session_state.simulationInProgress and not resultQueue.empty():
+        st.session_state.modelData = resultQueue.get()
+        st.session_state.simulationInProgress = False
+updateData()

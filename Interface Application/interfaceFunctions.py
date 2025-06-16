@@ -3,32 +3,21 @@
 # Functions used by the web application interface
 
 # Imports
-import io
-import urllib
+from io import StringIO
 import asyncio
-import aiohttp
-from concurrent.futures import ThreadPoolExecutor
-import numpy as np
+from aiohttp import ClientSession
 import pandas as pd
 import streamlit as st
+from sharedResources import serverUrl, threadExecutor, resultQueue, httpSession
 
-# Constants
-SERVER_URL = 'http://127.0.0.1:8000' # change to Azure SWA URL
-executor = ThreadPoolExecutor(max_workers = 1)
 
-# Function to create and reuse an asynchronous client session 
-# Used for HTTP requests to run the simulation on the server
-async def getSession():
-    if 'httpSession' not in st.session_state or st.session_state.httpSession.closed:
-        st.session_state.httpSession = aiohttp.ClientSession(
-            base_url = SERVER_URL, raise_for_status = True
-        )
-    return st.session_state.httpSession
 
-# Function to send model parameters to the server and receive the resulting data
+# Function to send model parameters to the server and receive the 
+# statistics obtained from the server in response
 async def runModel():
-    # TODO: Convert parameters into valid JSON file
+    # TODO: Convert parameters from Streamlit into valid JSON file
     # TODO: Error handling
+
     # For testing use this default simulation JSON instead of parameters
     parameterJSON = {
         "name": "Simple Test",
@@ -68,31 +57,41 @@ async def runModel():
         }]
     }
 
-    # Send request to server
-    session = await getSession()
-    async with session.post('runModel', json = parameterJSON) as response:
-        textData = await response.raise_for_status().text
-    # TODO: Use JSON to name CSV columns with simulation names
+    # Ensure session is initialised
+    global httpSession
+    if httpSession is None or httpSession.closed:
+        httpSession = ClientSession(
+            base_url = serverUrl, raise_for_status = True
+        )
+    
+    # Send POST request to server with parameters
+    async with httpSession.post('runModel', json = parameterJSON) as response:
+        csvData = await response.raise_for_status().text
+    
+    # Convert CSV statistics into DataFrame
     formattedData = pd.read_csv(
-        io.StringIO(textData), header = 0, 
+        StringIO(csvData), header = 0, 
         names = ['Day', 'Base Parameters', 'Surged']
     )
-    st.session_state.modelData = formattedData
 
+    # TODO: Use JSON parameters to format CSV data with simulation names
     # TODO: Store different data based on the request parameters
     # TODO: Determine if doing all analysis tasks with each model 
     # call is necessary/useful for the user
-    st.success('Simulation complete!')
+    return formattedData
 
-# Wrapper for runModel to be ran on button click
+    
+
+# Wrapper for runModel to asynchronously send the HTTP requests 
+# without blocking Streamlit operations
 def runModelWrapper():
-    # Function to asynchronously call the server and await results
+    # Inner function to asynchronously call the server and await results
     # Needed to avoid interrupting Streamlit UI functionality
     def runner():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(runModel())
-        st.session_state.simulationInProgress = False
+        formattedData = loop.run_until_complete(runModel())
         loop.close()
+        resultQueue.put(formattedData)
     st.session_state.simulationInProgress = True
-    executor.submit(runner)
+    threadExecutor.submit(runner)
