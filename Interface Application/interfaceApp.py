@@ -4,27 +4,19 @@
 # Imports
 import time
 import atexit
+import logging
 import numpy as np
 import pandas as pd
 import streamlit as st
 from interfaceFunctions import runModelWrapper
-from sharedResources import resultQueue, monitorSession
+from sharedResources import resultQueue#, monitorSession
 
-
-
-# Initialise session variables
-sessionParameters = {'modelData': None, 'simulationInProgress': False}
-for parameter, default in sessionParameters.items(): 
-    st.session_state.setdefault(parameter, default)
-
-# Start session monitoring function to ensure it's closed properly
-monitorSession()
-
-# Define callbacks for model parameter widgets
-def runSimulationButton():
-    st.session_state.simulationInProgress = True
-    runModelWrapper()
-
+# Logging config
+logging.basicConfig(
+    filename = './Logs/interfaceAppLogs.txt', filemode = 'a', 
+    format = '%(asctime)s,%(msecs)03d %(name)s %(levelname)s %(message)s', 
+    datefmt = '%Y-%m-%d %H:%M:%S', level = logging.DEBUG
+)
 
 
 # Define application pages
@@ -36,6 +28,21 @@ pages = {
         st.Page("initialChartPage.py", title="Model Results")
     ]
 }
+
+# Initialise session variables
+sessionParameters = {'modelData': None, 'simulationInProgress': False}
+for parameter, default in sessionParameters.items(): 
+    st.session_state.setdefault(parameter, default)
+
+# Start session monitoring function to ensure it's closed properly
+#monitorSession()
+
+# Define callbacks for model parameter widgets
+def runSimulationButton():
+    st.session_state.simulationInProgress = True
+    runModelWrapper()
+
+
 
 # Define model parameters to adjust in sidebar
 # TODO: flesh out selectable options

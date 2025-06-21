@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from modelSchema import modelGuideFile
 
 
+
 # Define main Flusim app
 flusimApp = FastAPI()
 
@@ -29,5 +30,6 @@ async def runModel(config: modelGuideFile):
     print(f'Simulation received; name = {modelConfiguration["name"]}')
     # TODO: run flusim simulation and analysis tools
     time.sleep(3) # Simulate long running time
+    print('Simulation complete, sending response')
     # For now this'll just send over the existing CSV file
     return FileResponse('./newcastle-coronaV96-epidemic-mean.csv')
