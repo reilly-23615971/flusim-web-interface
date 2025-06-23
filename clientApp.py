@@ -17,7 +17,7 @@ from ClientResources.SharedResources import resultQueue
 
 # Logging config
 logging.basicConfig(
-    filename = './Logs/interfaceAppLogs.txt', filemode = 'a', 
+    filename = './interfaceAppLogs.txt', filemode = 'a', 
     format = '%(asctime)s,%(msecs)03d %(name)s %(levelname)s %(message)s', 
     datefmt = '%Y-%m-%d %H:%M:%S', level = logging.DEBUG
 )
