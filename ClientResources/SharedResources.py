@@ -1,15 +1,19 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
-# Constants and other saved variables used by the web application interface
+# Constants and other saved variables used by the web application
+
+# Imports
 from queue import Queue
-import threading
 import logging
-from concurrent.futures import ThreadPoolExecutor
-import asyncio
-from aiohttp import ClientSession
-import streamlit as st
-from streamlit.runtime import get_instance
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+# Previous imports
+#import threading
+#from concurrent.futures import ThreadPoolExecutor
+#import asyncio
+#from aiohttp import ClientSession
+#import streamlit as st
+#from streamlit.runtime import get_instance
+#from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 # Logging
 sharedLog = logging.getLogger(__name__)
@@ -19,11 +23,13 @@ sharedLog = logging.getLogger(__name__)
 serverUrl = 'http://127.0.0.1:8000/'
 resultQueue = Queue()
 
+
+
+# Outdated code
+'''
 #threadExecutor = ThreadPoolExecutor(max_workers = 1)
 #httpSession: ClientSession | None = None
 
-
-'''
 # Teardown function to close resources when app shuts down
 def closeSessions():
     global httpSession#, threadExecutor

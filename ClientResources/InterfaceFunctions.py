@@ -10,7 +10,9 @@ import threading
 from aiohttp import ClientSession
 import pandas as pd
 import streamlit as st
-from sharedResources import serverUrl, resultQueue#, httpSession#, threadExecutor
+from SharedResources import serverUrl, resultQueue
+
+#from SharedResources import serverUrl, resultQueue, httpSession, threadExecutor
 
 # Logging
 functionLog = logging.getLogger(__name__)

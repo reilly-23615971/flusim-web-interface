@@ -1,0 +1,27 @@
+{
+  "routes": [
+    {
+      "route": "*.{svg,png,gif,css,js,py}",
+      "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/api/*",
+      "methods": ["POST"],
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/*",
+      "allowedRoles": ["anonymous", "authenticated"]
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["*.{svg,png,jpg,gif}"]
+  },
+  "responseOverrides": {
+    "401": {
+      "redirect": "/.auth/login/aad?post_login_redirect_uri=.referrer",
+      "statusCode": 302
+    }
+  }
+}

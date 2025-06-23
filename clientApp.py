@@ -2,14 +2,18 @@
 # Developed by Reilly Evans
 
 # Imports
-import time
-import atexit
 import logging
-import numpy as np
-import pandas as pd
 import streamlit as st
-from interfaceFunctions import runModelWrapper
-from sharedResources import resultQueue#, monitorSession
+from ClientResources.InterfaceFunctions import runModelWrapper
+from ClientResources.SharedResources import resultQueue
+
+#import time
+#import atexit
+#import numpy as np
+#import pandas as pd
+#from ClientResources.SharedResources import resultQueue, monitorSession
+
+
 
 # Logging config
 logging.basicConfig(
@@ -18,14 +22,13 @@ logging.basicConfig(
     datefmt = '%Y-%m-%d %H:%M:%S', level = logging.DEBUG
 )
 
-
 # Define application pages
 # TODO: Determine ideal page layout/what goes where
 st.set_page_config(page_title = 'SMRG Flusim Web Dashboard', page_icon = '🦠')
 pages = {
     'SMRG Flusim Web Dashboard': [
-        st.Page("modelDescription.py", title="Model Description"),
-        st.Page("initialChartPage.py", title="Model Results")
+        st.Page('pages/1_Model_Description.py', title = 'Model Description'),
+        st.Page('pages/2_Chart_Demonstration.py', title = 'Chart Demonstration')
     ]
 }
 

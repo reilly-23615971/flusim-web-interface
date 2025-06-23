@@ -2,9 +2,10 @@
 # Developed by Reilly Evans
 
 # Imports
-import pandas as pd
 import altair as alt
 import streamlit as st
+
+#import pandas as pd
 
 def formatInfectionData(data):
     # This function will eventually use additional parameters to 
@@ -15,10 +16,8 @@ def formatInfectionData(data):
     )
 
 
-# Create page
 
-
-st.title('Model Results')
+st.title('Flusim Project Web Interface')
 
 # Get data and plot as a line graph
 if st.session_state.modelData is None: st.write((
