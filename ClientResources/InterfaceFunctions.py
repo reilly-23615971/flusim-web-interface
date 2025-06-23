@@ -10,7 +10,7 @@ import threading
 from aiohttp import ClientSession
 import pandas as pd
 import streamlit as st
-from SharedResources import serverUrl, resultQueue
+from ClientResources.SharedResources import serverUrl, resultQueue
 
 #from SharedResources import serverUrl, resultQueue, httpSession, threadExecutor
 
