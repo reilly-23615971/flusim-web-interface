@@ -70,7 +70,3 @@ def updateData():
         st.session_state.modelData = resultQueue.get()
         st.session_state.simulationInProgress = False
 updateData()
-
-
-# CORS middleware for deployment (comment out when testing)
-if __name__ == '__main__': st.set_option('server.enableCORS', True)
