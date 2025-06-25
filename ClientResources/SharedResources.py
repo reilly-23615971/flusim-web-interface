@@ -22,6 +22,7 @@ sharedLog = logging.getLogger(__name__)
 # change URL to Azure SWA URL
 serverUrl = 'http://127.0.0.1:8000/'
 resultQueue = Queue()
+population = {'albany': 0, 'cairns': 140402, 'newcastle': 272407}
 
 
 
