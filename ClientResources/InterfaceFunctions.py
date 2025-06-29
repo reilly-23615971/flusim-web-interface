@@ -111,7 +111,10 @@ def runModelWrapper():
 
 
 
-
+# Function to convert raw data from the 'epidemic' Flusim analysis tool
+# into the desired DataFrame format for graphs
+def epidemicFormatter(rawCSV, scenarioNames):
+    return
 
 
 
