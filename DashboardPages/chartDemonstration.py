@@ -7,20 +7,9 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
+from ClientResources.InterfaceFunctions import formatEpidemic, plotEpidemic
 
 #******************************************************************
-# Debug graph formatting
-def formatMeanCaseCSV(filename, cumulative):
-    formattedData = pd.read_csv(
-        filename, header = 0, names = [
-            'Days Since Start of Simulation', 'Constant Seeding', 'Surged Seeding'
-        ]
-    )
-    valueLabel = 'Total Cases' if cumulative else 'Cases Per Day'
-    return formattedData.round(3).melt(
-        'Days Since Start of Simulation', var_name = 'Simulation', 
-        value_name = valueLabel
-    )
 
 caseRate = 0.5
 hospitalisationRate = 0.1
@@ -66,22 +55,17 @@ else:
 
 #******************************************************************
 # Debug case plot
-data1 = formatMeanCaseCSV('./meanCasePerDay.csv', False)
-plot1 = alt.Chart(
-    data1, title = 'Daily Cases Over Time'
-).mark_line().encode(
-    x = 'Days Since Start of Simulation:Q', y = 'Cases Per Day:Q', 
-    color = 'Simulation:N'
-)
-st.altair_chart(plot1)
+scenarios = ['Baseline', 'Surged']
 
-data2 = formatMeanCaseCSV('./cumulativeMean.csv', True)
-plot2 = alt.Chart(
-    data2, title = 'Total Cases Over Time'
-).mark_line().encode(
-    x = 'Days Since Start of Simulation:Q', y = 'Total Cases:Q', 
-    color = 'Simulation:N'
-)
-st.altair_chart(plot2)
+with open('./meanCasePerDay.csv', 'r') as csv:
+    meanData = formatEpidemic(csv.read(), scenarios, 'Cases')
+
+st.altair_chart(plotEpidemic(meanData, 'Cases'))
+
+
+with open('./cumulativeMean.csv', 'r') as csv:
+    sumData = formatEpidemic(csv.read(), scenarios, 'Cases', True)
+
+st.altair_chart(plotEpidemic(sumData, 'Cases', True))
 
 #******************************************************************

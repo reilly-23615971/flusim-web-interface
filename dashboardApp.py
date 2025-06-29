@@ -24,11 +24,10 @@ logging.basicConfig(
 
 # Define application pages
 # TODO: Determine ideal page layout/what goes where
-st.set_page_config(page_title = 'SMRG Flusim Web Dashboard', page_icon = '🦠')
 pages = {
     'SMRG Flusim Web Dashboard': [
-        st.Page('pages/1_Model_Description.py', title = 'Model Description'),
-        st.Page('pages/2_Chart_Demonstration.py', title = 'Chart Demonstration')
+        st.Page('DashboardPages/modelDescription.py', title = 'Model Description'),
+        st.Page('DashboardPages/chartDemonstration.py', title = 'Chart Demonstration')
     ]
 }
 
@@ -59,6 +58,7 @@ runModelButton = parameterSidebar.button('Run Simulation', on_click = runSimulat
 
 # Initialise and run the application pages
 flusimPages = st.navigation(pages)
+st.set_page_config(page_title = 'SMRG Flusim Web Dashboard', page_icon = '🦠')
 flusimPages.run()
 
 
