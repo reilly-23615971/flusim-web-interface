@@ -244,7 +244,7 @@ def plotEpidemic(data, outcome = 'Infections', cumulative = False):
         x = xLabel, y = yLabel, 
         color = alt.condition(
             tooltipPicker, colourLabel, alt.value('transparent'), empty = False
-        ), tooltip = [alt.Tooltip(yLabel, format = '.3f'), xLabel, colourLabel]
+        ), tooltip = [yLabel, xLabel, colourLabel]
     ).add_params(tooltipPicker)
 
     # Return both plots combined

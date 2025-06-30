@@ -57,13 +57,13 @@ else:
 # Debug case plot
 scenarios = ['Baseline', 'Surged']
 
-with open('./meanCasePerDay.csv', 'r') as csv:
+with open('./epidemicMedianDaily.csv', 'r') as csv:
     meanData = formatEpidemic(csv.read(), scenarios, 'Cases')
 
 st.altair_chart(plotEpidemic(meanData, 'Cases'))
 
 
-with open('./cumulativeMean.csv', 'r') as csv:
+with open('./epidemicMedianCumulative.csv', 'r') as csv:
     sumData = formatEpidemic(csv.read(), scenarios, 'Cases', True)
 
 st.altair_chart(plotEpidemic(sumData, 'Cases', True))
