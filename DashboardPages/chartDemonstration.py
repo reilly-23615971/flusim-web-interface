@@ -7,7 +7,9 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
-from ClientResources.InterfaceFunctions import formatEpidemic, plotEpidemic
+from ClientResources.InterfaceFunctions import (
+    formatEpidemic, formatAsir, plotEpidemic
+)
 
 #******************************************************************
 
@@ -57,15 +59,21 @@ else:
 # Debug case plot
 scenarios = ['Baseline', 'Surged']
 
-with open('./epidemicMedianDaily.csv', 'r') as csv:
+with open('./TestData/epidemicMedianDaily.csv', 'r') as csv:
     meanData = formatEpidemic(csv.read(), scenarios, 'Cases')
 
 st.altair_chart(plotEpidemic(meanData, 'Cases'))
 
 
-with open('./epidemicMedianCumulative.csv', 'r') as csv:
+with open('./TestData/epidemicMedianCumulative.csv', 'r') as csv:
     sumData = formatEpidemic(csv.read(), scenarios, 'Cases', True)
 
 st.altair_chart(plotEpidemic(sumData, 'Cases', True))
+
+with open('./TestData/asirMedianAbsolute.csv', 'r') as csv:
+    ageData = formatAsir(csv.read(), scenarios, 'Cases', False, 'absolute')
+
+with open('./TestData/asirMedianAbsolute.csv', 'r') as csv:
+    ageData = formatAsir(csv.read(), scenarios, 'Cases', False, 'percentage')
 
 #******************************************************************

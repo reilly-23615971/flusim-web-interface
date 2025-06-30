@@ -3,6 +3,7 @@
 # Functions used by the web application interface
 
 # Imports
+from math import ceil
 from io import StringIO
 import asyncio
 import logging
@@ -11,7 +12,9 @@ from aiohttp import ClientSession
 import pandas as pd
 import streamlit as st
 import altair as alt
-from ClientResources.SharedResources import serverUrl, resultQueue
+from ClientResources.SharedResources import (
+    serverUrl, resultQueue, ageCategories, outcomeAdjectives
+)
 
 # Logging
 functionLog = logging.getLogger(__name__)
@@ -136,7 +139,7 @@ Parameters:
 
 Output:
     formattedData: A pandas DataFrame containing the data, reshaped into
-    a format more easily used by Altair's charts
+    a format more easily used by Altair's charts.
 """
 def formatEpidemic(
     rawCSV, scenarioNames, outcome = 'Infections', 
@@ -144,23 +147,26 @@ def formatEpidemic(
 ):
     # Validate parameters
     try:
-        if not isinstance(scenarioNames, list) or not all(
-            isinstance(name, str) for name in scenarioNames
+        if (
+            not isinstance(scenarioNames, list) 
+            or not all(isinstance(name, str) for name in scenarioNames)
         ): raise ValueError((
             'scenarioNames should be a list of '
             f'strings; was {type(scenarioNames)}.'
         ))
-        if outcome not in {
-            'Infections', 'Cases', 'Hospitalisations', 
-            'ICU Visits', 'GP Visits', 'Deaths'
-        }: raise ValueError((
-            'outcome should be one of "Infections", "Cases", "Hospitalisations", '
-            f'"ICU Visits", "GP Visits", or "Deaths"; was "{outcome}".'
+        if not scenarioNames: raise ValueError(
+            'scenarioNames should not be empty.'
+        )
+        if outcome not in outcomeAdjectives.keys(): raise ValueError((
+            'outcome should be either "Infections", "Cases", '
+            '"Hospitalisations", "ICU Visits", "GP Visits", '
+            f'or "Deaths"; was "{outcome}".'
         ))
     except Exception as e:
-        functionLog.error(
-            f'[formatEpidemic] Encountered {type(e).__name__}: {e}'
-        )
+        functionLog.error((
+            f'[formatEpidemic] Encountered {type(e).__name__} '
+            f'while validating parameters: {e}'
+        ))
         raise e
 
     # Generate and format the dataframe
@@ -180,6 +186,113 @@ def formatEpidemic(
             'Days Since First Infection', var_name = 'Scenario', 
             value_name = valueLabel
         )
+    
+
+
+"""
+Function to convert raw data from the age-specific infection rate 
+('asir') Flusim analysis tool into the desired DataFrame format for 
+tables and other visualisations
+
+Parameters:
+    rawCSV: The CSV output of the 'asir' analysis function, obtained
+    from the server after running the simulation.
+
+    scenarioNames: A list of strings containing the names of the 
+    different scenarios that were simulated (since the CSV just uses 
+    non-descriptive placeholders).
+
+    outcome: A string indicating the health outcome the asir
+    data represents. Can be either 'Infections', 'Cases', 
+    'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
+
+    proportion: A Boolean that is True when the CSV contains 
+    proportional/fractional results instead of the direct number of 
+    infections per category.
+
+    difference: A string that is not empty when the outputted DataFrame 
+    should contain a column indicating the difference between the 
+    baseline scenario (assumed to be the first in the CSV file) and 
+    the other scenarios. Can be either 'absolute', 'percentage' or an 
+    empty string/False.
+
+Output:
+    formattedData: A pandas DataFrame containing the data, reshaped into
+    a format more easily used by Altair's charts.
+"""
+def formatAsir(
+    rawCSV, scenarioNames, outcome = 'Infections', 
+    proportion = False, difference = ''
+):
+    # Validate parameters
+    try:
+        if (
+            not isinstance(scenarioNames, list) 
+            or not all(isinstance(name, str) for name in scenarioNames)
+        ): raise ValueError((
+            'scenarioNames should be a list of '
+            f'strings; was {type(scenarioNames)}.'
+        ))
+        if not scenarioNames: raise ValueError(
+            'scenarioNames should not be empty.'
+        )
+        if outcome not in outcomeAdjectives.keys(): raise ValueError((
+            'outcome should be either "Infections", "Cases", '
+            '"Hospitalisations", "ICU Visits", "GP Visits", '
+            f'or "Deaths"; was "{outcome}".'
+        ))
+        if difference and difference not in {'absolute', 'percentage'}: 
+            raise ValueError((
+                'difference should be either "absolute", "percentage", '
+                f'or an empty string; was "{difference}".'
+            ))
+    except Exception as e:
+        functionLog.error(
+            f'[formatAsir] Encountered {type(e).__name__} '
+            f'while validating parameters: {e}'
+        )
+        raise e
+
+    # Generate and format the dataframe
+    framedData = pd.read_csv(
+        StringIO(rawCSV), header = 0, index_col = 0,
+        names = ['Total'].extend(ageCategories)
+    )
+    framedData.index = pd.Index(scenarioNames)
+    framedData.reset_index(names = 'Scenario', inplace = True)
+
+    # Reshape data for better Altair usage
+    valueLabel = (
+        f'{outcomeAdjectives[outcome]} Proportion of Population' if proportion 
+        else f'Number of {outcome}'
+    )
+    meltedData = framedData.melt(
+        'Scenario', var_name = 'Age Group', value_name = valueLabel
+    )
+    if not difference: return meltedData
+    
+    # Generate difference column if specified
+    functionLog.info(f'[formatAsir] Melted dataframe:\n{meltedData}')
+    baselineScenario = scenarioNames[0]
+    functionLog.info(f'[formatAsir] Baseline scenario name: {baselineScenario}')
+    #indexedData = meltedData.set_index(['Scenario', 'Age Group'])
+    baselineRows = (meltedData.loc[
+        meltedData['Scenario'] == baselineScenario
+    ].set_index('Age Group')[valueLabel])
+    functionLog.info(f'[formatAsir] Baseline stuff:\n{baselineRows}')
+    
+    if difference == 'absolute': diffFromBaseline = (
+        meltedData[valueLabel] - meltedData['Age Group'].map(baselineRows)
+    ).abs()
+    else: diffFromBaseline = (
+        meltedData[valueLabel] - meltedData['Age Group'].map(baselineRows)
+    ).abs() / meltedData['Age Group'].map(baselineRows)
+        
+    functionLog.info(f'[formatAsir] {difference} difference:\n{diffFromBaseline}')
+    meltedData['Difference from Baseline'] = diffFromBaseline
+    functionLog.info(f'[formatAsir] True final dataframe:\n{meltedData}')
+    return meltedData
+
 
 
 """
@@ -208,23 +321,22 @@ def plotEpidemic(data, outcome = 'Infections', cumulative = False):
         if not isinstance(data, pd.DataFrame): raise ValueError(
             f'data should be a DataFrame, was {type(data)}'
         )
-        if outcome not in {
-            'Infections', 'Cases', 'Hospitalisations', 
-            'ICU Visits', 'GP Visits', 'Deaths'
-        }: raise ValueError((
-            'outcome should be one of "Infections", "Cases", "Hospitalisations", '
-            f'"ICU Visits", "GP Visits", or "Deaths"; was "{outcome}".'
+        if outcome not in outcomeAdjectives.keys(): raise ValueError((
+            'outcome should be either "Infections", "Cases", '
+            '"Hospitalisations", "ICU Visits", "GP Visits", '
+            f'or "Deaths"; was "{outcome}".'
         ))
     except Exception as e:
-        functionLog.error(
-            f'[plotEpidemic] Encountered {type(e).__name__}: {e}'
-        )
+        functionLog.error((
+            f'[plotEpidemic] Encountered {type(e).__name__} '
+            f'while validating parameters: {e}'
+        ))
         raise e
 
     # Define miscellaneous chart components
     plotTitle = (
-        f'Cumulative {outcome} Over Time' if cumulative 
-        else f'{outcome} per Day Over Time'
+        f'Cumulative Median {outcome} Over Time' if cumulative 
+        else f'Median {outcome} per Day Over Time'
     )
     yLabel =  f'Total {outcome}:Q' if cumulative else f'{outcome} per Day:Q'
     xLabel, colourLabel = 'Days Since First Infection:Q', 'Scenario:N'
@@ -234,9 +346,9 @@ def plotEpidemic(data, outcome = 'Infections', cumulative = False):
     epidemicPlot = alt.Chart(data, title = plotTitle).mark_line(
         interpolate = 'natural'
     ).encode(
-        x = alt.X(xLabel).scale(
-            domain = (0, data['Days Since First Infection'].max())
-        ), y = yLabel, color = colourLabel
+        x = alt.X(xLabel).scale(domain = (
+            0, ceil(data['Days Since First Infection'].max() / 10) * 10
+        ), nice = False), y = yLabel, color = colourLabel
     )
 
     # Plot the points used for tooltip display
