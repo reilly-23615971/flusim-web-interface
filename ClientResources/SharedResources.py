@@ -15,6 +15,7 @@ sharedLog = logging.getLogger(__name__)
 serverUrl = 'http://127.0.0.1:8000/'
 # Queue used to store CSV data from completed server requests
 resultQueue = Queue()
+
 # Dictionary getting the population of each community the simulator uses
 population = {'cairns': 140402, 'newcastle': 272407}
 # Tuple holding the possible age categories used by the simulator
@@ -30,9 +31,14 @@ ageCategories = (
     'Senior',        # 65-79 years
     'Older Senior'   # 80+ years
 )
+# Set containing health outcomes selectable for tables
+tableOutcomes = {
+    'Infections', 'Cases', 'Hospitalisations', 
+    'Deaths', 'ICU Visits', 'GP Visits'
+}
 # Dictionary getting adjective forms of health outcomes
 outcomeAdjectives = {
     'Infections': 'Infected', 'Cases': 'Diagnosed', 
-    'Hospitalisations': 'Hospitalised', 'ICU Visits': 'Severely Ill', 
-    'GP Visits': 'Visiting', 'Deaths': 'Dead'
+    'Hospitalisations': 'Hospitalised', 'Deaths': 'Dead', 
+    'ICU Visits': 'Severely Ill', 'GP Visits': 'Visiting'
 }

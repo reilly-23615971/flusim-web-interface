@@ -34,7 +34,7 @@ def formatInfectionData(data):
         'Day', var_name = 'Simulation', value_name = 'Rate'
     )
 
-st.title('Flusim Project Web Interface')
+st.title('Flusim Disease Model Web Dashboard')
 
 # Get data and plot as a line graph
 if st.session_state.modelData is None: st.write((

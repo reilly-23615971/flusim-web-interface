@@ -32,7 +32,9 @@ pages = {
 }
 
 # Initialise session variables
-sessionParameters = {'modelData': None, 'simulationInProgress': False}
+sessionParameters = {
+    'modelData': None, 'simulationInProgress': False, 'outcomeFieldCount': 1
+}
 for parameter, default in sessionParameters.items(): 
     st.session_state.setdefault(parameter, default)
 
@@ -43,6 +45,7 @@ for parameter, default in sessionParameters.items():
 def runSimulationButton():
     st.session_state.simulationInProgress = True
     runModelWrapper()
+    # TODO: Inform user if server doesn't respond
 
 
 
@@ -52,9 +55,29 @@ def runSimulationButton():
 # different parameters to run in parallel
 # TODO: Check if server is available and grey out button if not
 parameterSidebar = st.sidebar
-beta = parameterSidebar.slider('Beta', 0.01, 10.0, 0.11, key = 'beta')
-npi = parameterSidebar.selectbox('NPI Presets', ['None', 'Low', 'Medium', 'High'], key = 'npi')
-runModelButton = parameterSidebar.button('Run Simulation', on_click = runSimulationButton)
+modelParameters = parameterSidebar.form('modelParameters')
+beta = modelParameters.slider('Beta', 0.01, 10.0, 0.11, key = 'beta')
+npi = modelParameters.selectbox('NPI Presets', ['None', 'Low', 'Medium', 'High'], key = 'npi')
+
+caseRatio = modelParameters.slider(
+    'Diagnosed Case Ratio', 0.0, 1.0, 0.5, key = 'caseRatio'
+)
+hospitalRatio = modelParameters.slider(
+    'Hospitalisation Rate', 0.0, 0.5, 0.25, key = 'hospitalRatio'
+)
+deathRatio = modelParameters.slider(
+    'Mortality Rate', 0.0, 0.25, 0.05, key = 'deathRatio'
+)
+icuRatio = modelParameters.slider(
+    'ICU Visit Ratio', 0.0, 0.5, 0.1, key = 'icuRatio'
+)
+gpRatio = modelParameters.slider(
+    'GP Visit Rate', 0.0, 1.0, 0.333, key = 'gpRatio'
+)
+
+runModelButton = modelParameters.form_submit_button(
+    'Run Simulation', on_click = runSimulationButton
+)
 
 # Initialise and run the application pages
 flusimPages = st.navigation(pages)

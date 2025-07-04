@@ -5,7 +5,7 @@
 import streamlit as st
 
 # Create page
-st.title('Flusim Project Web Interface')
+st.title('Flusim Disease Model Web Dashboard')
 
 st.markdown(
     '''
