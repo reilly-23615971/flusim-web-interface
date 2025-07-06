@@ -1,0 +1,7 @@
+[global]
+
+disableWidgetStateDuplicationWarning = true
+
+[browser]
+
+gatherUsageStats = false

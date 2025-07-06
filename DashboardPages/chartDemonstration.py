@@ -1,5 +1,6 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
+# Temporary page demonstrating the application's graphing capabilities
 
 # Imports
 import altair as alt

@@ -1,6 +1,6 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
-# Constants and other saved variables used by the web application
+# Constants and other stored variables used by the client application
 
 # Imports
 from queue import Queue
@@ -41,4 +41,9 @@ outcomeAdjectives = {
     'Infections': 'Infected', 'Cases': 'Diagnosed', 
     'Hospitalisations': 'Hospitalised', 'Deaths': 'Dead', 
     'ICU Visits': 'Severely Ill', 'GP Visits': 'Visiting'
+}
+# Dictionary holding ordinal strings for variable-length forms
+ordinals = {
+    1: 'First', 2: 'Second', 3: 'Third', 4: 'Fourth', 5: 'Fifth', 
+    6: 'Sixth', 7: 'Seventh', 8: 'Eighth', 9: 'Ninth', 10: 'Tenth'
 }

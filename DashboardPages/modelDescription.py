@@ -1,5 +1,6 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
+# Page describing the Flusim model itself (and potentially other info)
 
 # Imports
 import streamlit as st
