@@ -31,6 +31,11 @@ ageCategories = (
     'Senior',        # 65-79 years
     'Older Senior'   # 80+ years
 )
+# Tuple holding the possible trigger conditions for NPIs
+triggerConditions = (
+    'Always', 'Timed', 'Community Case Rate', 'Community Case Count', 
+    'Cases per School', 'Cases per K-12 School'  
+)
 # Set containing health outcomes selectable for tables
 tableOutcomes = {
     'Infections', 'Cases', 'Hospitalisations', 

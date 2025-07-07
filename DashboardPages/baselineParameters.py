@@ -5,18 +5,22 @@
 # Imports
 import logging
 import streamlit as st
+# import streamlit_sortables as sts
 from ClientResources.InterfaceFunctions import (
     toggle, getRemainingAgeGroups, addFormRow, deleteFormRow
 )
-from ClientResources.SharedResources import ageCategories, ordinals
+from ClientResources.SharedResources import (
+    ageCategories, ordinals, triggerConditions
+)
 
 # Logging
 baselineLog = logging.getLogger(__name__)
 
 # Initialise session variables
 sessionParameters = {
-    'boostAgeRowCount0': 0, 
+    'vacAgeRowCount0': 0,
     'primaryDoseCount0': 2,
+    'boostAgeRowCount0': 0, 
     'boosterRemainingAgeGroups0': list(dict.fromkeys(ageCategories))
 }
 for parameter, default in sessionParameters.items(): 
@@ -24,14 +28,18 @@ for parameter, default in sessionParameters.items():
         parameter, default
     )
 
-boosterRowCount = st.session_state['boostAgeRowCount0']
+vaccineRowCount = st.session_state['vacAgeRowCount0']
 primaryRowCount = st.session_state['primaryDoseCount0']
+boosterRowCount = st.session_state['boostAgeRowCount0']
 
 # Ensure age selections only give possible parameters
 # Dictionary format: 'remaining groups variable': (
 #   'number of rows variable', 'group row variable prefix'
 # )
 ageGroupSets = {
+    'vaccineRemainingAgeGroups0': (
+        'vacAgeRowCount0', 'vacAgeGroup0-'
+    ),
     'boosterRemainingAgeGroups0': (
         'boostAgeRowCount0', 'boostAgeGroup0-'
     )
@@ -89,6 +97,8 @@ with interventionTab:
         and non-pharmaceutical interventions (NPIs) are integrated into 
         the simulation.
     ''')
+    #TODO: Generic trigger parameters?
+
     # Vaccination
     vaccineContainer = st.container()
     with vaccineContainer:
@@ -105,27 +115,264 @@ with interventionTab:
         # General Vaccination Policy Parameters
         vaccinePolicyContainer = st.expander('Vaccination Policies')
         with vaccinePolicyContainer:
-            st.markdown('to be completed')
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#DO THESE, THEN OTHER NPIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            # Describe what sort of parameters are here
+            st.markdown('''
+                These parameters control the rollout of vaccines in the 
+                simulation, with parameters such as what triggers the 
+                introduction of vaccines and how often individuals are 
+                vaccinated for the first time.
+            ''')
+
+            # Policy parameters
+            # TODO: Change population-based fields to have the 
+            # population of the current community as a maximum
+            unusedPriorityParameter = """
+                # TODO: VACCINATION PRIORITY (needs sortables package)
+                # Lacks disabling feature
+                vaccinePriorityHelp = st.markdown('', help = '''
+                    Individuals in the categories at the start of this list 
+                    will receive vaccine doses before individuals in the 
+                    categories at the end.
+                ''')
+                vaccinePriority = sts.sort_items(
+                    [
+                        'Elderly', 'Healthcare Workers', 
+                        'Essential Workers', 'Others'
+                    ],
+                    header = 'Vaccination Priority', key = 'vaccinePriority0'
+                )
+            """
+            # TODO: Trigger parameters
+            vaccineTriggerContainer = st.container()
+            with vaccineTriggerContainer:
+                vaccineTrigger = st.selectbox(
+                    'Vaccination Trigger Condition', key = f'vaccineTrigger0', 
+                    options = triggerConditions, disabled = not useVaccinesToggle,
+                    help = '''
+                        The type of condition that must be satisfied before 
+                        vaccines will start being administered in the 
+                        simulation.
+
+                        ##### Options:
+                        - Always: Vaccination will occur throughout the 
+                        entire simulation.
+                        - Timed: Vaccination will begin and end after a 
+                        specific number of days have passed in the 
+                        simulation.
+                        - Community Case Rate: Vaccination will begin if 
+                        the rate of newly diagnosed cases per day exceeds a 
+                        specific value, and will stop if the rate drops 
+                        below a different specific value afterwards.
+                        - Community Case Count: Vaccination will begin 
+                        after the number of diagnosed cases in the 
+                        community exceeds a specific value, and will 
+                        continue for the rest of the simulation.
+                    '''
+                )
+                # Show additional parameters based on trigger value
+                if vaccineTrigger == 'Timed':
+                    # TODO: Set time-based parameter maximums based on 
+                    # number of cycles in simulation
+                    vaccineTimeStart = st.slider(
+                        'Vaccination Starting Day', 0, 720, 30, 
+                        key = 'vaccineTimeStart0', 
+                        disabled = not useVaccinesToggle, help = '''
+                            The day of the simulation (starting from 
+                            Day 0) on which vaccinations will start 
+                            being administered.
+                        '''
+                    )
+                    vaccineTimeDuration = st.slider(
+                        'Vaccination Period Duration', 0, 720, 56, 
+                        key = 'vaccineTimeDuration0', 
+                        disabled = not useVaccinesToggle, help = '''
+                            The length (in days) of the period of time 
+                            in which vaccinations will be administered.
+                        '''
+                    )
+                elif vaccineTrigger == 'Community Case Rate':
+                    st.info('''
+                        Note: Due to limitations in the Flusim 
+                        model, the starting and ending rates defined 
+                        for vaccinations will be shared with any NPIs 
+                        that use community case rates as their trigger 
+                        condition.
+                    ''')
+                    #ADD THESE PARAMS!!!!!!!!!!!!!!!!
+                    #ADD THESE PARAMS!!!!!!!!!!!!!!!!
+                    #ADD THESE PARAMS!!!!!!!!!!!!!!!!
+                    #ADD THESE PARAMS!!!!!!!!!!!!!!!!
+                    #ADD THESE PARAMS!!!!!!!!!!!!!!!!
+                    #ADD THESE PARAMS!!!!!!!!!!!!!!!!
+                    #ADD THESE PARAMS!!!!!!!!!!!!!!!!
+                    #ADD THESE PARAMS!!!!!!!!!!!!!!!!
+                    #ADD THESE PARAMS!!!!!!!!!!!!!!!!
+                    #ADD THESE PARAMS!!!!!!!!!!!!!!!!
+                    #ADD THESE PARAMS!!!!!!!!!!!!!!!!
+                    #ADD THESE PARAMS!!!!!!!!!!!!!!!!
+                    #ADD THESE PARAMS!!!!!!!!!!!!!!!!
+                    #ADD THESE PARAMS!!!!!!!!!!!!!!!!
+                    #ADD THESE PARAMS!!!!!!!!!!!!!!!!
+                    #ADD THESE PARAMS!!!!!!!!!!!!!!!!#ADD THESE PARAMS!!!!!!!!!!!!!!!!
+                    
+            initialDoseReserve = st.number_input(
+                'Initial Number of Available Doses', 0, 300000, 
+                key = 'initialDoseReserve0', 
+                placeholder = 'Enter a whole number of doses',
+                disabled = not useVaccinesToggle, help = '''
+                    The number of vaccine doses that will be available 
+                    to administer to individuals at the beginning of 
+                    the simulation.
+                '''
+            )
+            firstDoseRate = st.number_input(
+                'Daily Vaccination Rate (First Dose)', 0, 300000, 300,
+                key = 'firstDoseRate0', 
+                placeholder = 'Enter a whole number of people',
+                disabled = not useVaccinesToggle, help = '''
+                    The number of unvaccinated individuals who will 
+                    receive the first dose of the vaccine each day, 
+                    assuming there are enough doses available.
+                '''
+            )
+            initialVaccinated = st.slider(
+                'Initial Vaccinated Proportion', 0.0, 1.0, 0.0,
+                disabled = not useVaccinesToggle, 
+                key = 'initialVaccinated0', help = '''
+                    The proportion of the population that will already 
+                    be vaccinated against the disease at the beginning 
+                    of the simulation.
+                '''
+            )
+            targetEfficacy = st.slider(
+                'Target Vaccinated Proportion', 0.0, 1.0, 0.8,
+                disabled = not useVaccinesToggle, 
+                key = 'targetEfficacy0', help = '''
+                    The proportion of the population that will be 
+                    targeted by the vaccine program in the simulation. 
+                    The actual proportion of the population that is 
+                    vaccinated may be lower if there are an 
+                    insufficient number of doses available.
+                '''
+            )
+
+            # Modifiable-length field for age-specific efficacy
+            st.markdown('### Age-Specific Vaccinated Proportion Parameters')
+            vacAgeProportionContainer = st.container()
+            for i in range(vaccineRowCount):
+                (
+                    vacAgeGroupColumn, vacAgeInitialColumn, 
+                    vacAgeTargetColumn, vacAgeRemoveColumn
+                ) = vacAgeProportionContainer.columns(
+                    (0.25, 0.275, 0.275, 0.2)
+                )
+                # Age group column
+                with vacAgeGroupColumn: vacAgeGroups = st.selectbox(
+                    'Age Group', key = f'vacAgeGroup0-{i}', 
+                    # Set age group options such that only ages that 
+                    # haven't been selected yet can be selected
+                    options = (
+                        [st.session_state.get(f'vacAgeGroup0-{i}')] 
+                        + [
+                            group for group in st.session_state[
+                                'vaccineRemainingAgeGroups0'
+                            ] if group != st.session_state.get(
+                                f'vacAgeGroup0-{i}'
+                            )
+                        ] if st.session_state.get(f'vacAgeGroup0-{i}') 
+                        else st.session_state['vaccineRemainingAgeGroups0']
+                    ), 
+                    disabled = (
+                        not useVaccinesToggle or not vaccineRowCount < 10
+                    ),
+                    help = '''
+                        An age group that will have specific 
+                        vaccination initial and target proportions 
+                        defined for it, overriding the base proportions.
+
+                        ##### Options:
+                        - Young Infant: 0-6 months old.
+                        - Infant: 7-24 months old.
+                        - Young Child: 3-5 years old.
+                        - Child: 6-12 years old.
+                        - Adolescent: 13-17 years old.
+                        - Young Adult: 18-24 years old.
+                        - Adult: 25-44 years old.
+                        - Older Adult: 45-64 years old.
+                        - Senior: 65-79 years old.
+                        - Older Senior: 80+ years old.
+                    '''
+                )
+                # Standard efficacy column
+                with vacAgeInitialColumn: vacAgeInitial = st.slider(
+                    'Initial Proportion', 0.0, 1.0, 0.0,
+                    disabled = not useVaccinesToggle, 
+                    key = f'vacAgeInitial0-{i}', help = '''
+                        The proportion of individuals in this age group 
+                        that will already be vaccinated against the 
+                        disease at the beginning of the simulation.
+                    '''
+                )
+                # Waned efficacy column
+                with vacAgeTargetColumn: vacAgeTarget = st.slider(
+                    'Target Proportion', 0.0, 1.0, 0.8,
+                    disabled = not useVaccinesToggle, 
+                    key = f'vacAgeTarget0-{i}', help = '''
+                        The proportion of individuals in this age group 
+                        that will be targeted by the vaccine program in 
+                        the simulation. The actual proportion of 
+                        individuals that are vaccinated may be lower if 
+                        there are an insufficient number of doses 
+                        available.
+                    '''
+                )
+                # Delete button column
+                with vacAgeRemoveColumn: vacAgeRemoveButtons = st.button(
+                    label = 'Remove Age Group', icon = ':material/delete:', 
+                    key = f'vacAgeRemove0-{i}', on_click = deleteFormRow, 
+                    args = (
+                        i, 'vacAgeRowCount0', {
+                            'vacAgeGroup0-', 'vacAgeInitial0-', 
+                            'vacAgeTarget0-'
+                        }
+                    ),
+                    disabled = not useVaccinesToggle, help = '''
+                        Remove this row of the form and remove these 
+                        age-specific vaccine proportion values from the 
+                        simulation.
+                    '''
+                )
+            # Button to add another row for additional age specification
+            vacAgeAddButton = vacAgeProportionContainer.button(
+                label = 'Add Age Group', icon = ':material/add:', 
+                on_click = addFormRow, key = 'vacAgeAdd0', 
+                args = (
+                    'vacAgeRowCount0', {
+                        f'vacAgeGroup0-{vaccineRowCount}': 
+                        (
+                            st.session_state['vaccineRemainingAgeGroups0'][0] 
+                            if st.session_state['vaccineRemainingAgeGroups0'] 
+                            else None
+                        ),
+                        f'vacAgeInitial0-{vaccineRowCount}': 
+                        initialVaccinated,
+                        f'vacAgeTarget0-{vaccineRowCount}': 
+                        targetEfficacy,
+                    }
+                ), 
+                disabled = (
+                    not useVaccinesToggle or not vaccineRowCount < 10
+                ),
+                help = '''
+                    Add another row to this form, where you can select 
+                    an additional age group to have unique booster 
+                    vaccine efficacy values.
+                ''' if vaccineRowCount <= 9 else '''
+                    All age groups have been given unique booster 
+                    vaccine efficacy values.
+                '''
+            )
+
 
 
 

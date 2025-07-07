@@ -21,6 +21,11 @@ from ClientResources.SharedResources import (
 functionLog = logging.getLogger(__name__)
 
 
+"""
+Function to generate a JSON config file using the parameters set by the user
+"""
+# Keep in mind that cycles are zero-indexed (at least in Dynamic 
+# Immunity)! Subtract one from days if necessary
 
 """
 Function to send JSON model parameters to the server, awaiting a 

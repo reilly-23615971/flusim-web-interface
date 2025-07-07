@@ -1,0 +1,10 @@
+aiohttp>=3.11.10
+altair>=5.5.0
+annotated-types>=0.6.0
+matplotlib>=3.10.0
+pandas>=2.2.3
+pydantic>=2.10.3
+streamlit>=1.45.1
+streamlit-sortables>=0.3.1
+typing_extensions>=4.12.2
+watchdog>=4.0.2
