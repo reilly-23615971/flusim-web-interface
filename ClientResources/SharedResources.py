@@ -33,7 +33,7 @@ ageCategories = (
 )
 # Tuple holding the possible trigger conditions for NPIs
 triggerConditions = (
-    'Always', 'Timed', 'Community Case Rate', 'Community Case Count', 
+    'Always', 'Timed', 'Community Case Rate', 'Community Case Total', 
     'Cases per School', 'Cases per K-12 School'  
 )
 # Set containing health outcomes selectable for tables
