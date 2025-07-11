@@ -16,6 +16,11 @@ serverUrl = 'http://127.0.0.1:8000/'
 # Queue used to store CSV data from completed server requests
 resultQueue = Queue()
 
+# Dictionary holding ordinal strings for variable-length forms
+ordinals = {
+    1: 'First', 2: 'Second', 3: 'Third', 4: 'Fourth', 5: 'Fifth', 
+    6: 'Sixth', 7: 'Seventh', 8: 'Eighth', 9: 'Ninth', 10: 'Tenth'
+}
 # Dictionary getting the population of each community the simulator uses
 population = {'cairns': 140402, 'newcastle': 272407}
 # Tuple holding the possible age categories used by the simulator
@@ -31,11 +36,6 @@ ageCategories = (
     'Senior',        # 65-79 years
     'Older Senior'   # 80+ years
 )
-# Tuple holding the possible trigger conditions for NPIs
-triggerConditions = (
-    'Always', 'Timed', 'Community Case Rate', 'Community Case Total', 
-    'Cases per School', 'Cases per K-12 School'  
-)
 # Set containing health outcomes selectable for tables
 tableOutcomes = {
     'Infections', 'Cases', 'Hospitalisations', 
@@ -47,8 +47,18 @@ outcomeAdjectives = {
     'Hospitalisations': 'Hospitalised', 'Deaths': 'Dead', 
     'ICU Visits': 'Severely Ill', 'GP Visits': 'Visiting'
 }
-# Dictionary holding ordinal strings for variable-length forms
-ordinals = {
-    1: 'First', 2: 'Second', 3: 'Third', 4: 'Fourth', 5: 'Fifth', 
-    6: 'Sixth', 7: 'Seventh', 8: 'Eighth', 9: 'Ninth', 10: 'Tenth'
-}
+
+# Tuple holding the names of the different possible NPIs
+npis = (
+    'Vaccination', 'School Closure', 'Withdrawal Increase', 
+    'Reduced Group Size', 'Background Contact Count Reduction'
+)
+# Tuple holding the camelCase names of NPIs for anchor tags and the like
+npiCamel = (
+    'vaccination', 'schoolClosure', 'withdrawalIncrease', 'reducedGroup', 'bcc'
+)
+# Tuple holding the possible trigger conditions for NPIs
+triggerConditions = (
+    'Always', 'Timed', 'Community Case Rate', 'Community Case Total', 
+    'Cases per School', 'Cases per K-12 School'  
+)
