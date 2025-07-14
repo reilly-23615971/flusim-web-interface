@@ -113,7 +113,7 @@ with interventionTab:
             'Enable Vaccines in Simulation', value = True, 
             key = 'vaccineToggle0', help = '''
                 Toggle whether or not individuals in the simulation 
-                will be vaccinated against the disease. Overrides all 
+                will be vaccinated against the disease, overriding all 
                 other vaccine-related parameters.
             '''
         )
@@ -363,7 +363,8 @@ with interventionTab:
                     vaccine efficacy values.
                 ''' if vaccineRowCount <= 9 else '''
                     All age groups have been given unique booster 
-                    vaccine efficacy values.
+                    vaccine efficacy values, so a new age group cannot 
+                    be added.
                 '''
             )
 
@@ -374,7 +375,7 @@ with interventionTab:
         with primaryContainer:
             # Describe primary vaccines
             st.markdown('''
-                These parameters control the properties of the initial 
+                These parameters control the properties of the main
                 program of vaccines that will be administered to 
                 individuals within the simulation. Each vaccine in the 
                 program can have its own efficacy values set, since in 
@@ -384,22 +385,25 @@ with interventionTab:
 
             # Universal primary parameters
             primaryDoseCount = st.slider(
-                'Number of Primary Doses', 1, 5, 2, key = 'primaryDoseCount0',
+                'Number of Vaccine Doses', 1, 5, 2, key = 'primaryDoseCount0',
                 disabled = not useVaccinesToggle, help = '''
                     The number of times each individual in the 
-                    simulation will be administered a vaccine in the 
-                    initial vaccine program. Note that modifying this 
-                    value will affect the individual dose parameters 
-                    below.
+                    simulation will be administered a vaccine for the 
+                    disease, excluding booster vaccines. 
+                    
+                    Note that since efficacy is defined separately for 
+                    each vaccine dose in the program, modifying this 
+                    value will change the number of fields for 
+                    specifying efficacy below.
                 '''
             )
             primaryDelay = st.slider(
                 'Time Between Vaccine Doses (Days)', 1, 180, 56,
                 disabled = not useVaccinesToggle, key = 'primaryDelay0', 
                 help = '''
-                    The number of days after an individual receives one 
-                    primary vaccine dose before they are able to 
-                    receive another.
+                    The number of days after an individual receives a 
+                    vaccine dose before they are able to receive 
+                    another.
                 '''
             )
             primaryDuration = st.slider(
@@ -407,8 +411,8 @@ with interventionTab:
                 disabled = not useVaccinesToggle, key = 'primaryDuration0', 
                 help = '''
                     The number of days after an individual receives a 
-                    primary vaccine dose before the immunity conferred 
-                    by this vaccine begins to diminish.
+                    vaccine dose before the immunity conferred by this 
+                    vaccine begins to diminish.
                 '''
             )
             # TODO: See if better methods of representing waning rate 
@@ -419,8 +423,8 @@ with interventionTab:
                 disabled = not useVaccinesToggle, key = 'primaryWaningRate0', 
                 help = '''
                     The probability that an individual will lose the 
-                    immunity conferred by a primary vaccine dose each 
-                    day after the vaccine's duration has passed.
+                    immunity conferred by a vaccine dose each day after 
+                    the vaccine's duration has passed.
                 '''
             )
 
@@ -428,13 +432,15 @@ with interventionTab:
             st.markdown('''
                 ### Individual Dose Efficacies
                 
-                Modify the "Number of Primary Doses" parameter to 
-                change how many doses can be configured here.
+                Here you can set the efficacy of each vaccine dose in 
+                the program separately. Changing the "Number of Vaccine 
+                Doses" parameter will alter how many filed are present 
+                here.
             ''')
             for i in range(primaryDoseCount):
                 doseEfficacyContainer = st.container(border = True)
                 doseEfficacyContainer.markdown(
-                    f'#### {ordinals[i+1]} Primary Dose'
+                    f'#### {ordinals[i+1]} Vaccine Dose'
                 )
                 doseBaseEfficacy = doseEfficacyContainer.slider(
                     'Dose Efficacy (Proportion of Population)', 
@@ -598,11 +604,14 @@ with interventionTab:
             st.markdown('''
                 These parameters control the properties of booster 
                 vaccines, additional doses of a vaccine only 
-                administered to individuals who have received all 
-                primary vaccines. All doses of booster vaccines have 
-                the same efficacy values. Booster vaccines are 
-                primarily used to preserve an individual's immunity to 
-                the disease as it begins to wane over time.
+                administered to individuals who have already received 
+                all vaccines in the initial program. Unlike the main 
+                vaccine doses defined above, all booster vaccine doses 
+                share the same efficacy values. Booster vaccines are 
+                primarily used with diseases like COVID-19, 
+                meningococcal disease and diphtheria to preserve an 
+                individual's immunity to the disease as it wanes over 
+                time.
             ''')
 
             # Universal booster parameters
