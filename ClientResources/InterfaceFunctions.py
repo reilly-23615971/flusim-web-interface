@@ -40,17 +40,15 @@ Parameters:
 """
 def getRemainingAgeGroups(groupSets):
     for set, (rowCount, prefix) in groupSets.items():
-        #functionLog.info(f'Modifying set "{set}" using {rowCount} variables with prefix {prefix}') #DEBUG
+        # Calculate age groups that haven't been used yet
         remainingGroups = dict.fromkeys(ageCategories)
-        #functionLog.info(f'Current groups: {remainingGroups}') #DEBUG
         takenGroups = [
             st.session_state.get(f'{prefix}{i}') 
             for i in range(st.session_state[rowCount])
         ]
-        #functionLog.info(f'Groups present in variables: {takenGroups}') #DEBUG
         for group in takenGroups: 
             if group: remainingGroups.pop(group, None)
-        #functionLog.info(f'Final groups: {remainingGroups}') #DEBUG
+        # Save the new age groups
         st.session_state[set] = list(remainingGroups.keys())
 
 """

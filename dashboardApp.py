@@ -61,7 +61,7 @@ pages = {
 # Initialise session variables
 sessionParameters = {
     'modelData': None, 'simulationInProgress': False, 
-    'outcomeFieldCount': 1, 'boosterAgeSpecificRows0': 0
+    'outcomeFieldCount': 1
 }
 for parameter, default in sessionParameters.items(): 
     st.session_state[parameter] = st.session_state.setdefault(
