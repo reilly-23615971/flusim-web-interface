@@ -4,6 +4,7 @@
 
 # Imports
 import logging
+import numpy as np
 import streamlit as st
 # import streamlit_sortables as sts
 from ClientResources.InterfaceFunctions import (
@@ -20,6 +21,7 @@ baselineLog = logging.getLogger(__name__)
 sessionParameters = {
     'vacAgeRowCount0': 0,
     'primaryDoseCount0': 2,
+    'primWanedRowCount0': 0,
     'boostAgeRowCount0': 0, 
     'boosterRemainingAgeGroups0': list(dict.fromkeys(ageCategories))
 }
@@ -30,6 +32,7 @@ for parameter, default in sessionParameters.items():
 
 vaccineRowCount = st.session_state['vacAgeRowCount0']
 primaryRowCount = st.session_state['primaryDoseCount0']
+primaryWanedRowCount = st.session_state['primWanedRowCount0']
 boosterRowCount = st.session_state['boostAgeRowCount0']
 
 # Ensure age selections only give possible parameters
@@ -39,6 +42,9 @@ boosterRowCount = st.session_state['boostAgeRowCount0']
 ageGroupSets = {
     'vaccineRemainingAgeGroups0': (
         'vacAgeRowCount0', 'vacAgeGroup0-'
+    ),
+    'primaryRemainingWanedGroups0': (
+        'primWanedRowCount0', 'primWanedGroup0-'
     ),
     'boosterRemainingAgeGroups0': (
         'boostAgeRowCount0', 'boostAgeGroup0-'
@@ -60,8 +66,18 @@ primaryAgeRowCounts = [
 
 getRemainingAgeGroups(ageGroupSets)
 
+nonCanon = """
+# Hide slider min/max labels
+hide_elements = '''
+    <style> div[data-testid = 'stSliderTickBar'] {
+        display: none;
+    } </style>
+'''
+st.html(hide_elements)
+"""
+
+
 # TODO: Warn for nonsensical conditions like reduced BCC > regular BCC
-# TODO: Equalise rate/case condition triggers
 # TODO: Split off tabs into their own files, both for file size 
 # reduction and preparation for scenario implementation
 
@@ -85,6 +101,9 @@ st.markdown('''
     explanation of what that button does.
 ''')
 
+# Place to put warnings errors in the current parameter selection
+alertContainer = st.container()
+
 #TODO: Add more configurable parameters/tabs
 #TODO: Consider having templates that load parameters for specific stuff
 # Tab ideas: Environment? Health Outcome?
@@ -105,6 +124,16 @@ with interventionTab:
         the simulation.
     ''')
 
+    # Potential Catchable Errors:
+    # - Duration of NPI is longer that simulation length/simulation 
+    #   ends before timed NPI does
+    # - Initial vaccinated proportion is greater than target vaccinated 
+    #   proportion (including age-specific versions)
+    # - Vaccine total program length is greater than simulation time
+    # - Final waned efficacy is grater than initial efficacy (including 
+    #   age-specific versions and boosters if possible)
+    # - Effect of NPI is weaker than base parameters
+
     # Vaccination
     vaccineContainer = st.container()
     with vaccineContainer:
@@ -120,8 +149,7 @@ with interventionTab:
 
         # General Vaccination Policy Parameters
         st.html('<span id = "vaccinationTriggerCondition"></span>')
-        vaccinePolicyContainer = st.expander('Vaccination Policies')
-        with vaccinePolicyContainer:
+        with st.expander('Vaccination Policies'):
             # Describe what sort of parameters are here
             st.markdown('''
                 These parameters control the rollout of vaccines in the 
@@ -131,10 +159,9 @@ with interventionTab:
             ''')
 
             # Policy parameters
-            # TODO: Change population-based fields to have the 
+            # TODO: Change relevant population-based fields to have the 
             # population of the current community as a maximum
-            vaccineTriggerContainer = st.container(border = True)
-            with vaccineTriggerContainer:
+            with st.container(border = True):
                 vaccineTrigger = st.selectbox(
                     'Vaccination Trigger Condition', key = f'vaccineTrigger0', 
                     options = triggerConditions[:-2], 
@@ -181,7 +208,7 @@ with interventionTab:
                         '''
                     )
                     vaccineTimeDuration = st.slider(
-                        'Vaccination Period Duration (Days)', 0, 720, 56, 
+                        'Vaccination Period Duration (Days)', 1, 720, 56, 
                         key = 'vaccineTimeDuration0', 
                         disabled = not useVaccinesToggle, help = '''
                             The length (in days) of the period of time 
@@ -210,9 +237,9 @@ with interventionTab:
                     directly).
                 ''')
             # Other vaccine program parameters
-            initialDoseReserve = st.number_input(
+            st.number_input(
                 'Starting Number of Available Doses', 
-                0, 300000, key = 'initialDoseReserve0', 
+                0, key = 'initialDoseReserve0', 
                 placeholder = 'Enter a whole number of doses',
                 disabled = not useVaccinesToggle, help = '''
                     The number of vaccine doses that will be available 
@@ -220,30 +247,33 @@ with interventionTab:
                     the simulation.
                 '''
             )
-            firstDoseRate = st.number_input(
+            st.number_input(
                 'First Dose Vaccination Rate (Vaccinations per Day)', 
-                0, 300000, 300, key = 'firstDoseRate0', 
+                1, value = 300, key = 'firstDoseRate0', 
                 placeholder = 'Enter a whole number of people',
                 disabled = not useVaccinesToggle, help = '''
                     The number of unvaccinated individuals who will 
                     receive the first dose of the vaccine each day, 
-                    assuming there are enough doses available.
+                    assuming there are enough doses available. Must be 
+                    a whole number greater than 0.
                 '''
             )
-            initialVaccinated = st.slider(
-                'Initial Vaccinated Proportion of Population', 0.0, 1.0, 0.0,
-                disabled = not useVaccinesToggle, key = 'initialVaccinated0', 
-                help = '''
-                    The proportion of the population that will already 
+            initialVaccinated = st.select_slider(
+                'Initial Vaccinated Proportion of Population', 
+                np.linspace(0.0, 1.0, 1001), 0.0, key = 'initialVaccinated0', 
+                format_func = lambda x: f'{100 * x:0.3g}%',
+                disabled = not useVaccinesToggle, help = '''
+                    The percentage of the population that will already 
                     be vaccinated against the disease at the beginning 
                     of the simulation.
                 '''
             )
-            targetEfficacy = st.slider(
-                'Target Vaccinated Proportion of Population', 0.0, 1.0, 0.8,
-                disabled = not useVaccinesToggle, key = 'targetEfficacy0', 
-            help = '''
-                    The proportion of the population that will be 
+            targetVaccinated = st.select_slider(
+                'Target Vaccinated Proportion of Population', 
+                np.linspace(0.0, 1.0, 1001), 0.8, key = 'targetVaccinated0', 
+                format_func = lambda x: f'{100 * x:0.3g}%', 
+                disabled = not useVaccinesToggle, help = '''
+                    The percentage of the population that will be 
                     targeted by the vaccine program in the simulation. 
                     The actual proportion of the population that is 
                     vaccinated may be lower if there are an 
@@ -251,8 +281,20 @@ with interventionTab:
                 '''
             )
 
-            # Modifiable-length field for age-specific efficacy
-            st.markdown('### Age-Specific Vaccinated Proportion Parameters')
+            # Store age-based proportion values for error checking
+            vacAgeInitials, vacAgeTargets = {}, {}
+
+            # Modifiable-length field for age-specific vaccination
+            # TODO: Show warnings if age specific targets are below 
+            # initial values
+            st.markdown('''
+                ### Age-Specific Vaccinated Proportion Parameters
+                
+                This section allows for unique vaccinated proportion 
+                parameters to be defined for individual age groups in 
+                the simulation, overriding the global parameters 
+                defined above.
+            ''')
             vacAgeProportionContainer = st.container()
             for i in range(vaccineRowCount):
                 (
@@ -262,7 +304,7 @@ with interventionTab:
                     (0.25, 0.275, 0.275, 0.2)
                 )
                 # Age group column
-                with vacAgeGroupColumn: vacAgeGroups = st.selectbox(
+                with vacAgeGroupColumn: vacAgeGroup = st.selectbox(
                     'Age Group', key = f'vacAgeGroup0-{i}', 
                     # Set age group options such that only ages that 
                     # haven't been selected yet can be selected
@@ -298,31 +340,38 @@ with interventionTab:
                         - Older Senior: 80+ years old.
                     '''
                 )
-                # Standard efficacy column
-                with vacAgeInitialColumn: vacAgeInitial = st.slider(
-                    'Initial Proportion', 0.0, 1.0, 0.0,
-                    disabled = not useVaccinesToggle, 
-                    key = f'vacAgeInitial0-{i}', help = '''
-                        The proportion of individuals in this age group 
-                        that will already be vaccinated against the 
-                        disease at the beginning of the simulation.
-                    '''
-                )
-                # Waned efficacy column
-                with vacAgeTargetColumn: vacAgeTarget = st.slider(
-                    'Target Proportion', 0.0, 1.0, 0.8,
-                    disabled = not useVaccinesToggle, 
-                    key = f'vacAgeTarget0-{i}', help = '''
-                        The proportion of individuals in this age group 
-                        that will be targeted by the vaccine program in 
-                        the simulation. The actual proportion of 
-                        individuals that are vaccinated may be lower if 
-                        there are an insufficient number of doses 
-                        available.
-                    '''
-                )
+                # Initial proportion column
+                with vacAgeInitialColumn: 
+                    vacAgeInitials[vacAgeGroup] = st.select_slider(
+                        'Initial Vaccinated Proportion of Population', 
+                        np.linspace(0.0, 1.0, 1001), 0.0,  
+                        format_func = lambda x: f'{100 * x:0.3g}%',
+                        disabled = not useVaccinesToggle, 
+                        key = f'vacAgeInitial0-{i}', help = '''
+                            The percentage of individuals in this age 
+                            group that will already be vaccinated 
+                            against the disease at the beginning of the 
+                            simulation.
+                        '''
+                    )
+                # Target proportion column
+                with vacAgeTargetColumn: 
+                    vacAgeTargets[vacAgeGroup] = st.select_slider(
+                        'Target Vaccinated Proportion of Population', 
+                        np.linspace(0.0, 1.0, 1001), 0.8, 
+                        format_func = lambda x: f'{100 * x:0.3g}%',
+                        disabled = not useVaccinesToggle, 
+                        key = f'vacAgeTarget0-{i}', help = '''
+                            The percentage of individuals in this age 
+                            group that will be targeted by the vaccine 
+                            program in the simulation. The actual 
+                            proportion of individuals that are 
+                            vaccinated may be lower if there are an 
+                            insufficient number of doses available.
+                        '''
+                    )
                 # Delete button column
-                with vacAgeRemoveColumn: vacAgeRemoveButtons = st.button(
+                with vacAgeRemoveColumn: st.button(
                     label = 'Remove Age Group', icon = ':material/delete:', 
                     key = f'vacAgeRemove0-{i}', on_click = deleteFormRow, 
                     args = (
@@ -338,7 +387,7 @@ with interventionTab:
                     '''
                 )
             # Button to add another row for additional age specification
-            vacAgeAddButton = vacAgeProportionContainer.button(
+            vacAgeProportionContainer.button(
                 label = 'Add Age Group', icon = ':material/add:', 
                 on_click = addFormRow, key = 'vacAgeAdd0', args = (
                     'vacAgeRowCount0', {
@@ -351,7 +400,7 @@ with interventionTab:
                         f'vacAgeInitial0-{vaccineRowCount}': 
                         initialVaccinated,
                         f'vacAgeTarget0-{vaccineRowCount}': 
-                        targetEfficacy,
+                        targetVaccinated,
                     }
                 ), 
                 disabled = (
@@ -359,20 +408,19 @@ with interventionTab:
                 ),
                 help = '''
                     Add another row to this form, where you can select 
-                    an additional age group to have unique booster 
-                    vaccine efficacy values.
+                    an additional age group to have unique vaccinated 
+                    proportion values.
                 ''' if vaccineRowCount <= 9 else '''
-                    All age groups have been given unique booster 
-                    vaccine efficacy values, so a new age group cannot 
-                    be added.
+                    All age groups have been given unique vaccinated 
+                    proportion values, so a new age group cannot be 
+                    added.
                 '''
             )
 
 
 
         # Primary Vaccine Parameters
-        primaryContainer = st.expander('Primary Vaccine Properties')
-        with primaryContainer:
+        with st.expander('Primary Vaccine Properties'):
             # Describe primary vaccines
             st.markdown('''
                 These parameters control the properties of the main
@@ -406,8 +454,8 @@ with interventionTab:
                     another.
                 '''
             )
-            primaryDuration = st.slider(
-                'Vaccine Effective Duration (Days)', 1, 180, 30, 
+            st.slider(
+                'Vaccine Immunity Waning Delay (Days)', 1, 180, 30, 
                 disabled = not useVaccinesToggle, key = 'primaryDuration0', 
                 help = '''
                     The number of days after an individual receives a 
@@ -415,8 +463,25 @@ with interventionTab:
                     vaccine begins to diminish.
                 '''
             )
+            primaryWanedEfficacy = st.select_slider(
+                ((
+                    'Dose Efficacy After Immunity '
+                    'Waning (Proportion of Population)'
+                )), 
+                np.linspace(0.0, 1.0, 1001), 0.0, 
+                format_func = lambda x: f'{100 * x:0.3g}%', 
+                disabled = not useVaccinesToggle, 
+                key = f'primaryWanedEfficacy0', help = '''
+                    The final efficacy value that the vaccine program 
+                    will approach as the immunity it provides begins to 
+                    diminish, represented as the percentage of 
+                    individuals with completely waned immunity who will 
+                    not become infected when exposed to the disease.
+                '''
+            )
             # TODO: See if better methods of representing waning rate 
             # (e.g. vaccine effectiveness dropoff) are feasible
+            oldPrimaryWaningRate = """
             primaryWaningRate = st.slider(
                 'Vaccine Immunity Waning Rate (Probability)', 0.0, 0.02, 0.005,
                 step = 0.0005, format = '%0.4g', 
@@ -427,57 +492,199 @@ with interventionTab:
                     the vaccine's duration has passed.
                 '''
             )
+            """
+            st.slider(
+                'Vaccine Waning Duration (Days)', 0, 720, 180,
+                disabled = not useVaccinesToggle, key = 'primaryWaningRate0', 
+                help = '''
+                    The number of days after the immunity from a 
+                    vaccine dose begins waning before the efficacy of 
+                    the vaccine stabilises. Vaccine-conferred immunity 
+                    in the *Flusim* simulation will wane at a linear 
+                    rate, so this parameter represents how long it 
+                    takes for the vaccine's efficacy to decrease from 
+                    the final dose's initial value to its final value.
+
+                    If this parameter is set to 0, the immunity 
+                    provided by the main vaccine program will never 
+                    diminish.
+                '''
+            )
+
+            # Store age-based waned efficacy values for error checking
+            primAgeWaneds = {}
+
+            # Age-Specific Waned Efficacy Field
+            st.markdown('''
+                #### Age-Specific Efficacy After Immunity Waning
+                
+                This section allows for unique final efficacy values 
+                after immunity waning to be defined for individual age 
+                groups in the simulation, overriding the global waned 
+                efficacy defined above.
+            ''')
+            primWanedContainer = st.container()
+            for i in range(primaryWanedRowCount):
+                (
+                    primWanedGroupColumn, primWanedEffColumn, 
+                    primWanedRemoveColumn
+                ) = primWanedContainer.columns((0.25, 0.55, 0.2))
+                # Age group column
+                with primWanedGroupColumn: primWanedAgeGroup = st.selectbox(
+                    'Age Group', key = f'primWanedGroup0-{i}', 
+                    # Set age group options such that only ages that 
+                    # haven't been selected yet can be selected
+                    options = (
+                        [st.session_state.get(f'primWanedGroup0-{i}')] 
+                        + [
+                            group for group in st.session_state[
+                                f'primaryRemainingWanedGroups0'
+                            ] if group != st.session_state.get(
+                                f'primWanedGroup0-{i}'
+                            )
+                        ] if st.session_state.get(f'primWanedGroup0-{i}')
+                        else st.session_state[
+                            f'primaryRemainingWanedGroups0'
+                        ]
+                    ), 
+                    disabled = (
+                        not useVaccinesToggle or not primaryWanedRowCount < 10
+                    ),
+                    help = '''
+                        An age group that will have a specific final 
+                        efficacy value after immunity waning defined 
+                        for it, overriding the base waned efficacy 
+                        value.
+
+                        ##### Options:
+                        - Young Infant: 0-6 months old.
+                        - Infant: 7-24 months old.
+                        - Young Child: 3-5 years old.
+                        - Child: 6-12 years old.
+                        - Adolescent: 13-17 years old.
+                        - Young Adult: 18-24 years old.
+                        - Adult: 25-44 years old.
+                        - Older Adult: 45-64 years old.
+                        - Senior: 65-79 years old.
+                        - Older Senior: 80+ years old.
+                    '''
+                )
+                # Waned efficacy column
+                with primWanedEffColumn: 
+                    primAgeWaneds[primWanedAgeGroup] = st.select_slider(
+                        ((
+                            'Dose Efficacy After Immunity '
+                            'Waning \n\n(Proportion of Population)'
+                        )), 
+                        np.linspace(0.0, 1.0, 1001), 0.0, 
+                        format_func = lambda x: f'{100 * x:0.3g}%', 
+                        disabled = not useVaccinesToggle, 
+                        key = f'primAgeWanedEfficacy0-{i}', help = '''
+                            The final efficacy value that the vaccine 
+                            program will approach for this age group as 
+                            the immunity it provides begins to 
+                            diminish, represented as the percentage of 
+                            individuals in this age group with 
+                            completely waned immunity who will not 
+                            become infected when exposed to the disease.
+                        '''
+                    )
+                # Delete button column
+                with primWanedRemoveColumn: st.button(
+                    label = 'Remove Age Group', icon = ':material/delete:',
+                    key = f'primWanedRemove0-{i}', 
+                    on_click = deleteFormRow, args = (
+                        i, f'primWanedRowCount0', {
+                            f'primWanedGroup0-', 
+                            f'primAgeWanedEfficacy0-'
+                        }
+                    ),
+                    disabled = not useVaccinesToggle, help = '''
+                        Remove this row of the form and remove these 
+                        age-specific vaccine waned efficacy values from 
+                        the simulation.
+                    '''
+                )
+            # Button to add another row for additional age specification
+            primWanedContainer.button(
+                label = 'Add Age Group', icon = ':material/add:', 
+                on_click = addFormRow, key = f'primWanedAdd0', args = (
+                    f'primWanedRowCount0', {
+                        f'primWanedGroup0-{primaryWanedRowCount}': 
+                        (
+                            st.session_state[
+                                f'primaryRemainingWanedGroups0'
+                            ][0] if st.session_state[
+                                f'primaryRemainingWanedGroups0'
+                            ] else None
+                        ),
+                        f'primAgeWanedEfficacy0-{primaryWanedRowCount}': 
+                        primaryWanedEfficacy
+                    }
+                ), 
+                disabled = (
+                    not useVaccinesToggle or not primaryWanedRowCount < 10
+                ),
+                help = '''
+                    Add another row to this form, where you can select 
+                    an additional age group to have unique vaccine 
+                    waned efficacy values.
+                ''' if primaryWanedRowCount <= 9 else '''
+                    All age groups have been given unique waned 
+                    efficacy values, so a new age group cannot be added.
+                '''
+            )
+
+            # Store age-based initial efficacy values for error checking
+            primDoseInitials = [None for _ in range(primaryDoseCount)]
+            primAgeInitials = [{} for _ in range(primaryDoseCount)]
 
             # Modifiable-length field for each primary dose
             st.markdown('''
                 ### Individual Dose Efficacies
                 
-                Here you can set the efficacy of each vaccine dose in 
-                the program separately. Changing the "Number of Vaccine 
-                Doses" parameter will alter how many filed are present 
-                here.
+                Here you can set the initial efficacy of each vaccine 
+                dose in the program separately. Changing the "Number of 
+                Vaccine Doses" parameter will affect how many sections 
+                are present here.
             ''')
             for i in range(primaryDoseCount):
                 doseEfficacyContainer = st.container(border = True)
                 doseEfficacyContainer.markdown(
                     f'#### {ordinals[i+1]} Vaccine Dose'
                 )
-                doseBaseEfficacy = doseEfficacyContainer.slider(
-                    'Dose Efficacy (Proportion of Population)', 
-                    0.0, 1.0, 0.5, disabled = not useVaccinesToggle, 
+                primDoseInitials[i] = doseEfficacyContainer.select_slider(
+                    'Initial Dose Efficacy (Proportion of Population)', 
+                    np.linspace(0.0, 1.0, 1001), 0.5, 
+                    format_func = lambda x: f'{100 * x:0.3g}%', 
+                    disabled = not useVaccinesToggle, 
                     key = f'primaryBaseEfficacy0-{i}', help = '''
-                        The efficacy of this vaccine dose, represented 
-                        as the proportion of individuals that have 
-                        recently received the dose who will not become 
-                        infected when exposed to the disease.
+                        The initial efficacy of this vaccine dose, 
+                        represented as the percentage of individuals 
+                        that have recently received the dose who will 
+                        not become infected when exposed to the disease.
                     '''
                 )
-                doseWanedEfficacy = doseEfficacyContainer.slider(
-                    'Dose Waned Efficacy (Proportion of Population)', 
-                    0.0, 1.0, 0.0, disabled = not useVaccinesToggle, 
-                    key = f'primaryWanedEfficacy0-{i}', help = '''
-                        The efficacy of this vaccine dose when 
-                        the immunity conferred by it has diminished but 
-                        the next dose has not been received, 
-                        represented as the proportion of individuals 
-                        with waning immunity who will not become 
-                        infected when exposed to the disease.
-                    '''
-                )
+
                 # Age-Specific Primary Efficacy Field
-                doseEfficacyContainer.markdown(
-                    '##### Age-Specific Efficacy Rates'
-                )
+                doseEfficacyContainer.markdown('''
+                    ##### Age-Specific Efficacy Rates
+                    
+                    This section allows unique initial efficacy values 
+                    for this dose to be defined for individual age 
+                    groups in the simulation, overriding the global 
+                    initial efficacy value for this dose defined above.
+                ''')
                 primAgeEfficacyContainer = doseEfficacyContainer.container()
                 for j in range(primaryAgeRowCounts[i]):
                     (
                         primAgeGroupColumn, primAgeEfficacyColumn, 
-                        primAgeWanedColumn, primAgeRemoveColumn
+                        primAgeRemoveColumn
                     ) = primAgeEfficacyContainer.columns(
-                        (0.25, 0.275, 0.275, 0.2)
+                        (0.25, 0.55, 0.2)
                     )
                     # Age group column
-                    with primAgeGroupColumn: primAgeGroups = st.selectbox(
+                    with primAgeGroupColumn: primAgeGroup = st.selectbox(
                         'Age Group', key = f'primAgeGroup0-{i}-{j}', 
                         # Set age group options such that only ages that 
                         # haven't been selected yet can be selected
@@ -500,9 +707,9 @@ with interventionTab:
                         ),
                         help = '''
                             An age group that will have specific 
-                            vaccine efficacy values defined for it, 
-                            overriding the base efficacy value for this 
-                            vaccine dose.
+                            initial vaccine efficacy values defined for 
+                            it, overriding the base efficacy value for 
+                            this vaccine dose.
 
                             ##### Options:
                             - Young Infant: 0-6 months old.
@@ -517,51 +724,40 @@ with interventionTab:
                             - Older Senior: 80+ years old.
                         '''
                     )
-                    # Standard efficacy column
-                    with primAgeEfficacyColumn: primAgeEfficacies = st.slider(
-                        'Dose Efficacy', 0.0, 1.0, 0.9, 
-                        disabled = not useVaccinesToggle, 
-                        key = f'primAgeEfficacy0-{i}-{j}', help = '''
-                            The efficacy of this vaccine dose for this 
-                            age group, represented as the proportion of 
-                            individuals in this age group that have 
-                            recently received the dose who will not 
-                            become infected when exposed to the disease.
-                        '''
-                    )
-                    # Waned efficacy column
-                    with primAgeWanedColumn: primAgeWanedEfficacies = st.slider(
-                        'Dose Waned Efficacy', 0.0, 1.0, 0.6,
-                        disabled = not useVaccinesToggle, 
-                        key = f'primAgeWanedEfficacy0-{i}-{j}', help = '''
-                            The efficacy of this vaccine dose for this 
-                            age group when the immunity conferred by it 
-                            has diminished but the next dose has not 
-                            been received, represented as the 
-                            proportion of individuals in this age group 
-                            with waning immunity who will not become 
-                            infected when exposed to the disease.
-                        '''
-                    )
+                    # Initial efficacy column
+                    with primAgeEfficacyColumn: 
+                        primAgeInitials[i][primAgeGroup] = st.select_slider(
+                            'Initial Dose Efficacy (Proportion of Population)',
+                            np.linspace(0.0, 1.0, 1001), 0.5, 
+                            format_func = lambda x: f'{100 * x:0.3g}%', 
+                            disabled = not useVaccinesToggle, 
+                            key = f'primAgeEfficacy0-{i}-{j}', help = '''
+                                The initial efficacy of this vaccine 
+                                dose for this age group, represented as 
+                                the percentage of recently vaccinated 
+                                individuals in this age group who will 
+                                not become infected when exposed to the 
+                                disease.
+                            '''
+                        )
                     # Delete button column
-                    with primAgeRemoveColumn: primAgeRemoveButtons = st.button(
+                    with primAgeRemoveColumn: st.button(
                         label = 'Remove Age Group', icon = ':material/delete:',
                         key = f'primAgeRemove0-{i}-{j}', 
                         on_click = deleteFormRow, args = (
                             i, f'primAgeRowCount0-{i}', {
                                 f'primAgeGroup0-{i}-', 
-                                f'primAgeEfficacy0-{i}-', 
-                                f'primAgeWanedEfficacy0-{i}-'
+                                f'primAgeEfficacy0-{i}-'
                             }
                         ),
                         disabled = not useVaccinesToggle, help = '''
-                            Remove this row of the form and remove these 
-                            age-specific vaccine dose efficacy values 
-                            from the simulation.
+                            Remove this row of the form and remove 
+                            these age-specific initial vaccine efficacy 
+                            values from the simulation.
                         '''
                     )
                 # Button to add another row for additional age specification
-                primAgeAddButton = primAgeEfficacyContainer.button(
+                primAgeEfficacyContainer.button(
                     label = 'Add Age Group', icon = ':material/add:', 
                     on_click = addFormRow, key = f'primAgeAdd0-{i}', args = (
                         f'primAgeRowCount0-{i}', {
@@ -574,11 +770,7 @@ with interventionTab:
                                 ] else None
                             ),
                             f'primAgeEfficacy0-{i}-{primaryAgeRowCounts[i]}': 
-                            doseBaseEfficacy,
-                            ((
-                                f'primAgeWanedEfficacy0-{i}-'
-                                f'{primaryAgeRowCounts[i]}'
-                            )): doseWanedEfficacy,
+                            primDoseInitials[i]
                         }
                     ), 
                     disabled = (
@@ -588,18 +780,18 @@ with interventionTab:
                     help = '''
                         Add another row to this form, where you can 
                         select an additional age group to have unique 
-                        vaccine dose efficacy values.
+                        initial vaccine efficacy values.
                     ''' if primaryAgeRowCounts[i] <= 9 else '''
-                        All age groups have been given unique efficacy 
-                        values for this vaccine dose.
+                        All age groups have been given unique initial 
+                        efficacy values for this vaccine dose, so a new 
+                        age group cannot be added.
                     '''
                 )
 
 
 
         # Booster Parameters
-        boosterContainer = st.expander('Booster Vaccine Properties')
-        with boosterContainer:
+        with st.expander('Booster Vaccine Properties'):
             # Describe booster vaccines
             st.markdown('''
                 These parameters control the properties of booster 
@@ -624,17 +816,7 @@ with interventionTab:
                     booster-related parameters.
                 '''
             )
-            boosterBaseEfficacy = st.slider(
-                'Booster Efficacy (Proportion of Population)', 0.0, 1.0, 0.9,
-                disabled = not useVaccinesToggle or not useBoostersToggle, 
-                key = 'boosterBaseEfficacy0', help = '''
-                    The efficacy of each booster vaccine, represented 
-                    as the proportion of individuals that have recently 
-                    received the booster who will not become infected 
-                    when exposed to the disease.
-                '''
-            )
-            boosterDoseCount = st.slider(
+            st.slider(
                 'Number of Booster Doses', 1, 10, 3, key = 'boosterDoseCount0',
                 disabled = not useVaccinesToggle or not useBoostersToggle, 
                 help = '''
@@ -651,8 +833,8 @@ with interventionTab:
                     receive another.
                 '''
             )
-            boosterDuration = st.slider(
-                'Booster Effective Duration (Days)', 1, 180, 60,
+            st.slider(
+                'Booster Immunity Waning Delay (Days)', 1, 180, 60,
                 disabled = not useVaccinesToggle or not useBoostersToggle, 
                 key = 'boosterDuration0', help = '''
                     The number of days after an individual receives a 
@@ -660,19 +842,36 @@ with interventionTab:
                     by this vaccine begins to diminish.
                 '''
             )
-            boosterWanedEfficacy = st.slider(
-                'Booster Waned Efficacy (Proportion of Population)', 0.0, 1.0, 
-                0.6, disabled = not useVaccinesToggle or not useBoostersToggle,
-                key = 'boosterWanedEfficacy0', help = '''
-                    The efficacy of the overall vaccine program once 
-                    the immunity conferred by booster vaccines has 
-                    diminished, represented as the proportion of 
-                    individuals with waning booster immunity who will 
+            boosterBaseEfficacy = st.select_slider(
+                'Initial Booster Efficacy (Proportion of Population)', 
+                np.linspace(0.0, 1.0, 1001), 0.9, key = 'boosterBaseEfficacy0',
+                disabled = not useVaccinesToggle or not useBoostersToggle, 
+                format_func = lambda x: f'{100 * x:0.3g}%', help = '''
+                    The initial efficacy of each booster vaccine, 
+                    represented as the percentage of individuals that 
+                    have recently received the booster who will not 
+                    become infected when exposed to the disease.
+                '''
+            )
+            boosterWanedEfficacy = st.select_slider(
+                ((
+                    'Booster Efficacy After Immunity '
+                    'Waning (Proportion of Population)'
+                )), 
+                np.linspace(0.0, 1.0, 1001), 0.6, 
+                key = 'boosterWanedEfficacy0', 
+                disabled = not useVaccinesToggle or not useBoostersToggle,
+                format_func = lambda x: f'{100 * x:0.3g}%', help = '''
+                    The final efficacy value that the booster vaccine 
+                    will approach as the immunity it provides begins to 
+                    diminish, represented as the percentage of 
+                    individuals with completely waned immunity who will 
                     not become infected when exposed to the disease.
                 '''
             )
             # TODO: See if better methods of representing waning rate 
             # (e.g. vaccine effectiveness dropoff) are feasible
+            oldBoosterWaningRate = """
             boosterWaningRate = st.slider(
                 'Booster Immunity Waning Rate (Probability)', 0.0, 0.02, 0.005,
                 step = 0.0005, format = '%0.4g', 
@@ -683,9 +882,36 @@ with interventionTab:
                     after the vaccine's duration has passed.
                 '''
             )
+            """
+            st.slider(
+                'Booster Waning Duration (Days)', 0, 720, 180,
+                disabled = not useVaccinesToggle or not useBoostersToggle, 
+                key = 'boosterWaningRate0', help = '''
+                    The number of days after the immunity from a 
+                    booster vaccine begins waning before the efficacy 
+                    of the vaccine stabilises. Vaccine-conferred 
+                    immunity in the *Flusim* simulation will wane at a 
+                    linear rate, so this parameter represents how long 
+                    it takes for the vaccine's efficacy to decrease 
+                    from its initial value to its final value.
+
+                    If this parameter is set to 0, the immunity 
+                    provided by booster vaccines will never diminish.
+                '''
+            )
+
+            # Store age-based booster efficacy values for error checking
+            boostAgeInitials, boostAgeWaneds = {}, {}
 
             # Modifiable-length field for age-specific efficacy
-            st.markdown('### Age-Specific Efficacy Rates')
+            st.markdown('''
+                ### Age-Specific Booster Efficacies
+                
+                This section allows for unique booster efficacy values 
+                (both initial and final) to be defined for individual 
+                age groups in the simulation, overriding the global 
+                booster efficacy values defined above.
+            ''')
             boostAgeEfficacyContainer = st.container()
             for i in range(boosterRowCount):
                 (
@@ -695,7 +921,7 @@ with interventionTab:
                     (0.25, 0.275, 0.275, 0.2)
                 )
                 # Age group column
-                with boostAgeGroupColumn: boostAgeGroups = st.selectbox(
+                with boostAgeGroupColumn: boostAgeGroup = st.selectbox(
                     # Set age group options such that only ages that 
                     # haven't been selected yet can be selected
                     'Age Group', key = f'boostAgeGroup0-{i}', options = (
@@ -733,34 +959,44 @@ with interventionTab:
                     '''
                 )
                 # Standard efficacy column
-                with boostAgeEfficacyColumn: boostAgeEfficacies = st.slider(
-                    'Booster Efficacy (Proportion of Population)', 
-                    0.0, 1.0, 0.9, key = f'boostAgeEfficacy0-{i}',
-                    disabled = not useVaccinesToggle or not useBoostersToggle, 
-                    help = '''
-                        The efficacy of each booster vaccine for this 
-                        age group, represented as the proportion of 
-                        individuals in this age group that have 
-                        recently received the booster who will not 
-                        become infected when exposed to the disease.
-                    '''
-                )
+                with boostAgeEfficacyColumn: 
+                    boostAgeInitials[boostAgeGroup] = st.select_slider(
+                        'Initial Booster Efficacy (Proportion of Population)', 
+                        np.linspace(0.0, 1.0, 1001), 0.9, disabled = (
+                            not useVaccinesToggle or not useBoostersToggle
+                        ), 
+                        format_func = lambda x: f'{100 * x:0.3g}%', 
+                        key = f'boostAgeEfficacy0-{i}', help = '''
+                            The initial efficacy of each booster 
+                            vaccine for this age group, represented as 
+                            the percentage of recently vaccinated individuals 
+                            in this age group who will not become infected 
+                            when exposed to the disease.
+                        '''
+                    )
                 # Waned efficacy column
-                with boostAgeWanedColumn: boostAgeWanedEfficacies = st.slider(
-                    'Booster Waned Efficacy (Proportion of Population)', 
-                    0.0, 1.0, 0.6, key = f'boostAgeWanedEfficacy0-{i}',
-                    disabled = not useVaccinesToggle or not useBoostersToggle, 
-                    help = '''
-                        The efficacy of the overall vaccine program for 
-                        this age group once the immunity conferred by 
-                        booster vaccines has diminished, represented as 
-                        the proportion of individuals in this age group 
-                        with waning booster immunity who will not 
-                        become infected when exposed to the disease.
-                    '''
-                )
+                with boostAgeWanedColumn: 
+                    boostAgeWaneds[boostAgeGroup] = st.select_slider(
+                        ((
+                            'Booster Efficacy After Immunity '
+                            'Waning (Proportion of Population)'
+                        )), 
+                        np.linspace(0.0, 1.0, 1001), 0.6, disabled = (
+                            not useVaccinesToggle or not useBoostersToggle
+                        ), 
+                        format_func = lambda x: f'{100 * x:0.3g}%', 
+                        key = f'boostAgeWanedEfficacy0-{i}', help = '''
+                            The final efficacy value that the booster 
+                            vaccine will approach for this age group as the 
+                            immunity it provides begins to diminish, 
+                            represented as the percentage of individuals in 
+                            this age group with completely waned immunity 
+                            who will not become infected when exposed to 
+                            the disease.
+                        '''
+                    )
                 # Delete button column
-                with boostAgeRemoveColumn: boostAgeRemoveButtons = st.button(
+                with boostAgeRemoveColumn: st.button(
                     label = 'Remove Age Group', icon = ':material/delete:', 
                     key = f'boostAgeRemove0-{i}', on_click = deleteFormRow, 
                     args = (
@@ -777,7 +1013,7 @@ with interventionTab:
                     '''
                 )
             # Button to add another row for additional age specification
-            boostAgeAddButton = boostAgeEfficacyContainer.button(
+            boostAgeEfficacyContainer.button(
                 label = 'Add Age Group', icon = ':material/add:', 
                 on_click = addFormRow, key = 'boostAgeAdd0', args = (
                     'boostAgeRowCount0', {
@@ -812,14 +1048,12 @@ with interventionTab:
 
 
     # NPIs
-    npiContainer = st.container()
-    with npiContainer:
+    with st.container():
         st.subheader('Non-Pharmaceutical Intervention (NPI) Parameters')
+
         # General NPIs
-        generalNPIContainer = st.expander(
-            'General NPI Properties'
-        )
-        with generalNPIContainer:
+        st.html('<span id = "generalTriggerCondition"></span>')
+        with st.expander('General NPI Properties'):
             st.markdown('''
                 These parameters control the implementation of simpler 
                 non-pharmaceutical intervention (NPI) techniques, 
@@ -836,19 +1070,22 @@ with interventionTab:
                     overriding other social distancing parameters.
                 '''
             )
-            socialDistancingCompliance = st.slider(
+            socialDistancingCompliance = st.select_slider(
                 'Social Distancing Compliance (Proportion of Population)', 
-                0.0, 1.0, 0.9, disabled = not useSocialDistancingToggle, 
+                np.linspace(0.0, 1.0, 1001), 0.9, 
+                format_func = lambda x: f'{100 * x:0.3g}%', 
+                disabled = not useSocialDistancingToggle, 
                 key = 'socialDistancingCompliance0', help = '''
-                    The proportion of the population that will comply 
+                    The percentage of the population that will comply 
                     with social distancing interventions in the 
                     simulation.
                 '''
-            )
+            )       
+            
             # TODO: Age-based social distancing probabilities
 
             # Case Isolation
-            caseIsolation = st.toggle(
+            st.toggle(
                 'Enable Case Isolation', value = True, 
                 key = 'caseIsolation0', help = '''
                     Toggle whether or not individuals who have been 
@@ -881,8 +1118,7 @@ with interventionTab:
 
         # School Closure
         st.html('<span id = "schoolClosureTriggerCondition"></span>')
-        schoolClosureContainer = st.expander('School Closure Properties')
-        with schoolClosureContainer:
+        with st.expander('School Closure Properties'):
             st.markdown('''
                 These parameters control if and when schools will close 
                 as a result of the disease.
@@ -897,8 +1133,7 @@ with interventionTab:
             )
             
             # School closure triggers
-            schoolClosureTriggerContainer = st.container(border = True)
-            with schoolClosureTriggerContainer:
+            with st.container(border = True):
                 schoolClosureTrigger = st.selectbox(
                     'School Closure Trigger Condition', 
                     key = f'schoolClosureTrigger0', 
@@ -959,8 +1194,8 @@ with interventionTab:
                         '''
                     )
                     schoolClosureTimeDuration = st.slider(
-                        'School Closure Period Duration (Days)', 0, 720, 56, 
-                        key = 'schoolClosureTimeDuration0', 
+                        'School Closure Period Duration (Days)', 
+                        0, 720, 56, key = 'schoolClosureTimeDuration0', 
                         disabled = not useSchoolClosureToggle, help = '''
                             The length (in days) of the period of time 
                             in which schools will be closed in the 
@@ -1007,9 +1242,11 @@ with interventionTab:
                     - Tertiary: Adult education facilities.
                 '''
             )
-            schoolClosureCompliance = st.slider(
+            st.select_slider(
                 'School Closure Compliance (Proportion of Population)', 
-                0.0, 1.0, 0.9, disabled = not useSchoolClosureToggle, 
+                np.linspace(0.0, 1.0, 1001), 0.9, 
+                format_func = lambda x: f'{100 * x:0.3g}%',
+                disabled = not useSchoolClosureToggle, 
                 key = 'schoolClosureCompliance0', help = '''
                     The proportion of the population that will withdraw 
                     from schools when they are closed in the simulation.
@@ -1020,10 +1257,7 @@ with interventionTab:
 
         # Withdrawal Increase
         st.html('<span id = "withdrawalIncreaseTriggerCondition"></span>')
-        withdrawalIncreaseContainer = st.expander(
-            'Withdrawal Increase Properties'
-        )
-        with withdrawalIncreaseContainer:
+        with st.expander('Withdrawal Increase Properties'):
             st.markdown('''
                 These parameters control the properties of 
                 interventions that increase the likelihood of infected 
@@ -1040,8 +1274,7 @@ with interventionTab:
             )
             
             # Withdrawal increase triggers
-            withdrawalIncreaseTriggerContainer = st.container(border = True)
-            with withdrawalIncreaseTriggerContainer:
+            with st.container(border = True):
                 withdrawalIncreaseTrigger = st.selectbox(
                     'Withdrawal Increase Trigger Condition', 
                     key = f'withdrawalIncreaseTrigger0', 
@@ -1123,8 +1356,10 @@ with interventionTab:
                     ''')
             
             # Increased withdrawal
-            withdrawalIncreaseAdult = st.slider(
-                'Adult Increased Withdrawal Rate (Probability)', 0.0, 1.0, 0.9,
+            withdrawalIncreaseAdult = st.select_slider(
+                'Adult Increased Withdrawal Rate (Probability)', 
+                np.linspace(0.0, 1.0, 1001), 0.9, 
+                format_func = lambda x: f'{100 * x:0.3g}%',
                 disabled = not useWithdrawalIncreaseToggle, 
                 key = 'withdrawalIncreaseAdult0', help = '''
                     The probability of an infected adult withdrawing 
@@ -1133,8 +1368,10 @@ with interventionTab:
                     overwriting the normal withdrawal rate.
                 '''
             )
-            withdrawalIncreaseChild = st.slider(
-                'Child Increased Withdrawal Rate (Probability)', 0.0, 1.0, 1.0,
+            withdrawalIncreaseChild = st.select_slider(
+                'Child Increased Withdrawal Rate (Probability)', 
+                np.linspace(0.0, 1.0, 1001), 1.0, 
+                format_func = lambda x: f'{100 * x:0.3g}%', 
                 disabled = not useWithdrawalIncreaseToggle, 
                 key = 'withdrawalIncreaseChild0', help = '''
                     The probability of an infected child withdrawing 
@@ -1148,8 +1385,7 @@ with interventionTab:
 
         # Reduced Workgroup Size
         st.html('<span id = "reducedGroupTriggerCondition"></span>')
-        reducedGroupContainer = st.expander('Reduced Group Size Properties')
-        with reducedGroupContainer:
+        with st.expander('Reduced Group Size Properties'):
             st.markdown('''
                 These parameters control the properties of 
                 interventions that reduce the size of work groups when 
@@ -1166,8 +1402,7 @@ with interventionTab:
             )
             
             # Reduced workgroup triggers
-            reducedGroupTriggerContainer = st.container(border = True)
-            with reducedGroupTriggerContainer:
+            with st.container(border = True):
                 reducedGroupTrigger = st.selectbox(
                     'Reduced Group Size Trigger Condition', 
                     key = f'reducedGroupTrigger0', 
@@ -1259,10 +1494,7 @@ with interventionTab:
 
         # BCC Reduction
         st.html('<span id = "bccTriggerCondition"></span>')
-        bccContainer = st.expander(
-            'Background Contact Count Reduction Properties'
-        )
-        with bccContainer:
+        with st.expander('Background Contact Count Reduction Properties'):
             st.markdown('''
                 These parameters control the properties of 
                 interventions that reduce the background contact count 
@@ -1281,8 +1513,7 @@ with interventionTab:
             )
             
             # BCC triggers
-            bccTriggerContainer = st.container(border = True)
-            with bccTriggerContainer:
+            with st.container(border = True):
                 # TODO: Check if school-based triggers are usable for 
                 # vaccination and other non-school-closure NPIs
                 bccTrigger = st.selectbox(
@@ -1367,8 +1598,8 @@ with interventionTab:
                 'BCC Reduced Rate (Average Number of Interactions per Person)',
                 0.0, 5.0, 0.2, disabled = not useBCCToggle,
                 key = 'bccReducedRate0', help = '''
-                    The number of other individuals each individual 
-                    will encounter in the background phase of the 
+                    The number of other people each individual will 
+                    interact with in the background phase of the 
                     simulation (emulating interactions outside of 
                     simulated locations) while a BCC reduction 
                     intervention is in effect, overwriting the normal 
@@ -1383,8 +1614,7 @@ with interventionTab:
     # Trigger Thresholds
     st.html('<span id = "thresholdTriggerCondition"></span>')
     st.subheader('Intervention Trigger Thresholds')
-    thresholdContainer = st.expander('Trigger Thresholds')
-    with thresholdContainer:
+    with st.expander('Trigger Thresholds'):
         st.markdown('''
             These parameters affect the threshold values that must be 
             reached for vaccination or non-pharmaceutical interventions 
@@ -1433,7 +1663,10 @@ with interventionTab:
                         names to go to the drop-down container with the 
                         trigger condition parameters for that 
                         intervention.\n\n
-                    ''' + ''.join(
+                    ''' + (
+                        f'\n- [Class Dismissal](#generalTriggerCondition)' 
+                        if classDismissal else ''
+                    ) + ''.join(
                         f'\n- [{npis[i]}](#{npiCamel[i]}TriggerCondition)' 
                         for i in rateConditions
                     )
