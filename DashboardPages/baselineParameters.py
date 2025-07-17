@@ -56,9 +56,9 @@ alertContainer = st.container()
 #TODO: Consider having templates that load parameters for specific stuff
 # Tab ideas: Environment? Health Outcome?
 
-basicTab, diseaseTab, interventionTab, dynamicTab = st.tabs([
+basicTab, diseaseTab, interventionTab, dynamicTab, healthOutcomeTab = st.tabs([
     'Basic Parameters', 'Disease Parameters', 
-    'Vaccination and NPIs', 'Dynamic Parameters'
+    'Vaccination and NPIs', 'Dynamic Parameters', 'Health Outcome Parameters'
 ])
 
 
@@ -66,5 +66,5 @@ basicTab, diseaseTab, interventionTab, dynamicTab = st.tabs([
 vaccinationNPITab(interventionTab, 0, alertContainer)
 
 #Debug
-st.header('DEBUG ZONE')
-st.write(st.session_state)
+#st.header('DEBUG ZONE')
+#st.write(st.session_state)

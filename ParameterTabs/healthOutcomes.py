@@ -1,6 +1,6 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
-# Functionised tab where vaccination/NPI parameters can be modified
+# Functionised tab where health outcome parameters can be modified
 
 # Imports
 import logging
@@ -10,15 +10,15 @@ from ClientResources.InterfaceFunctions import (
     getRemainingAgeGroups, addFormRow, deleteFormRow
 )
 from ClientResources.SharedResources import (
-    npis, npiCamel, ordinals, triggerConditions
+    npis, npiCamel, ageCategories, ordinals, triggerConditions
 )
 
 # Logging
 vaccineLog = logging.getLogger(__name__)
 
 """
-Function to generate the parameters for vaccination and NPIs in a 
-specified container with scenario differentiation
+Function to generate the parameters for health outcomes in a specified 
+container with scenario differentiation
 
 Parameters:
     container: The Streamlit container (likely a tab or expander) in 
@@ -31,7 +31,7 @@ Parameters:
     globalErrorContainer: A container outside of the tab where error 
     messages will be placed.
 """
-def vaccinationNPITab(container, id, globalErrorContainer):
+def healthOutcomeTab(container, id, globalErrorContainer):
     # Initialise session variables needed by the vaccination/NPI forms
     sessionParameters = {
         f'vacAgeRowCount{id}': 0,
@@ -206,7 +206,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                         )
                     # Rate triggers
                     elif vaccineTrigger == 'Community Case Rate': st.info('''
-                        Due to the design of the *Flusim* model, case 
+                        Due to limitations in the *Flusim* model, case 
                         rate thresholds must be defined globally. You 
                         may configure these thresholds using the 
                         "Intervention Trigger Thresholds" parameters at 
@@ -216,7 +216,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     ''')
                     # Case triggers
                     elif vaccineTrigger == 'Community Case Total': st.info('''
-                        Due to the design of the *Flusim* model, case 
+                        Due to limitations in the *Flusim* model, case 
                         total thresholds must be defined globally. You 
                         may configure these thresholds using the 
                         "Intervention Trigger Thresholds" parameters at 
@@ -441,26 +441,28 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     '''
                 )
                 primaryDelay = st.slider(
-                    'Time Between Vaccine Doses (Months)', 
-                    1, 36, 3, disabled = not useVaccinesToggle, 
+                    'Time Between Vaccine Doses (Days)', 
+                    1, 180, 56, disabled = not useVaccinesToggle, 
                     key = f'primaryDelay{id}', help = '''
-                        The number of months after an individual 
-                        receives a vaccine dose before they are able to 
-                        receive another, where a month is 30 days.
+                        The number of days after an individual receives 
+                        a vaccine dose before they are able to receive 
+                        another.
                     '''
                 )
                 st.slider(
-                    'Vaccine Immunity Waning Delay (Months)', 
-                    1, 36, 6, disabled = not useVaccinesToggle, 
+                    'Vaccine Immunity Waning Delay (Days)', 
+                    1, 180, 30, disabled = not useVaccinesToggle, 
                     key = f'primaryDuration{id}', help = '''
-                        The number of months after an individual 
-                        receives a vaccine dose before the immunity 
-                        conferred by this vaccine begins to diminish, 
-                        where a month is 30 days.
+                        The number of days after an individual receives 
+                        a vaccine dose before the immunity conferred by 
+                        this vaccine begins to diminish.
                     '''
                 )
                 primaryWanedEfficacy = st.select_slider(
-                    'Dose Efficacy After Immunity Waning (Probability)', 
+                    ((
+                        'Dose Efficacy After Immunity '
+                        'Waning (Proportion of Population)'
+                    )), 
                     np.linspace(0.0, 1.0, 1001), 0.0, 
                     format_func = lambda x: f'{100 * x:0.3g}%', 
                     disabled = not useVaccinesToggle, 
@@ -468,9 +470,9 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                         The final efficacy value that the vaccine 
                         schedule will approach as the immunity it 
                         provides begins to diminish, represented as the 
-                        probability that an individual with completely 
-                        waned immunity will remain healthy when exposed 
-                        to the disease.
+                        percentage of individuals with completely waned 
+                        immunity who will not become infected when 
+                        exposed to the disease.
                     '''
                 )
                 # TODO: See if better methods of representing waning 
@@ -488,17 +490,17 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                 )
                 """
                 st.slider(
-                    'Vaccine Waning Duration (Months)', 
-                    0, 36, 12, disabled = not useVaccinesToggle, 
+                    'Vaccine Waning Duration (Days)', 
+                    0, 720, 180, disabled = not useVaccinesToggle, 
                     key = f'primaryWaningRate{id}', help = '''
-                        The number of months after the immunity from a 
+                        The number of days after the immunity from a 
                         vaccine dose begins waning before the efficacy 
-                        of the vaccine stabilises, where a month is 30 
-                        days. Vaccine-conferred immunity in the 
-                        *Flusim* simulation will wane at a linear rate, 
-                        so this parameter represents how long it takes 
-                        for the vaccine's efficacy to decrease from the 
-                        final dose's initial value to its final value.
+                        of the vaccine stabilises. Vaccine-conferred 
+                        immunity in the *Flusim* simulation will wane 
+                        at a linear rate, so this parameter represents 
+                        how long it takes for the vaccine's efficacy to 
+                        decrease from the final dose's initial value to 
+                        its final value.
 
                         If this parameter is set to 0, the immunity 
                         provided by the main vaccine schedule will 
@@ -575,7 +577,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                         primAgeWaneds[primWanedGroup] = st.select_slider(
                             ((
                                 'Dose Efficacy After Immunity '
-                                'Waning (Probability)'
+                                'Waning \n\n(Proportion of Population)'
                             )), 
                             np.linspace(0.0, 1.0, 1001), 0.0, 
                             format_func = lambda x: f'{100 * x:0.3g}%', 
@@ -585,9 +587,9 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                                 vaccine schedule will approach for this 
                                 age group as the immunity it provides 
                                 begins to diminish, represented as the 
-                                probability that an individual in this 
-                                age group with completely waned 
-                                immunity will not remain healthy when 
+                                percentage of individuals in this age 
+                                group with completely waned immunity 
+                                who will not become infected when 
                                 exposed to the disease.
                             '''
                         )
@@ -653,16 +655,16 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                         f'#### {ordinals[i+1]} Vaccine Dose'
                     )
                     primDoseInitials[i] = doseEfficacyContainer.select_slider(
-                        'Initial Dose Efficacy (Probability)', 
+                        'Initial Dose Efficacy (Proportion of Population)', 
                         np.linspace(0.0, 1.0, 1001), 0.5, 
                         format_func = lambda x: f'{100 * x:0.3g}%', 
                         disabled = not useVaccinesToggle, 
                         key = f'primaryBaseEfficacy{id}-{i}', help = '''
                             The initial efficacy of this vaccine dose, 
-                            represented as the probability that an 
-                            individual that has recently received the 
-                            dose will remain healthy when exposed 
-                            to the disease.
+                            represented as the percentage of 
+                            individuals that have recently received the 
+                            dose who will not become infected when 
+                            exposed to the disease.
                         '''
                     )
 
@@ -732,7 +734,10 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                             primAgeInitials[i][
                                 primAgeGroup
                             ] = st.select_slider(
-                                'Initial Dose Efficacy (Probability)',
+                                ((
+                                    'Initial Dose Efficacy '
+                                    '(Proportion of Population)'
+                                )),
                                 np.linspace(0.0, 1.0, 1001), 0.5, 
                                 format_func = lambda x: f'{100 * x:0.3g}%', 
                                 disabled = not useVaccinesToggle, 
@@ -740,10 +745,11 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                                 help = '''
                                     The initial efficacy of this 
                                     vaccine dose for this age group, 
-                                    represented as the probability that 
-                                    a recently vaccinated individual in 
-                                    this age group will remain healthy 
-                                    when exposed to the disease.
+                                    represented as the percentage of 
+                                    recently vaccinated individuals in 
+                                    this age group who will not become 
+                                    infected when exposed to the 
+                                    disease.
                                 '''
                             )
                         # Delete button column
@@ -832,39 +838,41 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     '''
                 )
                 boosterDelay = st.slider(
-                    'Time Between Booster Doses (Months)', 1, 36, 3,
+                    'Time Between Booster Doses (Days)', 1, 180, 90,
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
                     key = f'boosterDelay{id}', help = '''
-                        The number of months after an individual receives 
+                        The number of days after an individual receives 
                         one booster vaccine dose before they are able 
-                        to receive another, where a month is 30 days.
+                        to receive another.
                     '''
                 )
                 st.slider(
-                    'Booster Immunity Waning Delay (Months)', 1, 36, 2,
+                    'Booster Immunity Waning Delay (Days)', 1, 180, 60,
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
                     key = f'boosterDuration{id}', help = '''
-                        The number of months after an individual receives 
+                        The number of days after an individual receives 
                         a booster vaccine dose before the immunity 
-                        conferred by this vaccine begins to diminish, 
-                        where a month is 30 days.
+                        conferred by this vaccine begins to diminish.
                     '''
                 )
                 boosterBaseEfficacy = st.select_slider(
-                    'Initial Booster Efficacy (Probability)', 
+                    'Initial Booster Efficacy (Proportion of Population)', 
                     np.linspace(0.0, 1.0, 1001), 0.9, 
                     key = f'boosterBaseEfficacy{id}',
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
                     format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                         The initial efficacy of each booster vaccine, 
-                        represented as the probability that an 
-                        individual that has recently received the 
-                        booster will remain healthy when exposed to the 
+                        represented as the percentage of individuals 
+                        that have recently received the booster who 
+                        will not become infected when exposed to the 
                         disease.
                     '''
                 )
                 boosterWanedEfficacy = st.select_slider(
-                    'Booster Efficacy After Immunity Waning (Probability)',
+                    ((
+                        'Booster Efficacy After Immunity '
+                        'Waning (Proportion of Population)'
+                    )), 
                     np.linspace(0.0, 1.0, 1001), 0.6, 
                     key = f'boosterWanedEfficacy{id}', 
                     disabled = not useVaccinesToggle or not useBoostersToggle,
@@ -872,9 +880,9 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                         The final efficacy value that the booster 
                         vaccine will approach as the immunity it 
                         provides begins to diminish, represented as the 
-                        probability that an individual with completely 
-                        waned immunity will remain healthy when exposed 
-                        to the disease.
+                        percentage of individuals with completely waned 
+                        immunity who will not become infected when 
+                        exposed to the disease.
                     '''
                 )
                 # TODO: See if better methods of representing waning 
@@ -892,17 +900,17 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                 )
                 """
                 st.slider(
-                    'Booster Waning Duration (Months)', 0, 36, 6,
+                    'Booster Waning Duration (Days)', 0, 720, 180,
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
                     key = f'boosterWaningRate{id}', help = '''
-                        The number of months after the immunity from a 
+                        The number of days after the immunity from a 
                         booster vaccine begins waning before the 
-                        efficacy of the vaccine stabilises, where a 
-                        month is 30 days. Vaccine-conferred immunity in 
-                        the *Flusim* simulation will wane at a linear 
-                        rate, so this parameter represents how long it 
-                        takes for the vaccine's efficacy to decrease 
-                        from its initial value to its final value.
+                        efficacy of the vaccine stabilises. 
+                        Vaccine-conferred immunity in the *Flusim* 
+                        simulation will wane at a linear rate, so this 
+                        parameter represents how long it takes for the 
+                        vaccine's efficacy to decrease from its initial 
+                        value to its final value.
 
                         If this parameter is set to 0, the immunity 
                         provided by booster vaccines will never 
@@ -976,7 +984,10 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     # Standard efficacy column
                     with boostAgeEfficacyColumn: 
                         boostAgeInitials[boostAgeGroup] = st.select_slider(
-                            'Initial Booster Efficacy (Probability)', 
+                            ((
+                                'Initial Booster Efficacy '
+                                '(Proportion of Population)'
+                            )), 
                             np.linspace(0.0, 1.0, 1001), 0.9, disabled = (
                                 not useVaccinesToggle or not useBoostersToggle
                             ), 
@@ -984,18 +995,18 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                             key = f'boostAgeEfficacy{id}-{i}', help = '''
                                 The initial efficacy of each booster 
                                 vaccine for this age group, represented 
-                                as the probability that a recently 
-                                vaccinated individual in this age group 
-                                will remain healthy when exposed to the 
-                                disease.
+                                as the percentage of recently 
+                                vaccinated individuals in this age 
+                                group who will not become infected when 
+                                exposed to the disease.
                             '''
                         )
                     # Waned efficacy column
                     with boostAgeWanedColumn: 
                         boostAgeWaneds[boostAgeGroup] = st.select_slider(
                             ((
-                                'Booster Efficacy After '
-                                'Immunity Waning (Probability)'
+                                'Booster Efficacy After Immunity '
+                                'Waning (Proportion of Population)'
                             )), 
                             np.linspace(0.0, 1.0, 1001), 0.6, disabled = (
                                 not useVaccinesToggle or not useBoostersToggle
@@ -1006,9 +1017,9 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                                 booster vaccine will approach for this 
                                 age group as the immunity it provides 
                                 begins to diminish, represented as the 
-                                probability that an individual in this 
-                                age group with completely waned 
-                                immunity will remain healthy when 
+                                percentage of individuals in this age 
+                                group with completely waned immunity 
+                                who will not become infected when 
                                 exposed to the disease.
                             '''
                         )
@@ -1091,14 +1102,14 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     '''
                 )
                 socialDistancingCompliance = st.select_slider(
-                    'Social Distancing Compliance (Probability)', 
+                    'Social Distancing Compliance (Proportion of Population)', 
                     np.linspace(0.0, 1.0, 1001), 0.9, 
                     format_func = lambda x: f'{100 * x:0.3g}%', 
                     disabled = not useSocialDistancingToggle, 
                     key = f'socialDistancingCompliance{id}', help = '''
-                        The probability that an individual will comply 
-                        with social distancing interventions in the 
-                        simulation.
+                        The percentage of the population that will 
+                        comply with social distancing interventions in 
+                        the simulation.
                     '''
                 )       
                 
@@ -1124,7 +1135,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     '''
                 )
                 if classDismissal: st.info('''
-                    Due to the design of the *Flusim* model, case rate 
+                    Due to limitations in the *Flusim* model, case rate 
                     thresholds must be defined globally. You may 
                     configure these thresholds using the 
                     "Intervention Trigger Thresholds" parameters at the 
@@ -1228,7 +1239,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     # Rate triggers
                     elif schoolClosureTrigger == 'Community Case Rate': 
                         st.info('''
-                            Due to the design of the *Flusim* model, 
+                            Due to limitations in the *Flusim* model, 
                             case rate thresholds must be defined 
                             globally. You may configure these 
                             thresholds using the "Intervention Trigger 
@@ -1242,7 +1253,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                         'Community Case Total', 'Cases per School', 
                         'Cases per K-12 School'
                     }: st.info('''
-                        Due to the design of the *Flusim* model, case 
+                        Due to limitations in the *Flusim* model, case 
                         total thresholds must be defined globally. You 
                         may configure these thresholds using the 
                         "Intervention Trigger Thresholds" parameters at 
@@ -1271,12 +1282,12 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     '''
                 )
                 st.select_slider(
-                    'School Closure Compliance (Probability)', 
+                    'School Closure Compliance (Proportion of Population)', 
                     np.linspace(0.0, 1.0, 1001), 0.9, 
                     format_func = lambda x: f'{100 * x:0.3g}%',
                     disabled = not useSchoolClosureToggle, 
                     key = f'schoolClosureCompliance{id}', help = '''
-                        The probability that an individual will 
+                        The proportion of the population that will 
                         withdraw from schools when they are closed in 
                         the simulation.
                     '''
@@ -1371,7 +1382,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     # Rate triggers
                     elif withdrawalIncreaseTrigger == 'Community Case Rate':
                         st.info('''
-                            Due to the design of the *Flusim* model, 
+                            Due to limitations in the *Flusim* model, 
                             case rate thresholds must be defined 
                             globally. You may configure these 
                             thresholds using the "Intervention Trigger 
@@ -1383,7 +1394,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     # Case triggers
                     elif withdrawalIncreaseTrigger == 'Community Case Total': 
                         st.info('''
-                            Due to the design of the *Flusim* model, 
+                            Due to limitations in the *Flusim* model, 
                             case total thresholds must be defined 
                             globally. You may configure these 
                             thresholds using the "Intervention Trigger 
@@ -1504,7 +1515,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     # Rate triggers
                     elif reducedGroupTrigger == 'Community Case Rate': 
                         st.info('''
-                            Due to the design of the *Flusim* model, 
+                            Due to limitations in the *Flusim* model, 
                             case rate thresholds must be defined 
                             globally. You may configure these 
                             thresholds using the "Intervention Trigger 
@@ -1516,7 +1527,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     # Case triggers
                     elif reducedGroupTrigger == 'Community Case Total': 
                         st.info('''
-                            Due to the design of the *Flusim* model, 
+                            Due to limitations in the *Flusim* model, 
                             case total thresholds must be defined 
                             globally. You may configure these 
                             thresholds using the "Intervention Trigger 
@@ -1625,7 +1636,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                         )
                     # Rate triggers
                     elif bccTrigger == 'Community Case Rate': st.info('''
-                        Due to the design of the *Flusim* model, case 
+                        Due to limitations in the *Flusim* model, case 
                         rate thresholds must be defined globally. You 
                         may configure these thresholds using the 
                         "Intervention Trigger Thresholds" parameters at 
@@ -1635,7 +1646,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     ''')
                     # Case triggers
                     elif bccTrigger == 'Community Case Total': st.info('''
-                        Due to the design of the *Flusim* model, case 
+                        Due to limitations in the *Flusim* model, case 
                         total thresholds must be defined globally. You 
                         may configure these thresholds using the 
                         "Intervention Trigger Thresholds" parameters at 
@@ -1673,7 +1684,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                 These parameters affect the threshold values that must 
                 be reached for vaccination or non-pharmaceutical 
                 interventions to be triggered in the simulation. Due to 
-                the design of the *Flusim* simulation model, all 
+                limitations in the *Flusim* simulation model, all 
                 interventions that are set to use case rates or totals 
                 as their trigger condition must share these thresholds; 
                 setting individual thresholds for each intervention is 
