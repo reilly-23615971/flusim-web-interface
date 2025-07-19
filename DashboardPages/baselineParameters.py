@@ -57,9 +57,20 @@ alertContainer = st.container()
 # Tab ideas: Environment? Health Outcome?
 
 basicTab, diseaseTab, interventionTab, dynamicTab, healthOutcomeTab = st.tabs([
-    'Basic Parameters', 'Disease Parameters', 
-    'Vaccination and NPIs', 'Dynamic Parameters', 'Health Outcome Parameters'
+    'Disease Parameters', 'Vaccination and NPIs', 
+    'Dynamic Parameters', 'Health Outcome Parameters'
 ])
+
+
+"""
+Still needs to be tabbed:
+- Dynamic intervention
+- Command arguments
+- Age-specific params (the weird ones)
+- Diagnosis delay
+- Start day of week
+"""
+
 
 
 # Vaccination and NPIs

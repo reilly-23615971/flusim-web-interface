@@ -83,15 +83,6 @@ def vaccinationNPITab(container, id, globalErrorContainer):
     # Use function to recalculate remaining group parameters
     getRemainingAgeGroups(ageGroupSets)
 
-    # Hide slider min/max labels (currently not used)
-    hideSliderLabels = """
-    st.html('''
-        <style> div[data-testid = 'stSliderTickBar'] {
-            display: none;
-        } </style>
-    ''')
-    """
-
 
 
 
@@ -119,8 +110,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
         # - Effect of NPI is weaker than base parameters
 
         # Vaccination
-        vaccineContainer = st.container()
-        with vaccineContainer:
+        with st.container():
             st.subheader('Vaccination Parameters')
             useVaccinesToggle = st.toggle(
                 'Enable Vaccines in Simulation', value = True, 
@@ -161,10 +151,9 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                             ##### Options:
                             - Always: Vaccination will occur throughout 
                             the entire simulation.
-                            - Timed: Vaccination will begin after a 
-                            specific number of days have passed in the 
-                            simulation, and will stop after a different 
-                            number of days.
+                            - Timed: Vaccination will occur within a 
+                            specific time period defined using a start 
+                            and end threshold.
                             - Community Case Rate: Vaccination will 
                             begin if the rate of newly diagnosed cases 
                             per day exceeds a specific threshold, and 
@@ -185,23 +174,19 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     if vaccineTrigger == 'Timed':
                         # TODO: Set time-based parameter maximums based 
                         # on number of cycles in simulation
-                        vaccineTimeStart = st.slider(
-                            'Vaccination Starting Day', 1, 720, 30, 
-                            key = f'vaccineTimeStart{id}', 
+                        vaccinePeriod = st.select_slider(
+                            'Vaccination Time Period', range(720), (30, 60), 
+                            key = f'vaccinePeriod{id}', 
+                            format_func = lambda x: f'Day {x + 1}', 
                             disabled = not useVaccinesToggle, help = '''
-                                The day of the simulation (starting 
-                                from Day 1) on which vaccinations will 
-                                start being administered in the 
-                                simulation.
-                            '''
-                        )
-                        vaccineTimeDuration = st.slider(
-                            'Vaccination Period Duration (Days)', 1, 720, 56, 
-                            key = f'vaccineTimeDuration{id}', 
-                            disabled = not useVaccinesToggle, help = '''
-                                The length (in days) of the period of 
-                                time during which vaccinations will be 
-                                administered in the simulation.
+                                The time period during which 
+                                vaccinations will be administered in 
+                                the simulation. The first value is the 
+                                day on which vaccine distribution will 
+                                begin (where Day 1 is the first day of 
+                                the simulation), and the second value 
+                                is the day on which vaccine 
+                                distribution will end.
                             '''
                         )
                     # Rate triggers
@@ -225,14 +210,34 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                         there directly).
                     ''')
                 # Other vaccine schedule parameters
+                limitDosesToggle = st.toggle(
+                    'Enable Limited Number of Vaccine Doses', value = False, 
+                    key = f'limitDosesToggle{id}', help = '''
+                        Toggle whether the total number of vaccine 
+                        first doses that can be administered across the 
+                        whole simulation should be limited to a 
+                        specific value, putting an upper limit on the 
+                        number of vaccinated individuals in the 
+                        simulation.
+                    '''
+                )
                 st.number_input(
-                    'Starting Number of Available Doses', 
+                    'Total Number of Vaccine First Doses', 
                     0, key = f'initialDoseReserve{id}', 
-                    placeholder = 'Enter a whole number of doses',
-                    disabled = not useVaccinesToggle, help = '''
-                        The number of vaccine doses that will be 
-                        available to administer to individuals at the 
-                        beginning of the simulation.
+                    disabled = not useVaccinesToggle or not limitDosesToggle, 
+                    placeholder = 'Enter a whole number of doses', help = '''
+                        The total number of vaccine first doses that 
+                        will be available to administer to unvaccinated 
+                        individuals throughout the simulation. Once all 
+                        first doses have been administered, any 
+                        remaining unvaccinated individuals in the 
+                        simulation will never be vaccinated. 
+                        Individuals who have already received the first 
+                        dose of the vaccine will still receive future 
+                        doses regardless of the remaining dose count.
+
+                        This parameter is ignored if "Enable Limited 
+                        Number of Vaccine Doses" has been toggled off.
                     '''
                 )
                 st.number_input(
@@ -414,7 +419,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
 
 
             # Primary Vaccine Parameters
-            with st.expander('Primary Vaccine Properties'):
+            with st.expander('Vaccine Properties'):
                 # Describe primary vaccines
                 st.markdown('''
                     These parameters control the properties of the main
@@ -1170,10 +1175,9 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                             ##### Options:
                             - Always: Schools will be closed throughout 
                             the entire simulation.
-                            - Timed: Schools will begin to close after 
-                            a specific number of days have passed in 
-                            the simulation, and will begin to reopen 
-                            after a different number of days.
+                            - Timed: Schools will be closed within a 
+                            specific time period defined using a start 
+                            and end threshold.
                             - Community Case Rate: Schools will begin 
                             to close if the rate of newly diagnosed 
                             cases per day exceeds a specific threshold, 
@@ -1207,22 +1211,18 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     if schoolClosureTrigger == 'Timed':
                         # TODO: Set time-based parameter maximums based 
                         # on number of cycles in simulation
-                        schoolClosureTimeStart = st.slider(
-                            'School Closure Starting Day', 1, 720, 30, 
-                            key = f'schoolClosureTimeStart{id}', 
+                        schoolClosurePeriod = st.select_slider(
+                            'School Closure Time Period', range(720), 
+                            (30, 60), key = f'schoolClosurePeriod{id}', 
+                            format_func = lambda x: f'Day {x + 1}', 
                             disabled = not useSchoolClosureToggle, help = '''
-                                The day of the simulation (starting 
-                                from Day 1) on which schools will start 
-                                closing in the simulation.
-                            '''
-                        )
-                        schoolClosureTimeDuration = st.slider(
-                            'School Closure Period Duration (Days)', 
-                            0, 720, 56, key = f'schoolClosureTimeDuration{id}',
-                            disabled = not useSchoolClosureToggle, help = '''
-                                The length (in days) of the period of 
-                                time in which schools will be closed in 
-                                the simulation.
+                                The time period during which schools 
+                                will be closed in the simulation. The 
+                                first value is the day on which schools 
+                                will initially close (where Day 1 is 
+                                the first day of the simulation), and 
+                                the second value is the day on which 
+                                schools will reopen.
                             '''
                         )
                     # Rate triggers
@@ -1320,11 +1320,9 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                             ##### Options:
                             - Always: Withdrawal rates will be 
                             increased throughout the entire simulation.
-                            - Timed: Withdrawal rates will begin 
-                            increasing after a specific number of days 
-                            have passed in the simulation, and will 
-                            revert to normal after a different number 
-                            of days.
+                            - Timed: Withdrawal rates will be increased 
+                            within a specific time period defined using 
+                            a start and end threshold.
                             - Community Case Rate: Withdrawal rates 
                             will begin increasing if the rate of newly 
                             diagnosed cases per day exceeds a specific 
@@ -1347,25 +1345,19 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     if withdrawalIncreaseTrigger == 'Timed':
                         # TODO: Set time-based parameter maximums based 
                         # on number of cycles in simulation
-                        withdrawalIncreaseTimeStart = st.slider(
-                            'Withdrawal Increase Starting Day', 1, 720, 30, 
-                            key = f'withdrawalIncreaseTimeStart{id}', 
+                        withdrawalIncreasePeriod = st.select_slider(
+                            'Withdrawal Increase Time Period', range(720), 
+                            (30, 60), key = f'withdrawalIncreasePeriod{id}', 
                             disabled = not useWithdrawalIncreaseToggle, 
-                            help = '''
-                                The day of the simulation (starting 
-                                from Day 1) on which withdrawal rates 
-                                will start increasing in the simulation.
-                            '''
-                        )
-                        withdrawalIncreaseTimeDuration = st.slider(
-                            'Withdrawal Increase Period Duration (Days)', 
-                            0, 720, 56, 
-                            key = f'withdrawalIncreaseTimeDuration{id}', 
-                            disabled = not useWithdrawalIncreaseToggle, 
-                            help = '''
-                                The length (in days) of the period of 
-                                time in which withdrawal rates will be 
-                                increased in the simulation.
+                            format_func = lambda x: f'Day {x + 1}', help = '''
+                                The time period during which withdrawal 
+                                rates will be increased in the 
+                                simulation. The first value is the day 
+                                on which withdrawal rates will first 
+                                increase (where Day 1 is the first day 
+                                of the simulation), and the second 
+                                value is the day on which withdrawal 
+                                rates will return to normal.
                             '''
                         )
                     # Rate triggers
@@ -1459,11 +1451,9 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                             ##### Options:
                             - Always: Work group sizes will be 
                             decreased throughout the entire simulation.
-                            - Timed: Work groups will begin shrinking 
-                            after a specific number of days have passed 
-                            in the simulation, and will revert to 
-                            normal size after a different number of 
-                            days.
+                            - Timed: Work group sizes will be decreased 
+                            within a specific time period defined using 
+                            a start and end threshold.
                             - Community Case Rate: Work groups will 
                             begin shrinking if the rate of newly 
                             diagnosed cases per day exceeds a specific 
@@ -1483,22 +1473,19 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     # Show additional parameters based on trigger value
                     # Timed triggers
                     if reducedGroupTrigger == 'Timed':
-                        reducedGroupTimeStart = st.slider(
-                            'Reduced Group Size Starting Day', 1, 720, 30, 
-                            key = f'reducedGroupTimeStart{id}', 
-                            disabled = not useReducedGroupToggle, help = '''
-                                The day of the simulation (starting 
-                                from Day 1) on which work groups will 
-                                start shrinking in the simulation.
-                            '''
-                        )
-                        reducedGroupTimeDuration = st.slider(
-                            'Reduced Group Size Period Duration (Days)', 
-                            0, 720, 56, key = f'reducedGroupTimeDuration{id}', 
-                            disabled = not useReducedGroupToggle, help = '''
-                                The length (in days) of the period of 
-                                time in which work groups will be 
-                                smaller in the simulation.
+                        reducedGroupPeriod = st.select_slider(
+                            'Reduced Group Size Time Period', range(720), 
+                            (30, 60), key = f'reducedGroupPeriod{id}', 
+                            disabled = not useReducedGroupToggle, 
+                            format_func = lambda x: f'Day {x + 1}', help = '''
+                                The time period during which work 
+                                group sizes will be smaller in the 
+                                simulation. The first value is the day 
+                                on which work groups will first shrink 
+                                (where Day 1 is the first day of the 
+                                simulation), and the second value is 
+                                the day on which work groups will 
+                                return to normal.
                             '''
                         )
                     # Rate triggers
@@ -1579,10 +1566,8 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                             - Always: Background contact count will be 
                             reduced throughout the entire simulation.
                             - Timed: Background contact count will be 
-                            reduced after a specific number of days 
-                            have passed in the simulation, and will 
-                            revert to normal levels after a different 
-                            number of days.
+                            reduced within a specific time period 
+                            defined using a start and end threshold.
                             - Community Case Rate: Background contact 
                             count will be reduced if the rate of newly 
                             diagnosed cases per day exceeds a specific 
@@ -1605,22 +1590,19 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                     if bccTrigger == 'Timed':
                         # TODO: Set time-based parameter maximums based 
                         # on number of cycles in simulation
-                        bccTimeStart = st.slider(
-                            'BCC Reduction Starting Day', 1, 720, 30, 
-                            key = f'bccTimeStart{id}', 
-                            disabled = not useBCCToggle, help = '''
-                                The day of the simulation (starting 
-                                from Day 1) on which background contact 
-                                count will be reduced in the simulation.
-                            '''
-                        )
-                        bccTimeDuration = st.slider(
-                            'BCC Reduction Period Duration (Days)', 0, 720, 56,
-                            key = f'bccTimeDuration{id}', 
-                            disabled = not useBCCToggle, help = '''
-                                The length (in days) of the period of 
-                                time in which background contact count 
-                                will be reduced in the simulation.
+                        bccPeriod = st.select_slider(
+                            'BCC Reduction Time Period', range(720), 
+                            (30, 60), key = f'bccPeriod{id}', 
+                            disabled = not useBCCToggle, 
+                            format_func = lambda x: f'Day {x + 1}', help = '''
+                                The time period during which background 
+                                contact count (BCC) will be reduced in 
+                                the simulation. The first value is the 
+                                day on which BCC will first be reduced 
+                                (where Day 1 is the first day of the 
+                                simulation), and the second value is 
+                                the day on which BCC will return to 
+                                normal.
                             '''
                         )
                     # Rate triggers

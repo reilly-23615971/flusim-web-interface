@@ -1,6 +1,6 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
-# Functionised tab where health outcome parameters can be modified
+# Functionised tab where disease parameters can be modified
 
 # Imports
 import logging
@@ -17,7 +17,7 @@ from ClientResources.SharedResources import (
 vaccineLog = logging.getLogger(__name__)
 
 """
-Function to generate the parameters for health outcomes in a specified 
+Function to generate the parameters for the disease in a specified 
 container with scenario differentiation
 
 Parameters:
@@ -31,8 +31,15 @@ Parameters:
     globalErrorContainer: A container outside of the tab where error 
     messages will be placed.
 """
-def healthOutcomeTab(container, id, globalErrorContainer):
-    # Initialise session variables needed by the vaccination/NPI forms
+def diseaseTab(container, id, globalErrorContainer):
+
+
+
+
+
+
+    # Old Vaccine Stuff
+    # Initialise session variables needed by the disease forms
     sessionParameters = {
         f'vacAgeRowCount{id}': 0,
         f'primaryDoseCount{id}': 2,
@@ -83,14 +90,13 @@ def healthOutcomeTab(container, id, globalErrorContainer):
     # Use function to recalculate remaining group parameters
     getRemainingAgeGroups(ageGroupSets)
 
-    # Hide slider min/max labels (currently not used)
-    hideSliderLabels = """
-    st.html('''
-        <style> div[data-testid = 'stSliderTickBar'] {
-            display: none;
-        } </style>
-    ''')
-    """
+
+
+
+    
+
+
+
 
 
 
@@ -100,27 +106,56 @@ def healthOutcomeTab(container, id, globalErrorContainer):
     # TODO: Warn for nonsensical conditions like reduced BCC being 
     # lower than regular BCC
     with container:
-        st.header('Vaccination and NPI Parameters')
+        st.header('Disease Parameters')
         st.markdown('''
-            This tab contains parameters relating to whether 
-            vaccination and non-pharmaceutical interventions (NPIs) are 
-            integrated into the simulation.
+            This tab contains parameters relating to the disease 
+            itself, including how it initially enters the community, 
+            the rate at which it spreads and the likelihood of 
+            different health outcomes occurring as a result of it.
         ''')
 
         # Potential Catchable Errors:
-        # - Duration of NPI is longer that simulation length/simulation 
-        #   ends before timed NPI does
-        # - Initial vaccinated proportion is greater than target 
-        #   vaccinated proportion (including age-specific versions)
-        # - Vaccine total program length is greater than simulation time
-        # - Final waned efficacy is greater than initial efficacy 
-        #   (including age-specific versions and boosters if possible)
-        # - No school types selected for closure
-        # - Effect of NPI is weaker than base parameters
+        # - none yet!
 
-        # Vaccination
-        vaccineContainer = st.container()
-        with vaccineContainer:
+        # Inclusions: Beta from strain parameters, the age-specifics 
+        # once implemented, infection immunity waning, seeding minus 
+        # start day, beta symptom multipliers, infection parameters, 
+        # kappas?, health outcomes?
+
+        # Seeding
+
+
+
+        # Disease Attributes (consider further splitting)
+
+
+
+        # Health Outcomes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        # Old vaccine stuff
+        with st.container():
             st.subheader('Vaccination Parameters')
             useVaccinesToggle = st.toggle(
                 'Enable Vaccines in Simulation', value = True, 
