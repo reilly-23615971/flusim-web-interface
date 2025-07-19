@@ -7,10 +7,10 @@ import logging
 import numpy as np
 import streamlit as st
 from ClientResources.InterfaceFunctions import (
-    getRemainingAgeGroups, addFormRow, deleteFormRow
+    getRemainingGroups, addFormRow, deleteFormRow
 )
 from ClientResources.SharedResources import (
-    npis, npiCamel, ordinals, triggerConditions
+    npis, npiCamel, ordinals, triggerConditions, ageCategories
 )
 
 # Logging
@@ -31,13 +31,14 @@ Parameters:
     globalErrorContainer: A container outside of the tab where error 
     messages will be placed.
 """
-def vaccinationNPITab(container, id, globalErrorContainer):
+def buildVaccinationNPITab(container, id, globalErrorContainer):
     # Initialise session variables needed by the vaccination/NPI forms
     sessionParameters = {
         f'vacAgeRowCount{id}': 0,
         f'primaryDoseCount{id}': 2,
         f'primWanedRowCount{id}': 0,
         f'boostAgeRowCount{id}': 0,
+        f'socialRowCount{id}': 0,
         f'classDismissal{id}': True
     }
     for parameter, default in sessionParameters.items(): 
@@ -62,6 +63,9 @@ def vaccinationNPITab(container, id, globalErrorContainer):
         ),
         f'boosterRemainingAgeGroups{id}': (
             f'boostAgeRowCount{id}', f'boostAgeGroup{id}-'
+        ),
+        f'socialRemainingAgeGroups{id}': (
+            f'socialRowCount{id}', f'socialAgeGroup{id}-'
         )
     }
 
@@ -81,7 +85,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
     ]
 
     # Use function to recalculate remaining group parameters
-    getRemainingAgeGroups(ageGroupSets)
+    getRemainingGroups(ageGroupSets, ageCategories)
 
 
 
@@ -1105,9 +1109,122 @@ def vaccinationNPITab(container, id, globalErrorContainer):
                         with social distancing interventions in the 
                         simulation.
                     '''
-                )       
+                )
                 
-                # TODO: Age-based social distancing probabilities
+                # TODO: Make age-based social distancing probabilities 
+                # actually work in the schema
+                st.markdown('''
+                    ### Age-Specific Social Distancing Compliance
+                    
+                    This section allows for unique social distancing 
+                    compliance values to be defined for individual age 
+                    groups in the simulation, overriding the global 
+                    probability defined above.
+                ''')
+                # Save relevant params as variables to avoid lookups
+                socialRowCount = st.session_state[f'socialRowCount{id}']
+                socialRemainingGroups = st.session_state[
+                    f'socialRemainingAgeGroups{id}'
+                ]
+                socialAgeContainer = st.container()
+                for i in range(socialRowCount): 
+                    (
+                        socialGroupColumn, socialComplianceColumn, 
+                        socialRemoveColumn
+                    ) = socialAgeContainer.columns((0.25, 0.55, 0.2))
+                    socialCurrentGroup = st.session_state.get(
+                        f'socialAgeGroup{id}-{i}'
+                    )
+
+                    # Age group column
+                    with socialGroupColumn: st.selectbox(
+                        'Age Group', key = f'socialAgeGroup{id}-{i}', 
+                        # Set age group options such that only ages 
+                        # that haven't been selected yet can be selected
+                        options = (
+                            [socialCurrentGroup] + [
+                                group for group in socialRemainingGroups 
+                                if group != socialCurrentGroup
+                            ] if socialCurrentGroup else socialRemainingGroups
+                        ), 
+                        disabled = (
+                            not useSocialDistancingToggle 
+                            or not socialRowCount < 10
+                        ),
+                        help = '''
+                            An age group that will have specific 
+                            social distancing compliance probability 
+                            defined for it, overriding the base 
+                            probability.
+
+                            ##### Options:
+                            - Young Infant: 0-6 months old.
+                            - Infant: 7-24 months old.
+                            - Young Child: 3-5 years old.
+                            - Child: 6-12 years old.
+                            - Adolescent: 13-17 years old.
+                            - Young Adult: 18-24 years old.
+                            - Adult: 25-44 years old.
+                            - Older Adult: 45-64 years old.
+                            - Senior: 65-79 years old.
+                            - Older Senior: 80+ years old.
+                        '''
+                    )
+                    # Compliance column
+                    with socialComplianceColumn: st.select_slider(
+                        'Social Distancing Compliance (Probability)', 
+                        np.linspace(0.0, 1.0, 1001), 0.9, 
+                        format_func = lambda x: f'{100 * x:0.3g}%', 
+                        disabled = not useSocialDistancingToggle, 
+                        key = f'socialCompliance{id}-{i}', help = '''
+                            The probability that an individual in 
+                            this age group will comply with social 
+                            distancing interventions in the 
+                            simulation.
+                        '''
+                    )
+                    # Delete button column
+                    with socialRemoveColumn: st.button(
+                        label = 'Remove Age Group', icon = ':material/delete:',
+                        key = f'socialRemove{id}-{i}', 
+                        on_click = deleteFormRow, args = (
+                            i, f'socialRowCount{id}', {
+                                f'socialAgeGroup{id}-', f'socialCompliance{id}-'
+                            }
+                        ),
+                        disabled = not useVaccinesToggle, help = '''
+                            Remove this row of the form and remove 
+                            these age-specific vaccine proportion 
+                            values from the simulation.
+                        '''
+                    )
+                # Button to add another row for age specific params
+                socialAgeContainer.button(
+                    label = 'Add Age Group', icon = ':material/add:', 
+                    on_click = addFormRow, key = f'socialAdd{id}', args = (
+                        f'socialRowCount{id}', {
+                            f'socialAgeGroup{id}-{socialRowCount}': (
+                                socialRemainingGroups[0] 
+                                if socialRemainingGroups else None
+                            ),
+                            f'socialCompliance{id}-{socialRowCount}': 
+                            socialDistancingCompliance
+                        }
+                    ), 
+                    disabled = (
+                        not useSocialDistancingToggle 
+                        or not socialRowCount < 10
+                    ),
+                    help = '''
+                        Add another row to this form, where you can 
+                        select an additional age group to have unique 
+                        social distancing compliance values.
+                    ''' if socialRowCount <= 9 else '''
+                        All age groups have been given unique 
+                        social distancing compliance values, so a new 
+                        age group cannot be added.
+                    '''
+                )
 
                 # Case Isolation
                 st.toggle(
@@ -1285,6 +1402,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
 
 
             # Withdrawal Increase
+            # TODO: Mention which tab global withdrawals are changed in
             st.html('<span id = "withdrawalIncreaseTriggerCondition"></span>')
             with st.expander('Withdrawal Increase Properties'):
                 st.markdown('''
@@ -1416,6 +1534,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
 
 
             # Reduced Workgroup Size
+            # TODO: Mention which tab global group size is changed in
             st.html('<span id = "reducedGroupTriggerCondition"></span>')
             with st.expander('Reduced Group Size Properties'):
                 st.markdown('''
@@ -1527,6 +1646,7 @@ def vaccinationNPITab(container, id, globalErrorContainer):
 
 
             # BCC Reduction
+            # TODO: Mention which tab global BCC can be changed in
             st.html('<span id = "bccTriggerCondition"></span>')
             with st.expander('Background Contact Count Reduction Properties'):
                 st.markdown('''

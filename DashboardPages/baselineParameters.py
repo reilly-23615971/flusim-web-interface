@@ -5,7 +5,8 @@
 # Imports
 import logging
 import streamlit as st
-from ParameterTabs.vaccinationNPIs import vaccinationNPITab
+from ParameterTabs.diseaseParams import buildDiseaseTab
+from ParameterTabs.vaccinationNPIs import buildVaccinationNPITab
 
 # Logging
 baselineLog = logging.getLogger(__name__)
@@ -56,13 +57,13 @@ alertContainer = st.container()
 #TODO: Consider having templates that load parameters for specific stuff
 # Tab ideas: Environment? Health Outcome?
 
-basicTab, diseaseTab, interventionTab, dynamicTab, healthOutcomeTab = st.tabs([
+diseaseTab, interventionTab, dynamicTab, healthOutcomeTab = st.tabs([
     'Disease Parameters', 'Vaccination and NPIs', 
     'Dynamic Parameters', 'Health Outcome Parameters'
 ])
 
 
-"""
+remainder = """
 Still needs to be tabbed:
 - Dynamic intervention
 - Command arguments
@@ -71,10 +72,11 @@ Still needs to be tabbed:
 - Start day of week
 """
 
-
+# Disease parameters
+buildDiseaseTab(diseaseTab, 0, alertContainer)
 
 # Vaccination and NPIs
-vaccinationNPITab(interventionTab, 0, alertContainer)
+buildVaccinationNPITab(interventionTab, 0, alertContainer)
 
 #Debug
 #st.header('DEBUG ZONE')

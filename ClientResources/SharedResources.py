@@ -62,3 +62,8 @@ triggerConditions = (
     'Always', 'Timed', 'Community Case Rate', 'Community Case Total', 
     'Cases per School', 'Cases per K-12 School'  
 )
+# Tuple holding the different location types for kappa selection
+kappaLocations = (
+    'Households', 'K-12 Education', 'Tertiary Education', 
+    'Workplaces', 'Childcare', 'Hospitals', 'Background'
+)

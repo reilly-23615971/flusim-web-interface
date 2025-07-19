@@ -17,15 +17,7 @@ from ClientResources.SharedResources import (
 functionLog = logging.getLogger(__name__)
 
 """
-Simple callback that inverts the truthiness of a session state variable
-
-Parameters:
-    param: The Streamlit session state variable to invert.
-"""
-def toggle(param): st.session_state[param] = not st.session_state[param]
-
-"""
-Function to update what age parameters are selectable for different 
+Function to update what parameters are selectable for different 
 parts of a form, to avoid duplicates
 
 Parameters:
@@ -37,11 +29,14 @@ Parameters:
     variable holding the number of rows in the corresponding age 
     selection form. The second string is the prefix used to identify 
     variables holding the groups that have already been used.
+
+    possibleValues: A tuple containing strings representing the 
+    possible values that can be selected in the form
 """
-def getRemainingAgeGroups(groupSets):
+def getRemainingGroups(groupSets, possibleValues):
     for set, (rowCount, prefix) in groupSets.items():
         # Calculate age groups that haven't been used yet
-        remainingGroups = dict.fromkeys(ageCategories)
+        remainingGroups = dict.fromkeys(possibleValues)
         takenGroups = [
             st.session_state.get(f'{prefix}{i}') 
             for i in range(st.session_state[rowCount])
