@@ -12,7 +12,7 @@ from ClientResources.InterfaceFunctions import (
 from ClientResources.SharedResources import ageCategories, kappaLocations
 
 # Logging
-vaccineLog = logging.getLogger(__name__)
+diseaseLog = logging.getLogger(__name__)
 
 """
 Function to generate the parameters for the disease in a specified 
@@ -76,8 +76,8 @@ def buildDiseaseTab(container, id, globalErrorContainer):
             
             Note that despite being related to the disease's effects, 
             hospitalisation and mortality rate are defined in the 
-            Environment Tab instead of this tab, in order to group them 
-            with other health outcomes.
+            Community Parameters tab instead of this tab, in order to 
+            group them with other health outcomes.
         ''')
 
         # Potential Catchable Errors:
@@ -110,7 +110,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
             # TODO: Set time-based parameter maximums based on number 
             # of cycles in simulation
             st.select_slider(
-                'Infection Seeding Time Period', range(720), (0, 30), 
+                'Infection Seeding Time Period (Days)', range(720), (0, 30), 
                 format_func = lambda x: f'Day {x + 1}', 
                 key = f'seedPeriod{id}', help = '''
                     The time period during which infection seeding will 

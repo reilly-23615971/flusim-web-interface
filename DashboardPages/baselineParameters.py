@@ -5,7 +5,9 @@
 # Imports
 import logging
 import streamlit as st
+from ParameterTabs.basicParams import buildBasicTab
 from ParameterTabs.diseaseParams import buildDiseaseTab
+from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.vaccinationNPIs import buildVaccinationNPITab
 
 # Logging
@@ -57,9 +59,12 @@ alertContainer = st.container()
 #TODO: Consider having templates that load parameters for specific stuff
 # Tab ideas: Environment? Health Outcome?
 
-diseaseTab, interventionTab, dynamicTab, healthOutcomeTab = st.tabs([
-    'Disease Parameters', 'Vaccination and NPIs', 
-    'Dynamic Parameters', 'Health Outcome Parameters'
+(
+    basicTab, diseaseTab, environmentTab, 
+    interventionTab, healthOutcomeTab, dynamicTab
+) = st.tabs([
+    'Basic', 'Disease', 'Community', 
+    'Vaccination and NPIs', 'Health Outcome', 'Dynamic'
 ])
 
 
@@ -70,15 +75,20 @@ Still needs to be tabbed:
 - Contact parameters
 - Diagnosis delay
 - Age-specific mortality
-- Command arguments
 - Dynamic intervention
 
 - Waning infection immunity?
 - Separate relaxation triggers?
 """
 
+# Basic parameters
+buildBasicTab(basicTab, 0, alertContainer)
+
 # Disease parameters
 buildDiseaseTab(diseaseTab, 0, alertContainer)
+
+# Environment parameters
+buildCommunityTab(environmentTab, 0, alertContainer)
 
 # Vaccination and NPIs
 buildVaccinationNPITab(interventionTab, 0, alertContainer)

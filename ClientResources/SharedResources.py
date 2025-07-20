@@ -22,7 +22,7 @@ ordinals = {
     6: 'Sixth', 7: 'Seventh', 8: 'Eighth', 9: 'Ninth', 10: 'Tenth'
 }
 # Dictionary getting the population of each community the simulator uses
-population = {'cairns': 140402, 'newcastle': 272407}
+communityPopulation = {'Newcastle': 272407, 'Cairns': 140402}
 # Tuple holding the possible age categories used by the simulator
 ageCategories = (
     'Young Infant',  # 0-6 months
