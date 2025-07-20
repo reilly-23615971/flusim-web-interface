@@ -65,11 +65,16 @@ diseaseTab, interventionTab, dynamicTab, healthOutcomeTab = st.tabs([
 
 remainder = """
 Still needs to be tabbed:
-- Dynamic intervention
-- Command arguments
-- Age-specific params (the weird ones)
-- Diagnosis delay
 - Start day of week
+- Behaviour parameters
+- Contact parameters
+- Diagnosis delay
+- Age-specific mortality
+- Command arguments
+- Dynamic intervention
+
+- Waning infection immunity?
+- Separate relaxation triggers?
 """
 
 # Disease parameters

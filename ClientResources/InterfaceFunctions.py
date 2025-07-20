@@ -17,6 +17,11 @@ from ClientResources.SharedResources import (
 functionLog = logging.getLogger(__name__)
 
 """
+Simple function to convert an integer into a string describing a number of days
+"""
+def dayCount(count): return '1 Day' if count == 1 else f'{count} Days'
+
+"""
 Function to update what parameters are selectable for different 
 parts of a form, to avoid duplicates
 

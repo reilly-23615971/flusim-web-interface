@@ -7,7 +7,7 @@ import logging
 import numpy as np
 import streamlit as st
 from ClientResources.InterfaceFunctions import (
-    getRemainingGroups, addFormRow, deleteFormRow
+    getRemainingGroups, addFormRow, deleteFormRow, dayCount
 )
 from ClientResources.SharedResources import ageCategories, kappaLocations
 
@@ -71,17 +71,20 @@ def buildDiseaseTab(container, id, globalErrorContainer):
         st.markdown('''
             This tab contains parameters relating to the disease 
             itself, including how it initially enters the community, 
-            the rate at which it spreads and the likelihood of 
-            different health outcomes occurring as a result of it.
+            the rate at which it spreads and how long infection lasts 
+            before recovery.
+            
+            Note that despite being related to the disease's effects, 
+            hospitalisation and mortality rate are defined in the 
+            Environment Tab instead of this tab, in order to group them 
+            with other health outcomes.
         ''')
 
         # Potential Catchable Errors:
-        # - none yet!
-
-        # Inclusions: Beta from strain parameters, the age-specifics 
-        # once implemented, infection immunity waning, seeding minus 
-        # start day, beta symptom multipliers, infection parameters, 
-        # kappas?, health outcomes?
+        # - Disease total infection duration is less than what is 
+        # calculated using the other time parameters
+        # - Disease total infection length is longer than simulation 
+        # time?
 
 
 
@@ -455,32 +458,149 @@ def buildDiseaseTab(container, id, globalErrorContainer):
 
 
 
-        # Symptom Parameters
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************
-        #******************COMPLETE THESE PARAMETERS*******************#******************COMPLETE THESE PARAMETERS*******************
+        # Life Cycle Parameters
+        with st.expander('Disease Life Cycle Properties'):
+            # Describe what sort of parameters are here
+            st.markdown('''
+                These parameters control the disease's life cycle, 
+                including how long individuals are infectious for and 
+                the likelihood of developing symptoms.
+            ''')
+
+            # Asymptomatic params
+            st.select_slider(
+                'Probability of Young (0-24) Asymptomatic Case', 
+                np.linspace(0.0, 1.0, 1001), 0.35, 
+                format_func = lambda x: f'{100 * x:0.3g}%', 
+                key = f'asymptomaticChild{id}', help = '''
+                    The probability that an infected young person 
+                    (defined as 0-24 years old) in the simulation will 
+                    be asymptomatic (i.e. they never show any symptoms 
+                    of the disease despite being infectious).
+                '''
+            )
+            st.select_slider(
+                'Probability of Adult (24+) Asymptomatic Case', 
+                np.linspace(0.0, 1.0, 1001), 0.35, 
+                format_func = lambda x: f'{100 * x:0.3g}%', 
+                key = f'asymptomaticAdult{id}', help = '''
+                    The probability that an infected adult (defined as 
+                    24+ years old) in the simulation will be 
+                    asymptomatic (i.e. they never show any symptoms of 
+                    the disease despite being infectious).
+                '''
+            )
+
+            # Duration Parameters
+            st.markdown('''
+                ### Disease Life Stages
+                
+                Diseases in the simulation have 5 distinct stages in 
+                their life cycle:
+                        
+                1. Latent: The disease is still developing in the body 
+                of the infected individual; they do not yet show 
+                symptoms and are not infectious.
+                2. Developing: The disease has developed further but 
+                remains subclinical; the infected individual is now 
+                infectious but still does not show symptoms.
+                3. Symptomatic: The disease is now showing symptoms in 
+                the infected individual, and thus can now be diagnosed.
+                4. Post-Symptomatic: The infected individual's 
+                condition has improved enough that they no longer show 
+                symptoms of the disease, but they are still infectious.
+                5. Recovered: The individual is no longer infectious 
+                and is considered to have recovered from the disease.
+                
+                If an individual is asymptomatic, their infection may 
+                skip the third and fourth stages and remain in the 
+                second stage without symptoms for the disease's entire 
+                duration. The lengths of each of these stages is 
+                determined through the parameters in this section.
+            ''')
+            latencyPeriod = st.select_slider(
+                'Latency Period Length (Days)', range(91), 10, 
+                format_func = dayCount, key = f'latencyPeriod{id}', help = '''
+                    The length in days of the disease's latency period, 
+                    i.e. the length of time between an individual 
+                    initially being infected by the disease and said 
+                    individual becoming infectious themselves.
+                '''
+            )
+            incubationPeriod = st.select_slider(
+                'Incubation Period Length (Days)', range(91), 12, 
+                format_func = dayCount, key = f'incubationPeriod{id}', 
+                help = '''
+                    The length in days of the disease's incubation 
+                    period, i.e. the length of time between an 
+                    individual initially being infected by the disease 
+                    and said individual beginning to show symptoms.
+                '''
+            )
+            # TODO: Decide between generation time, infectious period, 
+            # symptom length
+            symptomPeriod = st.select_slider(
+                'Symptomatic Period Length (Days)', range(91), 7, 
+                format_func = dayCount, key = f'symptomPeriod{id}', help = '''
+                    The length in days of the disease's symptomatic 
+                    period, i.e. the length of time during which an 
+                    infected individual will show symptoms of the 
+                    disease.
+                '''
+            )
+            infectionDuration = st.select_slider(
+                'Total Infection Duration (Days)', range(181), 20, 
+                format_func = dayCount, key = f'infectionDuration{id}', 
+                help = '''
+                    The length in days of the disease's total lifespan, 
+                    i.e. the length of time between an individual 
+                    initially being infected by the disease and said 
+                    individual being fully recovered/no longer 
+                    infectious.
+                '''
+            )
+
+            # State duration lengths
+
+            st.markdown(f'''
+                #### Period Lengths
+                
+                Using the parameters defined above, the lengths of the 
+                disease's life stages are as follows:
+                        
+                - Latent: {dayCount(latencyPeriod)}
+                - Developing: {
+                    dayCount(incubationPeriod - latencyPeriod)
+                }
+                - Symptomatic: {dayCount(symptomPeriod)}
+                - Post-Symptomatic: {dayCount(
+                    infectionDuration - incubationPeriod - symptomPeriod
+                )}
+                - Total Infection Duration: {
+                    dayCount(infectionDuration)
+                }
+
+                Additionally, the Infectious Period for this disease 
+                (i.e. the length of time during which an infected 
+                individual is themselves infectious) has a length of {
+                    dayCount(infectionDuration - latencyPeriod)
+                }.
+            ''')
+            generationTimeCode = """- Average Generation Time (time between being infected 
+                and infecting someone else): {
+                    dayCount(incubationPeriod + symptomPeriod)
+                }
+            ''')"""
 
 
 
-        # Disease Attributes (consider further splitting)
-
-
-
-        # Health Outcomes
-
+        waningInfectionImmunityCode = """
+        # Waning Immunity Parameters
+        with st.expander('Waning Infection Immunity Properties'):
+            # Describe what sort of parameters are here
+            st.markdown('''
+                These parameters control how immunity to the disease 
+                conferred by having been infected by it in the past 
+                becomes less effective over time.
+            ''')
+        """
