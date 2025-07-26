@@ -594,13 +594,59 @@ def buildDiseaseTab(container, id, globalErrorContainer):
 
 
 
-        waningInfectionImmunityCode = """
         # Waning Immunity Parameters
-        with st.expander('Waning Infection Immunity Properties'):
+        with st.expander('Immunity Waning Properties'):
             # Describe what sort of parameters are here
             st.markdown('''
                 These parameters control how immunity to the disease 
                 conferred by having been infected by it in the past 
-                becomes less effective over time.
+                will become less effective over time. Note that 
+                individuals in the simulation are assumed to be 
+                completely immune to the disease immediately after 
+                recovering from it; the efficacy before waning is 100%.
+                
+                Parameters for controlling how immunity to the disease 
+                conferred by vaccines becomes less effective over time 
+                can be found in the "Vaccinations and NPI Parameters" 
+                tab.
             ''')
-        """
+
+            # Waning immunity
+            st.slider(
+                'Natural Immunity Waning Delay (Months)', 1, 36, 2, 
+                key = f'naturalImmunityDuration{id}', help = '''
+                    The number of months after an individual fully 
+                    recovers from the disease before the immunity 
+                    conferred by having been infected begins to 
+                    diminish, where a month is 30 days.
+                '''
+            )
+            st.select_slider(
+                'Natural Immunity After Waning (Probability)',
+                np.linspace(0.0, 1.0, 1001), 0.5, 
+                key = f'naturalWanedEfficacy{id}', 
+                format_func = lambda x: f'{100 * x:0.3g}%', help = '''
+                    The final efficacy value that an individual's 
+                    natural immunity after recovering from the disease will approach as it begins to 
+                    diminish, represented as the probability that 
+                    the individual will remain healthy when exposed to 
+                    the disease after their immunity is fully waned.
+                '''
+            )
+            st.slider(
+                'Natural Immunity Waning Duration (Months)', 0, 36, 6,
+                key = f'naturalWaningRate{id}', help = '''
+                    The number of months after the immunity from having 
+                    fully recovered from the disease begins waning 
+                    before the efficacy of the immunity stabilises, 
+                    where a month is 30 days. Natural immunity in the 
+                    *Flusim* simulation will wane at a linear rate, so 
+                    this parameter represents how long it takes for the 
+                    immunity level to decrease from total immunity to 
+                    the final immunity probability defined above.
+
+                    If this parameter is set to 0, the immunity 
+                    provided by recovering from the disease will never 
+                    diminish.
+                '''
+            )

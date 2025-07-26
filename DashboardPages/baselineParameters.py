@@ -63,21 +63,19 @@ alertContainer = st.container()
     basicTab, diseaseTab, environmentTab, 
     interventionTab, healthOutcomeTab, dynamicTab
 ) = st.tabs([
-    'Basic', 'Disease', 'Community', 
+    'Initialisation', 'Disease', 'Community', 
     'Vaccination and NPIs', 'Health Outcome', 'Dynamic'
 ])
 
 
 remainder = """
 Still needs to be tabbed:
-- Start day of week
 - Behaviour parameters
 - Contact parameters
 - Diagnosis delay
 - Age-specific mortality
 - Dynamic intervention
 
-- Waning infection immunity?
 - Separate relaxation triggers?
 """
 

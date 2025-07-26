@@ -886,20 +886,6 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         to the disease.
                     '''
                 )
-                # TODO: See if better methods of representing waning 
-                # rate (e.g. vaccine effectiveness dropoff) are feasible
-                oldBoosterWaningRate = """
-                boosterWaningRate = st.slider(
-                    'Booster Immunity Waning Rate (Probability)', 0.0, 0.02, 0.005,
-                    step = 0.0005, format = '%0.4g', 
-                    disabled = not useVaccinesToggle or not useBoostersToggle, 
-                    key = f'boosterWaningRate{id}', help = '''
-                        The probability that an individual will lose the 
-                        immunity conferred by a booster vaccine each day 
-                        after the vaccine's duration has passed.
-                    '''
-                )
-                """
                 st.slider(
                     'Booster Waning Duration (Months)', 0, 36, 6,
                     disabled = not useVaccinesToggle or not useBoostersToggle, 

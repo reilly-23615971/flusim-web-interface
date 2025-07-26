@@ -34,11 +34,11 @@ Parameters:
 def buildBasicTab(container, id, globalErrorContainer):
     # Tab Content
     with container:
-        st.header('Basic Parameters')
+        st.header('Initialisation Parameters')
         st.markdown('''
             This tab contains several key parameters that are 
-            fundamental to the simulation, including the length it runs 
-            for and the community it simulates.
+            fundamental to starting the simulation, including the 
+            length it runs for and the community it simulates.
         ''')
 
         # Potential Catchable Errors:
@@ -60,6 +60,16 @@ def buildBasicTab(container, id, globalErrorContainer):
             key = f'cycleCount{id}', help = '''
                 The number of days that will be simulated in each 
                 simulation run.
+            '''
+        )
+        st.select_slider(
+            'Simulation Starting Day of the Week', (
+                'Monday', 'Tuesday', 'Wednesday', 
+                'Thursday', 'Friday', 'Saturday', 'Sunday'
+            ),
+            'Monday', key = f'startDay{id}', help = '''
+                The day of the week that the first day of the 
+                simulation will be.
             '''
         )
 
