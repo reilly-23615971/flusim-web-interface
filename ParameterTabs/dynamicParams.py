@@ -32,17 +32,6 @@ Parameters:
 def buildDynamicTab(container, id, globalErrorContainer):
     # Initialise session variables needed by the disease forms
     sessionParameters = {
-        # Toggles
-        f'schoolClosureToggle{id}': True,
-        f'bccToggle{id}': True,
-
-        # Base values
-        f'seedRate{id}': 0.25,
-        f'schoolClosureCompliance{id}': 0.9,
-        f'bccReducedRate{id}': 0.2,
-        # f'schoolClosurePeriod{id}': (30, 60),
-
-        # Row counts
         f'seedRowCount{id}': 0,
         f'closeRowCount{id}': 0,
         f'bccRowCount{id}': 0
@@ -67,17 +56,16 @@ def buildDynamicTab(container, id, globalErrorContainer):
         st.markdown('''
             This tab allows for specific parameters to change their 
             values at predefined points throughout the simulation. The 
-            parameters that support this dynamic changing (and the tabs 
-            where the starting values may be modified) are as follows:
+            parameters that support this dynamic changing are as follows:
             
-            #### Disease Tab
-            - Infection Seeding Rate ("Disease" tab)
-            
-            #### Vaccinations and NPIs Tab
+            - Infection Seeding Rate
             - School Closure Compliance
             - Reduced Background Contact Count
             
-            Note that since the latter two parameters are tied to 
+            The initial value for Infection Seeding Rate can be changed 
+            in the "Disease" tab, while the other two parameters have 
+            their initial values defined in the "Vaccinations and NPIs" 
+            tab. Note that since the latter two parameters are tied to 
             non-pharmaceutical interventions (NPIs), any changes to 
             their value made here will only affect the simulation if 
             the corresponding NPI is active at that time.
@@ -114,7 +102,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
             )
             # New value column
             with seedNewColumn: st.select_slider(
-                'New Infection Seeding Rate (Average Individuals per Day)', 
+                'New Value (Average Individuals per Day)', 
                 np.linspace(0.005, 5.0, 1000), 0.25, 
                 key = f'seedNewRate{id}-{i}', 
                 format_func = lambda x: f'{x:0.4g}', help = '''
@@ -201,7 +189,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
             )
             # New value column
             with closeNewColumn: st.select_slider(
-                'New School Closure Compliance (Probability)', 
+                'New Value (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.9, 
                 key = f'closeNewRate{id}-{i}', disabled = not closeActive,
                 format_func = lambda x: f'{100 * x:0.3g}%', help = '''
@@ -292,10 +280,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
             )
             # New value column
             with bccNewColumn: st.slider(
-                ((
-                    'New Reduced Background Contact Count '
-                    '(Average Number of Interactions per Person)'
-                )),
+                'New Value (Average Interactions/Person)',
                 0.0, 8.0, 0.2, disabled = not bccActive,
                 key = f'bccNewRate{id}-{i}', help = '''
                     The average number of other people each individual 

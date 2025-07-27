@@ -1210,23 +1210,25 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
                 # Class Dismissal
                 classDismissal = st.toggle(
-                    'Enable Class Dismissal', value = True, 
+                    'Enable Class Dismissal', value = False, 
                     key = f'classDismissal{id}', help = '''
                         Toggle whether or not classes in childcare and 
                         non-tertiary schools should dismiss classes 
                         when the daily case rate is high enough.
+
+                        Note that the rate that must be reached before class dismissal begins to occur is shared with any other NPIs that are set to use case rates as their trigger threshold.
                     '''
                 )
-                if classDismissal: st.info('''
-                    Due to the design of the *Flusim* model, case rate 
-                    thresholds must be defined globally. You may 
-                    configure these thresholds using the 
-                    "Intervention Trigger Thresholds" parameters at the 
-                    bottom of this page (click 
-                    [this link](#thresholdTriggerCondition) to go there 
-                    directly).
+                if classDismissal: st.info(
+                '''
+                    Due to the design of the *Flusim* model, the case 
+                    rate thresholds used by class dismissal must be 
+                    defined globally for all NPIs. You may configure 
+                    these thresholds using the "Intervention Trigger 
+                    Thresholds" parameters at the bottom of this page 
+                    (click [this link](#thresholdTriggerCondition) to 
+                    go there directly).
                 ''')
-                # Diagnosis Delay will go in environment
 
 
 
@@ -1773,7 +1775,10 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     'Cases per School', 'Cases per K-12 School'
                 }
             ]
-            if not rateConditions and not totalConditions: st.info(
+            if (
+                not rateConditions and not totalConditions 
+                and not classDismissal
+            ): st.info(
                 '''
                 No interventions are currently using case rates or 
                 totals for their trigger conditions. Parameters for 
@@ -1783,7 +1788,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
             ''')
             else:
                 # Case rates
-                if rateConditions:
+                if rateConditions or classDismissal:
                     # Display links to NPIs that use rates (including 
                     # the non-standard Class Dismissal if applicable)
                     st.subheader('Case Rate Trigger Thresholds')

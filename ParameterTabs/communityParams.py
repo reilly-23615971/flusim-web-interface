@@ -189,7 +189,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     'Mortality Rate (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 0.05, 
                     key = f'deathRatio{id}-{i}', 
-                    format_func = lambda x: f'{x:0.3g}', help = '''
+                    format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                         The probability that an infected, symptomatic 
                         individual in this age group will die as a 
                         direct result of the disease.
@@ -329,8 +329,19 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     one child present and no other adults are at home.
                 '''
             )
+            st.slider(
+                'Number of Class Subgroups', 1, 5, 1, 
+                key = f'maxClassCount{id}', help = '''
+                    The maximum number of subgroups that may exist 
+                    within a single class in the simulation. Subgroups 
+                    are defined as sets of individuals that regularly 
+                    interact with each other but not with the rest of 
+                    the class.
+                '''
+            )
 
             # Group Sizes
+            st.subheader('Group Size Parameters')
             st.slider(
                 'Maximum School Class Size (Number of People)', 
                 0, 25, 10, key = f'maxClassSize{id}', help = '''
@@ -344,16 +355,6 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     The maximum size of classes within universities and 
                     other tertiary education facilities in the 
                     simulation.
-                '''
-            )
-            st.slider(
-                'Number of Class Subgroups', 1, 5, 1, 
-                key = f'maxClassCount{id}', help = '''
-                    The maximum number of subgroups that may exist 
-                    within a single class in the simulation. Subgroups 
-                    are defined as sets of individuals that regularly 
-                    interact with each other but not with the rest of 
-                    the class.
                 '''
             )
             workgroupSize = st.slider(
