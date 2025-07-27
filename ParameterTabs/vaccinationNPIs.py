@@ -482,20 +482,6 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         to the disease.
                     '''
                 )
-                # TODO: See if better methods of representing waning 
-                # rate (e.g. vaccine effectiveness dropoff) are feasible
-                oldPrimaryWaningRate = """
-                primaryWaningRate = st.slider(
-                    'Vaccine Immunity Waning Rate (Probability)', 0.0, 0.02, 0.005,
-                    step = 0.0005, format = '%0.4g', 
-                    disabled = not useVaccinesToggle, key = f'primaryWaningRate{id}', 
-                    help = '''
-                        The probability that an individual will lose the 
-                        immunity conferred by a vaccine dose each day after 
-                        the vaccine's duration has passed.
-                    '''
-                )
-                """
                 st.slider(
                     'Vaccine Waning Duration (Months)', 
                     0, 36, 12, disabled = not useVaccinesToggle, 
@@ -1735,10 +1721,10 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 # Reduced BCC rate
                 bccReducedRate = st.slider(
                     ((
-                        'BCC Reduced Rate (Average '
+                        'Reduced Background Contact Count (Average '
                         'Number of Interactions per Person)'
                     )),
-                    0.0, 5.0, 0.2, disabled = not useBCCToggle,
+                    0.0, 8.0, 0.2, disabled = not useBCCToggle,
                     key = f'bccReducedRate{id}', help = '''
                         The average number of other people each 
                         individual will interact with in the background 

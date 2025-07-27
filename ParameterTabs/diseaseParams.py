@@ -110,7 +110,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
             # TODO: Set time-based parameter maximums based on number 
             # of cycles in simulation
             st.select_slider(
-                'Infection Seeding Time Period (Days)', range(720), (0, 30), 
+                'Infection Seeding Time Period (Days)', range(720), (0, 29), 
                 format_func = lambda x: f'Day {x + 1}', 
                 key = f'seedPeriod{id}', help = '''
                     The time period during which infection seeding will 
@@ -223,9 +223,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 age group. 
             ''')
             # Save relevant params as variables to avoid lookups
-            transRowCount = st.session_state[
-                f'transRowCount{id}'
-            ]
+            transRowCount = st.session_state[f'transRowCount{id}']
             transRemainingGroups = st.session_state[
                 f'transRemainingAgeGroups{id}'
             ]
@@ -354,9 +352,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 not specified for a specific location. 
             ''')
             # Save relevant params as variables to avoid lookups
-            kappaRowCount = st.session_state[
-                f'kappaRowCount{id}'
-            ]
+            kappaRowCount = st.session_state[f'kappaRowCount{id}']
             kappaRemainingLocations = st.session_state[
                 f'kappaRemainingLocations{id}'
             ]
@@ -440,8 +436,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                         f'kappaLocation{id}-{kappaRowCount}': (
                             kappaRemainingLocations[0] 
                             if kappaRemainingLocations else None
-                        ),
-                        #f'kappaValue{id}-{kappaRowCount}': 1.0
+                        )
                     }
                 ), 
                 disabled = not kappaRowCount < 10, help = '''
@@ -607,8 +602,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 
                 Parameters for controlling how immunity to the disease 
                 conferred by vaccines becomes less effective over time 
-                can be found in the "Vaccinations and NPI Parameters" 
-                tab.
+                can be found in the "Vaccinations and NPIs" tab.
             ''')
 
             # Waning immunity
@@ -627,10 +621,11 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 key = f'naturalWanedEfficacy{id}', 
                 format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                     The final efficacy value that an individual's 
-                    natural immunity after recovering from the disease will approach as it begins to 
-                    diminish, represented as the probability that 
-                    the individual will remain healthy when exposed to 
-                    the disease after their immunity is fully waned.
+                    natural immunity after recovering from the disease 
+                    will approach as it begins to diminish, represented 
+                    as the probability that the individual will remain 
+                    healthy when exposed to the disease after their 
+                    immunity is fully waned.
                 '''
             )
             st.slider(

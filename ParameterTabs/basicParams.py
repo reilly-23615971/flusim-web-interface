@@ -4,14 +4,9 @@
 
 # Imports
 import logging
-import numpy as np
 import streamlit as st
-from ClientResources.InterfaceFunctions import (
-    getRemainingGroups, addFormRow, deleteFormRow, dayCount
-)
-from ClientResources.SharedResources import (
-    ageCategories, kappaLocations, communityPopulation
-)
+from ClientResources.InterfaceFunctions import dayCount
+from ClientResources.SharedResources import communityPopulation
 
 # Logging
 basicLog = logging.getLogger(__name__)
@@ -46,16 +41,15 @@ def buildBasicTab(container, id, globalErrorContainer):
 
         # Time Parameters
         runCount = st.slider(
-            'Number of Simulation Runs', 1, 24, 24,
-            key = f'runCount{id}', help = f'''
-                The number of times that {
-                    'the baseline scenario' if id == 0 else 'this scenario'
-                } will be ran. Higher values lead to longer simulations 
-                but more accurate results due to averaging.
+            'Number of Simulation Runs', 1, 24, 24, key = f'runCount{id}', 
+            help = f'''
+                The number of times that {'each' if id == 0 else 'this'} 
+                scenario will be ran. Higher values lead to longer 
+                simulations but more accurate results due to averaging.
             '''
         )
         cycleCount = st.select_slider(
-            'Length of Simulation (Days)', range(30, 721), 720, 
+            'Length of Simulation (Days)', range(30, 721), 360, 
             format_func = dayCount, 
             key = f'cycleCount{id}', help = '''
                 The number of days that will be simulated in each 

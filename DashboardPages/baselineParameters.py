@@ -9,27 +9,17 @@ from ParameterTabs.basicParams import buildBasicTab
 from ParameterTabs.diseaseParams import buildDiseaseTab
 from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.vaccinationNPIs import buildVaccinationNPITab
+from ParameterTabs.dynamicParams import buildDynamicTab
+from ClientResources.SimulationRunFunctions import runModelWrapper
 
 # Logging
 baselineLog = logging.getLogger(__name__)
 
-# Initialise session variables
-likelyLaterSessionParams = """
-sessionParameters = {
-    'vacAgeRowCount0': 0,
-    'primaryDoseCount0': 2,
-    'primWanedRowCount0': 0,
-    'boostAgeRowCount0': 0, 
-    'boosterRemainingAgeGroups0': list(dict.fromkeys(ageCategories))
-}
-for parameter, default in sessionParameters.items(): 
-    st.session_state[parameter] = st.session_state.setdefault(
-        parameter, default
-    )
-"""
-
-# TODO: Bring back the age group set setup from vaccination/NPIs if 
-# needed by other tabs
+# Callback for run simulation button
+def runSimulationButton():
+    st.session_state.simulationInProgress = True
+    runModelWrapper()
+    # TODO: Inform user if server doesn't respond
 
 
 
@@ -55,29 +45,34 @@ st.markdown('''
 # Place to put warnings errors in the current parameter selection
 alertContainer = st.container()
 
-#TODO: Add more configurable parameters/tabs
-#TODO: Consider having templates that load parameters for specific stuff
-# Tab ideas: Environment? Health Outcome?
+# Button to run the model
+# TODO: Check if server is available and grey out button if not
+# TODO: Vary message depending on scenario presence, server 
+# availability, errors, etc.
+# TODO: Add 'are you sure' prompt when pressing button
+st.markdown('''
+    Press the button below to run the simulation. Remember that in 
+    order to compare different parameter values, you should define 
+    scenarios with different parameters here [ADD LINK]; make sure 
+    these scenarios have been configured before running the model.
+''')
+runModelButton = st.button(
+    'Run Simulation', on_click = runSimulationButton
+)
+
+#TODO: Consider having a tab for templates that load parameters for 
+# specific stuff (e.g. influenza, NPI presets)
 
 (
     basicTab, diseaseTab, environmentTab, 
-    interventionTab, healthOutcomeTab, dynamicTab
+    interventionTab, dynamicTab
 ) = st.tabs([
     'Initialisation', 'Disease', 'Community', 
-    'Vaccination and NPIs', 'Health Outcome', 'Dynamic'
+    'Vaccination and NPIs', 'Dynamic'
 ])
 
 
-remainder = """
-Still needs to be tabbed:
-- Behaviour parameters
-- Contact parameters
-- Diagnosis delay
-- Age-specific mortality
-- Dynamic intervention
-
-- Separate relaxation triggers?
-"""
+# TODO: Split up start and relaxation triggers in Vaccination/NPIs
 
 # Basic parameters
 buildBasicTab(basicTab, 0, alertContainer)
@@ -90,6 +85,9 @@ buildCommunityTab(environmentTab, 0, alertContainer)
 
 # Vaccination and NPIs
 buildVaccinationNPITab(interventionTab, 0, alertContainer)
+
+# Dynamic parameters
+buildDynamicTab(dynamicTab, 0, alertContainer)
 
 #Debug
 #st.header('DEBUG ZONE')

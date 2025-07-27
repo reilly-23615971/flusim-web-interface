@@ -6,8 +6,8 @@
 import os
 import logging
 import streamlit as st
-from ClientResources.SimulationRunFunctions import runModelWrapper
-from ClientResources.InterfaceFunctions import preserveFormEntries
+#from ClientResources.SimulationRunFunctions import runModelWrapper
+#from ClientResources.InterfaceFunctions import preserveFormEntries
 from ClientResources.SharedResources import resultQueue
 
 #import time
@@ -71,43 +71,26 @@ for parameter, default in sessionParameters.items():
 # Start session monitoring function to ensure it's closed properly
 #monitorSession()
 
+runModelCallbackCode = """
 # Define callbacks for model parameter widgets
 def runSimulationButton():
     st.session_state.simulationInProgress = True
     runModelWrapper()
     # TODO: Inform user if server doesn't respond
+"""
 
 
-
-# Define model parameters to adjust in sidebar
-# TODO: flesh out selectable options
-# TODO: consider allowing for multiple selectable 'profiles' with 
-# different parameters to run in parallel
-# TODO: Check if server is available and grey out button if not
+# TODO: consider whether keeping the run simulation button in the 
+# sidebar is a good idea
+# TODO: consider adding progress updates to the sidebar (time remaining,
+# progress bars, server availability etc.)
 parameterSidebar = st.sidebar
-modelParameters = parameterSidebar.form('modelParameters')
-beta = modelParameters.slider('Beta', 0.01, 10.0, 0.11, key = 'beta')
-npi = modelParameters.selectbox('NPI Presets', ['None', 'Low', 'Medium', 'High'], key = 'npi')
-
-caseRatio = modelParameters.slider(
-    'Diagnosed Case Ratio', 0.0, 1.0, 0.5, key = 'caseRatio'
-)
-hospitalRatio = modelParameters.slider(
-    'Hospitalisation Rate', 0.0, 0.5, 0.25, key = 'hospitalRatio'
-)
-deathRatio = modelParameters.slider(
-    'Mortality Rate', 0.0, 0.25, 0.05, key = 'deathRatio'
-)
-icuRatio = modelParameters.slider(
-    'ICU Visit Ratio', 0.0, 0.5, 0.1, key = 'icuRatio'
-)
-gpRatio = modelParameters.slider(
-    'GP Visit Rate', 0.0, 1.0, 0.333, key = 'gpRatio'
-)
-
-runModelButton = modelParameters.form_submit_button(
+runModelButtonCode = """
+runModelButton = parameterSidebar.button(
     'Run Simulation', on_click = runSimulationButton
 )
+"""
+
 
 # Initialise and run the application pages
 flusimPages = st.navigation(pages)
