@@ -8,9 +8,10 @@ import streamlit as st
 from ParameterTabs.basicParams import buildBasicTab
 from ParameterTabs.diseaseParams import buildDiseaseTab
 from ParameterTabs.communityParams import buildCommunityTab
-from ParameterTabs.vaccinationNPIs import buildVaccinationNPITab
+from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
 from ParameterTabs.dynamicParams import buildDynamicTab
 from ClientResources.SimulationRunFunctions import runModelWrapper
+from ClientResources.SharedResources import communityPopulation
 
 # Logging
 baselineLog = logging.getLogger(__name__)
@@ -32,18 +33,69 @@ st.title('Flusim Disease Model Web Dashboard')
 
 st.markdown('''
     This page allows for configuring the parameters that will be used 
-    as a baseline for the simulation. All scenarios that you run will 
-    use these parameters unless the scenario explicitly overwrites them.
+    as a baseline for the simulation.
             
     Select a tab to view or modify the parameters under that category. 
     Hover your mouse over the :material/help: help icon next to a 
     parameter's input field to show an explanation of what that 
     parameter represents. Hover your mouse over any buttons to show an 
     explanation of what that button does.
+    
+    All scenarios in the simulation will use the parameters on this 
+    page as a baseline; however, individual scenarios can have 
+    different values defined here [ADD LINK], overwriting these base 
+    values. The sole exception to this is the Simulated Community 
+    parameter defined below, which applies to all scenarios and cannot 
+    be overwritten.
 ''')
 
 # Place to put warnings errors in the current parameter selection
 alertContainer = st.container()
+
+# Community Selection
+multiCommunityCode = """
+community = st.segmented_control(
+    'Simulated Community', communityPopulation.keys(), 
+    selection_mode = 'multi', default = 'newcastle', 
+    format_func = lambda x: x.capitalize(), key = 'community', help = '''
+                The Australian city whose community data will be used 
+                as the basis for the population and demographic 
+                distribution in the simulation. Note that the data used 
+                for these communities comes from 2011.
+
+                ##### Options:
+                - Newcastle: A metropolitan area in New South Wales, 
+                Australia. It has a population of 272407, the 
+                second-largest in the state, and has a demographic 
+                distribution that more closely matches that of 
+                Australia as a whole compared to Cairns.
+                - Cairns: A major city in Queensland, Australia. It has 
+                a population of 140402 (as of 2011 when this data was 
+                collected) and has a higher Indigenous population 
+                compared to Newcastle.
+            '''
+)
+"""
+community = st.selectbox(
+    'Simulated Community', communityPopulation.keys(), key = 'community', 
+    format_func = lambda x: x.capitalize(), help = '''
+        The Australian city whose community data will be used as the 
+        basis for the population and demographic distribution in the 
+        simulation. Note that the data used for these communities comes 
+        from 2011.
+
+        ##### Options:
+        - Newcastle: A metropolitan area in New South Wales, Australia. 
+        It has a population of 272407, the second-largest in the state, 
+        and has a demographic distribution that more closely matches 
+        that of Australia as a whole compared to Cairns.
+        - Cairns: A major city in Queensland, Australia. It has a 
+        population of 140402 (as of 2011 when this data was collected) 
+        and has a higher Indigenous population compared to Newcastle.
+    '''
+)
+# TODO: Consider displaying more comprehensive community info regarding 
+# the one the user selects
 
 # Button to run the model
 # TODO: Check if server is available and grey out button if not
@@ -64,7 +116,7 @@ runModelButton = st.button(
 # specific stuff (e.g. influenza, NPI presets)
 
 (
-    basicTab, diseaseTab, environmentTab, 
+    basicTab, diseaseTab, communityTab, 
     interventionTab, dynamicTab
 ) = st.tabs([
     'Initialisation', 'Disease', 'Community', 
@@ -81,7 +133,7 @@ buildBasicTab(basicTab, 0, alertContainer)
 buildDiseaseTab(diseaseTab, 0, alertContainer)
 
 # Environment parameters
-buildCommunityTab(environmentTab, 0, alertContainer)
+buildCommunityTab(communityTab, 0, alertContainer)
 
 # Vaccination and NPIs
 buildVaccinationNPITab(interventionTab, 0, alertContainer)

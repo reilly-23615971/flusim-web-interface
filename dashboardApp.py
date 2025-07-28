@@ -5,6 +5,7 @@
 # Imports
 import os
 import logging
+from datetime import datetime
 import streamlit as st
 #from ClientResources.SimulationRunFunctions import runModelWrapper
 #from ClientResources.InterfaceFunctions import preserveFormEntries
@@ -59,9 +60,11 @@ pages = {
 }
 
 # Initialise session variables
+# Use current time (Unix) as session ID so that different simulations 
+# aren't mixed up by the server
 sessionParameters = {
     'modelData': None, 'simulationInProgress': False, 
-    'outcomeFieldCount': 1
+    'outcomeFieldCount': 1, 'sessionID': int(datetime.now().timestamp())
 }
 for parameter, default in sessionParameters.items(): 
     st.session_state[parameter] = st.session_state.setdefault(

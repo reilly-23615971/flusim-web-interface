@@ -12,6 +12,9 @@ from aiohttp import ClientSession
 import pandas as pd
 import streamlit as st
 import altair as alt
+from ClientResources.ModelSchema import (
+    Parameters, modelGuideFile, overrideParams, simulationSet, simulation
+)
 from ClientResources.InterfaceFunctions import formatEpidemic
 from ClientResources.SharedResources import (
     serverUrl, resultQueue, ageCategories, tableOutcomes, outcomeAdjectives
@@ -20,12 +23,45 @@ from ClientResources.SharedResources import (
 # Logging
 functionLog = logging.getLogger(__name__)
 
-
 """
 Function to generate a JSON config file using the parameters set by the user
 """
-# Keep in mind that cycles are zero-indexed (at least in Dynamic 
-# Immunity)! Subtract one from days if necessary
+# Keep in mind that cycles are zero-indexed and each one is only half a 
+# day! Double or subtract one from days if necessary
+def createConfig():
+    # TODO: Properly check how many scenarios there are
+    scenarioCount = 0
+    scenarioNames = []
+
+
+    # Set up schema objects
+    baselineParams = Parameters()
+    scenarioParams = [Parameters() for _ in range(scenarioCount)]
+
+    # TODO: Populate parameters with session_state values
+
+    # Create config object
+    return modelGuideFile(
+        name = 'Flusim Dashboard Simulation',
+        description = (
+            'A set of simulations configured using the Flusim Web Dashboard.'
+        ),
+        community_used = [st.session_state.community], 
+        shared_overrides = overrideParams(parameters = baselineParams),
+        simulation_sets = [simulationSet(
+            name = 'Dashboard Simulation Set', 
+            version = st.session_state.sessionID,
+            simulations = [simulation(name = 'Baseline')] + [
+                simulation(
+                    name = scenarioNames[i], override_setting = overrideParams(
+                        parameters = scenarioParams[i]
+                    )
+                ) for i in range(scenarioCount)
+            ]
+        )]
+    )
+
+
 
 """
 Function to send JSON model parameters to the server, awaiting a 

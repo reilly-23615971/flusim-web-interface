@@ -7,6 +7,9 @@ import logging
 import streamlit as st
 from ClientResources.InterfaceFunctions import dayCount
 from ClientResources.SharedResources import communityPopulation
+from ClientResources.ModelSchema import (
+    Parameters, scenarioParameters, commandArgument
+)
 
 # Logging
 basicLog = logging.getLogger(__name__)
@@ -33,7 +36,8 @@ def buildBasicTab(container, id, globalErrorContainer):
         st.markdown('''
             This tab contains several key parameters that are 
             fundamental to starting the simulation, including the 
-            length it runs for and the community it simulates.
+            length it runs for and the number of times to run each 
+            scenario.
         ''')
 
         # Potential Catchable Errors:
@@ -50,8 +54,7 @@ def buildBasicTab(container, id, globalErrorContainer):
         )
         cycleCount = st.select_slider(
             'Length of Simulation (Days)', range(30, 721), 360, 
-            format_func = dayCount, 
-            key = f'cycleCount{id}', help = '''
+            format_func = dayCount, key = f'cycleCount{id}', help = '''
                 The number of days that will be simulated in each 
                 simulation run.
             '''
@@ -69,30 +72,52 @@ def buildBasicTab(container, id, globalErrorContainer):
 
 
 
-        # Community Selection
-        community = st.selectbox(
-            'Simulated Community', key = f'community{id}', 
-            options = communityPopulation.keys(), help = '''
-                The Australian city whose community data will be used 
-                as the basis for the population and demographic 
-                distribution in the simulation. Note that the data used 
-                for these communities comes from 2011.
 
-                ##### Options:
-                - Newcastle: A metropolitan area in New South Wales, 
-                Australia. It has a population of 272407, the 
-                second-largest in the state, and has a demographic 
-                distribution that more closely matches that of 
-                Australia as a whole compared to Cairns.
-                - Cairns: A major city in Queensland, Australia. It has 
-                a population of 140402 (as of 2011 when this data was 
-                collected) and has a higher Indigenous population 
-                compared to Newcastle.
-            '''
+
+"""
+Function to populate the Pydantic model schema with the parameters in 
+this tab with scenario differentiation
+
+Parameters:
+    schema: The Pydantic model (specifically an object in the 
+    Parameters class) that the parameters will be populated into.
+
+    id: An integer that will be used to differentiate the parameters in 
+    different instances of the tab by adding a number to the Streamlit 
+    session state variables. A value of 0 means that this is the 
+    baseline scenario and will be treated accordingly.
+"""
+def basicSchema(schema, id = 0):
+    try:
+        # Validate parameters
+        if not isinstance(schema, Parameters): raise ValueError(
+            'schema should be a Parameters object'
         )
-        # TODO: Consider displaying more comprehensive community info 
-        # regarding the one the user selects
 
+        # Add this tab's parameters to the scenario parameter object
+        # This is the only tab with commandArgument parameters, so we 
+        # won't need to worry about checking if that section exists
+
+        # Scenario_Parameters
+        if not schema.Scenario_Parameter: 
+            schema.Scenario_Parameter = scenarioParameters(
+                start_day_of_week = st.session_state[f'startDay{id}']
+            )
+        else: schema.Scenario_Parameter.start_day_of_week = st.session_state[
+            f'startDay{id}'
+        ]
+        
+        # Command_Arguments
+        schema.Command_Argument = commandArgument(
+            n_runs = st.session_state[f'runCount{id}'], 
+            n_cycles = st.session_state[f'cycleCount{id}'] * 2
+        )
+    except ValueError as e:
+        basicLog.error((
+            f'[basicParams] Encountered {type(e).__name__} '
+            f'while validating parameters for scenario {id}: {e}'
+        ))
+        raise e
 
 
         

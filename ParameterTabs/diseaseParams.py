@@ -143,28 +143,28 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 $$
                 
                 In this formula:
-                - $\\beta$ (beta) is the basic transmission coefficient 
+                - $\\beta$ (beta) is the basic transmission parameter 
                 for the disease
-                - $sym(I_i)$ is the disease state coefficient for the 
+                - $sym(I_i)$ is a parameter based on whether or not the 
+                infected individual has shown symptoms
+                - $inf(I_i)$ is the infectiousness parameter for the 
                 infected individual
-                - $inf(I_i)$ is the infectiousness coefficient for the 
-                infected individual
-                - $susc(I_s)$ is the susceptibility coefficient for the 
+                - $susc(I_s)$ is the susceptibility parameter for the 
                 uninfected individual
-                - $\\kappa$ (kappa) is the location coefficient for the 
-                area the interaction is occurring in
+                - $\\kappa$ is the location parameter for the area the 
+                interaction is occurring in
                 
                 The parameters in this section will control the values 
-                of each of these coefficients under various conditions.
+                of each of these parameters under various conditions.
             ''')
 
             # Beta and symptom multipliers
             st.select_slider(
-                'Basic Transmission Coefficient (β)', 
+                'Basic Transmission Parameter (β)', 
                 np.linspace(0.001, 1.0, 1000), 0.11, 
                 format_func = lambda x: f'{x:0.3g}', key = f'beta{id}', 
                 help = '''
-                    The value of the basic transmission coefficient 
+                    The value of the basic transmission parameter 
                     $\\beta$, the base constant used to calculate the 
                     probability of an individual being infected with 
                     the disease upon interacting with an infected 
@@ -179,7 +179,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 np.linspace(0.0, 1.0, 1001), 0.55, 
                 format_func = lambda x: f'{x:0.3g}', 
                 key = f'betaAsymptomatic{id}', help = '''
-                    The value of the disease state coefficient 
+                    The value of the transmissibility modifier 
                     $sym(I_i)$ when the infected individual in an 
                     interaction ($I_i$) is asymptomatic (i.e. has not 
                     shown any symptoms of the disease despite being 
@@ -197,7 +197,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 np.linspace(0.0, 1.0, 1001), 0.55, 
                 format_func = lambda x: f'{x:0.3g}', 
                 key = f'betaPostSymptomatic{id}', help = '''
-                    The value of the disease state coefficient 
+                    The value of the transmissibility modifier 
                     $sym(I_i)$ when the infected individual in an 
                     interaction ($I_i$) is post-symptomatic (i.e. 
                     previously showed symptoms of the disease, but no 
@@ -211,13 +211,12 @@ def buildDiseaseTab(container, id, globalErrorContainer):
             # Age-based infectiousness and susceptibility parameters
             # TODO: Make these parameters actually work in schema
             st.markdown('''
-                ### Age-Specific Infectiousness/Susceptibility 
-                Coefficients
+                ### Age-Specific Infectiousness/Susceptibility
                     
                 This section allows for unique values of $inf(I_i)$ and 
                 $susc(I_s)$ to be defined for each age group, modifying 
                 the probability of infection for interactions involving 
-                individuals in said age groups. These coefficients will 
+                individuals in said age groups. These parameters will 
                 assume a default value of 1 (i.e. no change in 
                 probability) if they are not specified for a specific 
                 age group. 
@@ -250,7 +249,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     ), 
                     disabled = not transRowCount < 10, help = '''
                         An age group that will have specific 
-                        infectiousness and susceptibility coefficients 
+                        infectiousness and susceptibility parameters 
                         defined for it, modifying the base transmission 
                         probability for interactions involving 
                         individuals in that age group.
@@ -270,11 +269,11 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 )
                 # Infectiousness column
                 with transInfectColumn: st.select_slider(
-                    'Infectiousness Coefficient', 
+                    'Infectiousness', 
                     np.linspace(0.0, 1.0, 1001), 1.0, 
                     key = f'transInfect{id}-{i}', 
                     format_func = lambda x: f'{x:0.3g}', help = '''
-                        The value of the infectiousness coefficient 
+                        The value of the infectiousness parameter 
                         $inf(I_i)$ when the infected individual in an 
                         interaction ($I_i$) is a member of this age 
                         group. The lower this value is, the less likely 
@@ -285,11 +284,11 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 )
                 # Susceptibility column
                 with transSusceptColumn: st.select_slider(
-                    'Susceptibility Coefficient', 
+                    'Susceptibility', 
                     np.linspace(0.0, 1.0, 1001), 1.0, 
                     key = f'transSuscept{id}-{i}', 
                     format_func = lambda x: f'{x:0.3g}', help = '''
-                        The value of the susceptibility coefficient 
+                        The value of the susceptibility parameter 
                         $susc(I_s)$ when the uninfected individual in 
                         an interaction ($I_s$) is a member of this age 
                         group. The lower this value is, the less likely 
@@ -310,7 +309,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     ),
                     help = '''
                         Remove this row of the form and remove these 
-                        age-specific transmission coefficients from the 
+                        age-specific transmission parameters from the 
                         simulation.
                     '''
                 )
@@ -330,10 +329,10 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 disabled = not transRowCount < 10, help = '''
                     Add another row to this form, where you can select 
                     an additional age group to have unique transmission 
-                    coefficients.
+                    parameters.
                 ''' if transRowCount <= 9 else '''
                     All age groups have been given unique transmission 
-                    coefficients, so a new age group cannot be added.
+                    parameters, so a new age group cannot be added.
                 '''
             )
 
@@ -341,15 +340,16 @@ def buildDiseaseTab(container, id, globalErrorContainer):
             # TODO: Link to Background Contact Count if Background 
             # Kappa is present in this form
             st.markdown('''
-                ### Location-Specific Kappa Coefficients
+                ### Location-Specific Transmission Modifiers
                     
-                This section allows for unique values of kappa 
-                ($\\kappa$) to be defined for each location type used 
+                This section allows for unique modifiers for the 
+                transmissibility function (represented in the formula 
+                as $\\kappa$) to be defined for each location type used 
                 in the simulation, modifying the probability of 
                 infection for interactions taking place in said 
-                locations. These coefficients will assume a default 
+                locations. These parameters will assume a default 
                 value of 1 (i.e. no change in probability) if they are 
-                not specified for a specific location. 
+                not specified for a particular location.
             ''')
             # Save relevant params as variables to avoid lookups
             kappaRowCount = st.session_state[f'kappaRowCount{id}']
@@ -378,8 +378,8 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                         ] if kappaCurrentLocation else kappaRemainingLocations
                     ), 
                     disabled = not kappaRowCount < 10, help = '''
-                        A location that will have a specific kappa 
-                        ($\\kappa$) coefficients defined for it, 
+                        A location that will have a specific 
+                        transmissibility modifier defined for it, 
                         modifying the base transmission probability for 
                         interactions occurring in that location.
 
@@ -400,15 +400,15 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                         locations.
                     '''
                 )
-                # Kappa coefficient column
+                # Kappa value column
                 with kappaValueColumn: st.select_slider(
-                    'Kappa Coefficient (κ)', np.linspace(0.0, 5.0, 1001), 
+                    'Transmissibility Modifier', np.linspace(0.0, 5.0, 1001), 
                     1.0, key = f'kappaValue{id}-{i}', 
                     format_func = lambda x: f'{x:0.3g}', help = '''
-                        The value of the kappa coefficient $\\kappa$ 
-                        when an interaction takes place in this 
-                        location. The higher this value is, the more 
-                        likely it is for uninfected individuals to 
+                        The value of the transmissibility modifier 
+                        $\\kappa$ when an interaction takes place in 
+                        this location. The higher this value is, the 
+                        more likely it is for uninfected individuals to 
                         contract the disease when interacting with 
                         infected individuals in this location.
                     '''
@@ -424,8 +424,8 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     ),
                     help = '''
                         Remove this row of the form and remove these 
-                        location-specific kappa coefficients from the 
-                        simulation.
+                        location-specific transmissibility parameters 
+                        from the simulation.
                     '''
                 )
             # Button to add another row for age specific params
@@ -441,11 +441,12 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 ), 
                 disabled = not kappaRowCount < 10, help = '''
                     Add another row to this form, where you can select 
-                    an additional location to have unique kappa 
-                    coefficients.
+                    an additional location to have unique 
+                    transmissibility parameters.
                 ''' if kappaRowCount <= 9 else '''
-                    All locations have been given unique kappa 
-                    coefficients, so a new location cannot be added.
+                    All locations have been given unique 
+                    transmissibility parameters, so a new location 
+                    cannot be added.
                 '''
             )
 
@@ -496,9 +497,9 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 1. Latent: The disease is still developing in the body 
                 of the infected individual; they do not yet show 
                 symptoms and are not infectious.
-                2. Developing: The disease has developed further but 
-                remains subclinical; the infected individual is now 
-                infectious but still does not show symptoms.
+                2. Developing: The disease has developed further and 
+                the infected individual is now infectious, but they 
+                still do not show any symptoms.
                 3. Symptomatic: The disease is now showing symptoms in 
                 the infected individual, and thus can now be diagnosed.
                 4. Post-Symptomatic: The infected individual's 
@@ -581,11 +582,6 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     dayCount(infectionDuration - latencyPeriod)
                 }.
             ''')
-            generationTimeCode = """- Average Generation Time (time between being infected 
-                and infecting someone else): {
-                    dayCount(incubationPeriod + symptomPeriod)
-                }
-            ''')"""
 
 
 
