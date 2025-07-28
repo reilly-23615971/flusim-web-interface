@@ -6,10 +6,14 @@
 import logging
 import numpy as np
 import streamlit as st
+from pydantic import ValidationError
 from ClientResources.InterfaceFunctions import (
     getRemainingGroups, addFormRow, deleteFormRow
 )
 from ClientResources.SharedResources import ageCategories
+from ClientResources.ModelSchema import (
+    Parameters, scenarioParameters, ageScenarioParameters
+)
 
 # Logging
 communityLog = logging.getLogger(__name__)
@@ -50,7 +54,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
     }
 
     # Use function to recalculate remaining group parameters
-    getRemainingGroups(ageGroupSets, ageCategories)
+    getRemainingGroups(ageGroupSets, ageCategories.keys())
 
 
 
@@ -378,3 +382,122 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     simulation.
                 '''
             )
+
+
+
+
+
+"""
+Function to populate the Pydantic model schema with the parameters in 
+this tab with scenario differentiation
+
+Parameters:
+    schema: The Pydantic model (specifically an object in the 
+    Parameters class) that the parameters will be populated into.
+
+    id: An integer that will be used to differentiate the parameters in 
+    different instances of the tab by adding a number to the Streamlit 
+    session state variables. A value of 0 means that this is the 
+    baseline scenario and will be treated accordingly.
+"""
+def communitySchema(schema, id = 0):
+    try:
+        # Validate parameters
+        if not isinstance(schema, Parameters): raise ValueError(
+            'schema should be a Parameters object'
+        )
+
+        # Add this tab's parameters to the scenario parameter object
+
+        # Scenario Parameters With Age Prefix
+        if not schema.Scenario_ParameterWithAgePrefix: 
+            schema.Scenario_ParameterWithAgePrefix = ageScenarioParameters(
+                mort = st.session_state[f'deathRatio{id}']
+            )
+        else: schema.Scenario_ParameterWithAgePrefix.mort = st.session_state[
+            f'deathRatio{id}'
+        ]
+
+        # Scenario Parameters
+        if not schema.Scenario_Parameter: 
+            schema.Scenario_Parameter = scenarioParameters(
+                prob_diagnosis = st.session_state[f'caseRatio{id}'], 
+                prob_hospitalisation = st.session_state[f'hospitalRatio{id}'], 
+                prob_withdrawal = st.session_state[f'withdrawalWork{id}'], 
+                prob_school_withdrawal = st.session_state[
+                    f'withdrawalSchool{id}'
+                ], 
+                diagnosis_delay = st.session_state[f'diagnosisDelay{id}'] * 2, 
+                background_contact_count = st.session_state[f'bccRate{id}'], 
+                prob_child_supervision = st.session_state[
+                    f'childSupervision{id}'
+                ], 
+                max_class_count = st.session_state[f'maxClassCount{id}'], 
+                max_class_size = st.session_state[f'maxClassSize{id}'], 
+                max_adult_class_size = st.session_state[
+                    f'maxAdultClassSize{id}'
+                ], 
+                max_workgroup_size = st.session_state[
+                    f'maxWorkGroupSize{id}'
+                ], 
+                max_neighbourgroup_size = st.session_state[
+                    f'maxNeighborGroupSize{id}'
+                ], 
+                max_churchgroup_size = st.session_state[
+                    f'maxChurchGroupSize{id}'
+                ]
+            )
+        else: 
+            schema.Scenario_Parameter.prob_diagnosis = st.session_state[
+                f'caseRatio{id}'
+            ]
+            schema.Scenario_Parameter.prob_hospitalisation = st.session_state[
+                f'hospitalRatio{id}'
+            ]
+            schema.Scenario_Parameter.prob_withdrawal = st.session_state[
+                f'withdrawalWork{id}'
+            ]
+            schema.Scenario_Parameter.prob_school_withdrawal = st.session_state[
+                f'withdrawalSchool{id}'
+            ]
+            schema.Scenario_Parameter.diagnosis_delay = st.session_state[f'diagnosisDelay{id}'] * 2
+            schema.Scenario_Parameter.background_contact_count = st.session_state[
+                f'bccRate{id}'
+            ]
+            schema.Scenario_Parameter.prob_child_supervision = st.session_state[
+                f'childSupervision{id}'
+            ]
+            schema.Scenario_Parameter.max_class_count = st.session_state[
+                f'maxClassCount{id}'
+            ]
+            schema.Scenario_Parameter.max_class_size = st.session_state[
+                f'maxClassSize{id}'
+            ]
+            schema.Scenario_Parameter.max_adult_class_size = st.session_state[
+                f'maxAdultClassSize{id}'
+            ]
+            schema.Scenario_Parameter.max_workgroup_size = st.session_state[
+                f'maxWorkGroupSize{id}'
+            ]
+            schema.Scenario_Parameter.max_neighbourgroup_size = st.session_state[
+                f'maxNeighborGroupSize{id}'
+            ]
+            schema.Scenario_Parameter.max_churchgroup_size = st.session_state[
+                f'maxChurchGroupSize{id}'
+            ]
+        
+        # Add age-based mortality
+        for i in range(st.session_state[f'deathRowCount{id}']):
+            varAgeGroup = ageCategories[
+                st.session_state[f'deathAgeGroup{id}-{i}']
+            ]
+            setattr(
+                schema.Scenario_Parameter, f'{varAgeGroup}_mort', 
+                st.session_state[f'deathRatio{id}-{i}']
+            )
+    except (ValueError, ValidationError) as e:
+        communityLog.error((
+            f'[communityParams] Encountered {type(e).__name__} '
+            f'while validating parameters for scenario {id}: {e}'
+        ))
+        raise e

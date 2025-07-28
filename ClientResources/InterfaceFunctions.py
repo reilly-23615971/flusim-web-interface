@@ -267,7 +267,7 @@ def formatAsir(
     # Generate and format the dataframe
     framedData = pd.read_csv(
         StringIO(rawCSV), header = 0, index_col = 0,
-        names = ['Total'].extend(ageCategories)
+        names = ['Total'].extend(ageCategories.keys())
     )
     framedData.index = pd.Index(scenarioNames)
     framedData.reset_index(names = 'Scenario', inplace = True)

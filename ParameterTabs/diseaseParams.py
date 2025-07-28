@@ -6,10 +6,14 @@
 import logging
 import numpy as np
 import streamlit as st
+from pydantic import ValidationError
 from ClientResources.InterfaceFunctions import (
     getRemainingGroups, addFormRow, deleteFormRow, dayCount
 )
 from ClientResources.SharedResources import ageCategories, kappaLocations
+from ClientResources.ModelSchema import (
+    Parameters, scenarioParameters, strainParameters
+)
 
 # Logging
 diseaseLog = logging.getLogger(__name__)
@@ -56,8 +60,8 @@ def buildDiseaseTab(container, id, globalErrorContainer):
     }
 
     # Use function to recalculate remaining group parameters
-    getRemainingGroups(ageGroupSets, ageCategories)
-    getRemainingGroups(locationGroupSets, kappaLocations)
+    getRemainingGroups(ageGroupSets, ageCategories.keys())
+    getRemainingGroups(locationGroupSets, kappaLocations.keys())
 
 
 
@@ -641,3 +645,148 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     diminish.
                 '''
             )
+
+
+
+
+
+"""
+Function to populate the Pydantic model schema with the parameters in 
+this tab with scenario differentiation
+
+Parameters:
+    schema: The Pydantic model (specifically an object in the 
+    Parameters class) that the parameters will be populated into.
+
+    id: An integer that will be used to differentiate the parameters in 
+    different instances of the tab by adding a number to the Streamlit 
+    session state variables. A value of 0 means that this is the 
+    baseline scenario and will be treated accordingly.
+"""
+def diseaseSchema(schema, id = 0):
+    try:
+        # Validate parameters
+        if not isinstance(schema, Parameters): raise ValueError(
+            'schema should be a Parameters object'
+        )
+
+        # Convert dashboard representation to model representation
+        seedPeriod = st.session_state[f'seedPeriod{id}']
+        incubationPeriod = st.session_state[f'incubationPeriod{id}']
+
+        # Add this tab's parameters to the scenario parameter object
+        # TODO: Age-specific trans and susc
+        # TODO: Kappas
+
+        # Strain Parameters
+        schema.Scenario_Strain = [strainParameters(
+            StrainId = 0, Beta = st.session_state[f'beta{id}']
+        )]
+
+        # Scenario Parameters
+        if not schema.Scenario_Parameter: 
+            schema.Scenario_Parameter = scenarioParameters(
+                seed_rate = st.session_state[f'seedRate{id}'], 
+                seeding_start_cycle = seedPeriod[0] * 2, 
+                seeding_duration = (seedPeriod[1] - seedPeriod[0]) * 2, 
+                beta_asymptomatic = st.session_state[f'betaAsymptomatic{id}'], 
+                beta_post_symptomatic = st.session_state[
+                    f'betaPostSymptomatic{id}'
+                ], 
+                prob_asymptomatic_young = st.session_state[
+                    f'asymptomaticChild{id}'
+                ], 
+                prob_asymptomatic = st.session_state[f'asymptomaticAdult{id}'],
+                transmissibility_delay = (
+                    st.session_state[f'latencyPeriod{id}'] * 2
+                ), 
+                symptom_latency = incubationPeriod * 2, 
+                generation_time = (
+                    incubationPeriod + st.session_state[f'symptomPeriod{id}']
+                ) * 2, 
+                infection_duration = (
+                    st.session_state[f'infectionDuration{id}'] * 2
+                ), 
+                infection_waning_cycle_delay = (
+                    st.session_state[f'naturalImmunityDuration{id}'] * 60
+                ), 
+                infection_waned_protection = st.session_state[
+                    f'naturalWanedEfficacy{id}'
+                ], 
+                infection_waning_rate_per_cycle = st.session_state[
+                    f'naturalWaningRate{id}'
+                ]
+            )
+        else: 
+            schema.Scenario_Parameter.seed_rate = st.session_state[
+                f'seedRate{id}'
+            ]
+            schema.Scenario_Parameter.seeding_start_cycle = seedPeriod[0] * 2
+            schema.Scenario_Parameter.seeding_duration = (
+                (seedPeriod[1] - seedPeriod[0]) * 2
+            )
+            schema.Scenario_Parameter.beta_asymptomatic = st.session_state[
+                f'betaAsymptomatic{id}'
+            ]
+            schema.Scenario_Parameter.beta_post_symptomatic = st.session_state[
+                f'betaPostSymptomatic{id}'
+            ]
+            (
+                schema.Scenario_Parameter.prob_asymptomatic_young
+            ) = st.session_state[
+                f'asymptomaticChild{id}'
+            ]
+            schema.Scenario_Parameter.prob_asymptomatic = st.session_state[
+                f'asymptomaticAdult{id}'
+            ]
+            schema.Scenario_Parameter.transmissibility_delay = (
+                st.session_state[f'latencyPeriod{id}'] * 2
+            )
+            schema.Scenario_Parameter.symptom_latency = incubationPeriod * 2
+            schema.Scenario_Parameter.generation_time = (
+                (incubationPeriod + st.session_state[f'symptomPeriod{id}']) * 2
+            )
+            schema.Scenario_Parameter.infection_duration = (
+                st.session_state[f'infectionDuration{id}'] * 2
+            )
+            schema.Scenario_Parameter.infection_waning_cycle_delay = (
+                st.session_state[f'naturalImmunityDuration{id}'] * 60
+            )
+            (
+                schema.Scenario_Parameter.infection_waned_protection
+            ) = st.session_state[
+                f'naturalWanedEfficacy{id}'
+            ]
+            (
+                schema.Scenario_Parameter.infection_waning_rate_per_cycle
+            ) = st.session_state[
+                f'naturalWaningRate{id}'
+            ]
+        
+        # Add procedural Scenario Parameters (age/kappa)
+        for i in range(st.session_state[f'transRowCount{id}']):
+            varAgeGroup = ageCategories[
+                st.session_state[f'transAgeGroup{id}-{i}']
+            ]
+            setattr(
+                schema.Scenario_Parameter, f'{varAgeGroup}_trans', 
+                st.session_state[f'transInfect{id}-{i}']
+            )
+            setattr(
+                schema.Scenario_Parameter, f'{varAgeGroup}_susc', 
+                st.session_state[f'transSuscept{id}-{i}']
+            )
+        for i in range(st.session_state[f'kappaRowCount{id}']):
+            varLocation = kappaLocations[
+                st.session_state[f'kappaLocation{id}-{i}']
+            ]
+            setattr(
+                schema.Scenario_Parameter, f'kappa_{varLocation}', 
+                st.session_state[f'kappaValue{id}-{i}']
+            )
+    except (ValueError, ValidationError) as e:
+        diseaseLog.error((
+            f'[diseaseParams] Encountered {type(e).__name__} '
+            f'while validating parameters for scenario {id}: {e}'
+        ))
+        raise e

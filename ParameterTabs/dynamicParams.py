@@ -4,12 +4,12 @@
 
 # Imports
 import logging
+from typing import Literal, cast
 import numpy as np
 import streamlit as st
-from ClientResources.InterfaceFunctions import (
-    getRemainingGroups, addFormRow, deleteFormRow, dayCount
-)
-from ClientResources.SharedResources import ageCategories, kappaLocations
+from pydantic import ValidationError
+from ClientResources.InterfaceFunctions import addFormRow, deleteFormRow
+from ClientResources.ModelSchema import Parameters, dynamicIntervention
 
 # Logging
 dynamicLog = logging.getLogger(__name__)
@@ -325,3 +325,58 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 in a single simulation.
             '''
         )
+
+
+
+
+
+"""
+Function to populate the Pydantic model schema with the parameters in 
+this tab with scenario differentiation
+
+Parameters:
+    schema: The Pydantic model (specifically an object in the 
+    Parameters class) that the parameters will be populated into.
+
+    id: An integer that will be used to differentiate the parameters in 
+    different instances of the tab by adding a number to the Streamlit 
+    session state variables. A value of 0 means that this is the 
+    baseline scenario and will be treated accordingly.
+"""
+def dynamicSchema(schema, id = 0):
+    try:
+        # Validate parameters
+        if not isinstance(schema, Parameters): raise ValueError(
+            'schema should be a Parameters object'
+        )
+
+        # Construct the list of parameter objects
+        dynamicMapping = {
+            'seed': 'seed_rate', 
+            'close': 'school_closure', 'bcc': 'bcc_reduction'
+        }
+        dynamicChanges = []
+        for prefix, param in dynamicMapping.values():
+            castedParam = cast(Literal[
+                'work_nonattendance', 'bcc_reduction', 'school_closure', 
+                'seed_rate', 'school_closure_delay', 'school_closure_duration'
+            ], param)
+            for i in range(st.session_state[f'{prefix}RowCount{id}']): 
+                dynamicChanges.append(dynamicIntervention(
+                    Name = castedParam, 
+                    CycleOffset = st.session_state[
+                        f'{prefix}Cycle{id}-{i}'
+                    ] * 2, 
+                    NewValue = st.session_state[f'{prefix}NewRate{id}-{i}']
+                ))
+        
+        # Assign the parameters
+        schema.Scenario_DynamicIntervention = dynamicChanges
+
+
+    except (ValueError, ValidationError) as e:
+        dynamicLog.error((
+            f'[dynamicParams] Encountered {type(e).__name__} '
+            f'while validating parameters for scenario {id}: {e}'
+        ))
+        raise e

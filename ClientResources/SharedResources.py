@@ -24,18 +24,18 @@ ordinals = {
 # Dictionary getting the population of each community the simulator uses
 communityPopulation = {'newcastle': 272407, 'cairns': 140402}
 # Tuple holding the possible age categories used by the simulator
-ageCategories = (
-    'Young Infant',  # 0-6 months
-    'Infant',        # 7-24 months (0.5-2 years)
-    'Young Child',   # 3-5 years
-    'Child',         # 6-12 years
-    'Adolescent',    # 13-17 years
-    'Young Adult',   # 18-24 years
-    'Adult',         # 25-44 years
-    'Older Adult',   # 45-64 years
-    'Senior',        # 65-79 years
-    'Older Senior'   # 80+ years
-)
+ageCategories = {
+    'Young Infant': 'young_infant',  # 0-6 months
+    'Infant': 'infant',              # 7-24 months (0.5-2 years)
+    'Young Child': 'young_child',    # 3-5 years
+    'Child': 'child',                # 6-12 years
+    'Adolescent': 'adolescent',      # 13-17 years
+    'Young Adult': 'young_adult',    # 18-24 years
+    'Adult': 'adult',                # 25-44 years
+    'Older Adult': 'older_adult',    # 45-64 years
+    'Senior': 'senior',              # 65-79 years
+    'Older Senior': 'older_senior'   # 80+ years
+}
 # Set containing health outcomes selectable for tables
 tableOutcomes = {
     'Infections', 'Cases', 'Hospitalisations', 
@@ -63,7 +63,9 @@ triggerConditions = (
     'Cases per School', 'Cases per K-12 School'  
 )
 # Tuple holding the different location types for kappa selection
-kappaLocations = (
-    'Households', 'K-12 Education', 'Tertiary Education', 
-    'Workplaces', 'Childcare', 'Hospitals', 'Background'
-)
+kappaLocations = {
+    'Households': 'household', 'K-12 Education': 'child_education', 
+    'Tertiary Education': 'adult_education', 'Workplaces': 'workplace', 
+    'Childcare': 'child_care', 'Hospitals': 'hospital', 
+    'Background': 'background'
+}

@@ -3,21 +3,17 @@
 # Functions used to make requests to the server for running the simulation
 
 # Imports
-from math import ceil
-from io import StringIO
 import asyncio
 import logging
 import threading
 from aiohttp import ClientSession
-import pandas as pd
 import streamlit as st
-import altair as alt
 from ClientResources.ModelSchema import (
     Parameters, modelGuideFile, overrideParams, simulationSet, simulation
 )
 from ClientResources.InterfaceFunctions import formatEpidemic
 from ClientResources.SharedResources import (
-    serverUrl, resultQueue, ageCategories, tableOutcomes, outcomeAdjectives
+    serverUrl, resultQueue
 )
 
 # Logging

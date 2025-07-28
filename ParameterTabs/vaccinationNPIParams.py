@@ -85,7 +85,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
     ]
 
     # Use function to recalculate remaining group parameters
-    getRemainingGroups(ageGroupSets, ageCategories)
+    getRemainingGroups(ageGroupSets, ageCategories.keys())
 
 
 

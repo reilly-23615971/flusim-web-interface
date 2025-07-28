@@ -5,8 +5,8 @@
 # Imports
 import logging
 import streamlit as st
+from pydantic import ValidationError
 from ClientResources.InterfaceFunctions import dayCount
-from ClientResources.SharedResources import communityPopulation
 from ClientResources.ModelSchema import (
     Parameters, scenarioParameters, commandArgument
 )
@@ -95,10 +95,14 @@ def basicSchema(schema, id = 0):
         )
 
         # Add this tab's parameters to the scenario parameter object
-        # This is the only tab with commandArgument parameters, so we 
-        # won't need to worry about checking if that section exists
 
-        # Scenario_Parameters
+        # Command Arguments
+        schema.Command_Argument = commandArgument(
+            n_runs = st.session_state[f'runCount{id}'], 
+            n_cycles = st.session_state[f'cycleCount{id}'] * 2
+        )
+
+        # Scenario Parameters
         if not schema.Scenario_Parameter: 
             schema.Scenario_Parameter = scenarioParameters(
                 start_day_of_week = st.session_state[f'startDay{id}']
@@ -106,18 +110,9 @@ def basicSchema(schema, id = 0):
         else: schema.Scenario_Parameter.start_day_of_week = st.session_state[
             f'startDay{id}'
         ]
-        
-        # Command_Arguments
-        schema.Command_Argument = commandArgument(
-            n_runs = st.session_state[f'runCount{id}'], 
-            n_cycles = st.session_state[f'cycleCount{id}'] * 2
-        )
-    except ValueError as e:
+    except (ValueError, ValidationError) as e:
         basicLog.error((
             f'[basicParams] Encountered {type(e).__name__} '
             f'while validating parameters for scenario {id}: {e}'
         ))
         raise e
-
-
-        
