@@ -99,8 +99,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
 
     # Tab Content
-    # TODO: Warn for nonsensical conditions like reduced BCC being 
-    # lower than regular BCC
+    # TODO: Warn for nonsensical conditions
     with container:
         st.header('Vaccination and NPI Parameters')
         st.markdown('''
@@ -144,8 +143,6 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 ''')
 
                 # Policy parameters
-                # TODO: Change relevant population-based fields to have 
-                # the population of the current community as a maximum
                 with st.container(border = True):
                     vaccineTrigger = st.selectbox(
                         'Vaccination Trigger Condition', 
@@ -291,8 +288,6 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 vacAgeInitials, vacAgeTargets = {}, {}
 
                 # Modifiable-length field for age-specific vaccination
-                # TODO: Show warnings if age specific targets are below 
-                # initial values
                 st.markdown('''
                     ### Age-Specific Vaccinated Proportion Parameters
                     
@@ -1089,9 +1084,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         simulation.
                     '''
                 )
-                
-                # TODO: Make age-based social distancing probabilities 
-                # actually work in the schema
+                # Age-specific social distancing compliance
                 st.markdown('''
                     ### Age-Specific Social Distancing Compliance
                     
@@ -1383,7 +1376,6 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
 
             # Withdrawal Increase
-            # TODO: Mention which tab global withdrawals are changed in
             st.html('<span id = "withdrawalIncreaseTriggerCondition"></span>')
             with st.expander('Withdrawal Increase Properties'):
                 st.markdown('''
@@ -1391,6 +1383,10 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     interventions that increase the likelihood of 
                     infected individuals withdrawing from work/school 
                     after becoming symptomatic.
+                    
+                    Parameters controlling the probability of 
+                    withdrawal when this intervention is not active can 
+                    be found in the "Community" tab.
                 ''')
                 useWithdrawalIncreaseToggle = st.toggle(
                     'Enable Withdrawal Increases', value = True, 
@@ -1515,7 +1511,6 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
 
             # Reduced Workgroup Size
-            # TODO: Mention which tab global group size is changed in
             st.html('<span id = "reducedGroupTriggerCondition"></span>')
             with st.expander('Reduced Group Size Properties'):
                 st.markdown('''
@@ -1523,6 +1518,10 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     interventions that reduce the size of work groups 
                     when in effect. Note that this NPI does not target 
                     school groups or other gatherings.
+                    
+                    Parameters controlling the size of work groups when 
+                    this intervention is not active can be found in the 
+                    "Community" tab.
                 ''')
                 useReducedGroupToggle = st.toggle(
                     'Enable Group Size Reductions', value = True, 
@@ -1627,7 +1626,6 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
 
             # BCC Reduction
-            # TODO: Mention which tab global BCC can be changed in
             st.html('<span id = "bccTriggerCondition"></span>')
             with st.expander('Background Contact Count Reduction Properties'):
                 st.markdown('''
@@ -1636,6 +1634,10 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     count (BCC) in the simulation, thus reducing the 
                     number of individuals each person interacts with 
                     per day outside of simulated locations.
+                    
+                    Parameters controlling the background contact count 
+                    when this intervention is not active can be found 
+                    in the "Community" tab.
                 ''')
                 useBCCToggle = st.toggle(
                     'Enable BCC Reduction', value = True, 

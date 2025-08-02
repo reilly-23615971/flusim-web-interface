@@ -50,9 +50,6 @@ st.markdown(f'''
     to all scenarios and cannot be overwritten.
 ''', unsafe_allow_html = True)
 
-# Place to put warnings errors in the current parameter selection
-alertContainer = st.container()
-
 # Community Selection
 multiCommunityCode = """
 community = st.segmented_control(
@@ -98,6 +95,9 @@ community = st.selectbox(
 # TODO: Consider displaying more comprehensive community info regarding 
 # the one the user selects
 
+# Place to put warnings errors in the current parameter selection
+alertContainer = st.container()
+
 # Button to run the model
 # TODO: Check if server is available and grey out button if not
 # TODO: Vary message depending on scenario presence, server 
@@ -126,9 +126,6 @@ runModelButton = st.button(
     'Vaccination and NPIs', 'Dynamic'
 ])
 
-
-# TODO: Split up start and relaxation triggers in Vaccination/NPIs
-
 # Basic parameters
 buildBasicTab(basicTab, 0, alertContainer)
 
@@ -144,6 +141,6 @@ buildVaccinationNPITab(interventionTab, 0, alertContainer)
 # Dynamic parameters
 buildDynamicTab(dynamicTab, 0, alertContainer)
 
-#Debug
+# TODO: Debug
 #st.header('DEBUG ZONE')
 #st.write(st.session_state)

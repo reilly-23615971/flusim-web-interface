@@ -5,6 +5,8 @@
 # Imports
 import logging
 import numpy as np
+import pandas as pd
+import altair as alt
 import streamlit as st
 from pydantic import ValidationError
 from ClientResources.InterfaceFunctions import (
@@ -68,8 +70,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
 
 
     # Tab Content
-    # TODO: Warn for nonsensical conditions like reduced BCC being 
-    # lower than regular BCC
+    # TODO: Warn for nonsensical parameters
     with container:
         st.header('Disease Parameters')
         st.markdown('''
@@ -80,8 +81,8 @@ def buildDiseaseTab(container, id, globalErrorContainer):
             
             Note that despite being related to the disease's effects, 
             hospitalisation and mortality rate are defined in the 
-            Community Parameters tab instead of this tab, in order to 
-            group them with other health outcomes.
+            "Community" tab instead of this tab, in order to group them 
+            with other health burden outcomes.
         ''')
 
         # Potential Catchable Errors:
@@ -111,8 +112,6 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     infected directly via infection seeding each cycle.
                 '''
             )
-            # TODO: Set time-based parameter maximums based on number 
-            # of cycles in simulation
             st.select_slider(
                 'Infection Seeding Time Period (Days)', range(720), (0, 29), 
                 format_func = lambda x: f'Day {x + 1}', 
@@ -213,7 +212,6 @@ def buildDiseaseTab(container, id, globalErrorContainer):
             )
 
             # Age-based infectiousness and susceptibility parameters
-            # TODO: Make these parameters actually work in schema
             st.markdown('''
                 ### Age-Specific Infectiousness/Susceptibility
                     
@@ -341,8 +339,6 @@ def buildDiseaseTab(container, id, globalErrorContainer):
             )
 
             # Location-based kappa parameters
-            # TODO: Link to Background Contact Count if Background 
-            # Kappa is present in this form
             st.markdown('''
                 ### Location-Specific Transmission Modifiers
                     
@@ -401,7 +397,12 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                         - Background: Interactions taking place during 
                         the model's background phase, simulating 
                         any contact that occurs outside of the other 
-                        locations.
+                        locations. Note that the rate at which these 
+                        interactions occur (the Background Contact 
+                        Count) can be set in the "Community" tab, and 
+                        will be affected by the BCC Reduction 
+                        non-pharmaceutical intervention in the 
+                        "Vaccinations and NPIs" tab.
                     '''
                 )
                 # Kappa value column
@@ -501,9 +502,9 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 1. Latent: The disease is still developing in the body 
                 of the infected individual; they do not yet show 
                 symptoms and are not infectious.
-                2. Developing: The disease has developed further and 
-                the infected individual is now infectious, but they 
-                still do not show any symptoms.
+                2. Pre-Symptomatic: The disease has developed further 
+                and the infected individual can now spread the disease 
+                to others, but they still do not show any symptoms.
                 3. Symptomatic: The disease is now showing symptoms in 
                 the infected individual, and thus can now be diagnosed.
                 4. Post-Symptomatic: The infected individual's 
@@ -512,12 +513,16 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 5. Recovered: The individual is no longer infectious 
                 and is considered to have recovered from the disease.
                 
-                If an individual is asymptomatic, their infection may 
-                skip the third and fourth stages and remain in the 
-                second stage without symptoms for the disease's entire 
-                duration. The lengths of each of these stages is 
-                determined through the parameters in this section.
+                If an infected individual is asymptomatic, their 
+                infection will not progress into the symptomatic stage; 
+                they will remain in the pre-symptomatic stage without 
+                symptoms for the disease's entire duration. 
+                
+                The following parameters configure the length of each 
+                stage in the disease's life cycle.
             ''')
+            """
+            # Original period definitions
             latencyPeriod = st.select_slider(
                 'Latency Period Length (Days)', range(91), 10, 
                 format_func = dayCount, key = f'latencyPeriod{id}', help = '''
@@ -537,8 +542,6 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     and said individual beginning to show symptoms.
                 '''
             )
-            # TODO: Decide between generation time, infectious period, 
-            # symptom length
             symptomPeriod = st.select_slider(
                 'Symptomatic Period Length (Days)', range(91), 7, 
                 format_func = dayCount, key = f'symptomPeriod{id}', help = '''
@@ -586,6 +589,126 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     dayCount(infectionDuration - latencyPeriod)
                 }.
             ''')
+            """
+
+            #"""
+            # Alternate period definitions
+            latencyPeriod = st.select_slider(
+                'Latency Period Length (Days)', range(91), 10, 
+                format_func = dayCount, key = f'latencyPeriod{id}', help = '''
+                    The length in days of the disease's latency period, 
+                    i.e. the length of time between an individual 
+                    initially being infected by the disease and said 
+                    individual becoming infectious themselves.
+                '''
+            )
+            preSymptomPeriod = st.select_slider(
+                'Pre-Symptomatic Period Length (Days)', range(91), 2, 
+                format_func = dayCount, key = f'preSymptomPeriod{id}', 
+                help = '''
+                    The length in days of the disease's pre-symptomatic 
+                    period, i.e. the length of time between an 
+                    infected individual becoming capable of infecting 
+                    others with the disease and said individual 
+                    beginning to show symptoms.
+                '''
+            )
+            symptomPeriod = st.select_slider(
+                'Symptomatic Period Length (Days)', range(91), 7, 
+                format_func = dayCount, key = f'symptomPeriod{id}', help = '''
+                    The length in days of the disease's symptomatic 
+                    period, i.e. the length of time during which an 
+                    infected individual will show symptoms of the 
+                    disease.
+                '''
+            )
+            postSymptomPeriod = st.select_slider(
+                'Post-Symptomatic Period Length (Days)', range(91), 1, 
+                format_func = dayCount, key = f'postSymptomPeriod{id}', 
+                help = '''
+                    The length in days of the disease's 
+                    post-symptomatic period, i.e. the length of time 
+                    between an individual ceasing to show symptoms of 
+                    the disease and said individual being fully 
+                    recovered/no longer infectious.
+                '''
+            )
+
+            # Display duration lengths via Cool Bar Graph Thing™
+            stageNames = [
+                'Latent', 'Pre-Symptomatic', 'Symptomatic', 'Post-Symptomatic'
+            ]
+            data = pd.DataFrame({
+                'Life Stage': stageNames,
+                'Length (Days)': [
+                    latencyPeriod, preSymptomPeriod, 
+                    symptomPeriod, postSymptomPeriod
+                ],
+            })
+            data['start'] = data['Length (Days)'].cumsum().shift(
+                fill_value = 0
+            )
+            data['end'] = data['Length (Days)'].cumsum()
+            data['tooltip'] = data['Life Stage'] + ": " + data[
+                'Length (Days)'
+            ].astype(str)
+            chart = alt.Chart(
+                data, title = 'Current Disease Life Cycle'
+            ).mark_bar().encode(
+                x = alt.X(
+                    'start:Q', title = 'Length (Days)', 
+                    scale = alt.Scale(domain = [0, (
+                        latencyPeriod + preSymptomPeriod 
+                        + symptomPeriod + postSymptomPeriod
+                    )])
+                ), x2 = 'end:Q', y = alt.value(0), color = alt.Color(
+                    'Life Stage:N', sort = stageNames, 
+                    scale = alt.Scale(scheme = 'category10')
+                ), tooltip = ['Life Stage', 'Length (Days)']
+            ).properties(width = 600, height = 150)
+            st.altair_chart(chart)
+
+            # Written period lengths
+            st.markdown('''
+                With the parameters defined above, the following time 
+                periods can be defined:
+            ''')
+            totalCol, incubationCol, infectiousCol = st.columns(
+                (0.33333, 0.33333, 0.33333)
+            )
+            totalCol.metric(
+                'Total Length of Infection', dayCount(
+                    latencyPeriod + preSymptomPeriod 
+                    + symptomPeriod + postSymptomPeriod
+                ), help = '''
+                    The length in days of the disease's total lifespan, 
+                    i.e. the length of time between an individual 
+                    initially being infected by the disease and said 
+                    individual being fully recovered/no longer 
+                    infectious.
+                '''
+            )
+            incubationCol.metric(
+                'Incubation Period', dayCount(
+                    latencyPeriod + preSymptomPeriod
+                ), help = '''
+                    The length in days of the disease's incubation 
+                    period, i.e. the length of time between an 
+                    individual initially being infected by the disease 
+                    and said individual beginning to show symptoms.
+                '''
+            )
+            infectiousCol.metric(
+                'Infectious Period', dayCount(
+                    preSymptomPeriod + symptomPeriod + postSymptomPeriod
+                ), help = '''
+                    The length in days of the disease's infectious 
+                    period, i.e. the length of time during which an 
+                    infected individual is capable of spreading the 
+                    disease to others.
+                '''
+            )
+            #"""
 
 
 
@@ -672,7 +795,14 @@ def diseaseSchema(schema, id = 0):
 
         # Load reused parameters immediately to save time
         seedPeriod = st.session_state[f'seedPeriod{id}']
-        incubationPeriod = st.session_state[f'incubationPeriod{id}']
+        #incubationPeriod = st.session_state[f'incubationPeriod{id}']
+        #"""
+        # Alternate period definitions
+        latencyPeriod = st.session_state[f'latencyPeriod{id}']
+        preSymptomPeriod = st.session_state[f'preSymptomPeriod{id}']
+        symptomPeriod = st.session_state[f'symptomPeriod{id}']
+        postSymptomPeriod = st.session_state[f'postSymptomPeriod{id}']
+        #"""
 
         # Strain Parameters
         schema.Scenario_Strain = [strainParameters(
@@ -699,6 +829,8 @@ def diseaseSchema(schema, id = 0):
         scenarioParams.prob_asymptomatic = st.session_state[
             f'asymptomaticAdult{id}'
         ]
+        """
+        # Original period definitions
         scenarioParams.transmissibility_delay = (
             st.session_state[f'latencyPeriod{id}'] * 2
         )
@@ -709,6 +841,19 @@ def diseaseSchema(schema, id = 0):
         scenarioParams.infection_duration = (
             st.session_state[f'infectionDuration{id}'] * 2
         )
+        """
+        #"""
+        # Alternate period definitions
+        scenarioParams.transmissibility_delay = latencyPeriod * 2
+        scenarioParams.symptom_latency = (latencyPeriod + preSymptomPeriod) * 2
+        scenarioParams.generation_time = (
+            latencyPeriod + preSymptomPeriod + symptomPeriod
+        ) * 2
+        scenarioParams.infection_duration = (
+            latencyPeriod + preSymptomPeriod 
+            + symptomPeriod + postSymptomPeriod
+        ) * 2
+        #"""
         scenarioParams.infection_waning_cycle_delay = (
             st.session_state[f'naturalImmunityDuration{id}'] * 60
         )

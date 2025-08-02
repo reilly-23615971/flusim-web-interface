@@ -14,3 +14,24 @@ st.write((
 ))
 
 #TODO
+
+st.header('Testing Scale Changes')
+
+upperBound = st.slider(
+    'Upper Bound Test Slider', 1, 1000, 750, key = 'upper', help = f'''
+        Slider used for testing.
+    '''
+)
+
+testValue = st.slider(
+    'Test Slider', 1, upperBound, key = 'test2', help = f'''
+        Slider used for testing with modifiable upper bound.
+    '''
+)
+
+st.markdown(f'''
+    Current Slider Values:
+    
+    - Upper Bound Slider: {upperBound}
+    - The Other One: {testValue}
+''')

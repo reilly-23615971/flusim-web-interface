@@ -61,8 +61,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
 
 
     # Tab Content
-    # TODO: Warn for nonsensical conditions like reduced BCC being 
-    # lower than regular BCC
+    # TODO: Warn for nonsensical conditions
     with container:
         st.header('Community Parameters')
         st.markdown('''
@@ -137,7 +136,6 @@ def buildCommunityTab(container, id, globalErrorContainer):
             )
 
             # Age-based Mortality
-            # TODO: Make these parameters actually work in schema
             st.markdown('''
                 ### Age-Specific Mortality Rate
                     

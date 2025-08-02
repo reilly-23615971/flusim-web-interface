@@ -40,11 +40,8 @@ def buildBasicTab(container, id, globalErrorContainer):
             scenario.
         ''')
 
-        # Potential Catchable Errors:
-        # - Taking Too Long
-
         # Time Parameters
-        runCount = st.slider(
+        st.slider(
             'Number of Simulation Runs', 1, 24, 24, key = f'runCount{id}', 
             help = f'''
                 The number of times that {'each' if id == 0 else 'this'} 
@@ -52,7 +49,7 @@ def buildBasicTab(container, id, globalErrorContainer):
                 simulations but more accurate results due to averaging.
             '''
         )
-        cycleCount = st.select_slider(
+        st.select_slider(
             'Length of Simulation (Days)', range(30, 721), 360, 
             format_func = dayCount, key = f'cycleCount{id}', help = '''
                 The number of days that will be simulated in each 
