@@ -4,13 +4,19 @@
 
 # Imports
 import logging
+from typing import Literal, cast
 import numpy as np
 import streamlit as st
+from pydantic import ValidationError
 from ClientResources.InterfaceFunctions import (
     getRemainingGroups, addFormRow, deleteFormRow
 )
 from ClientResources.SharedResources import (
     npis, npiCamel, ordinals, triggerConditions, ageCategories
+)
+from ClientResources.ModelSchema import (
+    Parameters, scenarioParameters, ageScenarioParameters, 
+    vaccineCoverage, vaccineDose, vaccineEfficacy
 )
 
 # Logging
@@ -49,6 +55,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
     # Save primary row count as variable to avoid lookups (this one's 
     # defined early since it's used for finalising remaining groups)
     primaryRowCount = st.session_state[f'primaryDoseCount{id}']
+    triggerNames = list(triggerConditions.keys())
 
     # Ensure age selections only give possible parameters
     # Dictionary format: 'remaining groups variable': (
@@ -143,7 +150,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     vaccineTrigger = st.selectbox(
                         'Vaccination Trigger Condition', 
                         key = f'vaccineTrigger{id}', 
-                        options = triggerConditions[:-2], 
+                        options = triggerNames[:-2], 
                         disabled = not useVaccinesToggle, help = '''
                             The type of condition that must be 
                             satisfied before vaccines will start being 
@@ -1254,7 +1261,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     schoolClosureTrigger = st.selectbox(
                         'School Closure Trigger Condition', 
                         key = f'schoolClosureTrigger{id}', 
-                        options = triggerConditions, 
+                        options = triggerNames, 
                         disabled = not useSchoolClosureToggle, help = '''
                             The type of condition that must be 
                             satisfied before schools will start being 
@@ -1400,7 +1407,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     withdrawalIncreaseTrigger = st.selectbox(
                         'Withdrawal Increase Trigger Condition', 
                         key = f'withdrawalIncreaseTrigger{id}', 
-                        options = triggerConditions[:-2], 
+                        options = triggerNames[:-2], 
                         disabled = not useWithdrawalIncreaseToggle, help = '''
                             The type of condition that must be 
                             satisfied before the rate of withdrawal 
@@ -1532,7 +1539,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     reducedGroupTrigger = st.selectbox(
                         'Reduced Group Size Trigger Condition', 
                         key = f'reducedGroupTrigger{id}', 
-                        options = triggerConditions[:-2], 
+                        options = triggerNames[:-2], 
                         disabled = not useReducedGroupToggle, help = '''
                             The type of condition that must be 
                             satisfied before the size of work groups 
@@ -1642,12 +1649,10 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 
                 # BCC triggers
                 with st.container(border = True):
-                    # TODO: Check if school-based triggers are usable 
-                    # for vaccination and other non-school-closure NPIs
                     bccTrigger = st.selectbox(
                         'BCC Reduction Trigger Condition', 
                         key = f'bccTrigger{id}', 
-                        options = triggerConditions[:-2], 
+                        options = triggerNames[:-2], 
                         disabled = not useBCCToggle, help = '''
                             The type of condition that must be 
                             satisfied before background contact count 
@@ -1863,3 +1868,298 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             exceeds this value.
                         '''
                     )
+
+
+
+"""
+Simple functions to cast strings for validation's sake
+"""
+def ageCast(x): return cast(Literal[
+    'young_infant', 'infant', 'young_child', 'child', 'adolescent', 
+    'young_adult', 'adult', 'older_adult', 'senior', 'older_senior'
+], ageCategories[x])
+
+def trigCast(x): return cast(Literal[
+    'none', 'timed', 'per_school_cases', 'community_cases',
+    'community_rate', 'per_primary_high_school_cases'
+], triggerConditions[x])
+
+
+
+"""
+Function to populate the Pydantic model schema with the parameters in 
+this tab with scenario differentiation
+
+Parameters:
+    schema: The Pydantic model (specifically an object in the 
+    Parameters class) that the parameters will be populated into.
+
+    id: An integer that will be used to differentiate the parameters in 
+    different instances of the tab by adding a number to the Streamlit 
+    session state variables. A value of 0 means that this is the 
+    baseline scenario and will be treated accordingly.
+"""
+def vaccineSchema(schema, id = 0):
+    try:
+        # Validate parameters
+        if not isinstance(schema, Parameters): raise ValueError(
+            'schema should be a Parameters object'
+        )
+
+        # Load reused parameters immediately to save time
+        vaccineToggle = st.session_state[f'vaccineToggle{id}']
+        boosterToggle = st.session_state[f'boosterToggle{id}']
+        socialDistanceToggle = st.session_state[f'socialDistancingToggle{id}']
+
+        ageNames = list(ageCategories.keys())
+        primDoseCount = st.session_state[f'primaryDoseCount{id}']
+        primBaseEfficacy = [st.session_state[
+            f'primaryBaseEfficacy{id}-{i}'
+        ] for i in range(primDoseCount)]
+        primWanedEfficacy = st.session_state[f'primaryWanedEfficacy{id}']
+        boostBaseEfficacy = st.session_state[f'boosterBaseEfficacy{id}']
+        boostWanedEfficacy = st.session_state[f'boosterWanedEfficacy{id}']
+
+
+            
+        # Vaccine-Related Parameters
+        if vaccineToggle: 
+            # Scenario Vaccine Coverage
+            schema.Scenario_VaccineCoverage = [vaccineCoverage(
+                Age = None, 
+                Initial = st.session_state[f'initialVaccinated{id}'], 
+                Target = st.session_state[f'targetVaccinated{id}']
+            )] + [vaccineCoverage(
+                Age = ageCast(st.session_state[f'vacAgeGroup{id}-{i}']),
+                Initial = st.session_state[f'vacAgeInitial{id}-{i}'],
+                Target = st.session_state[f'vacAgeTarget{id}-{i}']
+            ) for i in range(st.session_state[f'vacAgeRowCount{id}'])]
+
+            # Scenario Vaccine Dose
+            doseParams = [vaccineDose(
+                DoseType = 'primary', Count = primDoseCount,
+                DoseSpacingCycles = st.session_state[f'primaryDelay{id}'] * 60,
+                WaningDelay = st.session_state[f'primaryDuration{id}'] * 60,
+                WaningRatePerCycle = (
+                    primBaseEfficacy[-1] - primWanedEfficacy
+                ) / (st.session_state[f'primaryWaningRate{id}'] * 60)
+            )]
+            if boosterToggle: doseParams += [vaccineDose(
+                DoseType = 'booster', 
+                Count = st.session_state[f'boosterDoseCount{id}'],
+                DoseSpacingCycles = st.session_state[f'boosterDelay{id}'] * 60,
+                WaningDelay = st.session_state[f'boosterDuration{id}'] * 60,
+                WaningRatePerCycle = (
+                    boostBaseEfficacy - boostWanedEfficacy
+                ) / (st.session_state[f'boosterWaningRate{id}'] * 60)
+            )]
+            schema.Scenario_VaccineDose = doseParams
+        
+            # Scenario Vaccine Dose Efficacy
+
+            # Base Primary Efficacy Values
+            efficacyParams = [vaccineEfficacy(
+                DoseType = 'primary', Age = None, 
+                WanedEfficacy = primWanedEfficacy, Efficacy = primBaseEfficacy
+            )]
+            # Age-Specific Primary Efficacy Values
+            primAgeEfficacies = dict.fromkeys(ageNames, primBaseEfficacy)
+            for i in range(primDoseCount):
+                for j in range(st.session_state[f'primAgeRowCount{id}-{i}']):
+                    primAgeEfficacies[
+                        st.session_state[f'primAgeGroup{id}-{i}-{j}']
+                    ][i] = st.session_state[f'primAgeEfficacy{id}-{i}-{j}']
+            agePrimEfficacyParams = [vaccineEfficacy(
+                DoseType = 'primary', Age = ageCast(age),
+                Efficacy = primAgeEfficacies[age], 
+                WanedEfficacy = primWanedEfficacy
+            ) for age in ageNames]
+            for i in range(st.session_state[f'primWanedRowCount{id}']):
+                agePrimEfficacyParams[
+                    ageNames.index(st.session_state[f'primWanedGroup{id}-{i}'])
+                ].WanedEfficacy = st.session_state[
+                    f'primAgeWanedEfficacy{id}-{i}'
+                ]
+            efficacyParams += agePrimEfficacyParams
+            # Booster Efficacy Values
+            if boosterToggle: efficacyParams += [vaccineEfficacy(
+                DoseType = 'booster', Age = None, Efficacy = boostBaseEfficacy,
+                WanedEfficacy = boostWanedEfficacy
+            )] + [vaccineEfficacy(
+                DoseType = 'booster', 
+                Age = ageCast(st.session_state[f'boostAgeGroup{id}-{i}']), 
+                Efficacy = st.session_state[f'boostAgeEfficacy{id}-{i}'],
+                WanedEfficacy = st.session_state[
+                    f'boostAgeWanedEfficacy{id}-{i}'
+                ]
+            ) for i in range(st.session_state[f'boostAgeRowCount{id}'])]
+            # All together
+            schema.Scenario_VaccineDoseEfficacy = efficacyParams
+            
+        # Scenario Parameters With Age Prefix
+        ageScenarioParams = (
+            schema.Scenario_ParameterWithAgePrefix 
+            if schema.Scenario_ParameterWithAgePrefix 
+            else ageScenarioParameters()
+        )
+        ageScenarioParams.social_distance = st.session_state[
+            f'socialDistancingCompliance{id}'
+        ] if socialDistanceToggle else 0.0
+        schema.Scenario_ParameterWithAgePrefix = ageScenarioParams
+        
+        # Scenario Parameters
+        scenarioParams = (
+            schema.Scenario_Parameter if schema.Scenario_Parameter 
+            else scenarioParameters()
+        )
+        # Vaccination
+        if vaccineToggle:
+            scenarioParams.vaccine_doses = st.session_state[
+                f'initialDoseReserve{id}'
+            ] if st.session_state[f'limitDosesToggle{id}'] else 999999
+            scenarioParams.vaccination_first_dose_rate = st.session_state[
+                f'firstDoseRate{id}'
+            ]
+            vaccineTrigger = st.session_state[f'vaccineTrigger{id}']
+            scenarioParams.vaccination_trigger = trigCast(vaccineTrigger)
+            scenarioParams.vaccination_relaxation = trigCast(vaccineTrigger)
+            if vaccineTrigger == 'Always':
+                scenarioParams.vaccination_delay = 0
+                scenarioParams.vaccination_duration = 999999
+            elif vaccineTrigger == 'Timed':
+                vaccinePeriod = [
+                    i * 2 for i in st.session_state[f'vaccinePeriod{id}']
+                ]
+                scenarioParams.vaccination_delay = vaccinePeriod[0]
+                scenarioParams.vaccination_duration = (
+                    vaccinePeriod[1] - vaccinePeriod[0]
+                )
+        # School Closure
+        if st.session_state[f'schoolClosureToggle{id}']:
+            scenarioParams.school_closure_compliance = st.session_state[
+                f'schoolClosureCompliance{id}'
+            ]
+            closedSchoolTypes = st.session_state[f'schoolClosureTypes{id}']
+            scenarioParams.close_childcare = 'Childcare' in closedSchoolTypes
+            scenarioParams.close_child_education = 'K-12' in closedSchoolTypes
+            scenarioParams.close_adult_education = (
+                'Tertiary' in closedSchoolTypes
+            )
+            schoolTrigger = st.session_state[f'schoolClosureTrigger{id}']
+            scenarioParams.school_closure_trigger = trigCast(schoolTrigger)
+            scenarioParams.school_closure_relaxation = trigCast(schoolTrigger)
+            if schoolTrigger == 'Always':
+                scenarioParams.school_closure_delay = 0
+                scenarioParams.school_closure_duration = 999999
+            elif schoolTrigger == 'Timed':
+                schoolPeriod = [
+                    i * 2 for i in st.session_state[f'schoolClosurePeriod{id}']
+                ]
+                scenarioParams.school_closure_delay = schoolPeriod[0]
+                scenarioParams.school_closure_duration = (
+                    schoolPeriod[1] - schoolPeriod[0]
+                )
+        # Withdrawal Increase
+        if st.session_state[f'withdrawalIncreaseToggle{id}']:    
+            scenarioParams.increased_withdrawal = st.session_state[
+                f'withdrawalIncreaseAdult{id}'
+            ]
+            scenarioParams.increased_withdrawal_child = st.session_state[
+                f'withdrawalIncreaseChild{id}'
+            ]
+            withdrawalTrigger = st.session_state[
+                f'withdrawalIncreaseTrigger{id}'
+            ]
+            scenarioParams.withdrawal_increase_trigger = trigCast(
+                withdrawalTrigger
+            )
+            scenarioParams.withdrawal_increase_relaxation = trigCast(
+                withdrawalTrigger
+            )
+            if withdrawalTrigger == 'Always':
+                scenarioParams.withdrawal_increase_delay = 0
+                scenarioParams.withdrawal_increase_duration = 999999
+            elif withdrawalTrigger == 'Timed':
+                withdrawalPeriod = [i * 2 for i in st.session_state[
+                    f'withdrawalIncreasePeriod{id}'
+                ]]
+                scenarioParams.withdrawal_increase_delay = withdrawalPeriod[0]
+                scenarioParams.withdrawal_increase_duration = (
+                    withdrawalPeriod[1] - withdrawalPeriod[0]
+                )
+        # Reduced Group Size
+        if st.session_state[f'reducedGroupToggle{id}']: 
+            scenarioParams.reduced_workgroup_size = st.session_state[
+                f'reducedGroupSize{id}'
+            ]
+            reducedGroupTrigger = st.session_state[f'reducedGroupTrigger{id}']
+            scenarioParams.reduced_workgroup_trigger = trigCast(
+                reducedGroupTrigger
+            )
+            scenarioParams.reduced_workgroup_relaxation = trigCast(
+                reducedGroupTrigger
+            )
+            if reducedGroupTrigger == 'Always':
+                scenarioParams.reduced_workgroup_delay = 0
+                scenarioParams.reduced_workgroup_duration = 999999
+            elif reducedGroupTrigger == 'Timed':
+                reducedGroupPeriod = [
+                    i * 2 for i in st.session_state[f'reducedGroupPeriod{id}']
+                ]
+                scenarioParams.reduced_workgroup_delay = reducedGroupPeriod[0]
+                scenarioParams.reduced_workgroup_duration = (
+                    reducedGroupPeriod[1] - reducedGroupPeriod[0]
+                )
+        # BCC Reduction
+        if st.session_state[f'bccToggle{id}']:
+            scenarioParams.bcc_reduction = st.session_state[
+                f'bccReducedRate{id}'
+            ]
+            bccTrigger = st.session_state[f'bccTrigger{id}']
+            scenarioParams.bcc_reduction_trigger = trigCast(bccTrigger)
+            scenarioParams.bcc_reduction_relaxation = trigCast(bccTrigger)
+            if bccTrigger == 'Always':
+                scenarioParams.bcc_reduction_delay = 0
+                scenarioParams.bcc_reduction_duration = 999999
+            elif bccTrigger == 'Timed':
+                bccPeriod = [i * 2 for i in st.session_state[f'bccPeriod{id}']]
+                scenarioParams.bcc_reduction_delay = bccPeriod[0]
+                scenarioParams.bcc_reduction_duration = (
+                    bccPeriod[1] - bccPeriod[0]
+                )
+        # Other NPIs
+        if socialDistanceToggle:
+            scenarioParams.social_distance_compliance = st.session_state[
+                f'socialDistancingCompliance{id}'
+            ]
+            for i in range(st.session_state[f'socialRowCount{id}']): setattr(
+                scenarioParams, f'{ageCategories[
+                    st.session_state[f'socialAgeGroup{id}-{i}']
+                ]}_social_distance', 
+                st.session_state[f'socialCompliance{id}-{i}']
+            )
+        scenarioParams.diagnosed_case_isolation = st.session_state[
+            f'caseIsolation{id}'
+        ]
+        scenarioParams.class_dismissal = st.session_state[
+            f'classDismissal{id}'
+        ]
+        # Triggers
+        scenarioParams.case_trigger_threshold = st.session_state.get(
+            f'caseTotalThreshold{id}', 1
+        )
+        scenarioParams.rate_trigger_threshold = st.session_state.get(
+            f'rateStartThreshold{id}', 1
+        )
+        scenarioParams.rate_relaxation_threshold = st.session_state.get(
+            f'rateRelaxThreshold{id}', 1
+        )
+        scenarioParams.maximum_trigger_count = 250
+        # Save the updated parameters
+        schema.Scenario_Parameter = scenarioParams
+    except (ValueError, ValidationError) as e:
+        vaccineLog.error((
+            f'[vaccinationNPIParams] Encountered {type(e).__name__} '
+            f'while validating parameters for scenario {id}: {e}'
+        ))
+        raise e

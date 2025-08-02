@@ -11,7 +11,8 @@ sharedLog = logging.getLogger(__name__)
 
 # Constants
 
-# URL where server is located (change to proxy URL)
+# URLs where client/server is located (change to proxy URL)
+clientUrl = 'http://localhost:8501/'
 serverUrl = 'http://127.0.0.1:8000/'
 # Queue used to store CSV data from completed server requests
 resultQueue = Queue()
@@ -58,10 +59,13 @@ npiCamel = (
     'vaccination', 'schoolClosure', 'withdrawalIncrease', 'reducedGroup', 'bcc'
 )
 # Tuple holding the possible trigger conditions for NPIs
-triggerConditions = (
-    'Always', 'Timed', 'Community Case Rate', 'Community Case Total', 
-    'Cases per School', 'Cases per K-12 School'  
-)
+triggerConditions = {
+    'Always': 'timed', 'Timed': 'timed', 
+    'Community Case Rate': 'community_rate', 
+    'Community Case Total': 'community_cases', 
+    'Cases per School': 'per_school_cases', 
+    'Cases per K-12 School': 'per_primary_high_school_cases'  
+}
 # Tuple holding the different location types for kappa selection
 kappaLocations = {
     'Households': 'household', 'K-12 Education': 'child_education', 

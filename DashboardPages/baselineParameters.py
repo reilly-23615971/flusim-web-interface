@@ -11,7 +11,7 @@ from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
 from ParameterTabs.dynamicParams import buildDynamicTab
 from ClientResources.SimulationRunFunctions import runModelWrapper
-from ClientResources.SharedResources import communityPopulation
+from ClientResources.SharedResources import communityPopulation, clientUrl
 
 # Logging
 baselineLog = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ def runSimulationButton():
 
 st.title('Flusim Disease Model Web Dashboard')
 
-st.markdown('''
+st.markdown(f'''
     This page allows for configuring the parameters that will be used 
     as a baseline for the simulation.
             
@@ -43,11 +43,12 @@ st.markdown('''
     
     All scenarios in the simulation will use the parameters on this 
     page as a baseline; however, individual scenarios can have 
-    different values defined here [ADD LINK], overwriting these base 
-    values. The sole exception to this is the Simulated Community 
-    parameter defined below, which applies to all scenarios and cannot 
-    be overwritten.
-''')
+    different values defined at the Scenario Parameter Configuration 
+    page <a href="{clientUrl}scenarioParameters" target="_self">
+    here</a>, overwriting these base values. The sole exception to this 
+    is the Simulated Community parameter defined below, which applies 
+    to all scenarios and cannot be overwritten.
+''', unsafe_allow_html = True)
 
 # Place to put warnings errors in the current parameter selection
 alertContainer = st.container()
@@ -102,12 +103,14 @@ community = st.selectbox(
 # TODO: Vary message depending on scenario presence, server 
 # availability, errors, etc.
 # TODO: Add 'are you sure' prompt when pressing button
-st.markdown('''
+st.markdown(f'''
     Press the button below to run the simulation. Remember that in 
     order to compare different parameter values, you should define 
-    scenarios with different parameters here [ADD LINK]; make sure 
-    these scenarios have been configured before running the model.
-''')
+    scenarios with different parameters 
+    <a href="{clientUrl}scenarioParameters" target="_self">here</a>; 
+    make sure these scenarios have been configured before running the 
+    model.
+''', unsafe_allow_html = True)
 runModelButton = st.button(
     'Run Simulation', on_click = runSimulationButton
 )

@@ -331,6 +331,19 @@ def buildDynamicTab(container, id, globalErrorContainer):
 
 
 """
+Simple functions to cast strings for validation's sake
+"""
+dynamicMapping = {
+    'seed': 'seed_rate', 'close': 'school_closure', 'bcc': 'bcc_reduction'
+}
+def paramCast(x): return cast(Literal[
+    'work_nonattendance', 'bcc_reduction', 'school_closure', 
+    'seed_rate', 'school_closure_delay', 'school_closure_duration'
+], dynamicMapping[x])
+
+
+
+"""
 Function to populate the Pydantic model schema with the parameters in 
 this tab with scenario differentiation
 
@@ -350,30 +363,18 @@ def dynamicSchema(schema, id = 0):
             'schema should be a Parameters object'
         )
 
-        # Construct the list of parameter objects
-        dynamicMapping = {
-            'seed': 'seed_rate', 
-            'close': 'school_closure', 'bcc': 'bcc_reduction'
-        }
+        # Scenario Dynamic Intervention
         dynamicChanges = []
-        for prefix, param in dynamicMapping.values():
-            castedParam = cast(Literal[
-                'work_nonattendance', 'bcc_reduction', 'school_closure', 
-                'seed_rate', 'school_closure_delay', 'school_closure_duration'
-            ], param)
+        for prefix in ('seed', 'close', 'bcc'):
             for i in range(st.session_state[f'{prefix}RowCount{id}']): 
                 dynamicChanges.append(dynamicIntervention(
-                    Name = castedParam, 
-                    CycleOffset = st.session_state[
+                    Name = paramCast(prefix), CycleOffset = st.session_state[
                         f'{prefix}Cycle{id}-{i}'
                     ] * 2, 
                     NewValue = st.session_state[f'{prefix}NewRate{id}-{i}']
                 ))
-        
-        # Assign the parameters
+        # Save the updated parameters
         schema.Scenario_DynamicIntervention = dynamicChanges
-
-
     except (ValueError, ValidationError) as e:
         dynamicLog.error((
             f'[dynamicParams] Encountered {type(e).__name__} '

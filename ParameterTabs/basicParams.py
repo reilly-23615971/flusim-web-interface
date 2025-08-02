@@ -94,8 +94,6 @@ def basicSchema(schema, id = 0):
             'schema should be a Parameters object'
         )
 
-        # Add this tab's parameters to the scenario parameter object
-
         # Command Arguments
         schema.Command_Argument = commandArgument(
             n_runs = st.session_state[f'runCount{id}'], 
@@ -103,13 +101,12 @@ def basicSchema(schema, id = 0):
         )
 
         # Scenario Parameters
-        if not schema.Scenario_Parameter: 
-            schema.Scenario_Parameter = scenarioParameters(
-                start_day_of_week = st.session_state[f'startDay{id}']
-            )
-        else: schema.Scenario_Parameter.start_day_of_week = st.session_state[
-            f'startDay{id}'
-        ]
+        scenarioParams = (
+            schema.Scenario_Parameter if schema.Scenario_Parameter 
+            else scenarioParameters()
+        )
+        scenarioParams.start_day_of_week = st.session_state[f'startDay{id}']
+        schema.Scenario_Parameter = scenarioParams
     except (ValueError, ValidationError) as e:
         basicLog.error((
             f'[basicParams] Encountered {type(e).__name__} '

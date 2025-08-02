@@ -407,94 +407,63 @@ def communitySchema(schema, id = 0):
             'schema should be a Parameters object'
         )
 
-        # Add this tab's parameters to the scenario parameter object
-
         # Scenario Parameters With Age Prefix
-        if not schema.Scenario_ParameterWithAgePrefix: 
-            schema.Scenario_ParameterWithAgePrefix = ageScenarioParameters(
-                mort = st.session_state[f'deathRatio{id}']
-            )
-        else: schema.Scenario_ParameterWithAgePrefix.mort = st.session_state[
+        ageScenarioParams = (
+            schema.Scenario_ParameterWithAgePrefix 
+            if schema.Scenario_ParameterWithAgePrefix 
+            else ageScenarioParameters()
+        )
+        ageScenarioParams.mort = st.session_state[
             f'deathRatio{id}'
         ]
+        schema.Scenario_ParameterWithAgePrefix = ageScenarioParams
 
         # Scenario Parameters
-        if not schema.Scenario_Parameter: 
-            schema.Scenario_Parameter = scenarioParameters(
-                prob_diagnosis = st.session_state[f'caseRatio{id}'], 
-                prob_hospitalisation = st.session_state[f'hospitalRatio{id}'], 
-                prob_withdrawal = st.session_state[f'withdrawalWork{id}'], 
-                prob_school_withdrawal = st.session_state[
-                    f'withdrawalSchool{id}'
-                ], 
-                diagnosis_delay = st.session_state[f'diagnosisDelay{id}'] * 2, 
-                background_contact_count = st.session_state[f'bccRate{id}'], 
-                prob_child_supervision = st.session_state[
-                    f'childSupervision{id}'
-                ], 
-                max_class_count = st.session_state[f'maxClassCount{id}'], 
-                max_class_size = st.session_state[f'maxClassSize{id}'], 
-                max_adult_class_size = st.session_state[
-                    f'maxAdultClassSize{id}'
-                ], 
-                max_workgroup_size = st.session_state[
-                    f'maxWorkGroupSize{id}'
-                ], 
-                max_neighbourgroup_size = st.session_state[
-                    f'maxNeighborGroupSize{id}'
-                ], 
-                max_churchgroup_size = st.session_state[
-                    f'maxChurchGroupSize{id}'
-                ]
-            )
-        else: 
-            schema.Scenario_Parameter.prob_diagnosis = st.session_state[
-                f'caseRatio{id}'
-            ]
-            schema.Scenario_Parameter.prob_hospitalisation = st.session_state[
-                f'hospitalRatio{id}'
-            ]
-            schema.Scenario_Parameter.prob_withdrawal = st.session_state[
-                f'withdrawalWork{id}'
-            ]
-            schema.Scenario_Parameter.prob_school_withdrawal = st.session_state[
-                f'withdrawalSchool{id}'
-            ]
-            schema.Scenario_Parameter.diagnosis_delay = st.session_state[f'diagnosisDelay{id}'] * 2
-            schema.Scenario_Parameter.background_contact_count = st.session_state[
-                f'bccRate{id}'
-            ]
-            schema.Scenario_Parameter.prob_child_supervision = st.session_state[
-                f'childSupervision{id}'
-            ]
-            schema.Scenario_Parameter.max_class_count = st.session_state[
-                f'maxClassCount{id}'
-            ]
-            schema.Scenario_Parameter.max_class_size = st.session_state[
-                f'maxClassSize{id}'
-            ]
-            schema.Scenario_Parameter.max_adult_class_size = st.session_state[
-                f'maxAdultClassSize{id}'
-            ]
-            schema.Scenario_Parameter.max_workgroup_size = st.session_state[
-                f'maxWorkGroupSize{id}'
-            ]
-            schema.Scenario_Parameter.max_neighbourgroup_size = st.session_state[
-                f'maxNeighborGroupSize{id}'
-            ]
-            schema.Scenario_Parameter.max_churchgroup_size = st.session_state[
-                f'maxChurchGroupSize{id}'
-            ]
-        
-        # Add age-based mortality
-        for i in range(st.session_state[f'deathRowCount{id}']):
-            varAgeGroup = ageCategories[
+        scenarioParams = (
+            schema.Scenario_Parameter if schema.Scenario_Parameter 
+            else scenarioParameters()
+        )
+        scenarioParams.prob_diagnosis = st.session_state[f'caseRatio{id}']
+        scenarioParams.prob_hospitalisation = st.session_state[
+            f'hospitalRatio{id}'
+        ]
+        scenarioParams.prob_withdrawal = st.session_state[
+            f'withdrawalWork{id}'
+        ]
+        scenarioParams.prob_school_withdrawal = st.session_state[
+            f'withdrawalSchool{id}'
+        ]
+        scenarioParams.diagnosis_delay = (
+            st.session_state[f'diagnosisDelay{id}'] * 2
+        )
+        scenarioParams.background_contact_count = st.session_state[
+            f'bccRate{id}'
+        ]
+        scenarioParams.prob_child_supervision = st.session_state[
+            f'childSupervision{id}'
+        ]
+        scenarioParams.max_class_count = st.session_state[f'maxClassCount{id}']
+        scenarioParams.max_class_size = st.session_state[f'maxClassSize{id}']
+        scenarioParams.max_adult_class_size = st.session_state[
+            f'maxAdultClassSize{id}'
+        ]
+        scenarioParams.max_workgroup_size = st.session_state[
+            f'maxWorkGroupSize{id}'
+        ]
+        scenarioParams.max_neighbourgroup_size = st.session_state[
+            f'maxNeighborGroupSize{id}'
+        ]
+        scenarioParams.max_churchgroup_size = st.session_state[
+            f'maxChurchGroupSize{id}'
+        ]
+        # Procedural Scenario Parameters (age specific)
+        for i in range(st.session_state[f'deathRowCount{id}']): setattr(
+            scenarioParams, f'{ageCategories[
                 st.session_state[f'deathAgeGroup{id}-{i}']
-            ]
-            setattr(
-                schema.Scenario_Parameter, f'{varAgeGroup}_mort', 
-                st.session_state[f'deathRatio{id}-{i}']
-            )
+            ]}_mort', st.session_state[f'deathRatio{id}-{i}']
+        )
+        # Save the updated params
+        schema.Scenario_Parameter = scenarioParams
     except (ValueError, ValidationError) as e:
         communityLog.error((
             f'[communityParams] Encountered {type(e).__name__} '

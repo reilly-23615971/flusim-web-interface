@@ -49,8 +49,8 @@ pages = {
             title = 'Baseline Parameter Configuration'
         ),
         st.Page(
-            'DashboardPages/parameterConfiguration.py', 
-            title = 'Parameter Configuration'
+            'DashboardPages/scenarioParameters.py', 
+            title = 'Scenario Parameter Configuration'
         ),
         st.Page(
             'DashboardPages/tableCreation.py', 
