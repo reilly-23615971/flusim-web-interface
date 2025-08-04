@@ -22,6 +22,24 @@ Simple function to convert an integer into a string describing a number of days
 def dayCount(count): return '1 Day' if count == 1 else f'{count} Days'
 
 """
+Simple function to get a specific session state value with a specific 
+ID, checking ID 0 if the specified one doesn't exist before falling 
+back on a default
+
+Parameters:
+    string: The string component of the session state variable to get.
+
+    id: An integer that will be used to differentiate the parameters in 
+    different scenarios by adding numbers to session state variables.
+
+    defaultValue: What to return if neither the specified ID nor 0 give 
+    a value in session state.
+"""
+def idGet(string, id, defaultValue): return st.session_state.get(
+    f'{string}{id}', st.session_state.get(f'{string}0', defaultValue)
+)
+
+"""
 Function to update what parameters are selectable for different 
 parts of a form, to avoid duplicates
 

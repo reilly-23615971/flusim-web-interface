@@ -9,7 +9,7 @@ import numpy as np
 import streamlit as st
 from pydantic import ValidationError
 from ClientResources.InterfaceFunctions import (
-    getRemainingGroups, addFormRow, deleteFormRow
+    getRemainingGroups, addFormRow, deleteFormRow, idGet
 )
 from ClientResources.SharedResources import (
     npis, npiCamel, ordinals, triggerConditions, ageCategories
@@ -45,7 +45,14 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
         f'primWanedRowCount{id}': 0,
         f'boostAgeRowCount{id}': 0,
         f'socialRowCount{id}': 0,
-        f'classDismissal{id}': True
+        f'classDismissal{id}': True,
+        f'schoolTypeError{id}': 0,
+        f'baseVacPropError{id}': 0,
+        f'ageVacPropError{id}': 0,
+        f'adultWithdrawalError{id}': 0,
+        f'childWithdrawalError{id}': 0,
+        f'reducedGroupError{id}': 0,
+        f'bccError{id}': 0
     }
     for parameter, default in sessionParameters.items(): 
         st.session_state[parameter] = st.session_state.setdefault(
@@ -94,6 +101,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
     # Use function to recalculate remaining group parameters
     getRemainingGroups(ageGroupSets, ageCategories.keys())
 
+    # Parameters for keeping track of error presence in big fields
+    ageVacPropError = False
+
 
 
 
@@ -109,15 +119,29 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
         ''')
 
         # Potential Catchable Errors:
-        # - Duration of NPI is longer that simulation length/simulation 
-        #   ends before timed NPI does
-        # - Initial vaccinated proportion is greater than target 
-        #   vaccinated proportion (including age-specific versions)
-        # - Vaccine total program length is greater than simulation time
         # - Final waned efficacy is greater than initial efficacy 
         #   (including age-specific versions and boosters if possible)
-        # - No school types selected for closure
-        # - Effect of NPI is weaker than base parameters
+        # - NPI Time period extends past current number of days in sim
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        
 
         # Vaccination
         with st.container():
@@ -283,6 +307,51 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         available.
                     '''
                 )
+                baseVacPropErrorContainer = st.empty()
+
+                # Show error if initial proportion is above target
+                if useVaccinesToggle and initialVaccinated >= targetVaccinated:
+                    baseVacPropErrorContainer.warning(f'''
+                        Warning: The target vaccinated proportion in 
+                        the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } for all age groups is currently set to 
+                        {100 * targetVaccinated:0.3g}% of the 
+                        population, but the initial vaccinated 
+                        proportion for this scenario is set to 
+                        {100 * initialVaccinated:0.3g}%. As such, the 
+                        target vaccination level will already be met, 
+                        and no new vaccinations will occur in this 
+                        scenario. If this is not intentional, please 
+                        adjust the proportions above such that the 
+                        target proportion is less than the initial 
+                        proportion before running the simulation.
+                    ''')
+                    globalErrorContainer.warning(f'''
+                        Warning: The target vaccinated proportion in 
+                        the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } for all age groups is currently set to 
+                        {100 * targetVaccinated:0.3g}% of the 
+                        population, but the initial vaccinated 
+                        proportion for this scenario is set to 
+                        {100 * initialVaccinated:0.3g}%. As such, the 
+                        target vaccination level will already be met, 
+                        and no new vaccinations will occur in this 
+                        scenario. If this is not intentional, please 
+                        adjust the proportions in the "Vaccinations and 
+                        NPIs" tab such that the target proportion is 
+                        less than the initial proportion before running 
+                        the simulation.
+                    ''')
+                    st.session_state[f'baseVacPropError{id}'] = 1
+                else: st.session_state[f'baseVacPropError{id}'] = 0
 
                 # Store age-based proportion values for error checking
                 vacAgeInitials, vacAgeTargets = {}, {}
@@ -302,6 +371,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     f'vaccineRemainingAgeGroups{id}'
                 ]
                 vacAgeProportionContainer = st.container()
+                vacAgeErrorContainer = st.container()
                 for i in range(vaccineRowCount): 
                     (
                         vacAgeGroupColumn, vacAgeInitialColumn, 
@@ -421,6 +491,67 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         group cannot be added.
                     '''
                 )
+
+                # Age-based errors if initial proportion is above target
+                for age in vacAgeInitials.values():
+                    currentInitial = vacAgeInitials[age] 
+                    currentTarget = vacAgeTargets[age]
+                    if useVaccinesToggle and currentInitial >= currentTarget: 
+                        vacAgeErrorContainer.warning(f'''
+                            Warning: The target vaccinated proportion 
+                            in the {
+                                'baseline scenario' if id == 0 
+                                else f'scenario named "{
+                                    st.session_state[f'scenarioName{id}']
+                                }"'
+                            } for the "{age}" age group is currently 
+                            set to {100 * currentTarget:0.3g}% of the 
+                            population, but the initial vaccinated 
+                            proportion for said age group in this 
+                            scenario is set to 
+                            {100 * currentInitial:0.3g}%. As such, the 
+                            target vaccination level will already be 
+                            met, and no new vaccinations will occur in 
+                            this scenario for individuals in the 
+                            "{age}" age group. If this is not 
+                            intentional, please either remove the 
+                            unique proportions for the "{age}" group in 
+                            this scenario or adjust the proportions 
+                            such that the target proportion is less 
+                            than the initial proportion before running 
+                            the simulation.
+                        ''')
+                        globalErrorContainer.warning(f'''
+                            Warning: The target vaccinated proportion 
+                            in the {
+                                'baseline scenario' if id == 0 
+                                else f'scenario named "{
+                                    st.session_state[f'scenarioName{id}']
+                                }"'
+                            } for the "{age}" age group is currently 
+                            set to {100 * currentTarget:0.3g}% of the 
+                            population, but the initial vaccinated 
+                            proportion for said age group in this 
+                            scenario is set to 
+                            {100 * currentInitial:0.3g}%. As such, the 
+                            target vaccination level will already be 
+                            met, and no new vaccinations will occur in 
+                            this scenario for individuals in the 
+                            "{age}" age group. If this is not 
+                            intentional, please either remove the 
+                            unique proportions for the "{age}" group in 
+                            this scenario or adjust the proportions in 
+                            the "Vaccinations and NPIs" tab such that 
+                            the target proportion is less than the 
+                            initial proportion before running the 
+                            simulation.
+                        ''')
+                        st.session_state[f'ageVacPropError{id}'] = 1
+                        ageVacPropError = True
+                # Reset error parameter if none of the age levels error
+                if not ageVacPropError: 
+                    st.session_state[f'ageVacPropError{id}'] = 0
+                
 
 
 
@@ -1216,7 +1347,10 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         non-tertiary schools should dismiss classes 
                         when the daily case rate is high enough.
 
-                        Note that the rate that must be reached before class dismissal begins to occur is shared with any other NPIs that are set to use case rates as their trigger threshold.
+                        Note that the rate that must be reached before 
+                        class dismissal begins to occur is shared with 
+                        any other NPIs that are set to use case rates 
+                        as their trigger threshold.
                     '''
                 )
                 if classDismissal: st.info(
@@ -1361,6 +1495,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         - Tertiary: Adult education facilities.
                     '''
                 )
+                schoolTypeErrorContainer = st.empty()
                 st.select_slider(
                     'School Closure Compliance (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 0.9, 
@@ -1372,6 +1507,38 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         the simulation.
                     '''
                 )
+
+                # Show error if no schools selected
+                if useSchoolClosureToggle and not schoolClosureTypes: 
+                    schoolTypeErrorContainer.error(f'''
+                        Error: The {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } currently has no school types selected to 
+                        close during school closure NPIs. At least one 
+                        kind of school must be selected for this NPI in 
+                        order for it to have an effect on the scenario. 
+                        Please select at least one of the school types 
+                        above before running the simulation.
+                    ''')
+                    globalErrorContainer.error(f'''
+                        Error: The {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } currently has no school types selected to 
+                        close during school closure NPIs. At least one 
+                        kind of school must be selected for this NPI in 
+                        order for it to have an effect on the scenario. 
+                        Please select at least one of the school types 
+                        in the "Vaccinations and NPIs" tab before 
+                        running the simulation.
+                    ''')
+                    st.session_state[f'schoolTypeError{id}'] = 2
+                else: st.session_state[f'schoolTypeError{id}'] = 0
             
 
 
@@ -1494,6 +1661,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         normal withdrawal rate.
                     '''
                 )
+                adultWithdrawalErrorContainer = st.empty()
                 withdrawalIncreaseChild = st.select_slider(
                     'Child Increased Withdrawal Rate (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 1.0, 
@@ -1507,6 +1675,125 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         normal withdrawal rate.
                     '''
                 )
+                childWithdrawalErrorContainer = st.empty()
+
+                # Show error if initial proportion is above target
+                baseAdultWithdrawal = idGet('withdrawalWork', id, 0.5)
+                baseChildWithdrawal = idGet('withdrawalSchool', id, 0.9)
+                if (
+                    useWithdrawalIncreaseToggle 
+                    and baseAdultWithdrawal >= withdrawalIncreaseAdult
+                ): 
+                    adultWithdrawalErrorContainer.error(f'''
+                        Error: The work withdrawal probability during 
+                        withdrawal increase NPIs in the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to 
+                        {100 * withdrawalIncreaseAdult:0.3g}%, but the 
+                        standard work withdrawal probability outside of 
+                        this NPI for this scenario is set to 
+                        {100 * baseAdultWithdrawal:0.3g}%. As such, the 
+                        withdrawal increase NPI {
+                            'has no effect on' 
+                            if baseAdultWithdrawal == withdrawalIncreaseAdult 
+                            else 'actually decreases'
+                        } work withdrawal rates in this scenario. 
+                        Please either increase the NPI-affected work 
+                        withdrawal probability above such that it is 
+                        greater than {100 * baseAdultWithdrawal:0.3g}% 
+                        or lower the standard work withdrawal rate in 
+                        the "Community" tab such that it is less than 
+                        {100 * withdrawalIncreaseAdult:0.3g}% before 
+                        running the simulation.
+                    ''')
+                    globalErrorContainer.error(f'''
+                        Error: The work withdrawal probability during 
+                        withdrawal increase NPIs in the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to 
+                        {100 * withdrawalIncreaseAdult:0.3g}%, but the 
+                        standard work withdrawal probability outside of 
+                        this NPI for this scenario is set to 
+                        {100 * baseAdultWithdrawal:0.3g}%. As such, the 
+                        withdrawal increase NPI {
+                            'has no effect on' 
+                            if baseAdultWithdrawal == withdrawalIncreaseAdult 
+                            else 'actually decreases'
+                        } work withdrawal rates in this scenario. 
+                        Please either increase the NPI-affected work 
+                        withdrawal probability in the "Vaccinations and 
+                        NPIs" tab such that it is greater than 
+                        {100 * baseAdultWithdrawal:0.3g}% or lower the 
+                        standard work withdrawal rate in the 
+                        "Community" tab such that it is less than 
+                        {100 * withdrawalIncreaseAdult:0.3g}% before 
+                        running the simulation.
+                    ''')
+                    st.session_state[f'adultWithdrawalError{id}'] = 2
+                else: st.session_state[f'adultWithdrawalError{id}'] = 0
+                if (
+                    useWithdrawalIncreaseToggle 
+                    and baseChildWithdrawal >= withdrawalIncreaseChild
+                ): 
+                    childWithdrawalErrorContainer.error(f'''
+                        Error: The school withdrawal probability during 
+                        withdrawal increase NPIs in the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to 
+                        {100 * withdrawalIncreaseChild:0.3g}%, but the 
+                        standard school withdrawal probability outside 
+                        of this NPI for this scenario is set to 
+                        {100 * baseChildWithdrawal:0.3g}%. As such, the 
+                        withdrawal increase NPI {
+                            'has no effect on' 
+                            if baseChildWithdrawal == withdrawalIncreaseChild 
+                            else 'actually decreases'
+                        } school withdrawal rates in this scenario. 
+                        Please either increase the NPI-affected school 
+                        withdrawal probability above such that it is 
+                        greater than {100 * baseChildWithdrawal:0.3g}% 
+                        or lower the standard school withdrawal rate in 
+                        the "Community" tab such that it is less than 
+                        {100 * withdrawalIncreaseChild:0.3g}% before 
+                        running the simulation.
+                    ''')
+                    globalErrorContainer.error(f'''
+                        Error: The school withdrawal probability during 
+                        withdrawal increase NPIs in the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to 
+                        {100 * withdrawalIncreaseChild:0.3g}%, but the 
+                        standard school withdrawal probability outside 
+                        of this NPI for this scenario is set to 
+                        {100 * baseChildWithdrawal:0.3g}%. As such, the 
+                        withdrawal increase NPI {
+                            'has no effect on' 
+                            if baseChildWithdrawal == withdrawalIncreaseChild 
+                            else 'actually decreases'
+                        } school withdrawal rates in this scenario. 
+                        Please either increase the NPI-affected school 
+                        withdrawal probability in the "Vaccinations and 
+                        NPIs" tab such that it is greater than 
+                        {100 * baseChildWithdrawal:0.3g}% or lower the 
+                        standard school withdrawal rate in the 
+                        "Community" tab such that it is less than 
+                        {100 * withdrawalIncreaseChild:0.3g}% before 
+                        running the simulation.
+                    ''')
+                    st.session_state[f'childWithdrawalError{id}'] = 2
+                else: st.session_state[f'childWithdrawalError{id}'] = 0
 
 
 
@@ -1622,6 +1909,60 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         overwriting the normal maximum.
                     '''
                 )
+                reducedGroupErrorContainer = st.empty()
+
+                # Show error if initial proportion is above target
+                baseGroupSize = idGet('maxWorkGroupSize', id, 10)
+                if useReducedGroupToggle and reducedGroupSize >= baseGroupSize:
+                    reducedGroupErrorContainer.error(f'''
+                        Error: The reduced work group size during 
+                        reduced group size NPIs in the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to {reducedGroupSize} 
+                        people, but the standard work group size 
+                        outside of this NPI for this scenario is set to 
+                        {baseGroupSize} people. As such, the reduced 
+                        group size NPI {
+                            'has no effect on' 
+                            if baseGroupSize == reducedGroupSize 
+                            else 'actually increases'
+                        } work group sizes in this scenario. Please 
+                        either decrease the NPI-affected group size 
+                        above such that it is less than {baseGroupSize} 
+                        people, or increase the standard group size in 
+                        the "Community" tab such that it is more than 
+                        {reducedGroupSize} people before running the 
+                        simulation.
+                    ''')
+                    globalErrorContainer.error(f'''
+                        Error: The reduced work group size during 
+                        reduced group size NPIs in the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to {reducedGroupSize} 
+                        people, but the standard work group size 
+                        outside of this NPI for this scenario is set to 
+                        {baseGroupSize} people. As such, the reduced 
+                        group size NPI {
+                            'has no effect on' 
+                            if baseGroupSize == reducedGroupSize 
+                            else 'actually increases'
+                        } work group sizes in this scenario. Please 
+                        either decrease the NPI-affected group size 
+                        in the "Vaccinations and NPIs" tab such that it 
+                        is less than {baseGroupSize} people, or 
+                        increase the standard group size in the 
+                        "Community" tab such that it is more than 
+                        {reducedGroupSize} people before running the 
+                        simulation.
+                    ''')
+                    st.session_state[f'reducedGroupError{id}'] = 2
+                else: st.session_state[f'reducedGroupError{id}'] = 0
 
 
 
@@ -1731,18 +2072,71 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 bccReducedRate = st.slider(
                     ((
                         'Reduced Background Contact Count (Average '
-                        'Number of Interactions per Person)'
+                        'Number of Interactions per Person per Day)'
                     )),
                     0.0, 8.0, 0.2, disabled = not useBCCToggle,
                     key = f'bccReducedRate{id}', help = '''
                         The average number of other people each 
                         individual will interact with in the background 
-                        phase of the simulation (emulating interactions 
-                        outside of simulated locations) while a BCC 
-                        reduction intervention is in effect, 
-                        overwriting the normal BCC rate.
+                        phase of each day in the simulation (emulating 
+                        interactions outside of simulated locations) 
+                        while a BCC reduction intervention is in 
+                        effect, overwriting the normal BCC rate.
                     '''
                 )
+                bccErrorContainer = st.empty()
+
+                # Show error if initial proportion is above target
+                baseBCC = idGet('bccRate', id, 4.0)
+                if useBCCToggle and bccReducedRate >= baseBCC:
+                    bccErrorContainer.error(f'''
+                        Error: The reduced background contact count 
+                        (BCC) value during BCC reduction NPIs in the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to {bccReducedRate} 
+                        interactions per day, but the standard BCC 
+                        outside of this NPI for this scenario is set to 
+                        {baseBCC} interactions per day. As such, the 
+                        BCC reduction NPI {
+                            'has no effect on' 
+                            if baseBCC == bccReducedRate 
+                            else 'actually increases'
+                        } BCC in this scenario. Please either decrease 
+                        the NPI-affected BCC above such that it is less 
+                        than {baseBCC} interactions per day, or 
+                        increase the standard BCC in the "Community" 
+                        tab such that it is more than {bccReducedRate} 
+                        interactions per day before running the 
+                        simulation.
+                    ''')
+                    globalErrorContainer.error(f'''
+                        Error: The reduced background contact count 
+                        (BCC) value during BCC reduction NPIs in the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to {bccReducedRate} 
+                        interactions per day, but the standard BCC 
+                        outside of this NPI for this scenario is set to 
+                        {baseBCC} interactions per day. As such, the 
+                        BCC reduction NPI {
+                            'has no effect on' 
+                            if baseBCC == bccReducedRate 
+                            else 'actually increases'
+                        } BCC in this scenario. Please either decrease 
+                        the NPI-affected BCC in the "Vaccinations and 
+                        NPIs" tab such that it is less than {baseBCC} 
+                        interactions per day, or increase the standard 
+                        BCC in the "Community" tab such that it is more 
+                        than {bccReducedRate} interactions per day 
+                        before running the simulation.
+                    ''')
+                    st.session_state[f'bccError{id}'] = 2
+                else: st.session_state[f'bccError{id}'] = 0
         
 
 

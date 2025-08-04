@@ -8,7 +8,7 @@ from typing import Literal, cast
 import numpy as np
 import streamlit as st
 from pydantic import ValidationError
-from ClientResources.InterfaceFunctions import addFormRow, deleteFormRow
+from ClientResources.InterfaceFunctions import addFormRow, deleteFormRow, idGet
 from ClientResources.ModelSchema import Parameters, dynamicIntervention
 
 # Logging
@@ -34,29 +34,41 @@ def buildDynamicTab(container, id, globalErrorContainer):
     sessionParameters = {
         f'seedRowCount{id}': 0,
         f'closeRowCount{id}': 0,
-        f'bccRowCount{id}': 0
-        # f'periodRowCount{id}': 0
+        f'bccRowCount{id}': 0,
+        f'seedDynamicError{id}': 0,
+        f'closeDynamicError{id}': 0,
+        f'bccDynamicError{id}': 0
     }
     for parameter, default in sessionParameters.items(): 
         st.session_state[parameter] = st.session_state.setdefault(
             parameter, default
         )
+    
+    # Avoid flooding the container with errors when many dynamic 
+    # changes are defined for each parameter
+    firstSeedError, firstCloseError, firstBCCError = True, True, True
 
 
 
 
 
     # Tab Content
-    # TODO: Warn for nonsensical conditions like reduced BCC being 
-    # lower than regular BCC
-    # TODO: Change time-based parameters to use simulation length as max
     # TODO: Sort rows from earliest to latest
     with container:
         st.header('Dynamic Parameters')
         st.markdown('''
             This tab allows for specific parameters to change their 
-            values at predefined points throughout the simulation. The 
-            parameters that support this dynamic changing are as follows:
+            values at predefined points throughout the simulation. 
+            Modifying parameters midway through the simulation can be 
+            used to simulate different events occurring in the 
+            simulation. For example, changes in infection seeding can 
+            be used to simulate the spike in cases following a border 
+            opening, while changing school closure compliance can 
+            simulate changing policies or increased public awareness of 
+            the disease.
+                    
+            The parameters that support dynamic value changes are as 
+            follows:
             
             - Infection Seeding Rate
             - School Closure Compliance
@@ -71,13 +83,8 @@ def buildDynamicTab(container, id, globalErrorContainer):
             the corresponding NPI is active at that time.
         ''')
 
-        # Potential Catchable Errors:
-        # - First dynamic new value is same as base value
-        # - Other consecutive duplicate values
-        # - New seeding rate defined outside of seeding period
-        # - NPI parameters given dynamic changes when disabled
-
-
+        # Get simulation length for error checking
+        simLength = idGet('cycleCount', id, 360)
 
         # Infection Seeding Rate
         # TODO: Warn if update point is outside of seeding period (or 
@@ -85,21 +92,109 @@ def buildDynamicTab(container, id, globalErrorContainer):
         st.subheader('Infection Seeding Rate')
         # Save relevant parameters as variables to avoid lookups
         seedRowCount = st.session_state[f'seedRowCount{id}']
-        baseSeedValue = st.session_state[f'seedRate{id}']
+        baseSeedValue = idGet('seedRate', id, 0.25)
+        seedStart, seedEnd = idGet('seedPeriod', id, (0, 29))
         seedContainer = st.container()
+        seedErrorContainer = st.container()
         for i in range(seedRowCount): 
             (
                 seedCycleColumn, seedNewColumn, seedRemoveColumn
             ) = seedContainer.columns((0.4, 0.4, 0.2))
             # Cycle column
-            with seedCycleColumn: st.select_slider(
-                'Day to Update Parameter', range(720), 
-                29, key = f'seedCycle{id}-{i}', 
-                format_func = lambda x: f'Day {x + 1}', help = '''
-                    The day of the simulation upon which the new value 
-                    for infection seeding rate will come into effect.
-                '''
-            )
+            with seedCycleColumn: 
+                seedUpdatePoint = st.select_slider(
+                    'Day to Update Parameter', range(720), 
+                    15, key = f'seedCycle{id}-{i}', 
+                    format_func = lambda x: f'Day {x + 1}', help = '''
+                        The day of the simulation upon which the new 
+                        value for infection seeding rate will come into 
+                        effect.
+                    '''
+                )
+                # Show error if time is outside of sim/seed periods
+                if firstSeedError and seedUpdatePoint >= simLength: 
+                    seedErrorContainer.error(f'''
+                        Error: The {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to last {simLength} days, 
+                        but the infection seeding rate for this 
+                        scenario is set to dynamically change on Day 
+                        {seedUpdatePoint + 1}. As such, the change in 
+                        the parameter's value will have no effect.
+                        Please either remove this scenario's dynamic 
+                        update(s), adjust the update point(s) to occur 
+                        before Day {simLength} or increase the 
+                        simulation length in the "Initialisation" tab 
+                        before running the simulation.
+                    ''')
+                    globalErrorContainer.error(f'''
+                        Error: The {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to last {simLength} days, 
+                        but the infection seeding rate for this 
+                        scenario is set to dynamically change on Day 
+                        {seedUpdatePoint + 1}. As such, the change in 
+                        the parameter's value will have no effect.
+                        Please either remove this scenario's dynamic 
+                        update(s) in the "Dynamic" tab, adjust the 
+                        update point(s) to occur before Day {simLength} 
+                        in the "Dynamic" tab, or increase the 
+                        simulation length in the "Initialisation" tab 
+                        before running the simulation.
+                    ''')
+                    st.session_state[f'seedDynamicError{id}'] = 2
+                    firstSeedError = False
+                elif firstSeedError and (
+                    seedUpdatePoint < seedStart or seedUpdatePoint > seedEnd
+                ):
+                    seedErrorContainer.error(f'''
+                        Error: The infection seeding period for the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to begin on Day {seedStart} 
+                        and end on Day {seedEnd}, but the infection 
+                        seeding rate for this 
+                        scenario is set to dynamically change on Day 
+                        {seedUpdatePoint + 1}. The change in the 
+                        seeding rate's value will thus have no effect, 
+                        as it is outside the seeding period. Please 
+                        either remove this scenario's dynamic 
+                        update(s), adjust the update point(s) to occur 
+                        between Day {seedStart} and Day {seedEnd}, or 
+                        modify the infection seeding period in the 
+                        "Disease" tab before running the simulation.
+                    ''')
+                    globalErrorContainer.error(f'''
+                        Error: The infection seeding period for the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to begin on Day {seedStart} 
+                        and end on Day {seedEnd}, but the infection 
+                        seeding rate for this 
+                        scenario is set to dynamically change on Day 
+                        {seedUpdatePoint + 1}. The change in the 
+                        seeding rate's value will thus have no effect, 
+                        as it is outside the seeding period. Please 
+                        either remove this scenario's dynamic 
+                        update(s) in the "Dynamic" tab, adjust the 
+                        update point(s) to occur between Day 
+                        {seedStart} and Day {seedEnd} in the "Dynamic" 
+                        tab, or modify the infection seeding period in 
+                        the "Disease" tab before running the simulation.
+                    ''')
+                    st.session_state[f'seedDynamicError{id}'] = 2
+                    firstSeedError = False
+                else: st.session_state[f'seedDynamicError{id}'] = 0
             # New value column
             with seedNewColumn: st.select_slider(
                 'New Value (Average Individuals per Day)', 
@@ -151,10 +246,10 @@ def buildDynamicTab(container, id, globalErrorContainer):
         st.subheader('School Closure Compliance')
         # Save relevant parameters as variables to avoid lookups
         closeRowCount = st.session_state[f'closeRowCount{id}']
-        baseCloseValue = st.session_state[f'schoolClosureCompliance{id}']
-        closeActive = st.session_state[f'schoolClosureToggle{id}']
-        closeContainer = st.container()
-
+        baseCloseValue = idGet('schoolClosureCompliance', id, 0.9)
+        closeActive = idGet('schoolClosureToggle', id, True)
+        closeTrigger = idGet('schoolClosureTrigger', id, 'Always')
+        closeStart, closeEnd = idGet('schoolClosurePeriod', id, (30, 60))
         # Warn if school closure is disabled
         if not closeActive: 
             if closeRowCount == 0: st.info(f'''
@@ -173,20 +268,114 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 you enable school closures in the "Vaccinations and 
                 NPIs" tab prior to running the simulation.
             ''')
-        
+        closeContainer = st.container()
+        closeErrorContainer = st.container()
         for i in range(closeRowCount): 
             (
                 closeCycleColumn, closeNewColumn, closeRemoveColumn
             ) = closeContainer.columns((0.4, 0.4, 0.2))
             # Cycle column
-            with closeCycleColumn: st.select_slider(
-                'Day to Update Parameter', range(720), 
-                29, key = f'closeCycle{id}-{i}', disabled = not closeActive,
-                format_func = lambda x: f'Day {x + 1}', help = '''
-                    The day of the simulation upon which the new value 
-                    for school closure compliance will come into effect.
-                '''
-            )
+            with closeCycleColumn: 
+                closeUpdatePoint = st.select_slider(
+                    'Day to Update Parameter', range(720), 15, 
+                    key = f'closeCycle{id}-{i}', disabled = not closeActive,
+                    format_func = lambda x: f'Day {x + 1}', help = '''
+                        The day of the simulation upon which the new 
+                        value for school closure compliance will come 
+                        into effect.
+                    '''
+                )
+                # Display error if update point is beyond sim length
+                if firstCloseError and closeUpdatePoint >= simLength: 
+                    closeErrorContainer.error(f'''
+                        Error: The {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to last {simLength} days, 
+                        but the school closure compliance probability 
+                        for this scenario is set to dynamically change 
+                        on Day {closeUpdatePoint + 1}. As such, the 
+                        change in the parameter's value will have no 
+                        effect. Please either remove this scenario's 
+                        dynamic update(s), adjust the update point(s) 
+                        to occur before Day {simLength} or increase the 
+                        simulation length in the "Initialisation" tab 
+                        before running the simulation.
+                    ''')
+                    globalErrorContainer.error(f'''
+                        Error: The {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to last {simLength} days, 
+                        but the school closure compliance probability 
+                        for this scenario is set to dynamically change 
+                        on Day {closeUpdatePoint + 1}. As such, the 
+                        change in the parameter's value will have no 
+                        effect. Please either remove this scenario's 
+                        dynamic update(s) in the "Dynamic" tab, adjust 
+                        the update point(s) to occur before Day 
+                        {simLength} in the "Dynamic" tab, or increase 
+                        the simulation length in the "Initialisation" 
+                        tab before running the simulation.
+                    ''')
+                    st.session_state[f'closeDynamicError{id}'] = 2
+                    firstCloseError = False
+                elif firstCloseError and closeTrigger == 'Timed' and (
+                    closeUpdatePoint < closeStart 
+                    or closeUpdatePoint > closeEnd
+                ):
+                    closeErrorContainer.error(f'''
+                        Error: The school closure NPI for the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to begin on Day {closeStart} 
+                        and end on Day {closeEnd}, but the school 
+                        closure compliance probability for this 
+                        scenario is set to dynamically change on Day 
+                        {closeUpdatePoint + 1}. The change in the 
+                        probability's value will thus have no effect, 
+                        as it is outside the NPI's active period. 
+                        Please either remove this scenario's dynamic 
+                        update(s), adjust the update point(s) to occur 
+                        between Day {closeStart} and Day {closeEnd}, 
+                        switch to a different school closure trigger 
+                        condition in the "Vaccinations and NPIs" tab, 
+                        or modify the school closure time period in the 
+                        "Vaccinations and NPIs" tab before running the 
+                        simulation.
+                    ''')
+                    globalErrorContainer.error(f'''
+                        Error: The school closure NPI for the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to begin on Day {closeStart} 
+                        and end on Day {closeEnd}, but the school 
+                        closure compliance probability for this 
+                        scenario is set to dynamically change on Day 
+                        {closeUpdatePoint + 1}. The change in the 
+                        probability's value will thus have no effect, 
+                        as it is outside the NPI's active period. 
+                        Please either remove this scenario's dynamic 
+                        update(s) in the "Dynamic" tab, adjust the 
+                        update point(s) to occur between Day 
+                        {closeStart} and Day {closeEnd} in the 
+                        "Dynamic" tab, switch to a different school 
+                        closure trigger condition in the "Vaccinations 
+                        and NPIs" tab, or modify the school closure 
+                        time period in the "Vaccinations and NPIs" tab 
+                        before running the simulation.
+                    ''')
+                    st.session_state[f'closeDynamicError{id}'] = 2
+                    firstCloseError = False
+                else: st.session_state[f'closeDynamicError{id}'] = 0
             # New value column
             with closeNewColumn: st.select_slider(
                 'New Value (Probability)', 
@@ -238,10 +427,10 @@ def buildDynamicTab(container, id, globalErrorContainer):
         st.subheader('Reduced Background Contact Count')
         # Save relevant parameters as variables to avoid lookups
         bccRowCount = st.session_state[f'bccRowCount{id}']
-        baseBCCValue = st.session_state[f'bccReducedRate{id}']
-        bccActive = st.session_state[f'bccToggle{id}']
-        bccContainer = st.container()
-
+        baseBCCValue = idGet('bccReducedRate', id, 0.2)
+        bccActive = idGet('bccToggle', id, True)
+        bccTrigger = idGet('bccTrigger', id, 'Always')
+        bccStart, bccEnd = idGet('bccPeriod', id, (30, 60))
         # Warn if BCC reduction is disabled
         if not bccActive: 
             if bccRowCount == 0: st.info(f'''
@@ -263,21 +452,114 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 reduction in the "Vaccinations and NPIs" tab prior to 
                 running the simulation.
             ''')
-        
+        bccContainer = st.container()
+        bccErrorContainer = st.container()
         for i in range(bccRowCount): 
             (
                 bccCycleColumn, bccNewColumn, bccRemoveColumn
             ) = bccContainer.columns((0.4, 0.4, 0.2))
             # Cycle column
-            with bccCycleColumn: st.select_slider(
-                'Day to Update Parameter', range(720), 
-                29, key = f'bccCycle{id}-{i}', disabled = not bccActive, 
-                format_func = lambda x: f'Day {x + 1}', help = '''
-                    The day of the simulation upon which the new value 
-                    for reduced background contact count will come into 
-                    effect.
-                '''
-            )
+            with bccCycleColumn: 
+                bccUpdatePoint = st.select_slider(
+                    'Day to Update Parameter', range(720), 
+                    15, key = f'bccCycle{id}-{i}', disabled = not bccActive, 
+                    format_func = lambda x: f'Day {x + 1}', help = '''
+                        The day of the simulation upon which the new value 
+                        for reduced background contact count will come into 
+                        effect.
+                    '''
+                )
+                # Display error if update point is beyond sim length
+                if firstBCCError and bccUpdatePoint >= simLength: 
+                    bccErrorContainer.error(f'''
+                        Error: The {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to last {simLength} days, 
+                        but the reduced background contact count value
+                        for this scenario is set to dynamically change 
+                        on Day {bccUpdatePoint + 1}. As such, the 
+                        change in the parameter's value will have no 
+                        effect. Please either remove this scenario's 
+                        dynamic update(s), adjust the update point(s) 
+                        to occur before Day {simLength} or increase the 
+                        simulation length in the "Initialisation" tab 
+                        before running the simulation.
+                    ''')
+                    globalErrorContainer.error(f'''
+                        Error: The {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to last {simLength} days, 
+                        but the reduced background contact count value 
+                        for this scenario is set to dynamically change 
+                        on Day {bccUpdatePoint + 1}. As such, the 
+                        change in the parameter's value will have no 
+                        effect. Please either remove this scenario's 
+                        dynamic update(s) in the "Dynamic" tab, adjust 
+                        the update point(s) to occur before Day 
+                        {simLength} in the "Dynamic" tab, or increase 
+                        the simulation length in the "Initialisation" 
+                        tab before running the simulation.
+                    ''')
+                    st.session_state[f'bccDynamicError{id}'] = 2
+                    firstBCCError = False
+                elif firstBCCError and bccTrigger == 'Timed' and (
+                    bccUpdatePoint < bccStart or bccUpdatePoint > bccEnd
+                ):
+                    bccErrorContainer.error(f'''
+                        Error: The reduced background contact count NPI 
+                        for the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to begin on Day {bccStart} 
+                        and end on Day {bccEnd}, but the reduced 
+                        background contact count value for this 
+                        scenario is set to dynamically change on Day 
+                        {bccUpdatePoint + 1}. The change in the 
+                        parameter's value will thus have no effect, as 
+                        it is outside the NPI's active period. Please 
+                        either remove this scenario's dynamic 
+                        update(s), adjust the update point(s) to occur 
+                        between Day {bccStart} and Day {bccEnd}, switch 
+                        to a different reduced BCC trigger condition in 
+                        the "Vaccinations and NPIs" tab, or modify the 
+                        reduced BCC time period in the "Vaccinations 
+                        and NPIs" tab before running the simulation.
+                    ''')
+                    globalErrorContainer.error(f'''
+                        Error: The reduced background contact count NPI 
+                        for the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } is currently set to begin on Day {bccStart} 
+                        and end on Day {bccEnd}, but the reduced 
+                        background contact count value for this 
+                        scenario is set to dynamically change on Day 
+                        {bccUpdatePoint + 1}. The change in the 
+                        parameter's value will thus have no effect, as 
+                        it is outside the NPI's active period. Please 
+                        either remove this scenario's dynamic 
+                        update(s) in the "Dynamic" tab, adjust the 
+                        update point(s) to occur between Day {bccStart} 
+                        and Day {bccEnd} in the "Dynamic" tab, switch 
+                        to a different reduced BCC trigger condition in 
+                        the "Vaccinations and NPIs" tab, or modify the 
+                        reduced BCC time period in the "Vaccinations 
+                        and NPIs" tab before running the simulation.
+                    ''')
+                    st.session_state[f'bccDynamicError{id}'] = 2
+                    firstBCCError = False
+                else: st.session_state[f'bccDynamicError{id}'] = 0
+
             # New value column
             with bccNewColumn: st.slider(
                 'New Value (Average Interactions/Person)',

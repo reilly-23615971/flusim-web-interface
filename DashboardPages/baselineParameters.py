@@ -95,9 +95,6 @@ community = st.selectbox(
 # TODO: Consider displaying more comprehensive community info regarding 
 # the one the user selects
 
-# Place to put warnings errors in the current parameter selection
-alertContainer = st.container()
-
 # Button to run the model
 # TODO: Check if server is available and grey out button if not
 # TODO: Vary message depending on scenario presence, server 
@@ -106,17 +103,32 @@ alertContainer = st.container()
 st.markdown(f'''
     Press the button below to run the simulation. Remember that in 
     order to compare different parameter values, you should define 
-    scenarios with different parameters 
-    <a href="{clientUrl}scenarioParameters" target="_self">here</a>; 
+    scenarios with different parameters <a href = 
+    "{clientUrl}scenarioParameters" target = "_self">here</a>; 
     make sure these scenarios have been configured before running the 
     model.
 ''', unsafe_allow_html = True)
+
+# TODO: Remove this message when there's no errors
+st.markdown(f'''
+    Currently, all parameters have been set to valid values. If any 
+    errors are been detected with the parameters selected for the 
+    simulation (both in this baseline scenario and in any scenarios 
+    defined <a href = "{clientUrl}scenarioParameters" target = 
+    "_self">here</a>), they will be described here.
+''', unsafe_allow_html = True)
+# Place to put warnings errors in the current parameter selection
+alertContainer = st.container()
+
 runModelButton = st.button(
     'Run Simulation', on_click = runSimulationButton
 )
 
-#TODO: Consider having a tab for templates that load parameters for 
+# TODO: Consider having a tab for templates that load parameters for 
 # specific stuff (e.g. influenza, NPI presets)
+# TODO: Check studies for better parameter defaults/ranges
+# TODO: Check parameters where slider is bad for selecting and either 
+# change scale or switch to number input
 
 (
     basicTab, diseaseTab, communityTab, 

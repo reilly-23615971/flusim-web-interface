@@ -8,7 +8,7 @@ import numpy as np
 import streamlit as st
 from pydantic import ValidationError
 from ClientResources.InterfaceFunctions import (
-    getRemainingGroups, addFormRow, deleteFormRow
+    getRemainingGroups, addFormRow, deleteFormRow, dayCount
 )
 from ClientResources.SharedResources import ageCategories
 from ClientResources.ModelSchema import (
@@ -67,27 +67,37 @@ def buildCommunityTab(container, id, globalErrorContainer):
         st.markdown('''
             This tab contains parameters relating to the community that 
             is simulated by the model, including the likelihood of 
-            different health outcomes, how individuals react to the 
+            different health burden outcomes, how individuals react to the 
             disease, and the size of groups that individuals form in 
             different locations.
         ''')
 
         # Potential Catchable Errors:
         # - Base Withdrawal rate (adult or child) is above NPI version
+        # - BCC and group size equivalents of previous
 
 
-        # Health Outcome Parameters
-        with st.expander('Health Outcome Properties'):
+        # Health Burden Outcome Parameters
+        with st.expander('Health Burden Outcome Properties'):
             # Describe what sort of parameters are here
             st.markdown('''
                 These parameters control how likely different health 
-                outcomes are as a result of the disease, including 
-                hospitalisation and death. Note that all of these 
-                health outcomes will only occur if the infected 
-                individual is symptomatic.
+                burden outcomes (such as hospitalisation and death) are 
+                to occur as a result of the disease. These parameters 
+                are primarily used in the simulation's post-processing 
+                phase; most of these outcomes are not simulated 
+                directly, but the probabilities defined here are used 
+                in combination with the data from the simulation to 
+                generate statistics on how many people were affected by 
+                each outcome. 
+                        
+                Note that none of these health burden outcomes are 
+                capable of occurring in asymptomatic individuals; the 
+                probabilities defined here will only apply to people 
+                who are symptomatic.
             ''')
 
-            # Health Outcomes
+            # Health Burden Outcomes
             st.select_slider(
                 'Diagnosed Case Rate (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.5, key = f'caseRatio{id}', 
@@ -253,7 +263,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                 "Vaccinations and NPIs" tab.
             ''')
 
-            # Withdrawal probabilities
+            # The parameters in question
             withdrawalWork = st.select_slider(
                 'Work Withdrawal Rate (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.5, 
@@ -274,22 +284,9 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     after becoming symptomatic.
                 '''
             )
-            # Withdrawal period seems to be unused
-            withdrawalPeriod = """
-            st.slider(
-                'Length of Withdrawal Period (Days)', 0, 30, 8,
-                key = f'withdrawalPeriod{id}', help = '''
-                    The number of days after an individual begins 
-                    withdrawing from work or school before they will 
-                    start attending their workplace/school again.
-                '''
-            )
-            """
-
-            # Diagnosis delay
-            st.slider(
-                'Case Diagnosis Delay (Days)', 0, 14, 1,
-                key = f'diagnosisDelay{id}', help = '''
+            st.select_slider(
+                'Case Diagnosis Delay (Days)', range(15), 1, 
+                format_func = dayCount, key = f'diagnosisDelay{id}', help = '''
                     The number of days after an individual begins 
                     showing symptoms of the disease before their 
                     infection can be formally diagnosed as a confirmed 
@@ -297,6 +294,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                 '''
             )
         
+
 
         # Behaviour Parameters
         with st.expander('Behaviour Properties'):
@@ -312,13 +310,14 @@ def buildCommunityTab(container, id, globalErrorContainer):
             bccRate = st.slider(
                 ((
                     'Background Contact Count (Average '
-                    'Number of Interactions per Person)'
+                    'Number of Interactions per Person per Day)'
                 )),
                 0.0, 8.0, 4.0, key = f'bccRate{id}', help = '''
                     The average number of other people each individual 
-                    will interact with in the background phase of the 
-                    simulation. These interactions emulate interactions 
-                    outside of locations simulated by the model.
+                    will interact with in the background phase of each 
+                    day in the simulation. These interactions emulate 
+                    interactions outside of locations simulated by the 
+                    model.
                 '''
             )
             st.select_slider(
@@ -332,13 +331,13 @@ def buildCommunityTab(container, id, globalErrorContainer):
                 '''
             )
             st.slider(
-                'Number of Class Subgroups', 1, 5, 1, 
+                'Number of School Class Subgroups', 1, 5, 1, 
                 key = f'maxClassCount{id}', help = '''
                     The maximum number of subgroups that may exist 
-                    within a single class in the simulation. Subgroups 
-                    are defined as sets of individuals that regularly 
-                    interact with each other but not with the rest of 
-                    the class.
+                    within a single school class in the simulation. 
+                    Subgroups are defined as sets of individuals that 
+                    regularly interact with each other but not with the 
+                    rest of the class.
                 '''
             )
 
