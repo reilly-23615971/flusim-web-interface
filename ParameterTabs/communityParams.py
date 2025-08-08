@@ -67,18 +67,13 @@ def buildCommunityTab(container, id, globalErrorContainer):
         st.markdown('''
             This tab contains parameters relating to the community that 
             is simulated by the model, including the likelihood of 
-            different health burden outcomes, how individuals react to the 
-            disease, and the size of groups that individuals form in 
-            different locations.
+            different health burden outcomes, how individuals react to 
+            the disease, and the size of groups that individuals form 
+            in different locations.
         ''')
 
-        # Potential Catchable Errors:
-        # - Base Withdrawal rate (adult or child) is above NPI version
-        # - BCC and group size equivalents of previous
-
-
         # Health Burden Outcome Parameters
-        with st.expander('Health Burden Outcome Properties'):
+        with st.expander('Health Burden Outcomes'):
             # Describe what sort of parameters are here
             st.markdown('''
                 These parameters control how likely different health 
@@ -247,7 +242,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
 
 
         # Disease Response Parameters
-        with st.expander('Disease Response Properties'):
+        with st.expander('Withdrawals and Diagnosis'):
             # Describe what sort of parameters are here
             st.markdown('''
                 These parameters control how individuals in the 
@@ -257,10 +252,10 @@ def buildCommunityTab(container, id, globalErrorContainer):
                 infection officially diagnosed as a case.
                 
                 Note that this section does not contain parameters 
-                related to social distancing and other interventions 
+                related to social distancing and other programs 
                 implemented by the government to reduce the spread of 
-                the disease; those parameters can be found in the 
-                "Vaccinations and NPIs" tab.
+                the disease. These interventions can be configured 
+                using the parameters in the "Vaccinations and NPIs" tab.
             ''')
 
             # The parameters in question
@@ -297,7 +292,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
 
 
         # Behaviour Parameters
-        with st.expander('Behaviour Properties'):
+        with st.expander('Population Behaviours'):
             # Describe what sort of parameters are here
             st.markdown('''
                 These parameters control various aspects of how 

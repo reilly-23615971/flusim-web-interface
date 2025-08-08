@@ -40,19 +40,36 @@ Parameters:
 def buildVaccinationNPITab(container, id, globalErrorContainer):
     # Initialise session variables needed by the vaccination/NPI forms
     sessionParameters = {
+        # Row counts
         f'vacAgeRowCount{id}': 0,
         f'primaryDoseCount{id}': 2,
         f'primWanedRowCount{id}': 0,
         f'boostAgeRowCount{id}': 0,
         f'socialRowCount{id}': 0,
-        f'classDismissal{id}': True,
-        f'schoolTypeError{id}': 0,
+
+        # Error trackers
         f'baseVacPropError{id}': 0,
         f'ageVacPropError{id}': 0,
+        f'basePrimEfficacyError{id}': 0,
+        f'agePrimEfficacyError{id}': 0,
+        f'baseBoostEfficacyError{id}': 0,
+        f'ageBoostEfficacyError{id}': 0,
+
+        f'schoolTypeError{id}': 0,
         f'adultWithdrawalError{id}': 0,
         f'childWithdrawalError{id}': 0,
         f'reducedGroupError{id}': 0,
-        f'bccError{id}': 0
+        f'bccError{id}': 0,
+
+        f'vaccinePeriodError{id}': 0,
+        f'schoolClosurePeriodError{id}': 0,
+        f'withdrawalIncreasePeriodError{id}': 0,
+        f'reducedGroupPeriodError{id}': 0,
+        f'bccPeriodError{id}': 0,
+
+        # Others
+        f'classDismissal{id}': True,
+
     }
     for parameter, default in sessionParameters.items(): 
         st.session_state[parameter] = st.session_state.setdefault(
@@ -101,8 +118,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
     # Use function to recalculate remaining group parameters
     getRemainingGroups(ageGroupSets, ageCategories.keys())
 
-    # Parameters for keeping track of error presence in big fields
-    ageVacPropError = False
+    # Parameters for keeping track of errors
+    simLength = idGet('cycleCount', id, 360)
+    ageVacPropError, ageBoostEfficacyError = False, False
 
 
 
@@ -121,26 +139,6 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
         # Potential Catchable Errors:
         # - Final waned efficacy is greater than initial efficacy 
         #   (including age-specific versions and boosters if possible)
-        # - NPI Time period extends past current number of days in sim
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # DO THESE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         
 
         # Vaccination
@@ -157,7 +155,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
             # General Vaccination Policy Parameters
             st.html(f'<span id = "vaccinationTriggerCondition{id}"></span>')
-            with st.expander('Vaccination Policies'):
+            with st.expander('Vaccination Programs'):
                 # Describe what sort of parameters are here
                 st.markdown('''
                     These parameters control the rollout of vaccines in 
@@ -204,10 +202,8 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     # Show additional parameters based on trigger value
                     # Timed triggers
                     if vaccineTrigger == 'Timed':
-                        # TODO: Set time-based parameter maximums based 
-                        # on number of cycles in simulation
                         vaccinePeriod = st.select_slider(
-                            'Vaccination Time Period', range(720), (30, 60), 
+                            'Vaccination Time Period', range(720), (29, 59), 
                             key = f'vaccinePeriod{id}', 
                             format_func = lambda x: f'Day {x + 1}', 
                             disabled = not useVaccinesToggle, help = '''
@@ -221,6 +217,139 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 distribution will end.
                             '''
                         )
+
+                        # Show error if time period goes past sim length
+                        vaccinePeriodErrorContainer = st.empty()
+                        if vaccinePeriod[0] >= simLength: 
+                            vaccinePeriodErrorContainer.error(f'''
+                                Error: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the vaccination time period 
+                                for this scenario (defined above) is 
+                                set to begin on Day 
+                                {vaccinePeriod[0] + 1}. As such, no 
+                                vaccinations will ever occur in this 
+                                scenario under these parameters. 
+                                
+                                To address this error, please make one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the start point of the 
+                                scenario's Vaccination Time Period to 
+                                any point before Day {simLength}. 
+                                - Change the scenario's Vaccination 
+                                Trigger Condition to any option other 
+                                than "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {vaccinePeriod[0] + 1} days or 
+                                more.
+                            ''')
+                            globalErrorContainer.error(f'''
+                                Error: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the vaccination time period 
+                                for this scenario is set to begin on 
+                                Day {vaccinePeriod[0] + 1}. As such, no 
+                                vaccinations will ever occur in this 
+                                scenario under these parameters. 
+                                
+                                To address this error, please make one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the start point of the 
+                                scenario's Vaccination Time Period in 
+                                the "Vaccination Programs" section of 
+                                the "Vaccinations and NPIs" tab to any 
+                                point before Day {simLength}. 
+                                - Change the scenario's Vaccination 
+                                Trigger Condition in the "Vaccination 
+                                Programs" section of the "Vaccinations 
+                                and NPIs" tab to any option other than 
+                                "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {vaccinePeriod[0] + 1} days or 
+                                more.
+                            ''')
+                            st.session_state[f'vaccinePeriodError{id}'] = 2
+                        elif vaccinePeriod[1] >= simLength: 
+                            vaccinePeriodErrorContainer.warning(f'''
+                                Warning: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the vaccination time period 
+                                for this scenario (defined above) is 
+                                set to end on Day 
+                                {vaccinePeriod[1] + 1}. As such, 
+                                vaccinations will still be ongoing when 
+                                the scenario ends. 
+                                
+                                If this is not desired behaviour, 
+                                please address this error by making one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the end point of the 
+                                scenario's Vaccination Time Period to 
+                                any point before Day {simLength}. 
+                                - Change the scenario's Vaccination 
+                                Trigger Condition to any option other 
+                                than "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {vaccinePeriod[1] + 1} days or 
+                                more.
+                            ''')
+                            globalErrorContainer.warning(f'''
+                                Warning: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the vaccination time period 
+                                for this scenario is set to end on Day 
+                                {vaccinePeriod[1] + 1}. As such, 
+                                vaccinations will still be ongoing when 
+                                the scenario ends. 
+                                
+                                If this is not desired behaviour, 
+                                please address this error by making one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the end point of the 
+                                scenario's Vaccination Time Period in 
+                                the "Vaccination Programs" section of 
+                                the "Vaccinations and NPIs" tab to any 
+                                point before Day {simLength}. 
+                                - Change the scenario's Vaccination 
+                                Trigger Condition in the "Vaccination 
+                                Programs" section of the "Vaccinations 
+                                and NPIs" tab to any option other than 
+                                "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {vaccinePeriod[1] + 1} days or 
+                                more.
+                            ''')
+                            st.session_state[f'vaccinePeriodError{id}'] = 1
+                        else: st.session_state[f'vaccinePeriodError{id}'] = 0
+                    
                     # Rate triggers
                     elif vaccineTrigger == 'Community Case Rate': st.info('''
                         Due to the design of the *Flusim* model, case 
@@ -325,10 +454,18 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         {100 * initialVaccinated:0.3g}%. As such, the 
                         target vaccination level will already be met, 
                         and no new vaccinations will occur in this 
-                        scenario. If this is not intentional, please 
-                        adjust the proportions above such that the 
-                        target proportion is less than the initial 
-                        proportion before running the simulation.
+                        scenario. 
+                        
+                        If this is not desired behaviour, please 
+                        address this error by making one of the 
+                        following changes before running the simulation:
+                                
+                        - Increase the scenario's Initial Vaccinated 
+                        Proportion of Population to be greater than 
+                        {100 * targetVaccinated:0.3g}%. 
+                        - Decrease the scenario's Target Vaccinated 
+                        Proportion of Population to be lower than 
+                        {100 * initialVaccinated:0.3g}%. 
                     ''')
                     globalErrorContainer.warning(f'''
                         Warning: The target vaccinated proportion in 
@@ -344,11 +481,22 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         {100 * initialVaccinated:0.3g}%. As such, the 
                         target vaccination level will already be met, 
                         and no new vaccinations will occur in this 
-                        scenario. If this is not intentional, please 
-                        adjust the proportions in the "Vaccinations and 
-                        NPIs" tab such that the target proportion is 
-                        less than the initial proportion before running 
-                        the simulation.
+                        scenario. 
+                        
+                        If this is not desired behaviour, please 
+                        address this error by making one of the 
+                        following changes before running the simulation:
+                                
+                        - Increase the scenario's Initial Vaccinated 
+                        Proportion of Population in the "Vaccination 
+                        Programs" section of the "Vaccinations and 
+                        NPIs" tab to be greater than 
+                        {100 * targetVaccinated:0.3g}%. 
+                        - Decrease the scenario's Target Vaccinated 
+                        Proportion of Population in the "Vaccination 
+                        Programs" section of the "Vaccinations and 
+                        NPIs" tab to be lower than 
+                        {100 * initialVaccinated:0.3g}%. 
                     ''')
                     st.session_state[f'baseVacPropError{id}'] = 1
                 else: st.session_state[f'baseVacPropError{id}'] = 0
@@ -513,13 +661,24 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             target vaccination level will already be 
                             met, and no new vaccinations will occur in 
                             this scenario for individuals in the 
-                            "{age}" age group. If this is not 
-                            intentional, please either remove the 
-                            unique proportions for the "{age}" group in 
-                            this scenario or adjust the proportions 
-                            such that the target proportion is less 
-                            than the initial proportion before running 
-                            the simulation.
+                            "{age}" age group. 
+                            
+                            If this is not desired behaviour, please 
+                            address this error by making one of the 
+                            following changes before running the 
+                            simulation:
+                                
+                            - Remove the scenario's age-specific 
+                            vaccination proportions for the "{age}" age 
+                            group.
+                            - Increase the scenario's Initial 
+                            Vaccinated Proportion of Population for the 
+                            "{age}" age group to be greater than 
+                            {100 * currentTarget:0.3g}%. 
+                            - Decrease the scenario's Target Vaccinated 
+                            Proportion of Population for the "{age}" 
+                            age group to be lower than 
+                            {100 * currentInitial:0.3g}%. 
                         ''')
                         globalErrorContainer.warning(f'''
                             Warning: The target vaccinated proportion 
@@ -537,14 +696,29 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             target vaccination level will already be 
                             met, and no new vaccinations will occur in 
                             this scenario for individuals in the 
-                            "{age}" age group. If this is not 
-                            intentional, please either remove the 
-                            unique proportions for the "{age}" group in 
-                            this scenario or adjust the proportions in 
-                            the "Vaccinations and NPIs" tab such that 
-                            the target proportion is less than the 
-                            initial proportion before running the 
-                            simulation.
+                            "{age}" age group. 
+                            
+                            If this is not desired behaviour, please 
+                            address this error by making one of the 
+                            following changes before running the 
+                            simulation:
+                                
+                            - Remove the scenario's age-specific 
+                            vaccination proportions for the "{age}" age 
+                            group from the "Vaccination Programs" 
+                            section of the "Vaccinations and NPIs" tab.
+                            - Increase the scenario's Initial 
+                            Vaccinated Proportion of Population for the 
+                            "{age}" age group in the "Vaccination 
+                            Programs" section of the "Vaccinations and 
+                            NPIs" tab to be greater than 
+                            {100 * currentTarget:0.3g}%. 
+                            - Decrease the scenario's Target Vaccinated 
+                            Proportion of Population for the "{age}" 
+                            age group in the "Vaccination Programs" 
+                            section of the "Vaccinations and NPIs" tab 
+                            to be lower than 
+                            {100 * currentInitial:0.3g}%. 
                         ''')
                         st.session_state[f'ageVacPropError{id}'] = 1
                         ageVacPropError = True
@@ -582,7 +756,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         sections used for specifying efficacy below.
                     '''
                 )
-                primaryDelay = st.slider(
+                st.slider(
                     'Time Between Vaccine Doses (Months)', 
                     1, 36, 3, disabled = not useVaccinesToggle, 
                     key = f'primaryDelay{id}', help = '''
@@ -763,8 +937,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 )
 
                 # Store age-based efficacy values for error checking
-                primDoseInitials = [None for _ in range(primaryDoseCount)]
-                primAgeInitials = [{} for _ in range(primaryDoseCount)]
+                primaryInitialEfficacy = 0.5
+                primAgeInitials = {}
+
 
                 # Modifiable-length field for each primary dose
                 st.markdown('''
@@ -780,7 +955,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     doseEfficacyContainer.markdown(
                         f'#### {ordinals[i+1]} Vaccine Dose'
                     )
-                    primDoseInitials[i] = doseEfficacyContainer.select_slider(
+                    baseDoseEfficacy = doseEfficacyContainer.select_slider(
                         'Initial Dose Efficacy (Probability)', 
                         np.linspace(0.0, 1.0, 1001), 0.5, 
                         format_func = lambda x: f'{100 * x:0.3g}%', 
@@ -793,6 +968,82 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             to the disease.
                         '''
                     )
+
+                    # Last efficacy value is all that's cared about
+                    # for error checking purposes
+                    if i == primaryDoseCount - 1:
+                        primaryInitialEfficacy = baseDoseEfficacy
+                        # Show error if waned efficacy is above initial
+                        if (
+                            useVaccinesToggle 
+                            and primaryWanedEfficacy > primaryInitialEfficacy
+                        ):
+                            st.error(f'''
+                                Error: The initial vaccine efficacy in 
+                                the {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } for the final vaccine dose in all age 
+                                groups is currently set to 
+                                {100 * primaryInitialEfficacy:0.3g}% 
+                                effectiveness, but the final vaccine 
+                                efficacy after immunity waning for this 
+                                scenario is set to 
+                                {100 * primaryWanedEfficacy:0.3g}%. As 
+                                such, the immunity to the disease 
+                                conferred by the vaccine will get 
+                                stronger over time instead of weaker. 
+
+                                To address this error, please make one 
+                                of the following changes before running 
+                                the simulation:
+
+                                - Increase the scenario's Initial 
+                                Dose Efficacy to be greater than 
+                                {100 * primaryWanedEfficacy:0.3g}%. 
+                                - Decrease the scenario's Dose Efficacy 
+                                After Immunity Waning to be lower than 
+                                {100 * primaryInitialEfficacy:0.3g}%. 
+                            ''')
+                            globalErrorContainer.error(f'''
+                                Error: The initial vaccine efficacy in 
+                                the {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } for all age groups is currently set 
+                                to {100 * primaryInitialEfficacy:0.3g}% 
+                                effectiveness, but the final vaccine 
+                                efficacy after immunity waning for this 
+                                scenario is set to 
+                                {100 * primaryWanedEfficacy:0.3g}%. As 
+                                such, the immunity to the disease 
+                                conferred by the vaccine will get 
+                                stronger over time instead of weaker. 
+
+                                To address this error, please make one 
+                                of the following changes before running 
+                                the simulation:
+
+                                - Increase the scenario's Initial 
+                                Dose Efficacy in the "Vaccination 
+                                Properties" section of the 
+                                "Vaccinations and NPIs" tab to be 
+                                greater than 
+                                {100 * primaryWanedEfficacy:0.3g}%. 
+                                - Decrease the scenario's Dose Efficacy 
+                                After Immunity Waning in the 
+                                "Vaccination Properties" section of the 
+                                "Vaccinations and NPIs" tab to be lower 
+                                than 
+                                {100 * primaryInitialEfficacy:0.3g}%. 
+                            ''')
+                            st.session_state[f'basePrimEfficacyError{id}'] = 2
+                        else: 
+                            st.session_state[f'basePrimEfficacyError{id}'] = 0
 
                     # Age-Specific Primary Efficacy Field
                     doseEfficacyContainer.markdown('''
@@ -809,6 +1060,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         f'primaryRemainingAgeGroups{id}-{i}'
                     ]
                     primEfficacyContainer = doseEfficacyContainer.container()
+                    (
+                        primEfficacyErrorContainer
+                    ) = doseEfficacyContainer.container()
                     for j in range(primaryAgeRowCounts[i]):
                         (
                             primAgeGroupColumn, primAgeEfficacyColumn, 
@@ -857,9 +1111,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         )
                         # Initial efficacy column
                         with primAgeEfficacyColumn: 
-                            primAgeInitials[i][
-                                primAgeGroup
-                            ] = st.select_slider(
+                            ageInitialEfficacy = st.select_slider(
                                 'Initial Dose Efficacy (Probability)',
                                 np.linspace(0.0, 1.0, 1001), 0.5, 
                                 format_func = lambda x: f'{100 * x:0.3g}%', 
@@ -874,6 +1126,14 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                     when exposed to the disease.
                                 '''
                             )
+
+                            # Last efficacy value is all that's cared 
+                            # about for error checking purposes
+                            if i == primaryDoseCount - 1: 
+                                primAgeInitials[
+                                    primAgeGroup
+                                ] = ageInitialEfficacy
+
                         # Delete button column
                         with primAgeRemoveColumn: st.button(
                             label = 'Remove Age Group', 
@@ -904,7 +1164,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             ((
                                 f'primAgeEfficacy{id}-{i}'
                                 f'-{primaryAgeRowCounts[i]}'
-                            )): primDoseInitials[i]
+                            )): baseDoseEfficacy
                         }), 
                         disabled = (
                             not useVaccinesToggle 
@@ -921,10 +1181,157 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         '''
                     )
 
+                    # Check errors in age-based primary efficacy
+                    if i == primaryDoseCount - 1 and useVaccinesToggle:
+                        initialAges = primAgeInitials.keys()
+                        wanedAges = primAgeWaneds.keys()
+                        for age in list(initialAges) + list(
+                            set(wanedAges) - set(initialAges)
+                        ):
+                            initialAgeEfficacy = primAgeInitials.get(
+                                age, primaryInitialEfficacy
+                            )
+                            wanedAgeEfficacy = primAgeWaneds.get(
+                                age, primaryWanedEfficacy
+                            )
+                            ageIsInitial = age in initialAges
+                            ageIsWaned = age in wanedAges
+                            if initialAgeEfficacy > wanedAgeEfficacy: 
+                                primEfficacyErrorContainer.error(f'''
+                                    Error: The initial vaccine efficacy 
+                                    in the {
+                                        'baseline scenario' if id == 0 
+                                        else f'scenario named "{
+                                            st.session_state[
+                                                f'scenarioName{id}'
+                                            ]
+                                        }"'
+                                    } for the final dose in the "{age}" 
+                                    age group is currently set to {
+                                        '' if ageIsInitial 
+                                        else 'the scenario base value of'
+                                    } {100 * initialAgeEfficacy:0.3g}% 
+                                    effectiveness, but the final 
+                                    vaccine efficacy after immunity 
+                                    waning for said age group in this 
+                                    scenario is set to {
+                                        '' if ageIsWaned 
+                                        else 'the scenario base value of'
+                                    } {100 * wanedAgeEfficacy:0.3g}%. 
+                                    As such, the immunity to the 
+                                    disease conferred by the vaccine
+                                    will get stronger over time instead 
+                                    of weaker for individuals in the 
+                                    "{age}" age group. 
+
+                                    To address this error, please make 
+                                    one of the following changes before 
+                                    running the simulation:
+
+                                    - Remove the scenario's 
+                                    age-specific {
+                                        'initial (final dose)' 
+                                        if ageIsInitial else ''
+                                    }{
+                                        'and ' if ageIsInitial and ageIsWaned 
+                                        else ''
+                                    }{
+                                        'waned ' if ageIsInitial else ''
+                                    }dose efficacy rate{
+                                        's' if ageIsInitial and ageIsWaned 
+                                        else ''
+                                    } for the "{age}" age group.
+                                    - Increase the scenario's {
+                                        'age-specific' if ageIsInitial 
+                                        else 'base'
+                                    } Initial Dose Efficacy for the 
+                                    final vaccine dose in the program 
+                                    to be greater than 
+                                    {100 * wanedAgeEfficacy:0.3g}%. 
+                                    - Decrease the scenario's {
+                                        'age-specific' if ageIsInitial 
+                                        else 'base'
+                                    } Dose Efficacy After Immunity 
+                                    Waning to be lower than 
+                                    {100 * initialAgeEfficacy:0.3g}%. 
+                                ''')
+                                globalErrorContainer.warning(f'''
+                                    Error: The initial vaccine efficacy 
+                                    in the {
+                                        'baseline scenario' if id == 0 
+                                        else f'scenario named "{
+                                            st.session_state[
+                                                f'scenarioName{id}'
+                                            ]
+                                        }"'
+                                    } for the final dose in the "{age}" 
+                                    age group is currently set to {
+                                        '' if age in initialAges 
+                                        else 'the scenario base value of'
+                                    } {100 * initialAgeEfficacy:0.3g}% 
+                                    effectiveness, but the final 
+                                    vaccine efficacy after immunity 
+                                    waning for said age group in this 
+                                    scenario is set to {
+                                        '' if age in wanedAges 
+                                        else 'the scenario base value of'
+                                    } {100 * wanedAgeEfficacy:0.3g}%. 
+                                    As such, the immunity to the 
+                                    disease conferred by the vaccine 
+                                    will get stronger over time instead 
+                                    of weaker for individuals in the 
+                                    "{age}" age group. 
+
+                                    To address this error, please make 
+                                    one of the following changes before 
+                                    running the simulation:
+
+                                    - Remove the scenario's 
+                                    age-specific {
+                                        'initial (final dose)' 
+                                        if ageIsInitial else ''
+                                    }{
+                                        'and ' if ageIsInitial and ageIsWaned 
+                                        else ''
+                                    }{
+                                        'waned ' if ageIsInitial else ''
+                                    }dose efficacy rate{
+                                        's' if ageIsInitial and ageIsWaned 
+                                        else ''
+                                    } for the "{age}" age group in the 
+                                    "Vaccination Properties" section of 
+                                    the "Vaccinations and NPIs" tab.
+                                    - Increase the scenario's {
+                                        'age-specific' if ageIsInitial 
+                                        else 'base'
+                                    } Initial Dose Efficacy for the 
+                                    final vaccine dose in the program 
+                                    in the "Vaccination Properties" 
+                                    section of the "Vaccinations and 
+                                    NPIs" tab to be greater than 
+                                    {100 * wanedAgeEfficacy:0.3g}%. 
+                                    - Decrease the scenario's {
+                                        'age-specific' if ageIsInitial 
+                                        else 'base'
+                                    } Dose Efficacy After Immunity 
+                                    Waning in the "Vaccination 
+                                    Properties" section of the 
+                                    "Vaccinations and NPIs" tab to be 
+                                    lower than 
+                                    {100 * initialAgeEfficacy:0.3g}%. 
+                                ''')
+                                st.session_state[
+                                    f'agePrimEfficacyError{id}'
+                                ] = 2
+                                ageBoostEfficacyError = True
+                        # Reset error parameter if no errors
+                        if not ageBoostEfficacyError: 
+                            st.session_state[f'agePrimEfficacyError{id}'] = 0
+
 
 
             # Booster Parameters
-            with st.expander('Booster Vaccine Properties'):
+            with st.expander('Booster Vaccines'):
                 # Describe booster vaccines
                 st.markdown('''
                     These parameters control the properties of booster 
@@ -1005,6 +1412,72 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         to the disease.
                     '''
                 )
+                baseBoostEfficacyErrorContainer = st.empty()
+
+                # Show error if waned efficacy is above initial
+                if (
+                    useVaccinesToggle and useBoostersToggle 
+                    and boosterWanedEfficacy > boosterBaseEfficacy
+                ):
+                    baseBoostEfficacyErrorContainer.error(f'''
+                        Error: The initial booster vaccine efficacy in 
+                        the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } for all age groups is currently set to 
+                        {100 * boosterBaseEfficacy:0.3g}% 
+                        effectiveness, but the final booster vaccine 
+                        efficacy after immunity waning for this 
+                        scenario is set to 
+                        {100 * boosterWanedEfficacy:0.3g}%. As such, 
+                        the immunity to the disease conferred by the 
+                        booster will get stronger over time instead of 
+                        weaker. 
+
+                        To address this error, please make one of the 
+                        following changes before running the simulation:
+
+                        - Increase the scenario's Initial Booster 
+                        Efficacy to be greater than 
+                        {100 * boosterWanedEfficacy:0.3g}%. 
+                        - Decrease the scenario's Booster Efficacy 
+                        After Immunity Waning to be lower than 
+                        {100 * boosterBaseEfficacy:0.3g}%. 
+                    ''')
+                    globalErrorContainer.error(f'''
+                        Error: The initial booster vaccine efficacy in 
+                        the {
+                            'baseline scenario' if id == 0 
+                            else f'scenario named "{
+                                st.session_state[f'scenarioName{id}']
+                            }"'
+                        } for all age groups is currently set to 
+                        {100 * boosterBaseEfficacy:0.3g}% 
+                        effectiveness, but the final booster vaccine 
+                        efficacy after immunity waning for this 
+                        scenario is set to 
+                        {100 * boosterWanedEfficacy:0.3g}%. As such, 
+                        the immunity to the disease conferred by the 
+                        booster will get stronger over time instead of 
+                        weaker. 
+
+                        To address this error, please make one of the 
+                        following changes before running the simulation:
+
+                        - Increase the scenario's Initial Booster 
+                        Efficacy in the "Booster Vaccines" section of 
+                        the "Vaccinations and NPIs" tab to be greater 
+                        than {100 * boosterWanedEfficacy:0.3g}%. 
+                        - Decrease the scenario's Booster Efficacy 
+                        After Immunity Waning in the "Booster Vaccines" 
+                        section of the "Vaccinations and NPIs" tab to 
+                        be lower than {100 * boosterBaseEfficacy:0.3g}%.
+                    ''')
+                    st.session_state[f'baseBoostEfficacyError{id}'] = 2
+                else: st.session_state[f'baseBoostEfficacyError{id}'] = 0
+
                 st.slider(
                     'Booster Waning Duration (Months)', 0, 36, 6,
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
@@ -1031,10 +1504,10 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 st.markdown('''
                     ### Age-Specific Booster Efficacies
                     
-                    This section allows for unique booster efficacy values 
-                    (both initial and final) to be defined for individual 
-                    age groups in the simulation, overriding the global 
-                    booster efficacy values defined above.
+                    This section allows for unique booster efficacy 
+                    values (both initial and final) to be defined for 
+                    individual age groups in the simulation, overriding 
+                    the global booster efficacy values defined above.
                 ''')
                 # Save relevant params as variables to avoid lookups
                 boosterRowCount = st.session_state[f'boostAgeRowCount{id}']
@@ -1042,6 +1515,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     f'boosterRemainingAgeGroups{id}'
                 ]
                 boostAgeEfficacyContainer = st.container()
+                boostAgeErrorContainer = st.container()
                 for i in range(boosterRowCount):
                     (
                         boostAgeGroupColumn, boostAgeEfficacyColumn, 
@@ -1128,7 +1602,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         )
                     # Delete button column
                     with boostAgeRemoveColumn: st.button(
-                        label = 'Remove Age Group', icon = ':material/delete:', 
+                        label = 'Remove Age Group', icon = ':material/delete:',
                         key = f'boostAgeRemove{id}-{i}', 
                         on_click = deleteFormRow, args = (
                             i, f'boostAgeRowCount{id}', {
@@ -1174,6 +1648,95 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         vaccine efficacy values.
                     '''
                 )
+
+                # Age-based errors if waned efficacy is above initial
+                for age in boostAgeInitials.values():
+                    currentInitial = boostAgeInitials[age] 
+                    currentWaned = boostAgeWaneds[age]
+                    if (
+                        useVaccinesToggle and useBoostersToggle 
+                        and currentInitial > currentWaned
+                    ): 
+                        boostAgeErrorContainer.error(f'''
+                            Error: The initial booster vaccine efficacy 
+                            in the {
+                                'baseline scenario' if id == 0 
+                                else f'scenario named "{
+                                    st.session_state[
+                                        f'scenarioName{id}'
+                                        ]
+                                }"'
+                            } for the "{age}" age group is currently 
+                            set to {100 * currentInitial:0.3g}% 
+                            effectiveness, but the final booster 
+                            vaccine efficacy after immunity waning for 
+                            said age group in this scenario is set to 
+                            {100 * currentWaned:0.3g}%. As such, the 
+                            immunity to the disease conferred by the 
+                            booster will get stronger over time instead 
+                            of weaker for individuals in the "{age}" 
+                            age group. 
+
+                            To address this error, please make one of 
+                            the following changes before running the 
+                            simulation:
+
+                            - Remove the scenario's age-specific 
+                            booster efficacies for the "{age}" age 
+                            group.
+                            - Increase the scenario's Initial Booster 
+                            Efficacy for the "{age}" age group to be 
+                            greater than 
+                            {100 * currentWaned:0.3g}%. 
+                            - Decrease the scenario's Booster Efficacy 
+                            After Immunity Waning for the "{age}" age 
+                            group to be lower than 
+                            {100 * currentInitial:0.3g}%. 
+                        ''')
+                        globalErrorContainer.warning(f'''
+                            Error: The initial booster vaccine efficacy 
+                            in the {
+                                'baseline scenario' if id == 0 
+                                else f'scenario named "{
+                                    st.session_state[
+                                        f'scenarioName{id}'
+                                    ]
+                                }"'
+                            } for the "{age}" age group is currently 
+                            set to {100 * currentInitial:0.3g}% 
+                            effectiveness, but the final booster 
+                            vaccine efficacy after immunity waning for 
+                            said age group in this scenario is set to 
+                            {100 * currentWaned:0.3g}%. As such, the 
+                            immunity to the disease conferred by the 
+                            booster will get stronger over time instead 
+                            of weaker for individuals in the "{age}" 
+                            age group. 
+
+                            To address this error, please make one of 
+                            the following changes before running the 
+                            simulation:
+
+                            - Remove the scenario's age-specific 
+                            booster efficacies for the "{age}" age 
+                            group in the "Booster Vaccines" section of 
+                            the "Vaccinations and NPIs" tab.
+                            - Increase the scenario's Initial Booster 
+                            Efficacy for the "{age}" age group in the 
+                            "Booster Vaccines" section of the 
+                            "Vaccinations and NPIs" tab to be greater 
+                            than {100 * currentWaned:0.3g}%. 
+                            - Decrease the scenario's Booster Efficacy 
+                            After Immunity Waning for the "{age}" age 
+                            group in the "Booster Vaccines" section of 
+                            the "Vaccinations and NPIs" tab to be lower 
+                            than {100 * currentInitial:0.3g}%. 
+                        ''')
+                        st.session_state[f'ageBoostEfficacyError{id}'] = 2
+                        ageBoostEfficacyError = True
+                # Reset error parameter if none of the age levels error
+                if not ageBoostEfficacyError: 
+                    st.session_state[f'ageBoostEfficacyError{id}'] = 0
         
 
 
@@ -1292,7 +1855,8 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         key = f'socialRemove{id}-{i}', 
                         on_click = deleteFormRow, args = (
                             i, f'socialRowCount{id}', {
-                                f'socialAgeGroup{id}-', f'socialCompliance{id}-'
+                                f'socialAgeGroup{id}-', 
+                                f'socialCompliance{id}-'
                             }
                         ),
                         disabled = not useVaccinesToggle, help = '''
@@ -1323,9 +1887,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         select an additional age group to have unique 
                         social distancing compliance values.
                     ''' if socialRowCount <= 9 else '''
-                        All age groups have been given unique 
-                        social distancing compliance values, so a new 
-                        age group cannot be added.
+                        All age groups have been given unique social 
+                        distancing compliance values, so a new age 
+                        group cannot be added.
                     '''
                 )
 
@@ -1368,7 +1932,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
             # School Closure
             st.html('<span id = "schoolClosureTriggerCondition"></span>')
-            with st.expander('School Closure Properties'):
+            with st.expander('School Closure'):
                 st.markdown('''
                     These parameters control if and when schools will 
                     close as a result of the disease.
@@ -1434,11 +1998,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     # Show additional parameters based on trigger value
                     # Timed triggers
                     if schoolClosureTrigger == 'Timed':
-                        # TODO: Set time-based parameter maximums based 
-                        # on number of cycles in simulation
                         schoolClosurePeriod = st.select_slider(
                             'School Closure Time Period', range(720), 
-                            (30, 60), key = f'schoolClosurePeriod{id}', 
+                            (29, 59), key = f'schoolClosurePeriod{id}', 
                             format_func = lambda x: f'Day {x + 1}', 
                             disabled = not useSchoolClosureToggle, help = '''
                                 The time period during which schools 
@@ -1450,6 +2012,146 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 schools will reopen.
                             '''
                         )
+
+                        # Show error if time period goes past sim length
+                        schoolClosurePeriodErrorContainer = st.empty()
+                        if schoolClosurePeriod[0] >= simLength: 
+                            schoolClosurePeriodErrorContainer.error(f'''
+                                Error: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the school closure NPI time 
+                                period for this scenario (defined 
+                                above) is set to begin on Day 
+                                {schoolClosurePeriod[0] + 1}. As such, 
+                                schools will never be closed in this 
+                                scenario under these parameters. 
+                                
+                                To address this error, please make one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the start point of the 
+                                scenario's School Closure Time Period 
+                                to any point before Day {simLength}. 
+                                - Change the scenario's School Closure 
+                                Trigger Condition to any option other 
+                                than "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {schoolClosurePeriod[0] + 1} days 
+                                or more.
+                            ''')
+                            globalErrorContainer.error(f'''
+                                Error: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the school closure NPI time 
+                                period for this scenario is set to 
+                                begin on Day 
+                                {schoolClosurePeriod[0] + 1}. As such, 
+                                schools will never be closed in this 
+                                scenario under these parameters. 
+                                
+                                To address this error, please make one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the start point of the 
+                                scenario's School Closure Time Period 
+                                in the "School Closure" section of the 
+                                "Vaccinations and NPIs" tab to any 
+                                point before Day {simLength}. 
+                                - Change the scenario's School Closure 
+                                Trigger Condition in the "School 
+                                Closure" section of the "Vaccinations 
+                                and NPIs" tab to any option other than 
+                                "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {schoolClosurePeriod[0] + 1} days 
+                                or more.
+                            ''')
+                            st.session_state[
+                                f'schoolClosurePeriodError{id}'
+                            ] = 2
+                        elif schoolClosurePeriod[1] >= simLength: 
+                            schoolClosurePeriodErrorContainer.warning(f'''
+                                Warning: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the school closure NPI time 
+                                period for this scenario (defined 
+                                above) is set to end on Day 
+                                {schoolClosurePeriod[1] + 1}. As such, 
+                                schools will still be closed when the 
+                                scenario ends. 
+                                
+                                If this is not desired behaviour, 
+                                please address this error by making one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the end point of the scenario's 
+                                School Closure Time Period to any point 
+                                before Day {simLength}. 
+                                - Change the scenario's School Closure 
+                                Trigger Condition to any option other 
+                                than "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {schoolClosurePeriod[1] + 1} days 
+                                or more.
+                            ''')
+                            globalErrorContainer.warning(f'''
+                                Warning: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the school closure NPI time 
+                                period for this scenario is set to end 
+                                on Day {schoolClosurePeriod[1] + 1}. As 
+                                such, schools will still be closed when 
+                                the scenario ends. 
+                                
+                                If this is not desired behaviour, 
+                                please address this error by making one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the end point of the scenario's 
+                                School Closure Time Period in the 
+                                "School Closure" section of the 
+                                "Vaccinations and NPIs" tab to any 
+                                point before Day {simLength}. 
+                                - Change the scenario's School Closure 
+                                Trigger Condition in the "School 
+                                Closure" section of the "Vaccinations 
+                                and NPIs" tab to any option other than 
+                                "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {schoolClosurePeriod[1] + 1} days 
+                                or more. 
+                            ''')
+                            st.session_state[
+                                f'schoolClosurePeriodError{id}'
+                            ] = 1
+                        else: st.session_state[
+                            f'schoolClosurePeriodError{id}'
+                        ] = 0
+
                     # Rate triggers
                     elif schoolClosureTrigger == 'Community Case Rate': 
                         st.info('''
@@ -1520,8 +2222,10 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         close during school closure NPIs. At least one 
                         kind of school must be selected for this NPI in 
                         order for it to have an effect on the scenario. 
-                        Please select at least one of the school types 
-                        above before running the simulation.
+
+                        To address this error, please select at least 
+                        one of the Types of School to Close before 
+                        running the simulation.
                     ''')
                     globalErrorContainer.error(f'''
                         Error: The {
@@ -1533,9 +2237,11 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         close during school closure NPIs. At least one 
                         kind of school must be selected for this NPI in 
                         order for it to have an effect on the scenario. 
-                        Please select at least one of the school types 
-                        in the "Vaccinations and NPIs" tab before 
-                        running the simulation.
+
+                        To address this error, please select at least 
+                        one of the Types of School to Close in the 
+                        "School Closure" section of the "Vaccinations 
+                        and NPIs" tab before running the simulation.
                     ''')
                     st.session_state[f'schoolTypeError{id}'] = 2
                 else: st.session_state[f'schoolTypeError{id}'] = 0
@@ -1544,16 +2250,17 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
             # Withdrawal Increase
             st.html('<span id = "withdrawalIncreaseTriggerCondition"></span>')
-            with st.expander('Withdrawal Increase Properties'):
+            with st.expander('Withdrawal Increase'):
                 st.markdown('''
                     These parameters control the properties of 
                     interventions that increase the likelihood of 
                     infected individuals withdrawing from work/school 
                     after becoming symptomatic.
                     
-                    Parameters controlling the probability of 
-                    withdrawal when this intervention is not active can 
-                    be found in the "Community" tab.
+                    The base likelihood of infected individuals 
+                    withdrawing from work/school when this intervention 
+                    is not active can be configured in the "Withdrawals 
+                    and Diagnosis" section of the "Community" tab.
                 ''')
                 useWithdrawalIncreaseToggle = st.toggle(
                     'Enable Withdrawal Increases', value = True, 
@@ -1605,11 +2312,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     # Show additional parameters based on trigger value
                     # Timed triggers
                     if withdrawalIncreaseTrigger == 'Timed':
-                        # TODO: Set time-based parameter maximums based 
-                        # on number of cycles in simulation
                         withdrawalIncreasePeriod = st.select_slider(
                             'Withdrawal Increase Time Period', range(720), 
-                            (30, 60), key = f'withdrawalIncreasePeriod{id}', 
+                            (29, 59), key = f'withdrawalIncreasePeriod{id}', 
                             disabled = not useWithdrawalIncreaseToggle, 
                             format_func = lambda x: f'Day {x + 1}', help = '''
                                 The time period during which withdrawal 
@@ -1622,6 +2327,150 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 rates will return to normal.
                             '''
                         )
+
+                        # Show error if time period goes past sim length
+                        withdrawalIncreasePeriodErrorContainer = st.empty()
+                        if withdrawalIncreasePeriod[0] >= simLength: 
+                            withdrawalIncreasePeriodErrorContainer.error(f'''
+                                Error: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the withdrawal increase NPI 
+                                time period for this scenario (defined 
+                                above) is set to begin on Day 
+                                {withdrawalIncreasePeriod[0] + 1}. As 
+                                such, withdrawal rates will never 
+                                increase in this scenario under these 
+                                parameters. 
+                                
+                                To address this error, please make one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the start point of the 
+                                scenario's Withdrawal Increase Time 
+                                Period to any point before Day 
+                                {simLength}. 
+                                - Change the scenario's Withdrawal 
+                                Increase Trigger Condition to any 
+                                option other than "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {withdrawalIncreasePeriod[0] + 1} 
+                                days or more.
+                            ''')
+                            globalErrorContainer.error(f'''
+                                Error: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the withdrawal increase NPI 
+                                time period for this scenario is set to 
+                                begin on Day 
+                                {withdrawalIncreasePeriod[0] + 1}. As 
+                                such, withdrawal rates will never 
+                                increase in this scenario under these 
+                                parameters. 
+                                
+                                To address this error, please make one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the start point of the 
+                                scenario's Withdrawal Increase Time 
+                                Period in the "Withdrawal Increase" 
+                                section of the "Vaccinations and NPIs" 
+                                tab to any point before Day {simLength}.
+                                - Change the scenario's Withdrawal 
+                                Increase Trigger Condition in the 
+                                "Withdrawal Increase" section of the 
+                                "Vaccinations and NPIs" tab to any 
+                                option other than "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {withdrawalIncreasePeriod[0] + 1} 
+                                days or more. 
+                            ''')
+                            st.session_state[
+                                f'withdrawalIncreasePeriodError{id}'
+                            ] = 2
+                        elif withdrawalIncreasePeriod[1] >= simLength: 
+                            withdrawalIncreasePeriodErrorContainer.warning(f'''
+                                Warning: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the withdrawal increase NPI 
+                                time period for this scenario (defined 
+                                above) is set to end on Day 
+                                {withdrawalIncreasePeriod[1] + 1}. As 
+                                such, withdrawal rates will still be 
+                                increased when the scenario ends. 
+                                
+                                If this is not desired behaviour, 
+                                please address this error by making one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the end point of the scenario's 
+                                Withdrawal Increase Time Period to any 
+                                point before Day {simLength}. 
+                                - Change the scenario's Withdrawal 
+                                Increase Trigger Condition to any 
+                                option other than "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {withdrawalIncreasePeriod[1] + 1} 
+                                days or more.
+                            ''')
+                            globalErrorContainer.warning(f'''
+                                Warning: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the withdrawal increase NPI 
+                                time period for this scenario is set to 
+                                end on Day 
+                                {withdrawalIncreasePeriod[1] + 1}. As 
+                                such, withdrawal rates will still be 
+                                increased when the scenario ends. 
+                                
+                                If this is not desired behaviour, 
+                                please address this error by making one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the end point of the scenario's 
+                                Withdrawal Increase Time Period in the 
+                                "Withdrawal Increase" section of the 
+                                "Vaccinations and NPIs" tab to any 
+                                point before Day {simLength}. 
+                                - Change the scenario's Withdrawal 
+                                Increase Trigger Condition in the 
+                                "Withdrawal Increase" section of the 
+                                "Vaccinations and NPIs" tab to any 
+                                option other than "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {withdrawalIncreasePeriod[1] + 1} 
+                                days or more. 
+                            ''')
+                            st.session_state[
+                                f'withdrawalIncreasePeriodError{id}'
+                                ] = 1
+                        else: st.session_state[
+                            f'withdrawalIncreasePeriodError{id}'
+                        ] = 0
+                    
                     # Rate triggers
                     elif withdrawalIncreaseTrigger == 'Community Case Rate':
                         st.info('''
@@ -1701,13 +2550,17 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             if baseAdultWithdrawal == withdrawalIncreaseAdult 
                             else 'actually decreases'
                         } work withdrawal rates in this scenario. 
-                        Please either increase the NPI-affected work 
-                        withdrawal probability above such that it is 
-                        greater than {100 * baseAdultWithdrawal:0.3g}% 
-                        or lower the standard work withdrawal rate in 
-                        the "Community" tab such that it is less than 
-                        {100 * withdrawalIncreaseAdult:0.3g}% before 
-                        running the simulation.
+
+                        To address this error, please make one of the 
+                        following changes before running the simulation:
+                                
+                        - Increase the scenario's Adult Increased 
+                        Withdrawal Rate to any probability above 
+                        {100 * baseAdultWithdrawal:0.3g}%. 
+                        - Decrease the scenario's Adult Withdrawal Rate 
+                        in the "Withdrawals and Diagnosis" section of 
+                        the "Community" tab to any probability below 
+                        {100 * withdrawalIncreaseAdult:0.3g}%. 
                     ''')
                     globalErrorContainer.error(f'''
                         Error: The work withdrawal probability during 
@@ -1726,14 +2579,19 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             if baseAdultWithdrawal == withdrawalIncreaseAdult 
                             else 'actually decreases'
                         } work withdrawal rates in this scenario. 
-                        Please either increase the NPI-affected work 
-                        withdrawal probability in the "Vaccinations and 
-                        NPIs" tab such that it is greater than 
-                        {100 * baseAdultWithdrawal:0.3g}% or lower the 
-                        standard work withdrawal rate in the 
-                        "Community" tab such that it is less than 
-                        {100 * withdrawalIncreaseAdult:0.3g}% before 
-                        running the simulation.
+
+                        To address this error, please make one of the 
+                        following changes before running the simulation:
+                                
+                        - Increase the scenario's Adult Increased 
+                        Withdrawal Rate in the "Withdrawal Increase" 
+                        section of the "Vaccinations and NPIs" tab to 
+                        any probability above 
+                        {100 * baseAdultWithdrawal:0.3g}%. 
+                        - Decrease the scenario's Adult Withdrawal Rate 
+                        in the "Withdrawals and Diagnosis" section of 
+                        the "Community" tab to any probability below 
+                        {100 * withdrawalIncreaseAdult:0.3g}%. 
                     ''')
                     st.session_state[f'adultWithdrawalError{id}'] = 2
                 else: st.session_state[f'adultWithdrawalError{id}'] = 0
@@ -1758,13 +2616,17 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             if baseChildWithdrawal == withdrawalIncreaseChild 
                             else 'actually decreases'
                         } school withdrawal rates in this scenario. 
-                        Please either increase the NPI-affected school 
-                        withdrawal probability above such that it is 
-                        greater than {100 * baseChildWithdrawal:0.3g}% 
-                        or lower the standard school withdrawal rate in 
-                        the "Community" tab such that it is less than 
-                        {100 * withdrawalIncreaseChild:0.3g}% before 
-                        running the simulation.
+
+                        To address this error, please make one of the 
+                        following changes before running the simulation:
+                                
+                        - Increase the scenario's Child Increased 
+                        Withdrawal Rate to any probability above 
+                        {100 * baseChildWithdrawal:0.3g}%. 
+                        - Decrease the scenario's Child Withdrawal Rate 
+                        in the "Withdrawals and Diagnosis" section of 
+                        the "Community" tab to any probability below 
+                        {100 * withdrawalIncreaseChild:0.3g}%. 
                     ''')
                     globalErrorContainer.error(f'''
                         Error: The school withdrawal probability during 
@@ -1783,32 +2645,49 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             if baseChildWithdrawal == withdrawalIncreaseChild 
                             else 'actually decreases'
                         } school withdrawal rates in this scenario. 
-                        Please either increase the NPI-affected school 
-                        withdrawal probability in the "Vaccinations and 
-                        NPIs" tab such that it is greater than 
-                        {100 * baseChildWithdrawal:0.3g}% or lower the 
-                        standard school withdrawal rate in the 
-                        "Community" tab such that it is less than 
-                        {100 * withdrawalIncreaseChild:0.3g}% before 
-                        running the simulation.
+
+                        To address this error, please make one of the 
+                        following changes before running the simulation:
+                                
+                        - Increase the scenario's Child Increased 
+                        Withdrawal Rate in the "Withdrawal Increase" 
+                        section of the "Vaccinations and NPIs" tab to 
+                        any probability above 
+                        {100 * baseChildWithdrawal:0.3g}%. 
+                        - Decrease the scenario's Child Withdrawal Rate 
+                        in the "Withdrawals and Diagnosis" section of 
+                        the "Community" tab to any probability below 
+                        {100 * withdrawalIncreaseChild:0.3g}%. 
                     ''')
                     st.session_state[f'childWithdrawalError{id}'] = 2
                 else: st.session_state[f'childWithdrawalError{id}'] = 0
 
 
+            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
+            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
+            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
+            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
+            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
+            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
+            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
+            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
+            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
+            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
 
+            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
+            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
             # Reduced Workgroup Size
             st.html('<span id = "reducedGroupTriggerCondition"></span>')
-            with st.expander('Reduced Group Size Properties'):
+            with st.expander('Reduced Work Group Size'):
                 st.markdown('''
                     These parameters control the properties of 
                     interventions that reduce the size of work groups 
                     when in effect. Note that this NPI does not target 
                     school groups or other gatherings.
                     
-                    Parameters controlling the size of work groups when 
-                    this intervention is not active can be found in the 
-                    "Community" tab.
+                    The base size of work groups when this intervention 
+                    is not active can be configured in the "Population 
+                    Behaviours" section of the "Community" tab.
                 ''')
                 useReducedGroupToggle = st.toggle(
                     'Enable Group Size Reductions', value = True, 
@@ -1861,7 +2740,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     if reducedGroupTrigger == 'Timed':
                         reducedGroupPeriod = st.select_slider(
                             'Reduced Group Size Time Period', range(720), 
-                            (30, 60), key = f'reducedGroupPeriod{id}', 
+                            (29, 59), key = f'reducedGroupPeriod{id}', 
                             disabled = not useReducedGroupToggle, 
                             format_func = lambda x: f'Day {x + 1}', help = '''
                                 The time period during which work 
@@ -1874,6 +2753,107 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 return to normal.
                             '''
                         )
+
+                        # Show error if time period goes past sim length
+                        reducedGroupPeriodErrorContainer = st.empty()
+                        if reducedGroupPeriod[0] >= simLength: 
+                            reducedGroupPeriodErrorContainer.error(f'''
+                                Error: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the reduced group size NPI time 
+                                period for this scenario (defined 
+                                above) is set to begin on Day 
+                                {reducedGroupPeriod[0] + 1}. As such, 
+                                work groups will never decrease in size in this 
+                                scenario under these parameters. Please 
+                                either adjust this scenario's reduced 
+                                group size NPI time period to start and end 
+                                before Day {simLength}, switch to a 
+                                different trigger condition for reduced
+                                group size NPIs, or increase the 
+                                simulation length in the 
+                                "Initialisation" tab before running the 
+                                simulation.
+                            ''')
+                            globalErrorContainer.error(f'''
+                                Error: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the reduced group size NPI time 
+                                period for this scenario is set to 
+                                begin on Day 
+                                {reducedGroupPeriod[0] + 1}. As such, 
+                                work groups will never decrease in size in this 
+                                scenario under these parameters. Please 
+                                either adjust this scenario's reduced 
+                                group size NPI time period in the 
+                                "Vaccinations and NPIs" tab to start 
+                                and end before Day {simLength}, switch 
+                                to a different trigger condition for 
+                                reduced group size NPIs in the 
+                                "Vaccinations and NPIs" tab, or 
+                                increase the simulation length in the 
+                                "Initialisation" tab before running the 
+                                simulation.
+                            ''')
+                            st.session_state[
+                                f'reducedGroupPeriodError{id}'
+                            ] = 2
+                        elif reducedGroupPeriod[1] >= simLength: 
+                            reducedGroupPeriodErrorContainer.warning(f'''
+                                Warning: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the reduced group size NPI time 
+                                period for this scenario (defined 
+                                above) is set to end on Day 
+                                {reducedGroupPeriod[1] + 1}. As such, 
+                                work groups will still be reduced in size when the 
+                                scenario ends. If this is not 
+                                intentional, please either adjust this 
+                                scenario's reduced group size NPI time period 
+                                to end before Day {simLength}, switch 
+                                to a different trigger condition for 
+                                reduced group size NPIs, or increase the 
+                                simulation length in the 
+                                "Initialisation" tab before running the 
+                                simulation.
+                            ''')
+                            globalErrorContainer.warning(f'''
+                                Warning: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the reduced group size NPI time 
+                                period for this scenario is set to end 
+                                on Day {reducedGroupPeriod[1] + 1}. As 
+                                such, work groups will still be reduced in size when 
+                                the scenario ends. If this is not 
+                                intentional, please either adjust this 
+                                scenario's reduced group size NPI time period 
+                                in the "Vaccinations and NPIs" tab to 
+                                end before Day {simLength}, switch to a 
+                                different trigger condition for reduced 
+                                group size NPIs in the "Vaccinations and 
+                                NPIs" tab, or increase the simulation 
+                                length in the "Initialisation" tab 
+                                before running the simulation.
+                            ''')
+                            st.session_state[f'reducedGroupPeriodError{id}'] = 1
+                        else: st.session_state[f'reducedGroupPeriodError{id}'] = 0
+
                     # Rate triggers
                     elif reducedGroupTrigger == 'Community Case Rate': 
                         st.info('''
@@ -1968,7 +2948,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
             # BCC Reduction
             st.html('<span id = "bccTriggerCondition"></span>')
-            with st.expander('Background Contact Count Reduction Properties'):
+            with st.expander('Background Contact Count Reduction'):
                 st.markdown('''
                     These parameters control the properties of 
                     interventions that reduce the background contact 
@@ -1976,9 +2956,10 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     number of individuals each person interacts with 
                     per day outside of simulated locations.
                     
-                    Parameters controlling the background contact count 
-                    when this intervention is not active can be found 
-                    in the "Community" tab.
+                    The base background contact count when this 
+                    intervention is not active can be configured in the 
+                    "Population Behaviours" section of the "Community" 
+                    tab.
                 ''')
                 useBCCToggle = st.toggle(
                     'Enable BCC Reduction', value = True, 
@@ -2030,11 +3011,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     # Show additional parameters based on trigger value
                     # Timed triggers
                     if bccTrigger == 'Timed':
-                        # TODO: Set time-based parameter maximums based 
-                        # on number of cycles in simulation
                         bccPeriod = st.select_slider(
                             'BCC Reduction Time Period', range(720), 
-                            (30, 60), key = f'bccPeriod{id}', 
+                            (29, 59), key = f'bccPeriod{id}', 
                             disabled = not useBCCToggle, 
                             format_func = lambda x: f'Day {x + 1}', help = '''
                                 The time period during which background 
@@ -2047,6 +3026,108 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 normal.
                             '''
                         )
+
+                        # Show error if time period goes past sim length
+                        bccPeriodErrorContainer = st.empty()
+                        if bccPeriod[0] >= simLength: 
+                            bccPeriodErrorContainer.error(f'''
+                                Error: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the background contact count (BCC) reduction NPI time 
+                                period for this scenario (defined 
+                                above) is set to begin on Day 
+                                {bccPeriod[0] + 1}. As such, 
+                                BCC rates will never be reduced in this 
+                                scenario under these parameters. Please 
+                                either adjust this scenario's BCC 
+                                reduction NPI time period to start and 
+                                end before Day {simLength}, switch to a 
+                                different trigger condition for BCC 
+                                reduction NPIs, or increase the 
+                                simulation length in the 
+                                "Initialisation" tab before running the 
+                                simulation.
+                            ''')
+                            globalErrorContainer.error(f'''
+                                Error: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the background contact count (BCC) reduction NPI time 
+                                period for this scenario is set to 
+                                begin on Day 
+                                {bccPeriod[0] + 1}. As such, 
+                                BCC rates will never be reduced in this 
+                                scenario under these parameters. Please 
+                                either adjust this scenario's BCC 
+                                reduction NPI time period in the 
+                                "Vaccinations and NPIs" tab to start 
+                                and end before Day {simLength}, switch 
+                                to a different trigger condition for 
+                                BCC reduction NPIs in the 
+                                "Vaccinations and NPIs" tab, or 
+                                increase the simulation length in the 
+                                "Initialisation" tab before running the 
+                                simulation.
+                            ''')
+                            st.session_state[
+                                f'bccPeriodError{id}'
+                            ] = 2
+                        elif bccPeriod[1] >= simLength: 
+                            bccPeriodErrorContainer.warning(f'''
+                                Warning: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the background contact count (BCC) reduction NPI time 
+                                period for this scenario (defined 
+                                above) is set to end on Day 
+                                {bccPeriod[1] + 1}. As such, 
+                                BCC rates will still be reduced when the 
+                                scenario ends. If this is not 
+                                intentional, please either adjust this 
+                                scenario's BCC reduction NPI time 
+                                period to end before Day {simLength}, 
+                                switch to a different trigger condition 
+                                for BCC reduction NPIs, or increase 
+                                the simulation length in the 
+                                "Initialisation" tab before running the 
+                                simulation.
+                            ''')
+                            globalErrorContainer.warning(f'''
+                                Warning: The {
+                                    'baseline scenario' if id == 0 
+                                    else f'scenario named "{
+                                        st.session_state[f'scenarioName{id}']
+                                    }"'
+                                } is currently set to last {simLength} 
+                                days, but the background contact count (BCC) reduction NPI time 
+                                period for this scenario is set to end 
+                                on Day {bccPeriod[1] + 1}. As 
+                                such, BCC rates will still be reduced when 
+                                the scenario ends. If this is not 
+                                intentional, please either adjust this 
+                                scenario's BCC reduction NPI time 
+                                period in the "Vaccinations and NPIs" 
+                                tab to end before Day {simLength}, 
+                                switch to a different trigger condition 
+                                for BCC reduction NPIs in the 
+                                "Vaccinations and NPIs" tab, or 
+                                increase the simulation length in the 
+                                "Initialisation" tab before running the 
+                                simulation.
+                            ''')
+                            st.session_state[f'bccPeriodError{id}'] = 1
+                        else: st.session_state[f'bccPeriodError{id}'] = 0
+                    
                     # Rate triggers
                     elif bccTrigger == 'Community Case Rate': st.info('''
                         Due to the design of the *Flusim* model, case 
@@ -2144,8 +3225,8 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
         # Trigger Thresholds
         st.html('<span id = "thresholdTriggerCondition"></span>')
-        st.subheader('Intervention Trigger Thresholds')
-        with st.expander('Trigger Thresholds'):
+        st.subheader('Threshold Parameters')
+        with st.expander('Intervention Trigger Thresholds'):
             st.markdown('''
                 These parameters affect the threshold values that must 
                 be reached for vaccination or non-pharmaceutical 

@@ -40,40 +40,9 @@ st.markdown(f'''
     parameter's input field to show an explanation of what that 
     parameter represents. Hover your mouse over any buttons to show an 
     explanation of what that button does.
-    
-    All scenarios in the simulation will use the parameters on this 
-    page as a baseline; however, individual scenarios can have 
-    different values defined at the Scenario Parameter Configuration 
-    page <a href="{clientUrl}scenarioParameters" target="_self">
-    here</a>, overwriting these base values. The sole exception to this 
-    is the Simulated Community parameter defined below, which applies 
-    to all scenarios and cannot be overwritten.
 ''', unsafe_allow_html = True)
 
 # Community Selection
-multiCommunityCode = """
-community = st.segmented_control(
-    'Simulated Community', communityPopulation.keys(), 
-    selection_mode = 'multi', default = 'newcastle', 
-    format_func = lambda x: x.capitalize(), key = 'community', help = '''
-                The Australian city whose community data will be used 
-                as the basis for the population and demographic 
-                distribution in the simulation. Note that the data used 
-                for these communities comes from 2011.
-
-                ##### Options:
-                - Newcastle: A metropolitan area in New South Wales, 
-                Australia. It has a population of 272407, the 
-                second-largest in the state, and has a demographic 
-                distribution that more closely matches that of 
-                Australia as a whole compared to Cairns.
-                - Cairns: A major city in Queensland, Australia. It has 
-                a population of 140402 (as of 2011 when this data was 
-                collected) and has a higher Indigenous population 
-                compared to Newcastle.
-            '''
-)
-"""
 community = st.selectbox(
     'Simulated Community', communityPopulation.keys(), key = 'community', 
     format_func = lambda x: x.capitalize(), help = '''
@@ -92,6 +61,16 @@ community = st.selectbox(
         and has a higher Indigenous population compared to Newcastle.
     '''
 )
+
+st.markdown(f'''
+    All scenarios in the simulation will use the parameters on this 
+    page as a baseline; however, individual scenarios can have 
+    different values defined at the Scenario Parameter Configuration 
+    page <a href="{clientUrl}scenarioParameters" target="_self">
+    here</a>, overwriting these base values. The sole exception to this 
+    is the Simulated Community parameter defined above, which applies 
+    to all scenarios and cannot be overwritten.
+''', unsafe_allow_html = True)
 # TODO: Consider displaying more comprehensive community info regarding 
 # the one the user selects
 
@@ -100,14 +79,6 @@ community = st.selectbox(
 # TODO: Vary message depending on scenario presence, server 
 # availability, errors, etc.
 # TODO: Add 'are you sure' prompt when pressing button
-st.markdown(f'''
-    Press the button below to run the simulation. Remember that in 
-    order to compare different parameter values, you should define 
-    scenarios with different parameters <a href = 
-    "{clientUrl}scenarioParameters" target = "_self">here</a>; 
-    make sure these scenarios have been configured before running the 
-    model.
-''', unsafe_allow_html = True)
 
 # TODO: Remove this message when there's no errors
 st.markdown(f'''

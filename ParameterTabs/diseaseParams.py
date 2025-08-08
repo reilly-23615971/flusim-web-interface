@@ -83,19 +83,13 @@ def buildDiseaseTab(container, id, globalErrorContainer):
             
             Note that despite being related to the disease's effects, 
             hospitalisation and mortality rate are defined in the 
-            "Community" tab instead of this tab, in order to group them 
-            with other health burden outcomes.
+            "Health Burden Outcomes" section of the "Community" tab 
+            instead of being in this tab, in order to group them with 
+            other health burden outcomes.
         ''')
 
-        # Potential Catchable Errors:
-        # - Disease total infection duration is less than what is 
-        # calculated using the other time parameters (only relevant 
-        # with original period definitions)
-
-
-
         # Seeding Parameters
-        with st.expander('Infection Seeding Properties'):
+        with st.expander('Infection Seeding'):
             # Describe what sort of parameters are here
             st.markdown('''
                 These parameters control how infected individuals 
@@ -140,10 +134,16 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     (defined above) is set to begin on Day 
                     {seedingPeriod[0] + 1}. As such, no infections will 
                     ever occur in this scenario under these parameters. 
-                    Please adjust this scenario's infection seeding 
-                    period to start and end before Day {simLength} or 
-                    increase the simulation length in the 
-                    "Initialisation" tab before running the simulation.
+
+                    To address this error, please make one of the 
+                    following changes before running the simulation:
+                    
+                    - Move the start point of the scenario's Infection 
+                    Seeding Time Period to any point before Day 
+                    {simLength}. 
+                    - Increase the scenario's Length of Simulation in 
+                    the "Initialisation" tab to be 
+                    {seedingPeriod[0] + 1} days or more.
                 ''')
                 globalErrorContainer.error(f'''
                     Error: The {
@@ -155,12 +155,18 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     the infection seeding period for this scenario is 
                     set to begin on Day {seedingPeriod[0] + 1}. As 
                     such, no infections will ever occur in this 
-                    scenario under these parameters. Please adjust this 
-                    scenario's infection seeding period in the 
-                    "Disease" tab to start and end before Day 
-                    {simLength} or increase the simulation length in 
-                    the "Initialisation" tab before running the 
-                    simulation.
+                    scenario under these parameters. 
+                    
+                    To address this error, please make one of the 
+                    following changes before running the simulation:
+                    
+                    - Move the start point of the scenario's Infection 
+                    Seeding Time Period in the "Infection Seeding" 
+                    section of the "Disease" tab to any point before 
+                    Day {simLength}. 
+                    - Increase the scenario's Length of Simulation in 
+                    the "Initialisation" tab to be 
+                    {seedingPeriod[0] + 1} days or more.
                 ''')
                 st.session_state[f'seedPeriodError{id}'] = 2
             elif seedingPeriod[1] >= simLength: 
@@ -174,12 +180,18 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     the infection seeding period for this scenario 
                     (defined above) is set to end on Day 
                     {seedingPeriod[1] + 1}. As such, infection seeding 
-                    will still be ongoing when the scenario ends. If 
-                    this is not intentional, please adjust this 
-                    scenario's infection seeding period to end before 
-                    Day {simLength} or increase the simulation length 
-                    in the "Initialisation" tab before running the 
-                    simulation.
+                    will still be ongoing when the scenario ends. 
+
+                    If this is not desired behaviour, please address 
+                    this error by making one of the following changes 
+                    before running the simulation:
+
+                    - Move the end point of the scenario's Infection 
+                    Seeding Time Period to any point before Day 
+                    {simLength}. 
+                    - Increase the scenario's Length of Simulation in 
+                    the "Initialisation" tab to be 
+                    {seedingPeriod[1] + 1} days or more.
                 ''')
                 globalErrorContainer.warning(f'''
                     Warning: The {
@@ -191,18 +203,26 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     the infection seeding period for this scenario is 
                     set to end on Day {seedingPeriod[1] + 1}. As such, 
                     infection seeding will still be ongoing when the 
-                    scenario ends. If this is not intentional, please 
-                    adjust this scenario's infection seeding period in 
-                    the "Disease" tab to end before Day {simLength} or 
-                    increase the simulation length in the 
-                    "Initialisation" tab before running the simulation.
+                    scenario ends. 
+
+                    If this is not desired behaviour, please address 
+                    this error by making one of the following changes 
+                    before running the simulation:
+
+                    - Move the end point of the scenario's Infection 
+                    Seeding Time Period in the "Infection Seeding" 
+                    section of the "Disease" tab to any point before 
+                    Day {simLength}. 
+                    - Increase the scenario's Length of Simulation in 
+                    the "Initialisation" tab to be 
+                    {seedingPeriod[1] + 1} days or more.
                 ''')
                 st.session_state[f'seedPeriodError{id}'] = 1
             else: st.session_state[f'seedPeriodError{id}'] = 0
 
 
         # Transmission Parameters
-        with st.expander('Transmission Properties'):
+        with st.expander('Disease Transmission'):
             # Describe what sort of parameters are here
             st.markdown('''
                 These parameters control the likelihood that the 
@@ -485,9 +505,11 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                         outside of the other locations. Note that the 
                         rate at which these interactions occur (the 
                         Background Contact Count) can be set in the 
-                        "Community" tab, and will be affected by the 
+                        "Population Behaviours" section of the "Community" tab, 
+                        and this rate will be affected by the 
                         BCC Reduction non-pharmaceutical intervention 
-                        in the "Vaccinations and NPIs" tab.
+                        configured in the "Background Contact Count 
+                        Reduction" section of the "Vaccinations and NPIs" tab.
                     '''
                 )
                 # Kappa value column
@@ -545,7 +567,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
 
 
         # Life Cycle Parameters
-        with st.expander('Disease Life Cycle Properties'):
+        with st.expander('Disease Life Cycle'):
             # Describe what sort of parameters are here
             st.markdown('''
                 These parameters control the disease's life cycle, 
@@ -606,80 +628,10 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 The following parameters configure the length of each 
                 stage in the disease's life cycle.
             ''')
-            """
-            # Original period definitions
-            latencyPeriod = st.select_slider(
-                'Latency Period Length (Days)', range(91), 10, 
-                format_func = dayCount, key = f'latencyPeriod{id}', help = '''
-                    The length in days of the disease's latency period, 
-                    i.e. the length of time between an individual 
-                    initially being infected by the disease and said 
-                    individual becoming infectious themselves.
-                '''
-            )
-            incubationPeriod = st.select_slider(
-                'Incubation Period Length (Days)', range(91), 12, 
-                format_func = dayCount, key = f'incubationPeriod{id}', 
-                help = '''
-                    The length in days of the disease's incubation 
-                    period, i.e. the length of time between an 
-                    individual initially being infected by the disease 
-                    and said individual beginning to show symptoms.
-                '''
-            )
-            symptomPeriod = st.select_slider(
-                'Symptomatic Period Length (Days)', range(91), 7, 
-                format_func = dayCount, key = f'symptomPeriod{id}', help = '''
-                    The length in days of the disease's symptomatic 
-                    period, i.e. the length of time during which an 
-                    infected individual will show symptoms of the 
-                    disease.
-                '''
-            )
-            infectionDuration = st.select_slider(
-                'Total Infection Duration (Days)', range(181), 20, 
-                format_func = dayCount, key = f'infectionDuration{id}', 
-                help = '''
-                    The length in days of the disease's total lifespan, 
-                    i.e. the length of time between an individual 
-                    initially being infected by the disease and said 
-                    individual being fully recovered/no longer 
-                    infectious.
-                '''
-            )
 
-            # State duration lengths
-
-            st.markdown(f'''
-                #### Period Lengths
-                
-                Using the parameters defined above, the lengths of the 
-                disease's life stages are as follows:
-                        
-                - Latent: {dayCount(latencyPeriod)}
-                - Developing: {
-                    dayCount(incubationPeriod - latencyPeriod)
-                }
-                - Symptomatic: {dayCount(symptomPeriod)}
-                - Post-Symptomatic: {dayCount(
-                    infectionDuration - incubationPeriod - symptomPeriod
-                )}
-                - Total Infection Duration: {
-                    dayCount(infectionDuration)
-                }
-
-                Additionally, the Infectious Period for this disease 
-                (i.e. the length of time during which an infected 
-                individual is themselves infectious) has a length of {
-                    dayCount(infectionDuration - latencyPeriod)
-                }.
-            ''')
-            """
-
-            #"""
             # Alternate period definitions
             latencyPeriod = st.select_slider(
-                'Latency Period Length (Days)', range(91), 10, 
+                'Latency Period Length (Days)', range(51), 10, 
                 format_func = dayCount, key = f'latencyPeriod{id}', help = '''
                     The length in days of the disease's latency period, 
                     i.e. the length of time between an individual 
@@ -688,7 +640,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 '''
             )
             preSymptomPeriod = st.select_slider(
-                'Pre-Symptomatic Period Length (Days)', range(91), 2, 
+                'Pre-Symptomatic Period Length (Days)', range(51), 2, 
                 format_func = dayCount, key = f'preSymptomPeriod{id}', 
                 help = '''
                     The length in days of the disease's pre-symptomatic 
@@ -699,7 +651,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 '''
             )
             symptomPeriod = st.select_slider(
-                'Symptomatic Period Length (Days)', range(91), 7, 
+                'Symptomatic Period Length (Days)', range(51), 7, 
                 format_func = dayCount, key = f'symptomPeriod{id}', help = '''
                     The length in days of the disease's symptomatic 
                     period, i.e. the length of time during which an 
@@ -708,7 +660,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 '''
             )
             postSymptomPeriod = st.select_slider(
-                'Post-Symptomatic Period Length (Days)', range(91), 1, 
+                'Post-Symptomatic Period Length (Days)', range(51), 1, 
                 format_func = dayCount, key = f'postSymptomPeriod{id}', 
                 help = '''
                     The length in days of the disease's 
@@ -793,12 +745,11 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     disease to others.
                 '''
             )
-            #"""
 
 
 
         # Waning Immunity Parameters
-        with st.expander('Immunity Waning Properties'):
+        with st.expander('Immunity Waning'):
             # Describe what sort of parameters are here
             st.markdown('''
                 These parameters control how immunity to the disease 
@@ -808,9 +759,10 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 completely immune to the disease immediately after 
                 recovering from it; the efficacy before waning is 100%.
                 
-                Parameters for controlling how immunity to the disease 
-                conferred by vaccines becomes less effective over time 
-                can be found in the "Vaccinations and NPIs" tab.
+                Note that these parameters do not affect immunity to 
+                the disease that is obtained from vaccination. This 
+                type of immunity can be configured using the parameters 
+                in the "Vaccinations and NPIs" tab.
             ''')
 
             # Waning immunity
