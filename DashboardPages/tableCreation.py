@@ -9,7 +9,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
-from ClientResources.InterfaceFunctions import formatAsir
+from ClientResources.InterfaceFunctions import saveKey, loadKey, formatAsir
 from ClientResources.SharedResources import outcomeAdjectives, tableOutcomes
 
 # Page Functions
@@ -83,10 +83,14 @@ with tableForm:
     # Define columns for placing elements
     leftCol, centreCol, rightCol = st.columns((0.4, 0.4, 0.2))
     # Health Outcome Selection Box
+    for i in range(st.session_state.outcomeFieldCount): 
+        loadKey(f'outcome{i}', 'Infections')
+        loadKey(f'type{i}', 'Frequency')
     with leftCol: outcomeSelections = [
         st.selectbox(
             label = 'Health Outcome', options = tableOutcomes, 
-            placeholder = 'Health Outcome', key = f'outcome{i}',
+            placeholder = 'Health Outcome', key = f'_outcome{i}',
+            on_change = saveKey, args = [f'outcome{i}'], # type: ignore
             help = '''
                 Select the health outcome you would like to be included 
                 as a column on the table.
@@ -113,7 +117,8 @@ with tableForm:
     # Display Type Selection Box
     with centreCol: typeSelections = [
         st.selectbox(
-            label = 'Type', placeholder = 'Type', key = f'type{j}', 
+            label = 'Type', placeholder = 'Type', key = f'_type{j}', 
+            on_change = saveKey, args = [f'type{j}'], # type: ignore
             options = {
                 'Frequency', 'Percentage of Population', 
                 'Difference from Baseline (Frequency)', 
@@ -145,7 +150,7 @@ with tableForm:
     with rightCol: deleteButtons = [
         st.button(
             label = 'Remove Statistic', icon = ':material/delete:', 
-            key = f'delete{k}', on_click = deleteFormRow, args = (k,),
+            key = f'healthOutcomeRemove{k}', on_click = deleteFormRow, args = (k,),
             disabled = st.session_state.outcomeFieldCount < 2, 
             help = (
                 'Do not include this column in the table.'
@@ -157,7 +162,7 @@ with tableForm:
     # Button to add new rows to the form
     addFormRowButton = st.button(
         label = 'Add Health Outcome', 
-        icon = ':material/add:', key = 'addOutcome', 
+        icon = ':material/add:', key = 'healthOutcomeAdd', 
         disabled = st.session_state.outcomeFieldCount > 7,
         help = '''
             Add another input field where you can select an additional 

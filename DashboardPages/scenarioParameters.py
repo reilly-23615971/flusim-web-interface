@@ -3,7 +3,11 @@
 # Page where variables for vaccination and NPIs can be configured
 
 # Imports
+import logging
 import streamlit as st
+
+# Logging
+scenarioLog = logging.getLogger(__name__)
 
 
 

@@ -16,6 +16,19 @@ from ClientResources.SharedResources import (
 # Logging
 functionLog = logging.getLogger(__name__)
 
+
+
+"""
+Function to save widget values into permanent session state vars
+"""
+def saveKey(key):  st.session_state[key] = st.session_state['_' + key]
+
+"""
+Function to update widgets with permanent session state vars
+"""
+def loadKey(key, default): 
+    st.session_state['_' + key] = st.session_state.get(key, default)
+
 """
 Simple function to convert an integer into a string describing a number of days
 """
@@ -122,29 +135,6 @@ def deleteFormRow(deletedRowIndex, rowCounter, inputPrefixes, minRows = 0):
         f'{input}{numberOfRows - 1}'
     ]
     st.session_state[rowCounter] -= 1
-
-"""
-Function to keep form variables loaded so that users don't have to 
-reenter the values when they go to a different page
-"""
-def preserveFormEntries():
-    # Age prefixes
-
-
-
-    for row in range(0, st.session_state.outcomeFieldCount):
-        for property in {'outcome', 'type', 'delete'}: 
-            if f'{property}{row}' in st.session_state:
-                st.session_state[f'{property}{row}'] = st.session_state[
-                    f'{property}{row}'
-                ]
-
-    # Copy this line with xyz replaced with each widget in the form
-    if "xyz" in st.session_state: 
-        st.session_state.xyz = st.session_state.xyz
-    
-
-
 
 """
 Function to convert raw data from the 'epidemic' Flusim analysis tool

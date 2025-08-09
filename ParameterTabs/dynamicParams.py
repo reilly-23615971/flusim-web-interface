@@ -8,7 +8,9 @@ from typing import Literal, cast
 import numpy as np
 import streamlit as st
 from pydantic import ValidationError
-from ClientResources.InterfaceFunctions import addFormRow, deleteFormRow, idGet
+from ClientResources.InterfaceFunctions import (
+    saveKey, loadKey, addFormRow, deleteFormRow, idGet
+)
 from ClientResources.ModelSchema import Parameters, dynamicIntervention
 
 # Logging
@@ -40,7 +42,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
         f'bccDynamicError{id}': 0
     }
     for parameter, default in sessionParameters.items(): 
-        st.session_state[parameter] = st.session_state.setdefault(
+        st.session_state[parameter] = st.session_state.get(
             parameter, default
         )
     
@@ -106,10 +108,12 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 seedCycleColumn, seedNewColumn, seedRemoveColumn
             ) = seedContainer.columns((0.4, 0.4, 0.2))
             # Cycle column
+            loadKey(f'seedCycle{id}-{i}', 15)
             with seedCycleColumn: 
                 seedUpdatePoint = st.select_slider(
                     'Day to Update Parameter', range(720), 
-                    15, key = f'seedCycle{id}-{i}', 
+                    15, key = f'_seedCycle{id}-{i}', 
+                    on_change = saveKey, args = [f'seedCycle{id}-{i}'], # type: ignore
                     format_func = lambda x: f'Day {x + 1}', help = '''
                         The day of the simulation upon which the new 
                         value for infection seeding rate will come into 
@@ -193,16 +197,18 @@ def buildDynamicTab(container, id, globalErrorContainer):
 
                         - Remove any update points for Infection 
                         Seeding Rate in the scenario that are set to 
-                        values below Day {seedStart + 1} or above Day 
-                        {seedEnd + 1}.
+                        values below Day {seedStart + 1} or above Day {
+                            seedEnd + 1
+                        }.
                         - Move the Day to Update Parameter of all 
                         update points for Infection Seeding Rate in the 
                         scenario to any point between Day 
                         {seedStart + 1} and Day {seedEnd + 1}.
                         - Modify the scenario's Infection Seeding Time 
                         Period in the "Infection Seeding" section of 
-                        the "Disease" tab to include Day 
-                        {seedUpdatePoint + 1}.
+                        the "Disease" tab to include Day {
+                            seedUpdatePoint + 1
+                        }.
                     ''')
                     globalErrorContainer.error(f'''
                         Error: The infection seeding period for the {
@@ -231,17 +237,20 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         Day {seedStart + 1} and Day {seedEnd + 1}.
                         - Modify the scenario's Infection Seeding Time 
                         Period in the "Infection Seeding" section of 
-                        the "Disease" tab to include Day 
-                        {seedUpdatePoint + 1}.
+                        the "Disease" tab to include Day {
+                            seedUpdatePoint + 1
+                        }.
                     ''')
                     st.session_state[f'seedDynamicError{id}'] = 2
                     firstSeedError = False
                 else: st.session_state[f'seedDynamicError{id}'] = 0
             # New value column
+            loadKey(f'seedNewRate{id}-{i}', 0.25)
             with seedNewColumn: st.select_slider(
                 'New Value (Average Individuals per Day)', 
                 np.linspace(0.005, 5.0, 1000), 0.25, 
-                key = f'seedNewRate{id}-{i}', 
+                key = f'_seedNewRate{id}-{i}', 
+                on_change = saveKey, args = [f'seedNewRate{id}-{i}'], # type: ignore
                 format_func = lambda x: f'{x:0.4g}', help = '''
                     The average number of individuals that will be 
                     infected directly via infection seeding each cycle 
@@ -319,10 +328,12 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 closeCycleColumn, closeNewColumn, closeRemoveColumn
             ) = closeContainer.columns((0.4, 0.4, 0.2))
             # Cycle column
+            loadKey(f'closeCycle{id}-{i}', 15)
             with closeCycleColumn: 
                 closeUpdatePoint = st.select_slider(
                     'Day to Update Parameter', range(720), 15, 
-                    key = f'closeCycle{id}-{i}', disabled = not closeActive,
+                    key = f'_closeCycle{id}-{i}', disabled = not closeActive, 
+                    on_change = saveKey, args = [f'closeCycle{id}-{i}'], # type: ignore
                     format_func = lambda x: f'Day {x + 1}', help = '''
                         The day of the simulation upon which the new 
                         value for school closure compliance will come 
@@ -352,8 +363,9 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         values above Day {simLength}.
                         - Move the Day to Update Parameter of all 
                         update points for School Closure Compliance in 
-                        the scenario to any point before Day 
-                        {simLength}.
+                        the scenario to any point before Day {
+                            simLength
+                        }.
                         - Increase the scenario's Length of Simulation 
                         in the "Initialisation" tab to be 
                         {closeUpdatePoint + 1} days or more.
@@ -410,8 +422,9 @@ def buildDynamicTab(container, id, globalErrorContainer):
 
                         - Remove any update points for School Closure 
                         Compliance in the scenario that are set to 
-                        values below Day {closeStart + 1} or above Day 
-                        {closeEnd + 1}.
+                        values below Day {closeStart + 1} or above Day {
+                            closeEnd + 1
+                        }.
                         - Move the Day to Update Parameter of all 
                         update points for School Closure Compliance in 
                         the scenario to any point between Day 
@@ -422,8 +435,9 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         other than "Timed".
                         - Modify the scenario's School Closure Time 
                         Period in the "School Closure" section of the 
-                        "Vaccinations and NPIs" tab to include Day 
-                        {closeUpdatePoint + 1}.
+                        "Vaccinations and NPIs" tab to include Day {
+                            closeUpdatePoint + 1
+                        }.
                     ''')
                     globalErrorContainer.error(f'''
                         Error: The school closure NPI for the {
@@ -449,25 +463,29 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         - Move the Day to Update Parameter of all 
                         update points for School Closure Compliance in 
                         the scenario's "Dynamic" tab to any point 
-                        between Day {closeStart + 1} and Day 
-                        {closeEnd + 1}.
+                        between Day {closeStart + 1} and Day {
+                            closeEnd + 1
+                        }.
                         - Change the scenario's School Closure Trigger 
                         Condition in the "School Closure" section of 
                         the "Vaccinations and NPIs" tab to any option 
                         other than "Timed".
                         - Modify the scenario's School Closure Time 
                         Period in the "School Closure" section of the 
-                        "Vaccinations and NPIs" tab to include Day 
-                        {closeUpdatePoint + 1}.
+                        "Vaccinations and NPIs" tab to include Day {
+                            closeUpdatePoint + 1
+                        }.
                     ''')
                     st.session_state[f'closeDynamicError{id}'] = 2
                     firstCloseError = False
                 else: st.session_state[f'closeDynamicError{id}'] = 0
             # New value column
+            loadKey(f'closeNewRate{id}-{i}', 0.9)
             with closeNewColumn: st.select_slider(
                 'New Value (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.9, 
-                key = f'closeNewRate{id}-{i}', disabled = not closeActive,
+                key = f'_closeNewRate{id}-{i}', disabled = not closeActive, 
+                on_change = saveKey, args = [f'closeNewRate{id}-{i}'], # type: ignore
                 format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                     The probability that an individual will withdraw 
                     from schools when they are closed after the 
@@ -548,10 +566,12 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 bccCycleColumn, bccNewColumn, bccRemoveColumn
             ) = bccContainer.columns((0.4, 0.4, 0.2))
             # Cycle column
+            loadKey(f'bccCycle{id}-{i}', 15)
             with bccCycleColumn: 
                 bccUpdatePoint = st.select_slider(
                     'Day to Update Parameter', range(720), 
-                    15, key = f'bccCycle{id}-{i}', disabled = not bccActive, 
+                    15, key = f'_bccCycle{id}-{i}', disabled = not bccActive, 
+                    on_change = saveKey, args = [f'bccCycle{id}-{i}'], # type: ignore
                     format_func = lambda x: f'Day {x + 1}', help = '''
                         The day of the simulation upon which the new value 
                         for reduced background contact count will come into 
@@ -577,8 +597,9 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         following changes before running the simulation:
 
                         - Remove any update points for Reduced BCC in 
-                        the scenario that are set to values above Day 
-                        {simLength}.
+                        the scenario that are set to values above Day {
+                            simLength
+                        }.
                         - Move the Day to Update Parameter of all 
                         update points for Reduced BCC in the scenario 
                         to any point before Day {simLength}.
@@ -607,8 +628,9 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         values above Day {simLength}.
                         - Move the Day to Update Parameter of all 
                         update points for Reduced BCC in the scenario's 
-                        "Dynamic" tab to any point before Day 
-                        {simLength}.
+                        "Dynamic" tab to any point before Day {
+                            simLength
+                        }.
                         - Increase the scenario's Length of Simulation 
                         in the "Initialisation" tab to be 
                         {bccUpdatePoint + 1} days or more.
@@ -641,8 +663,8 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         {bccStart + 1} or above Day {bccEnd + 1}.
                         - Move the Day to Update Parameter of all 
                         update points for Reduced BCC in the scenario 
-                        to any point between Day {bccStart + 1} and Day 
-                        {bccEnd + 1}.
+                        to any point between Day {bccStart + 1} and 
+                        Day {bccEnd + 1}.
                         - Change the scenario's BCC Reduction Trigger 
                         Condition in the "Background Contact Count 
                         Reduction" section of the "Vaccinations and 
@@ -672,8 +694,9 @@ def buildDynamicTab(container, id, globalErrorContainer):
 
                         - Remove any update points for Reduced BCC in 
                         the scenario's "Dynamic" tab that are set to 
-                        values below Day {bccStart + 1} or above Day 
-                        {bccEnd + 1}.
+                        values below Day {bccStart + 1} or above Day {
+                            bccEnd + 1
+                        }.
                         - Move the Day to Update Parameter of all 
                         update points for Reduced BCC in the scenario's 
                         "Dynamic" tab to any point between Day 
@@ -692,10 +715,12 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 else: st.session_state[f'bccDynamicError{id}'] = 0
 
             # New value column
+            loadKey(f'bccNewRate{id}-{i}', 0.2)
             with bccNewColumn: st.slider(
                 'New Value (Average Interactions/Person)',
                 0.0, 8.0, 0.2, disabled = not bccActive,
-                key = f'bccNewRate{id}-{i}', help = '''
+                on_change = saveKey, args = [f'bccNewRate{id}-{i}'], # type: ignore
+                key = f'_bccNewRate{id}-{i}', help = '''
                     The average number of other people each individual 
                     will interact with in the background phase of the 
                     simulation (emulating interactions outside of 

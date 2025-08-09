@@ -2,29 +2,6 @@
 # Developed by Reilly Evans
 # Functionised tab where disease parameters can be modified
 
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 # Imports
 import logging
 import numpy as np
@@ -33,7 +10,8 @@ import altair as alt
 import streamlit as st
 from pydantic import ValidationError
 from ClientResources.InterfaceFunctions import (
-    getRemainingGroups, addFormRow, deleteFormRow, dayCount, idGet
+    saveKey, loadKey, getRemainingGroups, 
+    addFormRow, deleteFormRow, dayCount, idGet
 )
 from ClientResources.SharedResources import (
     ageCategories, kappaLocations, backgroundColour
@@ -68,7 +46,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
         f'seedPeriodError{id}': 0
     }
     for parameter, default in sessionParameters.items(): 
-        st.session_state[parameter] = st.session_state.setdefault(
+        st.session_state[parameter] = st.session_state.get(
             parameter, default
         )
 
@@ -124,18 +102,22 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 daily.
             ''')
 
+            loadKey(f'seedRate{id}', 0.25)
             st.select_slider(
                 'Infection Seeding Rate (Average Individuals per Day)', 
-                np.linspace(0.005, 5.0, 1000), 0.25, key = f'seedRate{id}', 
+                np.linspace(0.005, 5.0, 1000), 0.25, key = f'_seedRate{id}', 
+                on_change = saveKey, args = [f'seedRate{id}'], # type: ignore
                 format_func = lambda x: f'{x:0.4g}', help = '''
                     The average number of individuals that will be 
                     infected directly via infection seeding each cycle.
                 '''
             )
+            loadKey(f'seedPeriod{id}', (0, 29))
             seedingPeriod = st.select_slider(
                 'Infection Seeding Time Period (Days)', range(720), (0, 29), 
                 format_func = lambda x: f'Day {x + 1}', 
-                key = f'seedPeriod{id}', help = '''
+                on_change = saveKey, args = [f'seedPeriod{id}'], # type: ignore
+                key = f'_seedPeriod{id}', help = '''
                     The time period during which infection seeding will 
                     occur in the simulation. The first value is the day 
                     on which seeding will begin (where Day 1 is the 
@@ -164,8 +146,9 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     following changes before running the simulation:
                     
                     - Move the start point of the scenario's Infection 
-                    Seeding Time Period to any point before Day 
-                    {simLength}. 
+                    Seeding Time Period to any point before Day {
+                        simLength
+                    }. 
                     - Increase the scenario's Length of Simulation in 
                     the "Initialisation" tab to be 
                     {seedingPeriod[0] + 1} days or more.
@@ -212,8 +195,9 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     before running the simulation:
 
                     - Move the end point of the scenario's Infection 
-                    Seeding Time Period to any point before Day 
-                    {simLength}. 
+                    Seeding Time Period to any point before Day {
+                        simLength
+                    }. 
                     - Increase the scenario's Length of Simulation in 
                     the "Initialisation" tab to be 
                     {seedingPeriod[1] + 1} days or more.
@@ -283,10 +267,12 @@ def buildDiseaseTab(container, id, globalErrorContainer):
             ''')
 
             # Beta and symptom multipliers
+            loadKey(f'beta{id}', 0.11)
             st.select_slider(
                 'Basic Transmission Parameter (β)', 
                 np.linspace(0.001, 1.0, 1000), 0.11, 
-                format_func = lambda x: f'{x:0.3g}', key = f'beta{id}', 
+                format_func = lambda x: f'{x:0.3g}', key = f'_beta{id}', 
+                on_change = saveKey, args = [f'beta{id}'], # type: ignore
                 help = '''
                     The value of the basic transmission parameter 
                     $\\beta$, the base constant used to calculate the 
@@ -298,11 +284,13 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     individuals.
                 '''
             )
+            loadKey(f'betaAsymptomatic{id}', 0.55)
             st.select_slider(
                 'Asymptomatic Transmission Multiplier', 
                 np.linspace(0.0, 1.0, 1001), 0.55, 
                 format_func = lambda x: f'{x:0.3g}', 
-                key = f'betaAsymptomatic{id}', help = '''
+                on_change = saveKey, args = [f'betaAsymptomatic{id}'], # type: ignore
+                key = f'_betaAsymptomatic{id}', help = '''
                     The value of the transmissibility modifier 
                     $sym(I_i)$ when the infected individual in an 
                     interaction ($I_i$) is asymptomatic (i.e. has not 
@@ -316,11 +304,13 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     interacting with asymptomatic individuals.
                 '''
             )
+            loadKey(f'betaPostSymptomatic{id}', 0.55)
             st.select_slider(
                 'Post-Symptomatic Transmission Multiplier', 
                 np.linspace(0.0, 1.0, 1001), 0.55, 
                 format_func = lambda x: f'{x:0.3g}', 
-                key = f'betaPostSymptomatic{id}', help = '''
+                on_change = saveKey, args = [f'betaPostSymptomatic{id}'], # type: ignore
+                key = f'_betaPostSymptomatic{id}', help = '''
                     The value of the transmissibility modifier 
                     $sym(I_i)$ when the infected individual in an 
                     interaction ($I_i$) is post-symptomatic (i.e. 
@@ -331,9 +321,11 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     individuals.
                 '''
             )
+            loadKey(f'householdKappa{id}', 2.2)
             st.select_slider(
                 'Household Transmission Multiplier', 
-                np.linspace(0.0, 5.0, 1001), 2.2, key = f'householdKappa{id}', 
+                np.linspace(0.0, 5.0, 1001), 2.2, key = f'_householdKappa{id}',
+                on_change = saveKey, args = [f'householdKappa{id}'], # type: ignore
                 format_func = lambda x: f'{x:0.4g}', help = '''
                     The value of the transmissibility modifier 
                     $\\kappa$ when an interaction takes place in a 
@@ -372,8 +364,13 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 )
 
                 # Age group column
+                loadKey(
+                    f'transAgeGroup{id}-{i}', 
+                    transCurrentGroup if transCurrentGroup 
+                    else transRemainingGroups[0]
+                )
                 with transGroupColumn: st.selectbox(
-                    'Age Group', key = f'transAgeGroup{id}-{i}', options = (
+                    'Age Group', key = f'_transAgeGroup{id}-{i}', options = (
                         # Set age group options such that only ages 
                         # that haven't been selected yet can be selected
                         [transCurrentGroup] + [
@@ -381,6 +378,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                             if group != transCurrentGroup
                         ] if transCurrentGroup else transRemainingGroups
                     ), 
+                    on_change = saveKey, args = [f'transAgeGroup{id}-{i}'], # type: ignore
                     disabled = not transRowCount < 10, help = '''
                         An age group that will have specific 
                         infectiousness and susceptibility parameters 
@@ -402,9 +400,11 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     '''
                 )
                 # Infectiousness column
+                loadKey(f'transInfect{id}-{i}', 1.0)
                 with transInfectColumn: st.select_slider(
                     'Infectiousness', np.linspace(0.0, 1.0, 1001), 1.0, 
-                    key = f'transInfect{id}-{i}', 
+                    key = f'_transInfect{id}-{i}', 
+                    on_change = saveKey, args = [f'transInfect{id}-{i}'], # type: ignore
                     format_func = lambda x: f'{x:0.3g}', help = '''
                         The value of the infectiousness parameter 
                         $inf(I_i)$ when the infected individual in an 
@@ -416,9 +416,11 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     '''
                 )
                 # Susceptibility column
+                loadKey(f'transSuscept{id}-{i}', 1.0)
                 with transSusceptColumn: st.select_slider(
                     'Susceptibility', np.linspace(0.0, 1.0, 1001), 1.0, 
-                    key = f'transSuscept{id}-{i}', 
+                    key = f'_transSuscept{id}-{i}', 
+                    on_change = saveKey, args = [f'transSuscept{id}-{i}'], # type: ignore
                     format_func = lambda x: f'{x:0.3g}', help = '''
                         The value of the susceptibility parameter 
                         $susc(I_s)$ when the uninfected individual in 
@@ -499,8 +501,13 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                 )
 
                 # Age group column
+                loadKey(
+                    f'kappaLocation{id}-{i}', 
+                    kappaCurrentLocation if kappaCurrentLocation 
+                    else kappaRemainingLocations[0]
+                )
                 with kappaLocationColumn: st.selectbox(
-                    'Location', key = f'kappaLocation{id}-{i}', options = (
+                    'Location', key = f'_kappaLocation{id}-{i}', options = (
                         # Set location options such that only places 
                         # that haven't been selected yet can be selected
                         [kappaCurrentLocation] + [
@@ -508,6 +515,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                             if place != kappaCurrentLocation
                         ] if kappaCurrentLocation else kappaRemainingLocations
                     ), 
+                    on_change = saveKey, args = [f'kappaLocation{id}-{i}'], # type: ignore
                     disabled = not kappaRowCount < 6, help = '''
                         A location that will have a specific 
                         transmissibility modifier defined for it, 
@@ -538,9 +546,11 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     '''
                 )
                 # Kappa value column
+                loadKey(f'kappaValue{id}-{i}', 1.0)
                 with kappaValueColumn: st.select_slider(
                     'Transmission Multiplier', np.linspace(0.0, 1.0, 1001), 
-                    1.0, key = f'kappaValue{id}-{i}', 
+                    1.0, key = f'_kappaValue{id}-{i}', 
+                    on_change = saveKey, args = [f'kappaValue{id}-{i}'], # type: ignore
                     format_func = lambda x: f'{x:0.3g}', help = '''
                         The value of the transmissibility modifier 
                         $\\kappa$ when an interaction takes place in 
@@ -601,22 +611,26 @@ def buildDiseaseTab(container, id, globalErrorContainer):
             ''')
 
             # Asymptomatic params
+            loadKey(f'asymptomaticChild{id}', 0.35)
             st.select_slider(
                 'Probability of Young (0-24) Asymptomatic Case', 
                 np.linspace(0.0, 1.0, 1001), 0.35, 
                 format_func = lambda x: f'{100 * x:0.3g}%', 
-                key = f'asymptomaticChild{id}', help = '''
+                on_change = saveKey, args = [f'asymptomaticChild{id}'], # type: ignore
+                key = f'_asymptomaticChild{id}', help = '''
                     The probability that an infected young person 
                     (defined as 0-24 years old) in the simulation will 
                     be asymptomatic (i.e. they never show any symptoms 
                     of the disease despite being infectious).
                 '''
             )
+            loadKey(f'asymptomaticAdult{id}', 0.35)
             st.select_slider(
                 'Probability of Adult (24+) Asymptomatic Case', 
                 np.linspace(0.0, 1.0, 1001), 0.35, 
                 format_func = lambda x: f'{100 * x:0.3g}%', 
-                key = f'asymptomaticAdult{id}', help = '''
+                on_change = saveKey, args = [f'asymptomaticAdult{id}'], # type: ignore
+                key = f'_asymptomaticAdult{id}', help = '''
                     The probability that an infected adult (defined as 
                     24+ years old) in the simulation will be 
                     asymptomatic (i.e. they never show any symptoms of 
@@ -655,18 +669,22 @@ def buildDiseaseTab(container, id, globalErrorContainer):
             ''')
 
             # Alternate period definitions
+            loadKey(f'latencyPeriod{id}', 10)
             latencyPeriod = st.select_slider(
                 'Latency Period Length (Days)', range(51), 10, 
-                format_func = dayCount, key = f'latencyPeriod{id}', help = '''
+                on_change = saveKey, args = [f'latencyPeriod{id}'], # type: ignore
+                format_func = dayCount, key = f'_latencyPeriod{id}', help = '''
                     The length in days of the disease's latency period, 
                     i.e. the length of time between an individual 
                     initially being infected by the disease and said 
                     individual becoming infectious themselves.
                 '''
             )
+            loadKey(f'preSymptomPeriod{id}', 2)
             preSymptomPeriod = st.select_slider(
                 'Pre-Symptomatic Period Length (Days)', range(51), 2, 
-                format_func = dayCount, key = f'preSymptomPeriod{id}', 
+                format_func = dayCount, key = f'_preSymptomPeriod{id}', 
+                on_change = saveKey, args = [f'preSymptomPeriod{id}'], # type: ignore
                 help = '''
                     The length in days of the disease's pre-symptomatic 
                     period, i.e. the length of time between an 
@@ -675,18 +693,22 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     beginning to show symptoms.
                 '''
             )
+            loadKey(f'symptomPeriod{id}', 7)
             symptomPeriod = st.select_slider(
                 'Symptomatic Period Length (Days)', range(51), 7, 
-                format_func = dayCount, key = f'symptomPeriod{id}', help = '''
+                on_change = saveKey, args = [f'symptomPeriod{id}'], # type: ignore
+                format_func = dayCount, key = f'_symptomPeriod{id}', help = '''
                     The length in days of the disease's symptomatic 
                     period, i.e. the length of time during which an 
                     infected individual will show symptoms of the 
                     disease.
                 '''
             )
+            loadKey(f'postSymptomPeriod{id}', 1)
             postSymptomPeriod = st.select_slider(
                 'Post-Symptomatic Period Length (Days)', range(51), 1, 
-                format_func = dayCount, key = f'postSymptomPeriod{id}', 
+                format_func = dayCount, key = f'_postSymptomPeriod{id}', 
+                on_change = saveKey, args = [f'postSymptomPeriod{id}'], # type: ignore
                 help = '''
                     The length in days of the disease's 
                     post-symptomatic period, i.e. the length of time 
@@ -789,19 +811,23 @@ def buildDiseaseTab(container, id, globalErrorContainer):
             ''')
 
             # Waning immunity
+            loadKey(f'naturalImmunityDuration{id}', 2)
             st.slider(
                 'Natural Immunity Waning Delay (Months)', 1, 36, 2, 
-                key = f'naturalImmunityDuration{id}', help = '''
+                on_change = saveKey, args = [f'naturalImmunityDuration{id}'], # type: ignore
+                key = f'_naturalImmunityDuration{id}', help = '''
                     The number of months after an individual fully 
                     recovers from the disease before the immunity 
                     conferred by having been infected begins to 
                     diminish, where a month is 30 days.
                 '''
             )
+            loadKey(f'naturalWanedEfficacy{id}', 0.5)
             st.select_slider(
                 'Natural Immunity After Waning (Probability)',
                 np.linspace(0.0, 1.0, 1001), 0.5, 
-                key = f'naturalWanedEfficacy{id}', 
+                key = f'_naturalWanedEfficacy{id}', 
+                on_change = saveKey, args = [f'naturalWanedEfficacy{id}'], # type: ignore
                 format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                     The final efficacy value that an individual's 
                     natural immunity after recovering from the disease 
@@ -811,9 +837,11 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     immunity is fully waned.
                 '''
             )
+            loadKey(f'naturalWaningRate{id}', 6)
             st.slider(
-                'Natural Immunity Waning Duration (Months)', 0, 36, 6,
-                key = f'naturalWaningRate{id}', help = '''
+                'Natural Immunity Waning Duration (Months)', 0, 36, 6, 
+                on_change = saveKey, args = [f'naturalWaningRate{id}'], # type: ignore
+                key = f'_naturalWaningRate{id}', help = '''
                     The number of months after the immunity from having 
                     fully recovered from the disease begins waning 
                     before the efficacy of the immunity stabilises, 

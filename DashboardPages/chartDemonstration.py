@@ -3,6 +3,7 @@
 # Temporary page demonstrating the application's graphing capabilities
 
 # Imports
+import logging
 import altair as alt
 import streamlit as st
 import pandas as pd
@@ -11,6 +12,10 @@ from io import BytesIO
 from ClientResources.InterfaceFunctions import (
     formatEpidemic, formatAsir, plotEpidemic
 )
+
+# Logging
+demoLog = logging.getLogger(__name__)
+
 
 #******************************************************************
 

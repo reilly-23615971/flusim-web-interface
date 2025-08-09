@@ -6,7 +6,7 @@
 import logging
 import streamlit as st
 from pydantic import ValidationError
-from ClientResources.InterfaceFunctions import dayCount
+from ClientResources.InterfaceFunctions import saveKey, loadKey, dayCount
 from ClientResources.ModelSchema import (
     Parameters, scenarioParameters, commandArgument
 )
@@ -41,27 +41,35 @@ def buildBasicTab(container, id, globalErrorContainer):
         ''')
 
         # Time Parameters
+        loadKey(f'runCount{id}', 24)
         st.slider(
-            'Number of Simulation Runs', 1, 24, 24, key = f'runCount{id}', 
+            'Number of Simulation Runs', 1, 24, 24, key = f'_runCount{id}', 
+            on_change = saveKey, args = [f'runCount{id}'], # type: ignore
             help = f'''
                 The number of times that {'each' if id == 0 else 'this'} 
                 scenario will be ran. Higher values lead to longer 
                 simulations but more accurate results due to averaging.
             '''
-        )
+        ) 
+        loadKey(f'cycleCount{id}', 360)
         st.select_slider(
             'Length of Simulation (Days)', range(30, 721), 360, 
-            format_func = dayCount, key = f'cycleCount{id}', help = '''
+            format_func = dayCount, key = f'_cycleCount{id}', 
+            on_change = saveKey, args = [f'cycleCount{id}'], # type: ignore
+            help = '''
                 The number of days that will be simulated in each 
                 simulation run.
             '''
         )
+        loadKey(f'startDay{id}', 'Monday')
         st.select_slider(
             'Simulation Starting Day of the Week', (
                 'Monday', 'Tuesday', 'Wednesday', 
                 'Thursday', 'Friday', 'Saturday', 'Sunday'
             ),
-            'Monday', key = f'startDay{id}', help = '''
+            'Monday', key = f'_startDay{id}', on_change = saveKey, 
+            args = [f'startDay{id}'], # type: ignore
+            help = '''
                 The day of the week that the first day of the 
                 simulation will be.
             '''

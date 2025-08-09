@@ -10,6 +10,7 @@ from ParameterTabs.diseaseParams import buildDiseaseTab
 from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
 from ParameterTabs.dynamicParams import buildDynamicTab
+from ClientResources.InterfaceFunctions import saveKey, loadKey
 from ClientResources.SimulationRunFunctions import runModelWrapper
 from ClientResources.SharedResources import communityPopulation, clientUrl
 
@@ -34,7 +35,7 @@ st.title('Flusim Disease Model Web Dashboard')
 st.markdown(f'''
     This page allows for configuring the parameters that will be used 
     as a baseline for the simulation.
-            
+    
     Select a tab to view or modify the parameters under that category. 
     Hover your mouse over the :material/help: help icon next to a 
     parameter's input field to show an explanation of what that 
@@ -43,9 +44,12 @@ st.markdown(f'''
 ''', unsafe_allow_html = True)
 
 # Community Selection
+loadKey('community', 'newcastle')
 community = st.selectbox(
-    'Simulated Community', communityPopulation.keys(), key = 'community', 
-    format_func = lambda x: x.capitalize(), help = '''
+    'Simulated Community', communityPopulation.keys(), key = '_community', 
+    format_func = lambda x: x.capitalize(), 
+    on_change = saveKey, args = ['community'],  # type: ignore
+    help = '''
         The Australian city whose community data will be used as the 
         basis for the population and demographic distribution in the 
         simulation. Note that the data used for these communities comes 
@@ -92,7 +96,7 @@ st.markdown(f'''
 alertContainer = st.container()
 
 runModelButton = st.button(
-    'Run Simulation', on_click = runSimulationButton
+    'Run Simulation', on_click = runSimulationButton, key = 'baselineRunModel'
 )
 
 # TODO: Consider having a tab for templates that load parameters for 

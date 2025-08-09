@@ -9,10 +9,11 @@ import numpy as np
 import streamlit as st
 from pydantic import ValidationError
 from ClientResources.InterfaceFunctions import (
-    getRemainingGroups, addFormRow, deleteFormRow, idGet
+    saveKey, loadKey, getRemainingGroups, addFormRow, deleteFormRow, idGet
 )
 from ClientResources.SharedResources import (
-    npis, npiCamel, ordinals, triggerConditions, ageCategories
+    npis, npiCamel, ordinals, triggerConditions, 
+    ageCategories, communityPopulation
 )
 from ClientResources.ModelSchema import (
     Parameters, scenarioParameters, ageScenarioParameters, 
@@ -60,6 +61,8 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
         f'childWithdrawalError{id}': 0,
         f'reducedGroupError{id}': 0,
         f'bccError{id}': 0,
+        f'triggerRateError{id}': 0,
+        f'triggerTotalError{id}': 0,
 
         f'vaccinePeriodError{id}': 0,
         f'schoolClosurePeriodError{id}': 0,
@@ -72,7 +75,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
     }
     for parameter, default in sessionParameters.items(): 
-        st.session_state[parameter] = st.session_state.setdefault(
+        st.session_state[parameter] = st.session_state.get(
             parameter, default
         )
     
@@ -138,9 +141,11 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
         # Vaccination
         with st.container():
             st.subheader('Vaccination Parameters')
+            loadKey(f'vaccineToggle{id}', True)
             useVaccinesToggle = st.toggle(
                 'Enable Vaccines in Simulation', value = True, 
-                key = f'vaccineToggle{id}', help = '''
+                on_change = saveKey, args = [f'vaccineToggle{id}'], # type: ignore
+                key = f'_vaccineToggle{id}', help = '''
                     Toggle whether or not individuals in the simulation 
                     will be vaccinated against the disease, overriding 
                     all other vaccine-related parameters.
@@ -160,10 +165,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
                 # Policy parameters
                 with st.container(border = True):
+                    loadKey(f'vaccineTrigger{id}', 'Always')
                     vaccineTrigger = st.selectbox(
                         'Vaccination Trigger Condition', 
-                        key = f'vaccineTrigger{id}', 
+                        key = f'_vaccineTrigger{id}', 
                         options = triggerNames[:-2], 
+                        on_change = saveKey, args = [f'vaccineTrigger{id}'], # type: ignore
                         disabled = not useVaccinesToggle, help = '''
                             The type of condition that must be 
                             satisfied before vaccines will start being 
@@ -196,10 +203,13 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     # Show additional parameters based on trigger value
                     # Timed triggers
                     if vaccineTrigger == 'Timed':
+                        loadKey(f'vaccinePeriod{id}', (29, 59))
                         vaccinePeriod = st.select_slider(
                             'Vaccination Time Period', range(720), (29, 59), 
-                            key = f'vaccinePeriod{id}', 
+                            key = f'_vaccinePeriod{id}', 
                             format_func = lambda x: f'Day {x + 1}', 
+                            on_change = saveKey, 
+                            args = [f'vaccinePeriod{id}'], # type: ignore
                             disabled = not useVaccinesToggle, help = '''
                                 The time period during which 
                                 vaccinations will be administered in 
@@ -365,9 +375,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         there directly).
                     ''')
                 # Other vaccine schedule parameters
+                loadKey(f'limitDosesToggle{id}', False)
                 limitDosesToggle = st.toggle(
                     'Enable Limited Number of Vaccine Doses', value = False, 
-                    key = f'limitDosesToggle{id}', help = '''
+                    key = f'_limitDosesToggle{id}', on_change = saveKey, 
+                    args = [f'limitDosesToggle{id}'], # type: ignore
+                    help = '''
                         Toggle whether the total number of vaccine 
                         first doses that can be administered across the 
                         whole simulation should be limited to a 
@@ -376,10 +389,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         simulation.
                     '''
                 )
+                loadKey(f'initialDoseReserve{id}', 0)
                 st.number_input(
                     'Total Number of Vaccine First Doses', 
-                    0, key = f'initialDoseReserve{id}', 
+                    0, key = f'_initialDoseReserve{id}', 
                     disabled = not useVaccinesToggle or not limitDosesToggle, 
+                    on_change = saveKey, args = [f'initialDoseReserve{id}'], # type: ignore
                     placeholder = 'Enter a whole number of doses', help = '''
                         The total number of vaccine first doses that 
                         will be available to administer to unvaccinated 
@@ -395,32 +410,38 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         Number of Vaccine Doses" has been toggled off.
                     '''
                 )
+                loadKey(f'firstDoseRate{id}', 300)
                 st.number_input(
                     'First Dose Vaccination Rate (Vaccinations per Day)', 
-                    1, value = 300, key = f'firstDoseRate{id}', 
-                    placeholder = 'Enter a whole number of people',
+                    1, value = 300, key = f'_firstDoseRate{id}', 
+                    placeholder = 'Enter a whole number of people', 
+                    on_change = saveKey, args = [f'firstDoseRate{id}'], # type: ignore
                     disabled = not useVaccinesToggle, help = '''
                         The number of unvaccinated individuals who will 
                         receive the first dose of the vaccine each day, 
                         assuming there are enough doses available.
                     '''
                 )
+                loadKey(f'initialVaccinated{id}', 0.0)
                 initialVaccinated = st.select_slider(
                     'Initial Vaccinated Proportion of Population', 
                     np.linspace(0.0, 1.0, 1001), 0.0, 
-                    key = f'initialVaccinated{id}', 
-                    format_func = lambda x: f'{100 * x:0.3g}%',
+                    key = f'_initialVaccinated{id}', 
+                    format_func = lambda x: f'{100 * x:0.3g}%', 
+                    on_change = saveKey, args = [f'initialVaccinated{id}'], # type: ignore
                     disabled = not useVaccinesToggle, help = '''
                         The percentage of the population that will 
                         already be vaccinated against the disease at 
                         the beginning of the simulation.
                     '''
                 )
+                loadKey(f'targetVaccinated{id}', 0.8)
                 targetVaccinated = st.select_slider(
                     'Target Vaccinated Proportion of Population', 
                     np.linspace(0.0, 1.0, 1001), 0.8, 
-                    key = f'targetVaccinated{id}', 
+                    key = f'_targetVaccinated{id}', 
                     format_func = lambda x: f'{100 * x:0.3g}%', 
+                    on_change = saveKey, args = [f'targetVaccinated{id}'], # type: ignore
                     disabled = not useVaccinesToggle, help = '''
                         The percentage of the population that will be 
                         targeted by the vaccine schedule in the 
@@ -455,11 +476,11 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         following changes before running the simulation:
                                 
                         - Increase the scenario's Initial Vaccinated 
-                        Proportion of Population to be greater than 
-                        {100 * targetVaccinated:0.3g}%. 
+                        Proportion of Population to be greater 
+                        than {100 * targetVaccinated:0.3g}%. 
                         - Decrease the scenario's Target Vaccinated 
-                        Proportion of Population to be lower than 
-                        {100 * initialVaccinated:0.3g}%. 
+                        Proportion of Population to be lower 
+                        than {100 * initialVaccinated:0.3g}%. 
                     ''')
                     globalErrorContainer.warning(f'''
                         Warning: The target vaccinated proportion in 
@@ -484,13 +505,13 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         - Increase the scenario's Initial Vaccinated 
                         Proportion of Population in the "Vaccination 
                         Programs" section of the "Vaccinations and 
-                        NPIs" tab to be greater than 
-                        {100 * targetVaccinated:0.3g}%. 
+                        NPIs" tab to be greater 
+                        than {100 * targetVaccinated:0.3g}%. 
                         - Decrease the scenario's Target Vaccinated 
                         Proportion of Population in the "Vaccination 
                         Programs" section of the "Vaccinations and 
-                        NPIs" tab to be lower than 
-                        {100 * initialVaccinated:0.3g}%. 
+                        NPIs" tab to be lower 
+                        than {100 * initialVaccinated:0.3g}%. 
                     ''')
                     st.session_state[f'baseVacPropError{id}'] = 1
                 else: st.session_state[f'baseVacPropError{id}'] = 0
@@ -526,8 +547,13 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     )
 
                     # Age group column
+                    loadKey(
+                        f'vacAgeGroup{id}-{i}', 
+                        vacAgeCurrentGroup if vacAgeCurrentGroup 
+                        else vacAgeRemainingGroups[0]
+                    )
                     with vacAgeGroupColumn: vacAgeGroup = st.selectbox(
-                        'Age Group', key = f'vacAgeGroup{id}-{i}', 
+                        'Age Group', key = f'_vacAgeGroup{id}-{i}', 
                         # Set age group options such that only ages 
                         # that haven't been selected yet can be selected
                         options = (
@@ -539,6 +565,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         disabled = (
                             not useVaccinesToggle or not vaccineRowCount < 10
                         ),
+                        on_change = saveKey, args = [f'vacAgeGroup{id}-{i}'], # type: ignore
                         help = '''
                             An age group that will have specific 
                             vaccination initial and target proportions 
@@ -559,13 +586,16 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         '''
                     )
                     # Initial proportion column
+                    loadKey(f'vacAgeInitial{id}-{i}', 0.0)
                     with vacAgeInitialColumn: 
                         vacAgeInitials[vacAgeGroup] = st.select_slider(
                             'Initial Vaccinated Proportion of Population', 
                             np.linspace(0.0, 1.0, 1001), 0.0,  
                             format_func = lambda x: f'{100 * x:0.3g}%',
                             disabled = not useVaccinesToggle, 
-                            key = f'vacAgeInitial{id}-{i}', help = '''
+                            on_change = saveKey, 
+                            args = [f'vacAgeInitial{id}-{i}'], # type: ignore
+                            key = f'_vacAgeInitial{id}-{i}', help = '''
                                 The percentage of individuals in this 
                                 age group that will already be 
                                 vaccinated against the disease at the 
@@ -573,13 +603,16 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             '''
                         )
                     # Target proportion column
+                    loadKey(f'vacAgeTarget{id}-{i}', 0.8)
                     with vacAgeTargetColumn: 
                         vacAgeTargets[vacAgeGroup] = st.select_slider(
                             'Target Vaccinated Proportion of Population', 
                             np.linspace(0.0, 1.0, 1001), 0.8, 
                             format_func = lambda x: f'{100 * x:0.3g}%',
                             disabled = not useVaccinesToggle, 
-                            key = f'vacAgeTarget{id}-{i}', help = '''
+                            on_change = saveKey, 
+                            args = [f'vacAgeTarget{id}-{i}'], # type: ignore
+                            key = f'_vacAgeTarget{id}-{i}', help = '''
                                 The percentage of individuals in this 
                                 age group that will be targeted by the 
                                 vaccine schedule in the simulation. The 
@@ -667,12 +700,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             group.
                             - Increase the scenario's Initial 
                             Vaccinated Proportion of Population for the 
-                            "{age}" age group to be greater than 
-                            {100 * currentTarget:0.3g}%. 
+                            "{age}" age group to be greater 
+                            than {100 * currentTarget:0.3g}%. 
                             - Decrease the scenario's Target Vaccinated 
                             Proportion of Population for the "{age}" 
-                            age group to be lower than 
-                            {100 * currentInitial:0.3g}%. 
+                            age group to be lower 
+                            than {100 * currentInitial:0.3g}%. 
                         ''')
                         globalErrorContainer.warning(f'''
                             Warning: The target vaccinated proportion 
@@ -705,14 +738,14 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             Vaccinated Proportion of Population for the 
                             "{age}" age group in the "Vaccination 
                             Programs" section of the "Vaccinations and 
-                            NPIs" tab to be greater than 
-                            {100 * currentTarget:0.3g}%. 
+                            NPIs" tab to be greater 
+                            than {100 * currentTarget:0.3g}%. 
                             - Decrease the scenario's Target Vaccinated 
                             Proportion of Population for the "{age}" 
                             age group in the "Vaccination Programs" 
                             section of the "Vaccinations and NPIs" tab 
-                            to be lower than 
-                            {100 * currentInitial:0.3g}%. 
+                            to be lower 
+                            than {100 * currentInitial:0.3g}%. 
                         ''')
                         st.session_state[f'ageVacPropError{id}'] = 1
                         ageVacPropError = True
@@ -736,9 +769,11 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 ''')
 
                 # Universal primary parameters
+                loadKey(f'primaryDoseCount{id}', 2)
                 primaryDoseCount = st.slider(
                     'Number of Vaccine Doses', 1, 5, 2, 
-                    key = f'primaryDoseCount{id}', 
+                    key = f'_primaryDoseCount{id}', 
+                    on_change = saveKey, args = [f'primaryDoseCount{id}'], # type: ignore
                     disabled = not useVaccinesToggle, help = '''
                         The number of times each individual in the 
                         simulation will be administered a vaccine for 
@@ -750,31 +785,37 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         sections used for specifying efficacy below.
                     '''
                 )
+                loadKey(f'primaryDelay{id}', 3)
                 st.slider(
                     'Time Between Vaccine Doses (Months)', 
                     1, 36, 3, disabled = not useVaccinesToggle, 
-                    key = f'primaryDelay{id}', help = '''
+                    on_change = saveKey, args = [f'primaryDelay{id}'], # type: ignore
+                    key = f'_primaryDelay{id}', help = '''
                         The number of months after an individual 
                         receives a vaccine dose before they are able to 
                         receive another, where a month is 30 days.
                     '''
                 )
+                loadKey(f'primaryDuration{id}', 6)
                 st.slider(
                     'Vaccine Immunity Waning Delay (Months)', 
                     1, 36, 6, disabled = not useVaccinesToggle, 
-                    key = f'primaryDuration{id}', help = '''
+                    on_change = saveKey, args = [f'primaryDuration{id}'], # type: ignore
+                    key = f'_primaryDuration{id}', help = '''
                         The number of months after an individual 
                         receives a vaccine dose before the immunity 
                         conferred by this vaccine begins to diminish, 
                         where a month is 30 days.
                     '''
                 )
+                loadKey(f'primaryWanedEfficacy{id}', 0.0)
                 primaryWanedEfficacy = st.select_slider(
                     'Dose Efficacy After Immunity Waning (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 0.0, 
                     format_func = lambda x: f'{100 * x:0.3g}%', 
                     disabled = not useVaccinesToggle, 
-                    key = f'primaryWanedEfficacy{id}', help = '''
+                    on_change = saveKey, args = [f'primaryWanedEfficacy{id}'], # type: ignore
+                    key = f'_primaryWanedEfficacy{id}', help = '''
                         The final efficacy value that the vaccine 
                         schedule will approach as the immunity it 
                         provides begins to diminish, represented as the 
@@ -783,10 +824,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         to the disease.
                     '''
                 )
+                loadKey(f'primaryWaningRate{id}', 12)
                 st.slider(
                     'Vaccine Waning Duration (Months)', 
                     0, 36, 12, disabled = not useVaccinesToggle, 
-                    key = f'primaryWaningRate{id}', help = '''
+                    on_change = saveKey, args = [f'primaryWaningRate{id}'], # type: ignore
+                    key = f'_primaryWaningRate{id}', help = '''
                         The number of months after the immunity from a 
                         vaccine dose begins waning before the efficacy 
                         of the vaccine stabilises, where a month is 30 
@@ -832,8 +875,13 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     )
 
                     # Age group column
+                    loadKey(
+                        f'primWanedGroup{id}-{i}', 
+                        primWanedCurrentGroup if primWanedCurrentGroup 
+                        else primWanedRemainingGroups[0]
+                    )
                     with primWanedGroupColumn: primWanedGroup = st.selectbox(
-                        'Age Group', key = f'primWanedGroup{id}-{i}', 
+                        'Age Group', key = f'_primWanedGroup{id}-{i}', 
                         # Set age group options such that only ages 
                         # that haven't been selected yet can be selected
                         options = (
@@ -847,6 +895,8 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             not useVaccinesToggle 
                             or not primaryWanedRowCount < 10
                         ),
+                        on_change = saveKey, 
+                        args = [f'primWanedGroup{id}-{i}'], # type: ignore
                         help = '''
                             An age group that will have a specific 
                             final efficacy value after immunity waning 
@@ -867,6 +917,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         '''
                     )
                     # Waned efficacy column
+                    loadKey(f'primAgeWanedEfficacy{id}-{i}', 0.0)
                     with primWanedEffColumn: 
                         primAgeWaneds[primWanedGroup] = st.select_slider(
                             ((
@@ -876,7 +927,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             np.linspace(0.0, 1.0, 1001), 0.0, 
                             format_func = lambda x: f'{100 * x:0.3g}%', 
                             disabled = not useVaccinesToggle, 
-                            key = f'primAgeWanedEfficacy{id}-{i}', help = '''
+                            on_change = saveKey, 
+                            args = [f'primAgeWanedEfficacy{id}-{i}'], # type: ignore
+                            key = f'_primAgeWanedEfficacy{id}-{i}', help = '''
                                 The final efficacy value that the 
                                 vaccine schedule will approach for this 
                                 age group as the immunity it provides 
@@ -949,12 +1002,14 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     doseEfficacyContainer.markdown(
                         f'#### {ordinals[i+1]} Vaccine Dose'
                     )
+                    loadKey(f'primaryBaseEfficacy{id}-{i}', 0.5)
                     baseDoseEfficacy = doseEfficacyContainer.select_slider(
                         'Initial Dose Efficacy (Probability)', 
                         np.linspace(0.0, 1.0, 1001), 0.5, 
                         format_func = lambda x: f'{100 * x:0.3g}%', 
-                        disabled = not useVaccinesToggle, 
-                        key = f'primaryBaseEfficacy{id}-{i}', help = '''
+                        disabled = not useVaccinesToggle, on_change = saveKey, 
+                        args = [f'primaryBaseEfficacy{id}-{i}'], # type: ignore
+                        key = f'_primaryBaseEfficacy{id}-{i}', help = '''
                             The initial efficacy of this vaccine dose, 
                             represented as the probability that an 
                             individual that has recently received the 
@@ -1068,8 +1123,13 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             f'primAgeGroup{id}-{i}-{j}'
                         )
                         # Age group column
+                        loadKey(
+                            f'primAgeGroup{id}-{i}-{j}', 
+                            primAgeCurrentGroup if primAgeCurrentGroup 
+                            else primAgeRemainingGroups[0]
+                        )
                         with primAgeGroupColumn: primAgeGroup = st.selectbox(
-                            'Age Group', key = f'primAgeGroup{id}-{i}-{j}', 
+                            'Age Group', key = f'_primAgeGroup{id}-{i}-{j}', 
                             # Set age group options such that only ages 
                             # that haven't been selected yet can be 
                             # selected
@@ -1083,7 +1143,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             disabled = (
                                 not useVaccinesToggle 
                                 or not primaryAgeRowCounts[i] < 10
-                            ),
+                            ), 
+                            on_change = saveKey, 
+                            args = [f'primAgeGroup{id}-{i}-{j}'], # type: ignore
                             help = '''
                                 An age group that will have specific 
                                 initial vaccine efficacy values defined 
@@ -1104,13 +1166,16 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             '''
                         )
                         # Initial efficacy column
+                        loadKey(f'primAgeEfficacy{id}-{i}-{j}', 0.5)
                         with primAgeEfficacyColumn: 
                             ageInitialEfficacy = st.select_slider(
                                 'Initial Dose Efficacy (Probability)',
                                 np.linspace(0.0, 1.0, 1001), 0.5, 
                                 format_func = lambda x: f'{100 * x:0.3g}%', 
                                 disabled = not useVaccinesToggle, 
-                                key = f'primAgeEfficacy{id}-{i}-{j}', 
+                                key = f'_primAgeEfficacy{id}-{i}-{j}', 
+                                on_change = saveKey, 
+                                args = [f'primAgeEfficacy{id}-{i}-{j}'], # type: ignore
                                 help = '''
                                     The initial efficacy of this 
                                     vaccine dose for this age group, 
@@ -1341,49 +1406,59 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 ''')
 
                 # Universal booster parameters
+                loadKey(f'boosterToggle{id}', True)
                 useBoostersToggle = st.toggle(
                     'Enable Booster Vaccines', value = True, 
-                    key = f'boosterToggle{id}', 
+                    key = f'_boosterToggle{id}', on_change = saveKey, 
+                    args = [f'boosterToggle{id}'], # type: ignore
                     disabled = not useVaccinesToggle, help = '''
                         Toggle whether or not booster vaccines are 
                         administered in the simulation, overriding 
                         other booster-related parameters.
                     '''
                 )
+                loadKey(f'boosterDoseCount{id}', 3)
                 st.slider(
                     'Number of Booster Doses', 
-                    1, 10, 3, key = f'boosterDoseCount{id}',
+                    1, 10, 3, key = f'_boosterDoseCount{id}',
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
+                    on_change = saveKey, args = [f'boosterDoseCount{id}'], # type: ignore
                     help = '''
                         The number of times each individual in the 
                         simulation will be administered a booster 
                         vaccine.
                     '''
                 )
+                loadKey(f'boosterDelay{id}', 3)
                 boosterDelay = st.slider(
                     'Time Between Booster Doses (Months)', 1, 36, 3,
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
-                    key = f'boosterDelay{id}', help = '''
+                    on_change = saveKey, args = [f'boosterDelay{id}'], # type: ignore
+                    key = f'_boosterDelay{id}', help = '''
                         The number of months after an individual receives 
                         one booster vaccine dose before they are able 
                         to receive another, where a month is 30 days.
                     '''
                 )
+                loadKey(f'boosterDuration{id}', 2)
                 st.slider(
                     'Booster Immunity Waning Delay (Months)', 1, 36, 2,
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
-                    key = f'boosterDuration{id}', help = '''
+                    on_change = saveKey, args = [f'boosterDuration{id}'], # type: ignore
+                    key = f'_boosterDuration{id}', help = '''
                         The number of months after an individual receives 
                         a booster vaccine dose before the immunity 
                         conferred by this vaccine begins to diminish, 
                         where a month is 30 days.
                     '''
                 )
+                loadKey(f'boosterBaseEfficacy{id}', 0.9)
                 boosterBaseEfficacy = st.select_slider(
                     'Initial Booster Efficacy (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 0.9, 
-                    key = f'boosterBaseEfficacy{id}',
+                    key = f'_boosterBaseEfficacy{id}',
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
+                    on_change = saveKey, args = [f'boosterBaseEfficacy{id}'], # type: ignore
                     format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                         The initial efficacy of each booster vaccine, 
                         represented as the probability that an 
@@ -1392,11 +1467,13 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         disease.
                     '''
                 )
+                loadKey(f'boosterWanedEfficacy{id}', 0.6)
                 boosterWanedEfficacy = st.select_slider(
                     'Booster Efficacy After Immunity Waning (Probability)',
                     np.linspace(0.0, 1.0, 1001), 0.6, 
-                    key = f'boosterWanedEfficacy{id}', 
+                    key = f'_boosterWanedEfficacy{id}', 
                     disabled = not useVaccinesToggle or not useBoostersToggle,
+                    on_change = saveKey, args = [f'boosterWanedEfficacy{id}'], # type: ignore
                     format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                         The final efficacy value that the booster 
                         vaccine will approach as the immunity it 
@@ -1434,11 +1511,11 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         following changes before running the simulation:
 
                         - Increase the scenario's Initial Booster 
-                        Efficacy to be greater than 
-                        {100 * boosterWanedEfficacy:0.3g}%. 
+                        Efficacy to be greater 
+                        than {100 * boosterWanedEfficacy:0.3g}%. 
                         - Decrease the scenario's Booster Efficacy 
-                        After Immunity Waning to be lower than 
-                        {100 * boosterBaseEfficacy:0.3g}%. 
+                        After Immunity Waning to be lower 
+                        than {100 * boosterBaseEfficacy:0.3g}%. 
                     ''')
                     globalErrorContainer.error(f'''
                         Error: The initial booster vaccine efficacy in 
@@ -1472,10 +1549,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     st.session_state[f'baseBoostEfficacyError{id}'] = 2
                 else: st.session_state[f'baseBoostEfficacyError{id}'] = 0
 
+                loadKey(f'boosterWaningRate{id}', 6)
                 st.slider(
                     'Booster Waning Duration (Months)', 0, 36, 6,
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
-                    key = f'boosterWaningRate{id}', help = '''
+                    on_change = saveKey, args = [f'boosterWaningRate{id}'], # type: ignore
+                    key = f'_boosterWaningRate{id}', help = '''
                         The number of months after the immunity from a 
                         booster vaccine begins waning before the 
                         efficacy of the vaccine stabilises, where a 
@@ -1521,10 +1600,15 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         f'boostAgeGroup{id}-{i}'
                     )
                     # Age group column
+                    loadKey(
+                        f'boostAgeGroup{id}-{i}', 
+                        boostAgeCurrentGroup if boostAgeCurrentGroup 
+                        else boostAgeRemainingGroups[0]
+                    )
                     with boostAgeGroupColumn: boostAgeGroup = st.selectbox(
                         # Set age group options such that only ages 
                         # that haven't been selected yet can be selected
-                        'Age Group', key = f'boostAgeGroup{id}-{i}', 
+                        'Age Group', key = f'_boostAgeGroup{id}-{i}', 
                         options = (
                             [boostAgeCurrentGroup] + [
                                 group for group in boostAgeRemainingGroups 
@@ -1535,7 +1619,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         disabled = (
                             not useVaccinesToggle or not useBoostersToggle 
                             or not boosterRowCount < 10
-                        ),
+                        ), 
+                        on_change = saveKey, 
+                        args = [f'boostAgeGroup{id}-{i}'], # type: ignore
                         help = '''
                             An age group that will have specific 
                             booster vaccine efficacy values defined for 
@@ -1556,6 +1642,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         '''
                     )
                     # Standard efficacy column
+                    loadKey(f'boostAgeEfficacy{id}-{i}', 0.9)
                     with boostAgeEfficacyColumn: 
                         boostAgeInitials[boostAgeGroup] = st.select_slider(
                             'Initial Booster Efficacy (Probability)', 
@@ -1563,7 +1650,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 not useVaccinesToggle or not useBoostersToggle
                             ), 
                             format_func = lambda x: f'{100 * x:0.3g}%', 
-                            key = f'boostAgeEfficacy{id}-{i}', help = '''
+                            on_change = saveKey, 
+                            args = [f'boostAgeEfficacy{id}-{i}'], # type: ignore
+                            key = f'_boostAgeEfficacy{id}-{i}', help = '''
                                 The initial efficacy of each booster 
                                 vaccine for this age group, represented 
                                 as the probability that a recently 
@@ -1573,6 +1662,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             '''
                         )
                     # Waned efficacy column
+                    loadKey(f'boostAgeWanedEfficacy{id}-{i}', 0.6)
                     with boostAgeWanedColumn: 
                         boostAgeWaneds[boostAgeGroup] = st.select_slider(
                             ((
@@ -1583,7 +1673,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 not useVaccinesToggle or not useBoostersToggle
                             ), 
                             format_func = lambda x: f'{100 * x:0.3g}%', 
-                            key = f'boostAgeWanedEfficacy{id}-{i}', help = '''
+                            on_change = saveKey, 
+                            args = [f'boostAgeWanedEfficacy{id}-{i}'], # type: ignore
+                            key = f'_boostAgeWanedEfficacy{id}-{i}', help = '''
                                 The final efficacy value that the 
                                 booster vaccine will approach for this 
                                 age group as the immunity it provides 
@@ -1680,12 +1772,11 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             group.
                             - Increase the scenario's Initial Booster 
                             Efficacy for the "{age}" age group to be 
-                            greater than 
-                            {100 * currentWaned:0.3g}%. 
+                            greater than {100 * currentWaned:0.3g}%. 
                             - Decrease the scenario's Booster Efficacy 
                             After Immunity Waning for the "{age}" age 
-                            group to be lower than 
-                            {100 * currentInitial:0.3g}%. 
+                            group to be lower 
+                            than {100 * currentInitial:0.3g}%. 
                         ''')
                         globalErrorContainer.warning(f'''
                             Error: The initial booster vaccine efficacy 
@@ -1752,21 +1843,27 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 ''')
 
                 # Social distancing
+                loadKey(f'socialDistancingToggle{id}', True)
                 useSocialDistancingToggle = st.toggle(
                     'Enable Social Distancing', value = True, 
-                    key = f'socialDistancingToggle{id}', help = '''
+                    on_change = saveKey, 
+                    args = [f'socialDistancingToggle{id}'], # type: ignore
+                    key = f'_socialDistancingToggle{id}', help = '''
                         Toggle whether or not social distancing 
                         interventions are implemented in the 
                         simulation, overriding other social distancing 
                         parameters.
                     '''
                 )
+                loadKey(f'socialDistancingCompliance{id}', 0.9)
                 socialDistancingCompliance = st.select_slider(
                     'Social Distancing Compliance (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 0.9, 
                     format_func = lambda x: f'{100 * x:0.3g}%', 
                     disabled = not useSocialDistancingToggle, 
-                    key = f'socialDistancingCompliance{id}', help = '''
+                    on_change = saveKey, 
+                    args = [f'socialDistancingCompliance{id}'], # type: ignore
+                    key = f'_socialDistancingCompliance{id}', help = '''
                         The probability that an individual will comply 
                         with social distancing interventions in the 
                         simulation.
@@ -1797,8 +1894,13 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     )
 
                     # Age group column
+                    loadKey(
+                        f'socialAgeGroup{id}-{i}', 
+                        socialCurrentGroup if socialCurrentGroup 
+                        else socialRemainingGroups[0]
+                    )
                     with socialGroupColumn: st.selectbox(
-                        'Age Group', key = f'socialAgeGroup{id}-{i}', 
+                        'Age Group', key = f'_socialAgeGroup{id}-{i}', 
                         # Set age group options such that only ages 
                         # that haven't been selected yet can be selected
                         options = (
@@ -1811,6 +1913,8 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             not useSocialDistancingToggle 
                             or not socialRowCount < 10
                         ),
+                        on_change = saveKey, 
+                        args = [f'socialAgeGroup{id}-{i}'], # type: ignore
                         help = '''
                             An age group that will have specific 
                             social distancing compliance probability 
@@ -1831,12 +1935,15 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         '''
                     )
                     # Compliance column
+                    loadKey(f'socialCompliance{id}-{i}', 0.9)
                     with socialComplianceColumn: st.select_slider(
                         'Social Distancing Compliance (Probability)', 
                         np.linspace(0.0, 1.0, 1001), 0.9, 
                         format_func = lambda x: f'{100 * x:0.3g}%', 
                         disabled = not useSocialDistancingToggle, 
-                        key = f'socialCompliance{id}-{i}', help = '''
+                        on_change = saveKey, 
+                        args = [f'socialCompliance{id}-{i}'], # type: ignore
+                        key = f'_socialCompliance{id}-{i}', help = '''
                             The probability that an individual in 
                             this age group will comply with social 
                             distancing interventions in the 
@@ -1888,9 +1995,11 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 )
 
                 # Case Isolation
+                loadKey(f'caseIsolation{id}', True)
                 st.toggle(
                     'Enable Case Isolation', value = True, 
-                    key = f'caseIsolation{id}', help = '''
+                    on_change = saveKey, args = [f'caseIsolation{id}'], # type: ignore
+                    key = f'_caseIsolation{id}', help = '''
                         Toggle whether or not individuals who have been 
                         diagnosed as cases of the disease will be 
                         forced to isolate at home.
@@ -1898,9 +2007,11 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 )
 
                 # Class Dismissal
+                loadKey(f'classDismissal{id}', False)
                 classDismissal = st.toggle(
                     'Enable Class Dismissal', value = False, 
-                    key = f'classDismissal{id}', help = '''
+                    on_change = saveKey, args = [f'classDismissal{id}'], # type: ignore
+                    key = f'_classDismissal{id}', help = '''
                         Toggle whether or not classes in childcare and 
                         non-tertiary schools should dismiss classes 
                         when the daily case rate is high enough.
@@ -1931,9 +2042,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     These parameters control if and when schools will 
                     close as a result of the disease.
                 ''')
+                loadKey(f'schoolClosureToggle{id}', True)
                 useSchoolClosureToggle = st.toggle(
                     'Enable School Closures', value = True, 
-                    key = f'schoolClosureToggle{id}', help = '''
+                    on_change = saveKey, 
+                    args = [f'schoolClosureToggle{id}'], # type: ignore
+                    key = f'_schoolClosureToggle{id}', help = '''
                         Toggle whether or not school closure 
                         interventions are implemented in the 
                         simulation, overriding other school closure 
@@ -1943,10 +2057,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 
                 # School closure triggers
                 with st.container(border = True):
+                    loadKey(f'schoolClosureTrigger{id}', 'Always')
                     schoolClosureTrigger = st.selectbox(
                         'School Closure Trigger Condition', 
-                        key = f'schoolClosureTrigger{id}', 
-                        options = triggerNames, 
+                        key = f'_schoolClosureTrigger{id}', 
+                        options = triggerNames, on_change = saveKey, 
+                        args = [f'schoolClosureTrigger{id}'], # type: ignore
                         disabled = not useSchoolClosureToggle, help = '''
                             The type of condition that must be 
                             satisfied before schools will start being 
@@ -1992,10 +2108,13 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     # Show additional parameters based on trigger value
                     # Timed triggers
                     if schoolClosureTrigger == 'Timed':
+                        loadKey(f'schoolClosurePeriod{id}', (29, 59))
                         schoolClosurePeriod = st.select_slider(
                             'School Closure Time Period', range(720), 
-                            (29, 59), key = f'schoolClosurePeriod{id}', 
+                            (29, 59), key = f'_schoolClosurePeriod{id}', 
                             format_func = lambda x: f'Day {x + 1}', 
+                            on_change = saveKey, 
+                            args = [f'schoolClosurePeriod{id}'], # type: ignore
                             disabled = not useSchoolClosureToggle, help = '''
                                 The time period during which schools 
                                 will be closed in the simulation. The 
@@ -2173,12 +2292,14 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     ''')
                 
                 # School types and compliance
+                loadKey(f'schoolClosureTypes{id}', ['K-12'])
                 schoolClosureTypes = st.segmented_control(
                     'Types of School to Close', 
                     ('Childcare', 'K-12', 'Tertiary'), 
                     selection_mode = 'multi', default = 'K-12', 
                     disabled = not useSchoolClosureToggle, 
-                    key = f'schoolClosureTypes{id}', help = '''
+                    on_change = saveKey, args = [f'schoolClosureTypes{id}'], # type: ignore
+                    key = f'_schoolClosureTypes{id}', help = '''
                         The types of schools that will close under the 
                         effects of this NPI. Multiple school types may 
                         be selected at once, but selecting none is 
@@ -2192,12 +2313,15 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     '''
                 )
                 schoolTypeErrorContainer = st.empty()
+                loadKey(f'schoolClosureCompliance{id}', 0.9)
                 st.select_slider(
                     'School Closure Compliance (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 0.9, 
                     format_func = lambda x: f'{100 * x:0.3g}%',
                     disabled = not useSchoolClosureToggle, 
-                    key = f'schoolClosureCompliance{id}', help = '''
+                    on_change = saveKey, 
+                    args = [f'schoolClosureCompliance{id}'], # type: ignore
+                    key = f'_schoolClosureCompliance{id}', help = '''
                         The probability that an individual will 
                         withdraw from schools when they are closed in 
                         the simulation.
@@ -2256,9 +2380,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     is not active can be configured in the "Withdrawals 
                     and Diagnosis" section of the "Community" tab.
                 ''')
+                loadKey(f'withdrawalIncreaseToggle{id}', True)
                 useWithdrawalIncreaseToggle = st.toggle(
                     'Enable Withdrawal Increases', value = True, 
-                    key = f'withdrawalIncreaseToggle{id}', help = '''
+                    on_change = saveKey, 
+                    args = [f'withdrawalIncreaseToggle{id}'], # type: ignore
+                    key = f'_withdrawalIncreaseToggle{id}', help = '''
                         Toggle whether or not withdrawal increasing 
                         interventions are implemented in the 
                         simulation, overriding other withdrawal 
@@ -2267,11 +2394,13 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 )
                 
                 # Withdrawal increase triggers
+                loadKey(f'withdrawalIncreaseTrigger{id}', 'Always')
                 with st.container(border = True):
                     withdrawalIncreaseTrigger = st.selectbox(
                         'Withdrawal Increase Trigger Condition', 
-                        key = f'withdrawalIncreaseTrigger{id}', 
-                        options = triggerNames[:-2], 
+                        key = f'_withdrawalIncreaseTrigger{id}', 
+                        options = triggerNames[:-2], on_change = saveKey, 
+                        args = [f'withdrawalIncreaseTrigger{id}'], # type: ignore
                         disabled = not useWithdrawalIncreaseToggle, help = '''
                             The type of condition that must be 
                             satisfied before the rate of withdrawal 
@@ -2306,10 +2435,13 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     # Show additional parameters based on trigger value
                     # Timed triggers
                     if withdrawalIncreaseTrigger == 'Timed':
+                        loadKey(f'withdrawalIncreasePeriod{id}', (29, 59))
                         withdrawalIncreasePeriod = st.select_slider(
                             'Withdrawal Increase Time Period', range(720), 
-                            (29, 59), key = f'withdrawalIncreasePeriod{id}', 
+                            (29, 59), key = f'_withdrawalIncreasePeriod{id}', 
                             disabled = not useWithdrawalIncreaseToggle, 
+                            on_change = saveKey, 
+                            args = [f'withdrawalIncreasePeriod{id}'], # type: ignore
                             format_func = lambda x: f'Day {x + 1}', help = '''
                                 The time period during which withdrawal 
                                 rates will be increased in the 
@@ -2491,12 +2623,15 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         ''')
                 
                 # Increased withdrawal
+                loadKey(f'withdrawalIncreaseAdult{id}', 0.9)
                 withdrawalIncreaseAdult = st.select_slider(
                     'Adult Increased Withdrawal Rate (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 0.9, 
                     format_func = lambda x: f'{100 * x:0.3g}%',
                     disabled = not useWithdrawalIncreaseToggle, 
-                    key = f'withdrawalIncreaseAdult{id}', help = '''
+                    on_change = saveKey, 
+                    args = [f'withdrawalIncreaseAdult{id}'], # type: ignore
+                    key = f'_withdrawalIncreaseAdult{id}', help = '''
                         The probability of an infected adult 
                         withdrawing from work after becoming 
                         symptomatic while a withdrawal increasing 
@@ -2505,12 +2640,15 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     '''
                 )
                 adultWithdrawalErrorContainer = st.empty()
+                loadKey(f'withdrawalIncreaseChild{id}', 1.0)
                 withdrawalIncreaseChild = st.select_slider(
                     'Child Increased Withdrawal Rate (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 1.0, 
                     format_func = lambda x: f'{100 * x:0.3g}%', 
                     disabled = not useWithdrawalIncreaseToggle, 
-                    key = f'withdrawalIncreaseChild{id}', help = '''
+                    on_change = saveKey, 
+                    args = [f'withdrawalIncreaseChild{id}'], # type: ignore
+                    key = f'_withdrawalIncreaseChild{id}', help = '''
                         The probability of an infected child 
                         withdrawing from school after becoming 
                         symptomatic while a withdrawal increasing 
@@ -2549,12 +2687,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         following changes before running the simulation:
                                 
                         - Increase the scenario's Adult Increased 
-                        Withdrawal Rate to any probability above 
-                        {100 * baseAdultWithdrawal:0.3g}%. 
+                        Withdrawal Rate to any probability 
+                        above {100 * baseAdultWithdrawal:0.3g}%. 
                         - Decrease the scenario's Adult Withdrawal Rate 
                         in the "Withdrawals and Diagnosis" section of 
-                        the "Community" tab to any probability below 
-                        {100 * withdrawalIncreaseAdult:0.3g}%. 
+                        the "Community" tab to any probability 
+                        below {100 * withdrawalIncreaseAdult:0.3g}%. 
                     ''')
                     globalErrorContainer.error(f'''
                         Error: The work withdrawal probability during 
@@ -2580,12 +2718,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         - Increase the scenario's Adult Increased 
                         Withdrawal Rate in the "Withdrawal Increase" 
                         section of the "Vaccinations and NPIs" tab to 
-                        any probability above 
-                        {100 * baseAdultWithdrawal:0.3g}%. 
+                        any probability 
+                        above {100 * baseAdultWithdrawal:0.3g}%. 
                         - Decrease the scenario's Adult Withdrawal Rate 
                         in the "Withdrawals and Diagnosis" section of 
-                        the "Community" tab to any probability below 
-                        {100 * withdrawalIncreaseAdult:0.3g}%. 
+                        the "Community" tab to any probability 
+                        below {100 * withdrawalIncreaseAdult:0.3g}%. 
                     ''')
                     st.session_state[f'adultWithdrawalError{id}'] = 2
                 else: st.session_state[f'adultWithdrawalError{id}'] = 0
@@ -2615,12 +2753,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         following changes before running the simulation:
                                 
                         - Increase the scenario's Child Increased 
-                        Withdrawal Rate to any probability above 
-                        {100 * baseChildWithdrawal:0.3g}%. 
+                        Withdrawal Rate to any probability 
+                        above {100 * baseChildWithdrawal:0.3g}%. 
                         - Decrease the scenario's Child Withdrawal Rate 
                         in the "Withdrawals and Diagnosis" section of 
-                        the "Community" tab to any probability below 
-                        {100 * withdrawalIncreaseChild:0.3g}%. 
+                        the "Community" tab to any probability 
+                        below {100 * withdrawalIncreaseChild:0.3g}%. 
                     ''')
                     globalErrorContainer.error(f'''
                         Error: The school withdrawal probability during 
@@ -2646,12 +2784,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         - Increase the scenario's Child Increased 
                         Withdrawal Rate in the "Withdrawal Increase" 
                         section of the "Vaccinations and NPIs" tab to 
-                        any probability above 
-                        {100 * baseChildWithdrawal:0.3g}%. 
+                        any probability 
+                        above {100 * baseChildWithdrawal:0.3g}%. 
                         - Decrease the scenario's Child Withdrawal Rate 
                         in the "Withdrawals and Diagnosis" section of 
-                        the "Community" tab to any probability below 
-                        {100 * withdrawalIncreaseChild:0.3g}%. 
+                        the "Community" tab to any probability 
+                        below {100 * withdrawalIncreaseChild:0.3g}%. 
                     ''')
                     st.session_state[f'childWithdrawalError{id}'] = 2
                 else: st.session_state[f'childWithdrawalError{id}'] = 0
@@ -2669,9 +2807,11 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     is not active can be configured in the "Population 
                     Behaviours" section of the "Community" tab.
                 ''')
+                loadKey(f'reducedGroupToggle{id}', True)
                 useReducedGroupToggle = st.toggle(
                     'Enable Group Size Reductions', value = True, 
-                    key = f'reducedGroupToggle{id}', help = '''
+                    on_change = saveKey, args = [f'reducedGroupToggle{id}'], # type: ignore
+                    key = f'_reducedGroupToggle{id}', help = '''
                         Toggle whether or not group size reduction 
                         interventions are implemented in the 
                         simulation, overriding other group size 
@@ -2680,11 +2820,13 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 )
                 
                 # Reduced workgroup triggers
+                loadKey(f'reducedGroupTrigger{id}', 'Always')
                 with st.container(border = True):
                     reducedGroupTrigger = st.selectbox(
                         'Reduced Group Size Trigger Condition', 
-                        key = f'reducedGroupTrigger{id}', 
-                        options = triggerNames[:-2], 
+                        key = f'_reducedGroupTrigger{id}', 
+                        options = triggerNames[:-2], on_change = saveKey, 
+                        args = [f'reducedGroupTrigger{id}'], # type: ignore
                         disabled = not useReducedGroupToggle, help = '''
                             The type of condition that must be 
                             satisfied before the size of work groups 
@@ -2718,10 +2860,13 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     # Show additional parameters based on trigger value
                     # Timed triggers
                     if reducedGroupTrigger == 'Timed':
+                        loadKey(f'reducedGroupPeriod{id}', (29, 59))
                         reducedGroupPeriod = st.select_slider(
                             'Reduced Group Size Time Period', range(720), 
-                            (29, 59), key = f'reducedGroupPeriod{id}', 
+                            (29, 59), key = f'_reducedGroupPeriod{id}', 
                             disabled = not useReducedGroupToggle, 
+                            on_change = saveKey, 
+                            args = [f'reducedGroupPeriod{id}'], # type: ignore
                             format_func = lambda x: f'Day {x + 1}', help = '''
                                 The time period during which work 
                                 group sizes will be smaller in the 
@@ -2896,10 +3041,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         ''')
                 
                 # Reduced group size
+                loadKey(f'reducedGroupSize{id}', 5)
                 reducedGroupSize = st.slider(
                     'Reduced Work Group Size (Number of People)', 0, 25, 5, 
-                    disabled = not useReducedGroupToggle, 
-                    key = f'reducedGroupSize{id}', help = '''
+                    disabled = not useReducedGroupToggle, on_change = saveKey, 
+                    args = [f'reducedGroupSize{id}'], # type: ignore
+                    key = f'_reducedGroupSize{id}', help = '''
                         The maximum size of work groups while a reduced 
                         group size intervention is in effect, 
                         overwriting the normal maximum.
@@ -2986,9 +3133,11 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     "Population Behaviours" section of the "Community" 
                     tab.
                 ''')
+                loadKey(f'bccToggle{id}', True)
                 useBCCToggle = st.toggle(
-                    'Enable BCC Reduction', value = True, 
-                    key = f'bccToggle{id}', help = '''
+                    'Enable BCC Reduction', value = True, on_change = saveKey, 
+                    args = [f'bccToggle{id}'], # type: ignore
+                    key = f'_bccToggle{id}', help = '''
                         Toggle whether or not background contact count 
                         reduction interventions are implemented in the 
                         simulation, overriding other BCC reduction 
@@ -2997,11 +3146,13 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 )
                 
                 # BCC triggers
+                loadKey(f'bccTrigger{id}', 'Always')
                 with st.container(border = True):
                     bccTrigger = st.selectbox(
                         'BCC Reduction Trigger Condition', 
-                        key = f'bccTrigger{id}', 
-                        options = triggerNames[:-2], 
+                        key = f'_bccTrigger{id}', 
+                        options = triggerNames[:-2], on_change = saveKey, 
+                        args = [f'bccTrigger{id}'], # type: ignore
                         disabled = not useBCCToggle, help = '''
                             The type of condition that must be 
                             satisfied before background contact count 
@@ -3036,10 +3187,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     # Show additional parameters based on trigger value
                     # Timed triggers
                     if bccTrigger == 'Timed':
+                        loadKey(f'bccPeriod{id}', (29, 59))
                         bccPeriod = st.select_slider(
                             'BCC Reduction Time Period', range(720), 
-                            (29, 59), key = f'bccPeriod{id}', 
-                            disabled = not useBCCToggle, 
+                            (29, 59), key = f'_bccPeriod{id}', 
+                            disabled = not useBCCToggle, on_change = saveKey, 
+                            args = [f'bccPeriod{id}'], # type: ignore
                             format_func = lambda x: f'Day {x + 1}', help = '''
                                 The time period during which background 
                                 contact count (BCC) will be reduced in 
@@ -3209,13 +3362,15 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     ''')
                 
                 # Reduced BCC rate
+                loadKey(f'bccReducedRate{id}', 0.2)
                 bccReducedRate = st.slider(
                     ((
                         'Reduced Background Contact Count (Average '
                         'Number of Interactions per Person per Day)'
                     )),
-                    0.0, 8.0, 0.2, disabled = not useBCCToggle,
-                    key = f'bccReducedRate{id}', help = '''
+                    0.0, 8.0, 0.2, disabled = not useBCCToggle, 
+                    on_change = saveKey, args = [f'bccReducedRate{id}'], # type: ignore
+                    key = f'_bccReducedRate{id}', help = '''
                         The average number of other people each 
                         individual will interact with in the background 
                         phase of each day in the simulation (emulating 
@@ -3311,7 +3466,13 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 not possible unless the "Timed" trigger condition is 
                 used. Parameters will only appear here if at least one 
                 intervention is set to use a trigger condition that 
-                requires them.
+                requires them. 
+                
+                Note that all thresholds that can be configured here 
+                are based on diagnosed cases, not infections. The 
+                likelihood of an infected individual being diagnosed as 
+                a case can be configured in the "Health Burden 
+                Outcomes" section of the "Community" tab.
             ''')
 
             # Display values based on what is used by the triggers
@@ -3364,9 +3525,13 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     )
 
                     # Set rate thresholds
+                    loadKey(f'rateStartThreshold{id}', 10)
                     rateStartThreshold = st.slider(
                         'Start Trigger Threshold Rate (Cases per Day)', 0, 
-                        100, 10, key = f'rateStartThreshold{id}', help = '''
+                        100, 10, key = f'_rateStartThreshold{id}', 
+                        on_change = saveKey, 
+                        args = [f'rateStartThreshold{id}'], # type: ignore
+                        help = '''
                             Any interventions set to trigger using the 
                             "Community Case Rate" condition will begin 
                             taking effect in the simulation once the 
@@ -3374,9 +3539,13 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             exceeds this value.
                         '''
                     )
+                    loadKey(f'rateRelaxThreshold{id}', 5)
                     rateRelaxThreshold = st.slider(
                         'Relaxation Trigger Threshold Rate (Cases per Day)', 0,
-                        100, 5, key = f'rateRelaxThreshold{id}', help = '''
+                        100, 5, key = f'_rateRelaxThreshold{id}', 
+                        on_change = saveKey, 
+                        args = [f'rateRelaxThreshold{id}'], # type: ignore
+                        help = '''
                             Any active interventions set to trigger 
                             using the "Community Case Rate" condition 
                             will stop taking effect in the simulation 
@@ -3384,6 +3553,70 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             per day goes below this value.
                         '''
                     )
+                    triggerRateErrorContainer = st.container()
+
+                    # Show error if relax threshold is above trigger
+                    if rateRelaxThreshold >= rateStartThreshold:
+                        triggerRateErrorContainer.error(f'''
+                            Error: The start trigger threshold case 
+                            rate for medical interventions in the {
+                                'baseline scenario' if id == 0 
+                                else f'scenario named "{
+                                    st.session_state[f'scenarioName{id}']
+                                }"'
+                            } is currently set to {rateStartThreshold} 
+                            cases per day, but the relaxation trigger 
+                            threshold case rate for this scenario is 
+                            set to {rateRelaxThreshold} people. As 
+                            such, any interventions set to use case 
+                            rates as a trigger condition will stop 
+                            immediately after starting, as they will 
+                            already be below the relaxation rate.  
+                            
+                            To address this error, please make one of 
+                            the following changes before running the 
+                            simulation:
+                                    
+                            - Increase the scenario's Start Trigger 
+                            Threshold Rate to any value above 
+                            {rateRelaxThreshold} cases per day. 
+                            - Decrease the scenario's Relaxation 
+                            Trigger Threshold Rate to any value below 
+                            {rateStartThreshold} cases per day. 
+                        ''')
+                        globalErrorContainer.error(f'''
+                            Error: The start trigger threshold case 
+                            rate for medical interventions in the {
+                                'baseline scenario' if id == 0 
+                                else f'scenario named "{
+                                    st.session_state[f'scenarioName{id}']
+                                }"'
+                            } is currently set to {rateStartThreshold} 
+                            cases per day, but the relaxation trigger 
+                            threshold case rate for this scenario is 
+                            set to {rateRelaxThreshold} people. As 
+                            such, any interventions set to use case 
+                            rates as a trigger condition will stop 
+                            immediately after starting, as they will 
+                            already be below the relaxation rate.  
+                            
+                            To address this error, please make one of 
+                            the following changes before running the 
+                            simulation:
+                                    
+                            - Increase the scenario's Start Trigger 
+                            Threshold Rate in the "Intervention Trigger 
+                            Thresholds" section of the "Vaccinations 
+                            and NPIs" tab to any value above 
+                            {rateRelaxThreshold} cases per day. 
+                            - Decrease the scenario's Relaxation 
+                            Trigger Threshold Rate in the "Intervention 
+                            Trigger Thresholds" section of the 
+                            "Vaccinations and NPIs" tab to any value 
+                            below {rateStartThreshold} cases per day. 
+                        ''')
+                        st.session_state[f'triggerRateError{id}'] = 2
+                    else: st.session_state[f'triggerRateError{id}'] = 0
                 
                 # Case totals
                 if totalConditions:
@@ -3403,9 +3636,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     )
 
                     # Set total threshold
+                    loadKey(f'caseTotalThreshold{id}', 1000)
                     caseTotalThreshold = st.number_input(
                         'Start Trigger Case Threshold (Total Community Cases)', 
-                        0, 300000, 1000, key = f'caseTotalThreshold{id}', 
+                        0, 300000, 1000, key = f'_caseTotalThreshold{id}', 
+                        on_change = saveKey, 
+                        args = [f'caseTotalThreshold{id}'], # type: ignore
                         placeholder = 'Enter a whole number of cases', help = '''
                             Any interventions set to trigger using the 
                             "Community Case Total", "Cases per School", 
@@ -3418,6 +3654,65 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             exceeds this value.
                         '''
                     )
+                    triggerTotalErrorContainer = st.container()
+
+                    # Show error if relax threshold is above trigger
+                    population = communityPopulation[
+                        st.session_state.get('community', 'newcastle')
+                    ]
+                    if caseTotalThreshold >= population:
+                        triggerTotalErrorContainer.error(f'''
+                            Error: The trigger threshold case total for 
+                            medical interventions in the {
+                                'baseline scenario' if id == 0 
+                                else f'scenario named "{
+                                    st.session_state[f'scenarioName{id}']
+                                }"'
+                            } is currently set to {caseTotalThreshold} 
+                            cases, but the population of {
+                                st.session_state.get(
+                                    'community', 'newcastle'
+                                ).capitalize()
+                            } (the community used for this simulation) 
+                            is equal to {population} people. As such, 
+                            any interventions set to use case totals as 
+                            a trigger condition will not activate 
+                            unless the entire population is infected, 
+                            and will thus have no practical effect in 
+                            the simulation. 
+                            
+                            To address this error, please increase the 
+                            scenario's Start Trigger Case Threshold to 
+                            any value above {population} cases. 
+                        ''')
+                        globalErrorContainer.error(f'''
+                            Error: The trigger threshold case total for 
+                            medical interventions in the {
+                                'baseline scenario' if id == 0 
+                                else f'scenario named "{
+                                    st.session_state[f'scenarioName{id}']
+                                }"'
+                            } is currently set to {caseTotalThreshold} 
+                            cases, but the population of {
+                                st.session_state.get(
+                                    'community', 'newcastle'
+                                ).capitalize()
+                            } (the community used for this simulation) 
+                            is equal to {population} people. As such, 
+                            any interventions set to use case totals as 
+                            a trigger condition will not activate 
+                            unless the entire population is infected, 
+                            and will thus have no practical effect in 
+                            the simulation. 
+                            
+                            To address this error, please increase the 
+                            scenario's Start Trigger Case Threshold in 
+                            the "Intervention Trigger Thresholds" 
+                            section of the "Vaccinations and NPIs" tab 
+                            to any value above {population} cases. 
+                        ''')
+                        st.session_state[f'triggerRateError{id}'] = 2
+                    else: st.session_state[f'triggerRateError{id}'] = 0
 
 
 

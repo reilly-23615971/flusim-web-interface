@@ -3,19 +3,10 @@
 # Main page of dashboard, defining pages & setting universal parameters
 
 # Imports
-import os
 import logging
 from datetime import datetime
 import streamlit as st
-#from ClientResources.SimulationRunFunctions import runModelWrapper
-#from ClientResources.InterfaceFunctions import preserveFormEntries
 from ClientResources.SharedResources import resultQueue
-
-#import time
-#import atexit
-#import numpy as np
-#import pandas as pd
-#from ClientResources.SharedResources import resultQueue, monitorSession
 
 
 
@@ -26,11 +17,13 @@ logging.basicConfig(
     datefmt = '%Y-%m-%d %H:%M:%S', level = logging.INFO
 )
 
+# Keep session state variables loaded
+session = st.session_state
+
 # Set environment variables for config
 #os.environ['STREAMLIT_GLOBAL_DISABLE_WIDGET_STATE_DUPLICATION_WARNING'] = '1'
 
-# Keep parameter values between pages
-#preserveFormEntries()
+
 
 # Define application pages
 # TODO: Determine ideal page layout/what goes where
@@ -59,7 +52,7 @@ pages = {
     ]
 }
 
-# Initialise session variables
+# Initialise session variables used by this page
 # Use current time (Unix) as session ID so that different simulations 
 # aren't mixed up by the server
 sessionParameters = {
@@ -67,30 +60,14 @@ sessionParameters = {
     'outcomeFieldCount': 1, 'sessionID': int(datetime.now().timestamp())
 }
 for parameter, default in sessionParameters.items(): 
-    st.session_state[parameter] = st.session_state.setdefault(
-        parameter, default
-    )
+    session[parameter] = session.get(parameter, default)
 
-# Start session monitoring function to ensure it's closed properly
-#monitorSession()
-
-runModelCallbackCode = """
-# Define callbacks for model parameter widgets
-def runSimulationButton():
-    st.session_state.simulationInProgress = True
-    runModelWrapper()
-    # TODO: Inform user if server doesn't respond
-"""
-
-
-# TODO: consider whether keeping the run simulation button in the 
-# sidebar is a good idea
 # TODO: consider adding progress updates to the sidebar (time remaining,
 # progress bars, server availability etc.)
 parameterSidebar = st.sidebar
 runModelButtonCode = """
 runModelButton = parameterSidebar.button(
-    'Run Simulation', on_click = runSimulationButton
+    'Run Simulation', on_click = runSimulationButton, key = 'sidebarRunModel'
 )
 """
 
@@ -105,7 +82,7 @@ flusimPages.run()
 # Fragment to regularly check if model results have been received yet
 @st.fragment(run_every = 1)
 def updateData():
-    if st.session_state.simulationInProgress and not resultQueue.empty():
-        st.session_state.modelData = resultQueue.get()
-        st.session_state.simulationInProgress = False
+    if session.simulationInProgress and not resultQueue.empty():
+        session.modelData = resultQueue.get()
+        session.simulationInProgress = False
 updateData()
