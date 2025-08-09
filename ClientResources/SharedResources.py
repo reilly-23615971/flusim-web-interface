@@ -5,6 +5,7 @@
 # Imports
 from queue import Queue
 import logging
+import streamlit as st
 
 # Logging
 sharedLog = logging.getLogger(__name__)
@@ -73,3 +74,9 @@ kappaLocations = {
     'Childcare': 'child_care', 'Hospitals': 'hospital', 
     'Background Interactions': 'background'
 }
+
+# Simple function to get theme colours
+# Change these values if background colour changes
+def backgroundColour(): return (
+    '#0F1116' if st.context.theme.type == 'dark' else '#FFFFFF'
+)

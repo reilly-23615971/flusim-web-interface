@@ -2,6 +2,29 @@
 # Developed by Reilly Evans
 # Functionised tab where disease parameters can be modified
 
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# SAVE PARAMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 # Imports
 import logging
 import numpy as np
@@ -12,7 +35,9 @@ from pydantic import ValidationError
 from ClientResources.InterfaceFunctions import (
     getRemainingGroups, addFormRow, deleteFormRow, dayCount, idGet
 )
-from ClientResources.SharedResources import ageCategories, kappaLocations
+from ClientResources.SharedResources import (
+    ageCategories, kappaLocations, backgroundColour
+)
 from ClientResources.ModelSchema import (
     Parameters, scenarioParameters, strainParameters
 )
@@ -682,16 +707,14 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     symptomPeriod, postSymptomPeriod
                 ],
             })
-            data['start'] = data['Length (Days)'].cumsum().shift(
-                fill_value = 0
-            )
             data['end'] = data['Length (Days)'].cumsum()
+            data['start'] = data['end'].shift(fill_value = 0)
             data['tooltip'] = data['Life Stage'] + ": " + data[
                 'Length (Days)'
             ].astype(str)
             chart = alt.Chart(
                 data, title = 'Current Disease Life Cycle'
-            ).mark_bar().encode(
+            ).mark_bar(stroke = backgroundColour(), strokeWidth = 1).encode(
                 x = alt.X(
                     'start:Q', title = 'Length (Days)', 
                     scale = alt.Scale(domain = [0, (
@@ -700,9 +723,9 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     )])
                 ), x2 = 'end:Q', y = alt.value(0), color = alt.Color(
                     'Life Stage:N', sort = stageNames, 
-                    scale = alt.Scale(scheme = 'category10')
+                    scale = alt.Scale(scheme = 'reds')
                 ), tooltip = ['Life Stage', 'Length (Days)']
-            ).properties(width = 600, height = 150)
+            ).properties(width = 600, height = 175)
             st.altair_chart(chart)
 
             # Written period lengths

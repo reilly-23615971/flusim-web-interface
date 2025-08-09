@@ -127,7 +127,6 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
 
     # Tab Content
-    # TODO: Warn for nonsensical conditions
     with container:
         st.header('Vaccination and NPI Parameters')
         st.markdown('''
@@ -135,11 +134,6 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
             vaccination and non-pharmaceutical interventions (NPIs) are 
             integrated into the simulation.
         ''')
-
-        # Potential Catchable Errors:
-        # - Final waned efficacy is greater than initial efficacy 
-        #   (including age-specific versions and boosters if possible)
-        
 
         # Vaccination
         with st.container():
@@ -2662,20 +2656,6 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     st.session_state[f'childWithdrawalError{id}'] = 2
                 else: st.session_state[f'childWithdrawalError{id}'] = 0
 
-
-            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
-            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
-            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
-            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
-            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
-            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
-            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
-            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
-            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
-            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
-
-            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
-            # FINISH FINAL ERRORS!!!!!!!!!!!!!!!!!!
             # Reduced Workgroup Size
             st.html('<span id = "reducedGroupTriggerCondition"></span>')
             with st.expander('Reduced Work Group Size'):
@@ -2764,20 +2744,28 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                         st.session_state[f'scenarioName{id}']
                                     }"'
                                 } is currently set to last {simLength} 
-                                days, but the reduced group size NPI time 
-                                period for this scenario (defined 
+                                days, but the reduced group size NPI 
+                                time period for this scenario (defined 
                                 above) is set to begin on Day 
                                 {reducedGroupPeriod[0] + 1}. As such, 
-                                work groups will never decrease in size in this 
-                                scenario under these parameters. Please 
-                                either adjust this scenario's reduced 
-                                group size NPI time period to start and end 
-                                before Day {simLength}, switch to a 
-                                different trigger condition for reduced
-                                group size NPIs, or increase the 
-                                simulation length in the 
-                                "Initialisation" tab before running the 
-                                simulation.
+                                work groups will never decrease in size 
+                                in this scenario under these parameters.
+                                
+                                To address this error, please make one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the start point of the 
+                                scenario's Reduced Group Size Time 
+                                Period to any point before Day 
+                                {simLength}. 
+                                - Change the scenario's Reduced Group
+                                Size Trigger Condition to any 
+                                option other than "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {reducedGroupPeriod[0] + 1} 
+                                days or more. 
                             ''')
                             globalErrorContainer.error(f'''
                                 Error: The {
@@ -2786,22 +2774,31 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                         st.session_state[f'scenarioName{id}']
                                     }"'
                                 } is currently set to last {simLength} 
-                                days, but the reduced group size NPI time 
-                                period for this scenario is set to 
+                                days, but the reduced group size NPI 
+                                time period for this scenario is set to 
                                 begin on Day 
                                 {reducedGroupPeriod[0] + 1}. As such, 
-                                work groups will never decrease in size in this 
-                                scenario under these parameters. Please 
-                                either adjust this scenario's reduced 
-                                group size NPI time period in the 
-                                "Vaccinations and NPIs" tab to start 
-                                and end before Day {simLength}, switch 
-                                to a different trigger condition for 
-                                reduced group size NPIs in the 
-                                "Vaccinations and NPIs" tab, or 
-                                increase the simulation length in the 
-                                "Initialisation" tab before running the 
-                                simulation.
+                                work groups will never decrease in size 
+                                in this scenario under these parameters.
+                                
+                                To address this error, please make one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the start point of the 
+                                scenario's Reduced Group Size Time 
+                                Period in the "Reduced Work Group Size" 
+                                section of the "Vaccinations and NPIs" 
+                                tab to any point before Day {simLength}. 
+                                - Change the scenario's Reduced Group
+                                Size Trigger Condition in the "Reduced 
+                                Work Group Size" section of the 
+                                "Vaccinations and NPIs" tab to any 
+                                option other than "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {reducedGroupPeriod[0] + 1} 
+                                days or more. 
                             ''')
                             st.session_state[
                                 f'reducedGroupPeriodError{id}'
@@ -2814,20 +2811,28 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                         st.session_state[f'scenarioName{id}']
                                     }"'
                                 } is currently set to last {simLength} 
-                                days, but the reduced group size NPI time 
-                                period for this scenario (defined 
+                                days, but the reduced group size NPI 
+                                time period for this scenario (defined 
                                 above) is set to end on Day 
                                 {reducedGroupPeriod[1] + 1}. As such, 
-                                work groups will still be reduced in size when the 
-                                scenario ends. If this is not 
-                                intentional, please either adjust this 
-                                scenario's reduced group size NPI time period 
-                                to end before Day {simLength}, switch 
-                                to a different trigger condition for 
-                                reduced group size NPIs, or increase the 
-                                simulation length in the 
-                                "Initialisation" tab before running the 
-                                simulation.
+                                work groups will still be reduced in 
+                                size when the scenario ends. 
+                                
+                                If this is not desired behaviour, 
+                                please address this error by making one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the end point of the scenario's 
+                                Reduced Group Size Time Period to any 
+                                point before Day {simLength}. 
+                                - Change the scenario's Reduced Group 
+                                Size Trigger Condition to any 
+                                option other than "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {reducedGroupPeriod[1] + 1} 
+                                days or more. 
                             ''')
                             globalErrorContainer.warning(f'''
                                 Warning: The {
@@ -2836,20 +2841,31 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                         st.session_state[f'scenarioName{id}']
                                     }"'
                                 } is currently set to last {simLength} 
-                                days, but the reduced group size NPI time 
-                                period for this scenario is set to end 
-                                on Day {reducedGroupPeriod[1] + 1}. As 
-                                such, work groups will still be reduced in size when 
-                                the scenario ends. If this is not 
-                                intentional, please either adjust this 
-                                scenario's reduced group size NPI time period 
-                                in the "Vaccinations and NPIs" tab to 
-                                end before Day {simLength}, switch to a 
-                                different trigger condition for reduced 
-                                group size NPIs in the "Vaccinations and 
-                                NPIs" tab, or increase the simulation 
-                                length in the "Initialisation" tab 
-                                before running the simulation.
+                                days, but the reduced group size NPI 
+                                time period for this scenario is set to 
+                                end on Day {reducedGroupPeriod[1] + 1}. 
+                                As such, work groups will still be 
+                                reduced in size when the scenario ends. 
+                                
+                                If this is not desired behaviour, 
+                                please address this error by making one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the end point of the scenario's 
+                                Reduced Group Size Time Period in the 
+                                "Reduced Work Group Size" section of 
+                                the "Vaccinations and NPIs" tab to any 
+                                point before Day {simLength}. 
+                                - Change the scenario's Reduced Group 
+                                Size Trigger Condition in the "Reduced 
+                                Work Group Size" section of the 
+                                "Vaccinations and NPIs" tab to any 
+                                option other than "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {reducedGroupPeriod[1] + 1} 
+                                days or more. 
                             ''')
                             st.session_state[f'reducedGroupPeriodError{id}'] = 1
                         else: st.session_state[f'reducedGroupPeriodError{id}'] = 0
@@ -2909,13 +2925,17 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             'has no effect on' 
                             if baseGroupSize == reducedGroupSize 
                             else 'actually increases'
-                        } work group sizes in this scenario. Please 
-                        either decrease the NPI-affected group size 
-                        above such that it is less than {baseGroupSize} 
-                        people, or increase the standard group size in 
-                        the "Community" tab such that it is more than 
-                        {reducedGroupSize} people before running the 
-                        simulation.
+                        } work group sizes in this scenario. 
+                        
+                        To address this error, please make one of the 
+                        following changes before running the simulation:
+                                
+                        - Decrease the scenario's Reduced Work Group 
+                        Size to any value below {baseGroupSize} people. 
+                        - Increase the scenario's Maximum Work Group 
+                        Size in the "Population Behaviours" section of 
+                        the "Community" tab to any value above 
+                        {reducedGroupSize} people. 
                     ''')
                     globalErrorContainer.error(f'''
                         Error: The reduced work group size during 
@@ -2932,14 +2952,19 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             'has no effect on' 
                             if baseGroupSize == reducedGroupSize 
                             else 'actually increases'
-                        } work group sizes in this scenario. Please 
-                        either decrease the NPI-affected group size 
-                        in the "Vaccinations and NPIs" tab such that it 
-                        is less than {baseGroupSize} people, or 
-                        increase the standard group size in the 
-                        "Community" tab such that it is more than 
-                        {reducedGroupSize} people before running the 
-                        simulation.
+                        } work group sizes in this scenario. 
+                        
+                        To address this error, please make one of the 
+                        following changes before running the simulation:
+                                
+                        - Decrease the scenario's Reduced Work Group 
+                        Size in the "Reduced Work Group Size" section 
+                        of the "Vaccinations and NPIs" tab to any value 
+                        below {baseGroupSize} people. 
+                        - Increase the scenario's Maximum Work Group 
+                        Size in the "Population Behaviours" section of 
+                        the "Community" tab to any value above 
+                        {reducedGroupSize} people. 
                     ''')
                     st.session_state[f'reducedGroupError{id}'] = 2
                 else: st.session_state[f'reducedGroupError{id}'] = 0
@@ -3037,20 +3062,27 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                         st.session_state[f'scenarioName{id}']
                                     }"'
                                 } is currently set to last {simLength} 
-                                days, but the background contact count (BCC) reduction NPI time 
-                                period for this scenario (defined 
-                                above) is set to begin on Day 
-                                {bccPeriod[0] + 1}. As such, 
-                                BCC rates will never be reduced in this 
-                                scenario under these parameters. Please 
-                                either adjust this scenario's BCC 
-                                reduction NPI time period to start and 
-                                end before Day {simLength}, switch to a 
-                                different trigger condition for BCC 
-                                reduction NPIs, or increase the 
-                                simulation length in the 
-                                "Initialisation" tab before running the 
-                                simulation.
+                                days, but the background contact count 
+                                (BCC) reduction NPI time period for 
+                                this scenario (defined above) is set to 
+                                begin on Day {bccPeriod[0] + 1}. As 
+                                such, BCC rates will never be reduced 
+                                in this scenario under these parameters.
+                                
+                                To address this error, please make one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the start point of the 
+                                scenario's BCC Reduction Time Period to 
+                                any point before Day {simLength}. 
+                                - Change the scenario's BCC Reduction 
+                                Trigger Condition to any option other 
+                                than "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {bccPeriod[0] + 1} 
+                                days or more. 
                             ''')
                             globalErrorContainer.error(f'''
                                 Error: The {
@@ -3059,22 +3091,32 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                         st.session_state[f'scenarioName{id}']
                                     }"'
                                 } is currently set to last {simLength} 
-                                days, but the background contact count (BCC) reduction NPI time 
-                                period for this scenario is set to 
-                                begin on Day 
-                                {bccPeriod[0] + 1}. As such, 
-                                BCC rates will never be reduced in this 
-                                scenario under these parameters. Please 
-                                either adjust this scenario's BCC 
-                                reduction NPI time period in the 
-                                "Vaccinations and NPIs" tab to start 
-                                and end before Day {simLength}, switch 
-                                to a different trigger condition for 
-                                BCC reduction NPIs in the 
-                                "Vaccinations and NPIs" tab, or 
-                                increase the simulation length in the 
-                                "Initialisation" tab before running the 
-                                simulation.
+                                days, but the background contact count 
+                                (BCC) reduction NPI time period for 
+                                this scenario is set to begin on Day 
+                                {bccPeriod[0] + 1}. As such, BCC rates 
+                                will never be reduced in this scenario 
+                                under these parameters. 
+                                
+                                To address this error, please make one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the start point of the 
+                                scenario's BCC Reduction Time Period in 
+                                the "Background Contact Count 
+                                Reduction" section of the "Vaccinations 
+                                and NPIs" tab to any point before Day 
+                                {simLength}. 
+                                - Change the scenario's BCC Reduction 
+                                Trigger Condition in the "Background 
+                                Contact Count Reduction" section of the 
+                                "Vaccinations and NPIs" tab to any 
+                                option other than "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {bccPeriod[0] + 1} 
+                                days or more. 
                             ''')
                             st.session_state[
                                 f'bccPeriodError{id}'
@@ -3087,20 +3129,27 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                         st.session_state[f'scenarioName{id}']
                                     }"'
                                 } is currently set to last {simLength} 
-                                days, but the background contact count (BCC) reduction NPI time 
-                                period for this scenario (defined 
-                                above) is set to end on Day 
-                                {bccPeriod[1] + 1}. As such, 
-                                BCC rates will still be reduced when the 
-                                scenario ends. If this is not 
-                                intentional, please either adjust this 
-                                scenario's BCC reduction NPI time 
-                                period to end before Day {simLength}, 
-                                switch to a different trigger condition 
-                                for BCC reduction NPIs, or increase 
-                                the simulation length in the 
-                                "Initialisation" tab before running the 
-                                simulation.
+                                days, but the background contact count 
+                                (BCC) reduction NPI time period for 
+                                this scenario (defined above) is set to 
+                                end on Day {bccPeriod[1] + 1}. As such, 
+                                BCC rates will still be reduced when 
+                                the scenario ends. 
+                                
+                                If this is not desired behaviour, 
+                                please address this error by making one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the end point of the scenario's 
+                                BCC Reduction Time Period to any point 
+                                before Day {simLength}. 
+                                - Change the scenario's BCC Reduction 
+                                Trigger Condition to any option other 
+                                than "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {bccPeriod[1] + 1} days or more. 
                             ''')
                             globalErrorContainer.warning(f'''
                                 Warning: The {
@@ -3109,21 +3158,31 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                         st.session_state[f'scenarioName{id}']
                                     }"'
                                 } is currently set to last {simLength} 
-                                days, but the background contact count (BCC) reduction NPI time 
-                                period for this scenario is set to end 
-                                on Day {bccPeriod[1] + 1}. As 
-                                such, BCC rates will still be reduced when 
-                                the scenario ends. If this is not 
-                                intentional, please either adjust this 
-                                scenario's BCC reduction NPI time 
-                                period in the "Vaccinations and NPIs" 
-                                tab to end before Day {simLength}, 
-                                switch to a different trigger condition 
-                                for BCC reduction NPIs in the 
-                                "Vaccinations and NPIs" tab, or 
-                                increase the simulation length in the 
-                                "Initialisation" tab before running the 
-                                simulation.
+                                days, but the background contact count 
+                                (BCC) reduction NPI time period for 
+                                this scenario is set to end on Day 
+                                {bccPeriod[1] + 1}. As such, BCC rates 
+                                will still be reduced when the scenario 
+                                ends. 
+                                
+                                If this is not desired behaviour, 
+                                please address this error by making one 
+                                of the following changes before running 
+                                the simulation:
+                                
+                                - Move the end point of the scenario's 
+                                BCC Reduction Time Period in the 
+                                "Background Contact Count Reduction" 
+                                section of the "Vaccinations and NPIs" 
+                                tab to any point before Day {simLength}.
+                                - Change the scenario's BCC Reduction 
+                                Trigger Condition in the "Background 
+                                Contact Count Reduction" section of the 
+                                "Vaccinations and NPIs" tab to any 
+                                option other than "Timed".
+                                - Increase the scenario's Length of 
+                                Simulation in the "Initialisation" tab 
+                                to be {bccPeriod[1] + 1} days or more. 
                             ''')
                             st.session_state[f'bccPeriodError{id}'] = 1
                         else: st.session_state[f'bccPeriodError{id}'] = 0
@@ -3185,13 +3244,19 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             'has no effect on' 
                             if baseBCC == bccReducedRate 
                             else 'actually increases'
-                        } BCC in this scenario. Please either decrease 
-                        the NPI-affected BCC above such that it is less 
-                        than {baseBCC} interactions per day, or 
-                        increase the standard BCC in the "Community" 
-                        tab such that it is more than {bccReducedRate} 
-                        interactions per day before running the 
-                        simulation.
+                        } BCC in this scenario. 
+                        
+                        To address this error, please make one of the 
+                        following changes before running the simulation:
+                                
+                        - Decrease the scenario's Reduced Background 
+                        Contact Count to any value below {baseBCC} 
+                        interactions per person per day. 
+                        - Increase the scenario's Background Contact 
+                        Count in the "Population Behaviours" section of 
+                        the "Community" tab to any value above 
+                        {bccReducedRate} interactions per person per 
+                        day. 
                     ''')
                     globalErrorContainer.error(f'''
                         Error: The reduced background contact count 
@@ -3208,13 +3273,21 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             'has no effect on' 
                             if baseBCC == bccReducedRate 
                             else 'actually increases'
-                        } BCC in this scenario. Please either decrease 
-                        the NPI-affected BCC in the "Vaccinations and 
-                        NPIs" tab such that it is less than {baseBCC} 
-                        interactions per day, or increase the standard 
-                        BCC in the "Community" tab such that it is more 
-                        than {bccReducedRate} interactions per day 
-                        before running the simulation.
+                        } BCC in this scenario. 
+                        
+                        To address this error, please make one of the 
+                        following changes before running the simulation:
+                                
+                        - Decrease the scenario's Reduced Background 
+                        Contact Count in the "Background Contact Count 
+                        Reduction" section of the "Vaccinations and 
+                        NPIs" tab to any value below {baseBCC} 
+                        interactions per person per day. 
+                        - Increase the scenario's Background Contact 
+                        Count in the "Population Behaviours" section of 
+                        the "Community" tab to any value above 
+                        {bccReducedRate} interactions per person per 
+                        day. 
                     ''')
                     st.session_state[f'bccError{id}'] = 2
                 else: st.session_state[f'bccError{id}'] = 0
