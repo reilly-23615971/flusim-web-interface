@@ -6,6 +6,7 @@
 import logging
 from datetime import datetime
 import streamlit as st
+import streamlit_notify as stn
 from ClientResources.SharedResources import resultQueue
 
 
@@ -56,7 +57,7 @@ pages = {
 # Use current time (Unix) as session ID so that different simulations 
 # aren't mixed up by the server
 sessionParameters = {
-    'modelData': None, 'simulationInProgress': False, 
+    'modelData': None, 'simulationInProgress': False, 'scenarioCount': 0,
     'outcomeFieldCount': 1, 'sessionID': int(datetime.now().timestamp())
 }
 for parameter, default in sessionParameters.items(): 
@@ -70,7 +71,8 @@ runModelButton = parameterSidebar.button(
     'Run Simulation', on_click = runSimulationButton, key = 'sidebarRunModel'
 )
 """
-
+# Update toasts and the like
+stn.notify(remove = False)
 
 # Initialise and run the application pages
 flusimPages = st.navigation(pages)

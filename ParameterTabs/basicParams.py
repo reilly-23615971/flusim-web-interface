@@ -41,7 +41,7 @@ def buildBasicTab(container, id, globalErrorContainer):
         ''')
 
         # Time Parameters
-        loadKey(f'runCount{id}', 24)
+        loadKey(f'runCount', id, 24)
         st.slider(
             'Number of Simulation Runs', 1, 24, 24, key = f'_runCount{id}', 
             on_change = saveKey, args = [f'runCount{id}'], # type: ignore
@@ -51,7 +51,7 @@ def buildBasicTab(container, id, globalErrorContainer):
                 simulations but more accurate results due to averaging.
             '''
         ) 
-        loadKey(f'cycleCount{id}', 360)
+        loadKey(f'cycleCount', id, 360)
         st.select_slider(
             'Length of Simulation (Days)', range(30, 721), 360, 
             format_func = dayCount, key = f'_cycleCount{id}', 
@@ -61,7 +61,7 @@ def buildBasicTab(container, id, globalErrorContainer):
                 simulation run.
             '''
         )
-        loadKey(f'startDay{id}', 'Monday')
+        loadKey(f'startDay', id, 'Monday')
         st.select_slider(
             'Simulation Starting Day of the Week', (
                 'Monday', 'Tuesday', 'Wednesday', 

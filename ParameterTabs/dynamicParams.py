@@ -94,8 +94,6 @@ def buildDynamicTab(container, id, globalErrorContainer):
         simLength = idGet('cycleCount', id, 360)
 
         # Infection Seeding Rate
-        # TODO: Warn if update point is outside of seeding period (or 
-        # silently adjust seeding period and add zeroes to fix it)
         st.subheader('Infection Seeding Rate')
         # Save relevant parameters as variables to avoid lookups
         seedRowCount = st.session_state[f'seedRowCount{id}']
@@ -108,7 +106,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 seedCycleColumn, seedNewColumn, seedRemoveColumn
             ) = seedContainer.columns((0.4, 0.4, 0.2))
             # Cycle column
-            loadKey(f'seedCycle{id}-{i}', 15)
+            loadKey(f'seedCycle', id, 15, f'-{i}')
             with seedCycleColumn: 
                 seedUpdatePoint = st.select_slider(
                     'Day to Update Parameter', range(720), 
@@ -245,7 +243,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                     firstSeedError = False
                 else: st.session_state[f'seedDynamicError{id}'] = 0
             # New value column
-            loadKey(f'seedNewRate{id}-{i}', 0.25)
+            loadKey(f'seedNewRate', id, 0.25, f'-{i}')
             with seedNewColumn: st.select_slider(
                 'New Value (Average Individuals per Day)', 
                 np.linspace(0.005, 5.0, 1000), 0.25, 
@@ -328,7 +326,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 closeCycleColumn, closeNewColumn, closeRemoveColumn
             ) = closeContainer.columns((0.4, 0.4, 0.2))
             # Cycle column
-            loadKey(f'closeCycle{id}-{i}', 15)
+            loadKey(f'closeCycle', id, 15, f'-{i}')
             with closeCycleColumn: 
                 closeUpdatePoint = st.select_slider(
                     'Day to Update Parameter', range(720), 15, 
@@ -480,7 +478,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                     firstCloseError = False
                 else: st.session_state[f'closeDynamicError{id}'] = 0
             # New value column
-            loadKey(f'closeNewRate{id}-{i}', 0.9)
+            loadKey(f'closeNewRate', id, 0.9, f'-{i}')
             with closeNewColumn: st.select_slider(
                 'New Value (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.9, 
@@ -566,7 +564,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 bccCycleColumn, bccNewColumn, bccRemoveColumn
             ) = bccContainer.columns((0.4, 0.4, 0.2))
             # Cycle column
-            loadKey(f'bccCycle{id}-{i}', 15)
+            loadKey(f'bccCycle', id, 15, f'-{i}')
             with bccCycleColumn: 
                 bccUpdatePoint = st.select_slider(
                     'Day to Update Parameter', range(720), 
@@ -715,7 +713,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 else: st.session_state[f'bccDynamicError{id}'] = 0
 
             # New value column
-            loadKey(f'bccNewRate{id}-{i}', 0.2)
+            loadKey(f'bccNewRate', id, 0.2, f'-{i}')
             with bccNewColumn: st.slider(
                 'New Value (Average Interactions/Person)',
                 0.0, 8.0, 0.2, disabled = not bccActive,

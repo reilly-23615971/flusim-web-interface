@@ -141,7 +141,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
         # Vaccination
         with st.container():
             st.subheader('Vaccination Parameters')
-            loadKey(f'vaccineToggle{id}', True)
+            loadKey(f'vaccineToggle', id, True)
             useVaccinesToggle = st.toggle(
                 'Enable Vaccines in Simulation', value = True, 
                 on_change = saveKey, args = [f'vaccineToggle{id}'], # type: ignore
@@ -165,7 +165,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
                 # Policy parameters
                 with st.container(border = True):
-                    loadKey(f'vaccineTrigger{id}', 'Always')
+                    loadKey(f'vaccineTrigger', id, 'Always')
                     vaccineTrigger = st.selectbox(
                         'Vaccination Trigger Condition', 
                         key = f'_vaccineTrigger{id}', 
@@ -203,7 +203,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     # Show additional parameters based on trigger value
                     # Timed triggers
                     if vaccineTrigger == 'Timed':
-                        loadKey(f'vaccinePeriod{id}', (29, 59))
+                        loadKey(f'vaccinePeriod', id, (29, 59))
                         vaccinePeriod = st.select_slider(
                             'Vaccination Time Period', range(720), (29, 59), 
                             key = f'_vaccinePeriod{id}', 
@@ -375,7 +375,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         there directly).
                     ''')
                 # Other vaccine schedule parameters
-                loadKey(f'limitDosesToggle{id}', False)
+                loadKey(f'limitDosesToggle', id, False)
                 limitDosesToggle = st.toggle(
                     'Enable Limited Number of Vaccine Doses', value = False, 
                     key = f'_limitDosesToggle{id}', on_change = saveKey, 
@@ -389,7 +389,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         simulation.
                     '''
                 )
-                loadKey(f'initialDoseReserve{id}', 0)
+                loadKey(f'initialDoseReserve', id, 0)
                 st.number_input(
                     'Total Number of Vaccine First Doses', 
                     0, key = f'_initialDoseReserve{id}', 
@@ -410,7 +410,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         Number of Vaccine Doses" has been toggled off.
                     '''
                 )
-                loadKey(f'firstDoseRate{id}', 300)
+                loadKey(f'firstDoseRate', id, 300)
                 st.number_input(
                     'First Dose Vaccination Rate (Vaccinations per Day)', 
                     1, value = 300, key = f'_firstDoseRate{id}', 
@@ -422,7 +422,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         assuming there are enough doses available.
                     '''
                 )
-                loadKey(f'initialVaccinated{id}', 0.0)
+                loadKey(f'initialVaccinated', id, 0.0)
                 initialVaccinated = st.select_slider(
                     'Initial Vaccinated Proportion of Population', 
                     np.linspace(0.0, 1.0, 1001), 0.0, 
@@ -435,7 +435,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         the beginning of the simulation.
                     '''
                 )
-                loadKey(f'targetVaccinated{id}', 0.8)
+                loadKey(f'targetVaccinated', id, 0.8)
                 targetVaccinated = st.select_slider(
                     'Target Vaccinated Proportion of Population', 
                     np.linspace(0.0, 1.0, 1001), 0.8, 
@@ -548,9 +548,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
                     # Age group column
                     loadKey(
-                        f'vacAgeGroup{id}-{i}', 
+                        f'vacAgeGroup', id, 
                         vacAgeCurrentGroup if vacAgeCurrentGroup 
-                        else vacAgeRemainingGroups[0]
+                        else vacAgeRemainingGroups[0], f'-{i}'
                     )
                     with vacAgeGroupColumn: vacAgeGroup = st.selectbox(
                         'Age Group', key = f'_vacAgeGroup{id}-{i}', 
@@ -586,7 +586,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         '''
                     )
                     # Initial proportion column
-                    loadKey(f'vacAgeInitial{id}-{i}', 0.0)
+                    loadKey(f'vacAgeInitial', id, 0.0, f'-{i}')
                     with vacAgeInitialColumn: 
                         vacAgeInitials[vacAgeGroup] = st.select_slider(
                             'Initial Vaccinated Proportion of Population', 
@@ -603,7 +603,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             '''
                         )
                     # Target proportion column
-                    loadKey(f'vacAgeTarget{id}-{i}', 0.8)
+                    loadKey(f'vacAgeTarget', id, 0.8, f'-{i}')
                     with vacAgeTargetColumn: 
                         vacAgeTargets[vacAgeGroup] = st.select_slider(
                             'Target Vaccinated Proportion of Population', 
@@ -668,7 +668,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 )
 
                 # Age-based errors if initial proportion is above target
-                for age in vacAgeInitials.values():
+                for age in vacAgeInitials.keys():
                     currentInitial = vacAgeInitials[age] 
                     currentTarget = vacAgeTargets[age]
                     if useVaccinesToggle and currentInitial >= currentTarget: 
@@ -769,7 +769,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 ''')
 
                 # Universal primary parameters
-                loadKey(f'primaryDoseCount{id}', 2)
+                loadKey(f'primaryDoseCount', id, 2)
                 primaryDoseCount = st.slider(
                     'Number of Vaccine Doses', 1, 5, 2, 
                     key = f'_primaryDoseCount{id}', 
@@ -785,7 +785,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         sections used for specifying efficacy below.
                     '''
                 )
-                loadKey(f'primaryDelay{id}', 3)
+                loadKey(f'primaryDelay', id, 3)
                 st.slider(
                     'Time Between Vaccine Doses (Months)', 
                     1, 36, 3, disabled = not useVaccinesToggle, 
@@ -796,7 +796,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         receive another, where a month is 30 days.
                     '''
                 )
-                loadKey(f'primaryDuration{id}', 6)
+                loadKey(f'primaryDuration', id, 6)
                 st.slider(
                     'Vaccine Immunity Waning Delay (Months)', 
                     1, 36, 6, disabled = not useVaccinesToggle, 
@@ -808,7 +808,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         where a month is 30 days.
                     '''
                 )
-                loadKey(f'primaryWanedEfficacy{id}', 0.0)
+                loadKey(f'primaryWanedEfficacy', id, 0.0)
                 primaryWanedEfficacy = st.select_slider(
                     'Dose Efficacy After Immunity Waning (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 0.0, 
@@ -824,7 +824,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         to the disease.
                     '''
                 )
-                loadKey(f'primaryWaningRate{id}', 12)
+                loadKey(f'primaryWaningRate', id, 12)
                 st.slider(
                     'Vaccine Waning Duration (Months)', 
                     0, 36, 12, disabled = not useVaccinesToggle, 
@@ -876,9 +876,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
                     # Age group column
                     loadKey(
-                        f'primWanedGroup{id}-{i}', 
+                        f'primWanedGroup', id, 
                         primWanedCurrentGroup if primWanedCurrentGroup 
-                        else primWanedRemainingGroups[0]
+                        else primWanedRemainingGroups[0], f'-{i}'
                     )
                     with primWanedGroupColumn: primWanedGroup = st.selectbox(
                         'Age Group', key = f'_primWanedGroup{id}-{i}', 
@@ -917,7 +917,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         '''
                     )
                     # Waned efficacy column
-                    loadKey(f'primAgeWanedEfficacy{id}-{i}', 0.0)
+                    loadKey(f'primAgeWanedEfficacy', id, 0.0, f'-{i}')
                     with primWanedEffColumn: 
                         primAgeWaneds[primWanedGroup] = st.select_slider(
                             ((
@@ -1002,7 +1002,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     doseEfficacyContainer.markdown(
                         f'#### {ordinals[i+1]} Vaccine Dose'
                     )
-                    loadKey(f'primaryBaseEfficacy{id}-{i}', 0.5)
+                    loadKey(f'primaryBaseEfficacy', id, 0.5, f'-{i}')
                     baseDoseEfficacy = doseEfficacyContainer.select_slider(
                         'Initial Dose Efficacy (Probability)', 
                         np.linspace(0.0, 1.0, 1001), 0.5, 
@@ -1124,9 +1124,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         )
                         # Age group column
                         loadKey(
-                            f'primAgeGroup{id}-{i}-{j}', 
+                            f'primAgeGroup', id, 
                             primAgeCurrentGroup if primAgeCurrentGroup 
-                            else primAgeRemainingGroups[0]
+                            else primAgeRemainingGroups[0], f'-{i}-{j}'
                         )
                         with primAgeGroupColumn: primAgeGroup = st.selectbox(
                             'Age Group', key = f'_primAgeGroup{id}-{i}-{j}', 
@@ -1166,7 +1166,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             '''
                         )
                         # Initial efficacy column
-                        loadKey(f'primAgeEfficacy{id}-{i}-{j}', 0.5)
+                        loadKey(f'primAgeEfficacy', id, 0.5, f'-{i}-{j}')
                         with primAgeEfficacyColumn: 
                             ageInitialEfficacy = st.select_slider(
                                 'Initial Dose Efficacy (Probability)',
@@ -1406,7 +1406,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 ''')
 
                 # Universal booster parameters
-                loadKey(f'boosterToggle{id}', True)
+                loadKey(f'boosterToggle', id, True)
                 useBoostersToggle = st.toggle(
                     'Enable Booster Vaccines', value = True, 
                     key = f'_boosterToggle{id}', on_change = saveKey, 
@@ -1417,7 +1417,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         other booster-related parameters.
                     '''
                 )
-                loadKey(f'boosterDoseCount{id}', 3)
+                loadKey(f'boosterDoseCount', id, 3)
                 st.slider(
                     'Number of Booster Doses', 
                     1, 10, 3, key = f'_boosterDoseCount{id}',
@@ -1429,7 +1429,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         vaccine.
                     '''
                 )
-                loadKey(f'boosterDelay{id}', 3)
+                loadKey(f'boosterDelay', id, 3)
                 boosterDelay = st.slider(
                     'Time Between Booster Doses (Months)', 1, 36, 3,
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
@@ -1440,7 +1440,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         to receive another, where a month is 30 days.
                     '''
                 )
-                loadKey(f'boosterDuration{id}', 2)
+                loadKey(f'boosterDuration', id, 2)
                 st.slider(
                     'Booster Immunity Waning Delay (Months)', 1, 36, 2,
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
@@ -1452,7 +1452,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         where a month is 30 days.
                     '''
                 )
-                loadKey(f'boosterBaseEfficacy{id}', 0.9)
+                loadKey(f'boosterBaseEfficacy', id, 0.9)
                 boosterBaseEfficacy = st.select_slider(
                     'Initial Booster Efficacy (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 0.9, 
@@ -1467,7 +1467,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         disease.
                     '''
                 )
-                loadKey(f'boosterWanedEfficacy{id}', 0.6)
+                loadKey(f'boosterWanedEfficacy', id, 0.6)
                 boosterWanedEfficacy = st.select_slider(
                     'Booster Efficacy After Immunity Waning (Probability)',
                     np.linspace(0.0, 1.0, 1001), 0.6, 
@@ -1549,7 +1549,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     st.session_state[f'baseBoostEfficacyError{id}'] = 2
                 else: st.session_state[f'baseBoostEfficacyError{id}'] = 0
 
-                loadKey(f'boosterWaningRate{id}', 6)
+                loadKey(f'boosterWaningRate', id, 6)
                 st.slider(
                     'Booster Waning Duration (Months)', 0, 36, 6,
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
@@ -1601,9 +1601,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     )
                     # Age group column
                     loadKey(
-                        f'boostAgeGroup{id}-{i}', 
+                        f'boostAgeGroup', id, 
                         boostAgeCurrentGroup if boostAgeCurrentGroup 
-                        else boostAgeRemainingGroups[0]
+                        else boostAgeRemainingGroups[0], f'-{i}'
                     )
                     with boostAgeGroupColumn: boostAgeGroup = st.selectbox(
                         # Set age group options such that only ages 
@@ -1642,7 +1642,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         '''
                     )
                     # Standard efficacy column
-                    loadKey(f'boostAgeEfficacy{id}-{i}', 0.9)
+                    loadKey(f'boostAgeEfficacy', id, 0.9, f'-{i}')
                     with boostAgeEfficacyColumn: 
                         boostAgeInitials[boostAgeGroup] = st.select_slider(
                             'Initial Booster Efficacy (Probability)', 
@@ -1662,7 +1662,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             '''
                         )
                     # Waned efficacy column
-                    loadKey(f'boostAgeWanedEfficacy{id}-{i}', 0.6)
+                    loadKey(f'boostAgeWanedEfficacy', id, 0.6, f'-{i}')
                     with boostAgeWanedColumn: 
                         boostAgeWaneds[boostAgeGroup] = st.select_slider(
                             ((
@@ -1736,12 +1736,12 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 )
 
                 # Age-based errors if waned efficacy is above initial
-                for age in boostAgeInitials.values():
+                for age in boostAgeInitials.keys():
                     currentInitial = boostAgeInitials[age] 
                     currentWaned = boostAgeWaneds[age]
                     if (
                         useVaccinesToggle and useBoostersToggle 
-                        and currentInitial > currentWaned
+                        and currentInitial < currentWaned
                     ): 
                         boostAgeErrorContainer.error(f'''
                             Error: The initial booster vaccine efficacy 
@@ -1843,7 +1843,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 ''')
 
                 # Social distancing
-                loadKey(f'socialDistancingToggle{id}', True)
+                loadKey(f'socialDistancingToggle', id, True)
                 useSocialDistancingToggle = st.toggle(
                     'Enable Social Distancing', value = True, 
                     on_change = saveKey, 
@@ -1855,7 +1855,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         parameters.
                     '''
                 )
-                loadKey(f'socialDistancingCompliance{id}', 0.9)
+                loadKey(f'socialDistancingCompliance', id, 0.9)
                 socialDistancingCompliance = st.select_slider(
                     'Social Distancing Compliance (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 0.9, 
@@ -1895,9 +1895,9 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
 
                     # Age group column
                     loadKey(
-                        f'socialAgeGroup{id}-{i}', 
+                        f'socialAgeGroup', id, 
                         socialCurrentGroup if socialCurrentGroup 
-                        else socialRemainingGroups[0]
+                        else socialRemainingGroups[0], f'-{i}'
                     )
                     with socialGroupColumn: st.selectbox(
                         'Age Group', key = f'_socialAgeGroup{id}-{i}', 
@@ -1935,7 +1935,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         '''
                     )
                     # Compliance column
-                    loadKey(f'socialCompliance{id}-{i}', 0.9)
+                    loadKey(f'socialCompliance', id, 0.9, f'-{i}')
                     with socialComplianceColumn: st.select_slider(
                         'Social Distancing Compliance (Probability)', 
                         np.linspace(0.0, 1.0, 1001), 0.9, 
@@ -1995,7 +1995,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 )
 
                 # Case Isolation
-                loadKey(f'caseIsolation{id}', True)
+                loadKey(f'caseIsolation', id, True)
                 st.toggle(
                     'Enable Case Isolation', value = True, 
                     on_change = saveKey, args = [f'caseIsolation{id}'], # type: ignore
@@ -2007,7 +2007,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 )
 
                 # Class Dismissal
-                loadKey(f'classDismissal{id}', False)
+                loadKey(f'classDismissal', id, False)
                 classDismissal = st.toggle(
                     'Enable Class Dismissal', value = False, 
                     on_change = saveKey, args = [f'classDismissal{id}'], # type: ignore
@@ -2042,7 +2042,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     These parameters control if and when schools will 
                     close as a result of the disease.
                 ''')
-                loadKey(f'schoolClosureToggle{id}', True)
+                loadKey(f'schoolClosureToggle', id, True)
                 useSchoolClosureToggle = st.toggle(
                     'Enable School Closures', value = True, 
                     on_change = saveKey, 
@@ -2057,7 +2057,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 
                 # School closure triggers
                 with st.container(border = True):
-                    loadKey(f'schoolClosureTrigger{id}', 'Always')
+                    loadKey(f'schoolClosureTrigger', id, 'Always')
                     schoolClosureTrigger = st.selectbox(
                         'School Closure Trigger Condition', 
                         key = f'_schoolClosureTrigger{id}', 
@@ -2108,7 +2108,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     # Show additional parameters based on trigger value
                     # Timed triggers
                     if schoolClosureTrigger == 'Timed':
-                        loadKey(f'schoolClosurePeriod{id}', (29, 59))
+                        loadKey(f'schoolClosurePeriod', id, (29, 59))
                         schoolClosurePeriod = st.select_slider(
                             'School Closure Time Period', range(720), 
                             (29, 59), key = f'_schoolClosurePeriod{id}', 
@@ -2292,7 +2292,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     ''')
                 
                 # School types and compliance
-                loadKey(f'schoolClosureTypes{id}', ['K-12'])
+                loadKey(f'schoolClosureTypes', id, ['K-12'])
                 schoolClosureTypes = st.segmented_control(
                     'Types of School to Close', 
                     ('Childcare', 'K-12', 'Tertiary'), 
@@ -2313,7 +2313,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     '''
                 )
                 schoolTypeErrorContainer = st.empty()
-                loadKey(f'schoolClosureCompliance{id}', 0.9)
+                loadKey(f'schoolClosureCompliance', id, 0.9)
                 st.select_slider(
                     'School Closure Compliance (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 0.9, 
@@ -2380,7 +2380,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     is not active can be configured in the "Withdrawals 
                     and Diagnosis" section of the "Community" tab.
                 ''')
-                loadKey(f'withdrawalIncreaseToggle{id}', True)
+                loadKey(f'withdrawalIncreaseToggle', id, True)
                 useWithdrawalIncreaseToggle = st.toggle(
                     'Enable Withdrawal Increases', value = True, 
                     on_change = saveKey, 
@@ -2394,7 +2394,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 )
                 
                 # Withdrawal increase triggers
-                loadKey(f'withdrawalIncreaseTrigger{id}', 'Always')
+                loadKey(f'withdrawalIncreaseTrigger', id, 'Always')
                 with st.container(border = True):
                     withdrawalIncreaseTrigger = st.selectbox(
                         'Withdrawal Increase Trigger Condition', 
@@ -2435,7 +2435,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     # Show additional parameters based on trigger value
                     # Timed triggers
                     if withdrawalIncreaseTrigger == 'Timed':
-                        loadKey(f'withdrawalIncreasePeriod{id}', (29, 59))
+                        loadKey(f'withdrawalIncreasePeriod', id, (29, 59))
                         withdrawalIncreasePeriod = st.select_slider(
                             'Withdrawal Increase Time Period', range(720), 
                             (29, 59), key = f'_withdrawalIncreasePeriod{id}', 
@@ -2623,7 +2623,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         ''')
                 
                 # Increased withdrawal
-                loadKey(f'withdrawalIncreaseAdult{id}', 0.9)
+                loadKey(f'withdrawalIncreaseAdult', id, 0.9)
                 withdrawalIncreaseAdult = st.select_slider(
                     'Adult Increased Withdrawal Rate (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 0.9, 
@@ -2640,7 +2640,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     '''
                 )
                 adultWithdrawalErrorContainer = st.empty()
-                loadKey(f'withdrawalIncreaseChild{id}', 1.0)
+                loadKey(f'withdrawalIncreaseChild', id, 1.0)
                 withdrawalIncreaseChild = st.select_slider(
                     'Child Increased Withdrawal Rate (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 1.0, 
@@ -2807,7 +2807,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     is not active can be configured in the "Population 
                     Behaviours" section of the "Community" tab.
                 ''')
-                loadKey(f'reducedGroupToggle{id}', True)
+                loadKey(f'reducedGroupToggle', id, True)
                 useReducedGroupToggle = st.toggle(
                     'Enable Group Size Reductions', value = True, 
                     on_change = saveKey, args = [f'reducedGroupToggle{id}'], # type: ignore
@@ -2820,7 +2820,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 )
                 
                 # Reduced workgroup triggers
-                loadKey(f'reducedGroupTrigger{id}', 'Always')
+                loadKey(f'reducedGroupTrigger', id, 'Always')
                 with st.container(border = True):
                     reducedGroupTrigger = st.selectbox(
                         'Reduced Group Size Trigger Condition', 
@@ -2860,7 +2860,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     # Show additional parameters based on trigger value
                     # Timed triggers
                     if reducedGroupTrigger == 'Timed':
-                        loadKey(f'reducedGroupPeriod{id}', (29, 59))
+                        loadKey(f'reducedGroupPeriod', id, (29, 59))
                         reducedGroupPeriod = st.select_slider(
                             'Reduced Group Size Time Period', range(720), 
                             (29, 59), key = f'_reducedGroupPeriod{id}', 
@@ -3041,7 +3041,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         ''')
                 
                 # Reduced group size
-                loadKey(f'reducedGroupSize{id}', 5)
+                loadKey(f'reducedGroupSize', id, 5)
                 reducedGroupSize = st.slider(
                     'Reduced Work Group Size (Number of People)', 0, 25, 5, 
                     disabled = not useReducedGroupToggle, on_change = saveKey, 
@@ -3133,7 +3133,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     "Population Behaviours" section of the "Community" 
                     tab.
                 ''')
-                loadKey(f'bccToggle{id}', True)
+                loadKey(f'bccToggle', id, True)
                 useBCCToggle = st.toggle(
                     'Enable BCC Reduction', value = True, on_change = saveKey, 
                     args = [f'bccToggle{id}'], # type: ignore
@@ -3146,7 +3146,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 )
                 
                 # BCC triggers
-                loadKey(f'bccTrigger{id}', 'Always')
+                loadKey(f'bccTrigger', id, 'Always')
                 with st.container(border = True):
                     bccTrigger = st.selectbox(
                         'BCC Reduction Trigger Condition', 
@@ -3187,7 +3187,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     # Show additional parameters based on trigger value
                     # Timed triggers
                     if bccTrigger == 'Timed':
-                        loadKey(f'bccPeriod{id}', (29, 59))
+                        loadKey(f'bccPeriod', id, (29, 59))
                         bccPeriod = st.select_slider(
                             'BCC Reduction Time Period', range(720), 
                             (29, 59), key = f'_bccPeriod{id}', 
@@ -3362,7 +3362,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     ''')
                 
                 # Reduced BCC rate
-                loadKey(f'bccReducedRate{id}', 0.2)
+                loadKey(f'bccReducedRate', id, 0.2)
                 bccReducedRate = st.slider(
                     ((
                         'Reduced Background Contact Count (Average '
@@ -3525,7 +3525,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     )
 
                     # Set rate thresholds
-                    loadKey(f'rateStartThreshold{id}', 10)
+                    loadKey(f'rateStartThreshold', id, 10)
                     rateStartThreshold = st.slider(
                         'Start Trigger Threshold Rate (Cases per Day)', 0, 
                         100, 10, key = f'_rateStartThreshold{id}', 
@@ -3539,7 +3539,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             exceeds this value.
                         '''
                     )
-                    loadKey(f'rateRelaxThreshold{id}', 5)
+                    loadKey(f'rateRelaxThreshold', id, 5)
                     rateRelaxThreshold = st.slider(
                         'Relaxation Trigger Threshold Rate (Cases per Day)', 0,
                         100, 5, key = f'_rateRelaxThreshold{id}', 
@@ -3636,7 +3636,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     )
 
                     # Set total threshold
-                    loadKey(f'caseTotalThreshold{id}', 1000)
+                    loadKey(f'caseTotalThreshold', id, 1000)
                     caseTotalThreshold = st.number_input(
                         'Start Trigger Case Threshold (Total Community Cases)', 
                         0, 300000, 1000, key = f'_caseTotalThreshold{id}', 

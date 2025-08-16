@@ -3,15 +3,17 @@
 # Functions used to make requests to the server for running the simulation
 
 # Imports
+import time
 import asyncio
 import logging
 import threading
 from aiohttp import ClientSession
 import streamlit as st
+import streamlit_notify as stn
 from ClientResources.ModelSchema import (
     Parameters, modelGuideFile, overrideParams, simulationSet, simulation
 )
-from ClientResources.InterfaceFunctions import formatEpidemic
+from ClientResources.InterfaceFunctions import formatEpidemic, checkErrors
 from ClientResources.SharedResources import (
     serverUrl, resultQueue
 )
@@ -56,6 +58,81 @@ def createConfig():
             ]
         )]
     )
+
+"""
+Callback function for the Run Simulation button
+"""
+@st.dialog('Run Simulation')
+def runSimulationButton():
+    scenarioCount = st.session_state.get('scenarioCount', 0)
+    errors = [checkErrors(id) for id in range(scenarioCount + 1)]
+    if max((max(e) for e in errors)) >= 2: st.error(f'''
+        There are errors with the parameters that have currently been 
+        selected for the following scenarios:
+                                                      
+        {'\n'.join(
+            f'''
+                - {
+                    st.session_state[f'scenarioName{id}'] 
+                    if id > 0 else 'Baseline'
+                } ({errors[id].count(2)} errors)
+            ''' 
+            for id in range(scenarioCount + 1) if max(errors[id]) >= 2
+        )}                            
+        
+        Please correct these errors by modifying the corresponding 
+        parameters to valid values before running the simulation.
+    ''')
+    else:
+        scenarioNumber = st.session_state.get('scenarioCount', 0)
+        # TODO: More detailed estimated time breakdown
+        st.markdown(f'''
+            With the current parameters, this simulation will use the 
+            "{
+                st.session_state.get('community', 'newcastle').capitalize()
+            }" community data, {
+                'with only a single baseline scenario.' 
+                if not scenarioNumber 
+                else f'''
+                    with the following {scenarioNumber + 1} scenarios:
+                    
+                    - Baseline\n{'\n'.join(
+                        f'- {st.session_state[f'scenarioName{id}']}' 
+                        for id in range(1, scenarioNumber)
+                    )}
+                '''
+            }
+        ''')
+        if max((max(e) for e in errors)) >= 1: st.warning(f'''
+            There are minor issues with the parameters that have 
+            currently been selected for the following scenarios:
+                                                      
+            {'\n'.join(
+                f'''
+                    - {
+                        st.session_state[f'scenarioName{id}'] 
+                        if id > 0 else 'Baseline'
+                    } ({errors[id].count(1)} issues)
+                ''' 
+                for id in range(scenarioCount + 1) if max(errors[id]) >= 1
+            )}                            
+        
+            Please make sure that these issues do not interfere with 
+            your intended simulation design before running the 
+            simulation.
+        ''')
+        st.markdown('''
+            Are you sure you want to run the simulation with the 
+            selected parameters?
+        ''')
+        if st.button('Run Simulation'):
+            st.session_state.simulationInProgress = True
+            st.session_state.simulationStartTime = time.time()
+            runModelWrapper()
+            # TODO: Inform user if server doesn't respond
+            stn.toast('Sending a request to run the simulation...')
+            st.rerun()
+            
 
 
 
@@ -143,6 +220,7 @@ def runModelWrapper():
             formattedData = asyncio.run(runModel())
             resultQueue.put(formattedData)
         except Exception as e:
+            # TODO: Inform the user of server errors (make toasts?)
             functionLog.error(f'[runner] Encountered {type(e).__name__}: {e}')
             raise e
     st.session_state.simulationInProgress = True

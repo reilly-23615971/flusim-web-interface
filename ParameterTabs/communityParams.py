@@ -93,7 +93,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
             ''')
 
             # Health Burden Outcomes
-            loadKey(f'caseRatio{id}', 0.5)
+            loadKey(f'caseRatio', id, 0.5)
             st.select_slider(
                 'Diagnosed Case Rate (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.5, key = f'_caseRatio{id}', 
@@ -104,7 +104,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     confirmed case of the disease.
                 '''
             )
-            loadKey(f'gpRatio{id}', 0.333)
+            loadKey(f'gpRatio', id, 0.333)
             st.select_slider(
                 'GP Visit Rate (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.333, key = f'_gpRatio{id}', 
@@ -115,7 +115,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     (GP) as a result of the disease.
                 '''
             )
-            loadKey(f'hospitalRatio{id}', 0.25)
+            loadKey(f'hospitalRatio', id, 0.25)
             st.select_slider(
                 'Hospitalisation Rate (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.25, key = f'_hospitalRatio{id}',
@@ -126,7 +126,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     result of the disease.
                 '''
             )
-            loadKey(f'icuRatio{id}', 0.1)
+            loadKey(f'icuRatio', id, 0.1)
             st.select_slider(
                 'ICU Visit Rate (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.1, key = f'_icuRatio{id}', 
@@ -138,7 +138,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     disease.
                 '''
             )
-            loadKey(f'deathRatio{id}', 0.05)
+            loadKey(f'deathRatio', id, 0.05)
             deathRate = st.select_slider(
                 'Mortality Rate (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.05, key = f'_deathRatio{id}', 
@@ -174,9 +174,9 @@ def buildCommunityTab(container, id, globalErrorContainer):
 
                 # Age group column
                 loadKey(
-                    f'deathAgeGroup{id}-{i}', 
+                    f'deathAgeGroup', id, 
                     deathCurrentGroup if deathCurrentGroup 
-                    else deathRemainingGroups[0]
+                    else deathRemainingGroups[0], f'-{i}'
                 )
                 with deathGroupColumn: st.selectbox(
                     'Age Group', key = f'_deathAgeGroup{id}-{i}', 
@@ -208,7 +208,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     '''
                 )
                 # Mortality column
-                loadKey(f'deathRatio{id}-{i}', 0.05)
+                loadKey(f'deathRatio', id, 0.05, f'-{i}')
                 with deathRateColumn: st.select_slider(
                     'Mortality Rate (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 0.05, 
@@ -277,7 +277,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
             ''')
 
             # The parameters in question
-            loadKey(f'withdrawalWork{id}', 0.5)
+            loadKey(f'withdrawalWork', id, 0.5)
             st.select_slider(
                 'Work Withdrawal Rate (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.5, 
@@ -289,7 +289,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     becoming symptomatic.
                 '''
             )
-            loadKey(f'withdrawalSchool{id}', 0.9)
+            loadKey(f'withdrawalSchool', id, 0.9)
             st.select_slider(
                 'School Withdrawal Rate (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.9, 
@@ -301,7 +301,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     after becoming symptomatic.
                 '''
             )
-            loadKey(f'diagnosisDelay{id}', 1)
+            loadKey(f'diagnosisDelay', id, 1)
             st.select_slider(
                 'Case Diagnosis Delay (Days)', range(15), 1, 
                 on_change = saveKey, args = [f'diagnosisDelay{id}'], # type: ignore
@@ -326,7 +326,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
             ''')
 
             # BCC and Child Supervision
-            loadKey(f'bccRate{id}', 4.0)
+            loadKey(f'bccRate', id, 4.0)
             st.slider(
                 ((
                     'Background Contact Count (Average '
@@ -342,7 +342,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     model.
                 '''
             )
-            loadKey(f'childSupervision{id}', 1.0)
+            loadKey(f'childSupervision', id, 1.0)
             st.select_slider(
                 'Child Supervision Rate (Probability)',
                 np.linspace(0.0, 1.0, 1001), 1.0, 
@@ -354,7 +354,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     one child present and no other adults are at home.
                 '''
             )
-            loadKey(f'maxClassCount{id}', 1)
+            loadKey(f'maxClassCount', id, 1)
             st.slider(
                 'Number of School Class Subgroups', 1, 5, 1, 
                 on_change = saveKey, args = [f'maxClassCount{id}'], # type: ignore
@@ -369,7 +369,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
 
             # Group Sizes
             st.subheader('Group Size Parameters')
-            loadKey(f'maxClassSize{id}', 10)
+            loadKey(f'maxClassSize', id, 10)
             st.slider(
                 'Maximum School Class Size (Number of People)', 
                 0, 25, 10, key = f'_maxClassSize{id}', on_change = saveKey, 
@@ -379,7 +379,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     schools and childcare facilities in the simulation.
                 '''
             )
-            loadKey(f'maxAdultClassSize{id}', 10)
+            loadKey(f'maxAdultClassSize', id, 10)
             st.slider(
                 'Maximum Tertiary Class Size (Number of People)', 
                 0, 25, 10, key = f'_maxAdultClassSize{id}', 
@@ -390,7 +390,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     simulation.
                 '''
             )
-            loadKey(f'maxWorkGroupSize{id}', 10)
+            loadKey(f'maxWorkGroupSize', id, 10)
             st.slider(
                 'Maximum Work Group Size (Number of People)', 
                 0, 25, 10, key = f'_maxWorkGroupSize{id}', 
@@ -400,7 +400,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     simulation.
                 '''
             )
-            loadKey(f'maxNeighborGroupSize{id}', 10)
+            loadKey(f'maxNeighborGroupSize', id, 10)
             st.slider(
                 'Maximum Neighbour Group Size (Number of People)', 
                 0, 25, 10, key = f'_maxNeighborGroupSize{id}', 
@@ -410,7 +410,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     the simulation.
                 '''
             )
-            loadKey(f'maxChurchGroupSize{id}', 10)
+            loadKey(f'maxChurchGroupSize', id, 10)
             st.slider(
                 'Maximum Church Group Size (Number of People)', 
                 0, 25, 10, key = f'_maxChurchGroupSize{id}', 

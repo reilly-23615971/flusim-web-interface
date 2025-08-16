@@ -26,13 +26,8 @@ def saveKey(key):  st.session_state[key] = st.session_state['_' + key]
 """
 Function to update widgets with permanent session state vars
 """
-def loadKey(key, default): 
-    st.session_state['_' + key] = st.session_state.get(key, default)
-
-"""
-Simple function to convert an integer into a string describing a number of days
-"""
-def dayCount(count): return '1 Day' if count == 1 else f'{count} Days'
+def loadKey(key, id, default, extra = ''): 
+    st.session_state[f'_{key}{id}{extra}'] = idGet(key, id, default, extra)
 
 """
 Simple function to get a specific session state value with a specific 
@@ -47,10 +42,22 @@ Parameters:
 
     defaultValue: What to return if neither the specified ID nor 0 give 
     a value in session state.
+
+    extra: An additional part of the ID that isn't used for scenario chicanery
 """
-def idGet(string, id, defaultValue): return st.session_state.get(
-    f'{string}{id}', st.session_state.get(f'{string}0', defaultValue)
-)
+def idGet(string, id, defaultValue, extra = None): 
+    if not extra: return st.session_state.get(
+        f'{string}{id}', st.session_state.get(f'{string}0', defaultValue)
+    )
+    else: return st.session_state.get(
+        f'{string}{id}{extra}', 
+        st.session_state.get(f'{string}0{extra}', defaultValue)
+    )
+
+"""
+Simple function to convert an integer into a string describing a number of days
+"""
+def dayCount(count): return '1 Day' if count == 1 else f'{count} Days'
 
 """
 Function to update what parameters are selectable for different 
@@ -135,6 +142,26 @@ def deleteFormRow(deletedRowIndex, rowCounter, inputPrefixes, minRows = 0):
         f'{input}{numberOfRows - 1}'
     ]
     st.session_state[rowCounter] -= 1
+
+"""
+Function to check if any errors are present in the parameters
+"""
+
+def checkErrors(id): return [
+    st.session_state.get(error, 0) for error in (
+        f'seedPeriodError{id}', f'seedDynamicError{id}', 
+        f'closeDynamicError{id}', f'bccDynamicError{id}', 
+        f'baseVacPropError{id}', f'ageVacPropError{id}', 
+        f'basePrimEfficacyError{id}', f'agePrimEfficacyError{id}', 
+        f'baseBoostEfficacyError{id}', f'ageBoostEfficacyError{id}', 
+        f'schoolTypeError{id}', f'adultWithdrawalError{id}', 
+        f'childWithdrawalError{id}', f'reducedGroupError{id}', 
+        f'bccError{id}', f'triggerRateError{id}', f'triggerTotalError{id}',
+        f'vaccinePeriodError{id}', f'schoolClosurePeriodError{id}', 
+        f'withdrawalIncreasePeriodError{id}', f'reducedGroupPeriodError{id}',
+        f'bccPeriodError{id}'
+    )
+]
 
 """
 Function to convert raw data from the 'epidemic' Flusim analysis tool
