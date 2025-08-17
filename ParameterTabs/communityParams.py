@@ -8,7 +8,8 @@ import numpy as np
 import streamlit as st
 from pydantic import ValidationError
 from ClientResources.InterfaceFunctions import (
-    saveKey, loadKey, getRemainingGroups, addFormRow, deleteFormRow, dayCount
+    saveKey, loadKey, idGet, getRemainingGroups, 
+    addFormRow, deleteFormRow, dayCount
 )
 from ClientResources.SharedResources import ageCategories
 from ClientResources.ModelSchema import (
@@ -451,9 +452,8 @@ def communitySchema(schema, id = 0):
             if schema.Scenario_ParameterWithAgePrefix 
             else ageScenarioParameters()
         )
-        ageScenarioParams.mort = st.session_state[
-            f'deathRatio{id}'
-        ]
+        deathRate = idGet('deathRatio', id, 0.05)
+        ageScenarioParams.mort = deathRate
         schema.Scenario_ParameterWithAgePrefix = ageScenarioParams
 
         # Scenario Parameters
@@ -461,44 +461,34 @@ def communitySchema(schema, id = 0):
             schema.Scenario_Parameter if schema.Scenario_Parameter 
             else scenarioParameters()
         )
-        scenarioParams.prob_diagnosis = st.session_state[f'caseRatio{id}']
-        scenarioParams.prob_hospitalisation = st.session_state[
-            f'hospitalRatio{id}'
-        ]
-        scenarioParams.prob_withdrawal = st.session_state[
-            f'withdrawalWork{id}'
-        ]
-        scenarioParams.prob_school_withdrawal = st.session_state[
-            f'withdrawalSchool{id}'
-        ]
-        scenarioParams.diagnosis_delay = (
-            st.session_state[f'diagnosisDelay{id}'] * 2
+        scenarioParams.prob_diagnosis = idGet('caseRatio', id, 0.5)
+        scenarioParams.prob_hospitalisation = idGet('hospitalRatio', id, 0.25)
+        scenarioParams.prob_withdrawal = idGet('withdrawalWork', id, 0.5)
+        scenarioParams.prob_school_withdrawal = idGet(
+            'withdrawalSchool', id, 0.9
         )
-        scenarioParams.background_contact_count = st.session_state[
-            f'bccRate{id}'
-        ]
-        scenarioParams.prob_child_supervision = st.session_state[
-            f'childSupervision{id}'
-        ]
-        scenarioParams.max_class_count = st.session_state[f'maxClassCount{id}']
-        scenarioParams.max_class_size = st.session_state[f'maxClassSize{id}']
-        scenarioParams.max_adult_class_size = st.session_state[
-            f'maxAdultClassSize{id}'
-        ]
-        scenarioParams.max_workgroup_size = st.session_state[
-            f'maxWorkGroupSize{id}'
-        ]
-        scenarioParams.max_neighbourgroup_size = st.session_state[
-            f'maxNeighborGroupSize{id}'
-        ]
-        scenarioParams.max_churchgroup_size = st.session_state[
-            f'maxChurchGroupSize{id}'
-        ]
+        scenarioParams.diagnosis_delay = (idGet('diagnosisDelay', id, 1) * 2)
+        scenarioParams.background_contact_count = idGet('bccRate', id, 4.0)
+        scenarioParams.prob_child_supervision = idGet(
+            'childSupervision', id, 1.0
+        )
+        scenarioParams.max_class_count = idGet('maxClassCount', id, 1)
+        scenarioParams.max_class_size = idGet('maxClassSize', id, 10)
+        scenarioParams.max_adult_class_size = idGet(
+            'maxAdultClassSize', id, 10
+        )
+        scenarioParams.max_workgroup_size = idGet('maxWorkGroupSize', id, 10)
+        scenarioParams.max_neighbourgroup_size = idGet(
+            'maxNeighborGroupSize', id, 10
+        )
+        scenarioParams.max_churchgroup_size = idGet(
+            'maxChurchGroupSize', id, 10
+        )
         # Procedural Scenario Parameters (age specific)
         for i in range(st.session_state[f'deathRowCount{id}']): setattr(
             scenarioParams, f'{ageCategories[
                 st.session_state[f'deathAgeGroup{id}-{i}']
-            ]}_mort', st.session_state[f'deathRatio{id}-{i}']
+            ]}_mort', idGet('deathRatio', id, deathRate, f'-{i}')
         )
         # Save the updated params
         schema.Scenario_Parameter = scenarioParams

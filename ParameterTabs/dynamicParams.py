@@ -801,16 +801,20 @@ def dynamicSchema(schema, id = 0):
 
         # Scenario Dynamic Intervention
         dynamicChanges = []
-        for prefix in ('seed', 'close', 'bcc'):
+        for prefix, default in {
+            'seed': idGet('seedRate', id, 0.25), 
+            'close': idGet('schoolClosureCompliance', id, 0.9), 
+            'bcc': idGet('bccReducedRate', id, 0.2)
+        }.items():
             for i in range(st.session_state[f'{prefix}RowCount{id}']): 
                 dynamicChanges.append(dynamicIntervention(
-                    Name = paramCast(prefix), CycleOffset = st.session_state[
-                        f'{prefix}Cycle{id}-{i}'
-                    ] * 2, 
-                    NewValue = st.session_state[f'{prefix}NewRate{id}-{i}']
+                    Name = paramCast(prefix), CycleOffset = idGet(
+                        f'{prefix}Cycle', id, 15, f'-{i}'
+                    ) * 2, 
+                    NewValue = idGet(f'{prefix}NewRate', id, default, f'-{i}')
                 ))
         # Save the updated parameters
-        schema.Scenario_DynamicIntervention = dynamicChanges
+        if dynamicChanges: schema.Scenario_DynamicIntervention = dynamicChanges
     except (ValueError, ValidationError) as e:
         dynamicLog.error((
             f'[dynamicParams] Encountered {type(e).__name__} '

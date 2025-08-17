@@ -138,5 +138,5 @@ buildVaccinationNPITab(interventionTab, 0, alertContainer)
 buildDynamicTab(dynamicTab, 0, alertContainer)
 
 # TODO: Debug
-st.header('DEBUG ZONE')
-st.write(st.session_state)
+#st.header('DEBUG ZONE')
+#st.write(st.session_state)

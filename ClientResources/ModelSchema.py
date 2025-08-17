@@ -1213,17 +1213,17 @@ class Parameters(BaseModel):
             'Parameters passed to the simulation on the command line.'
         )
     )
-    Scenario_Parameter: Optional[scenarioParameters] = Field(
-        title = 'Scenario Parameters', default = None, description = ((
-            'General model parameters that will populate the '
-            'Scenario_Parameter table used by the simulation.'
-        ))
-    )
     Scenario_ParameterWithAgePrefix: Optional[ageScenarioParameters] = Field(
         title = 'Age-Based Scenario Parameters', default = None, 
         description = ((
             'Parameters that will have unique values defined '
             'for each possible age category in the simulation.'
+        ))
+    )
+    Scenario_Parameter: Optional[scenarioParameters] = Field(
+        title = 'Scenario Parameters', default = None, description = ((
+            'General model parameters that will populate the '
+            'Scenario_Parameter table used by the simulation.'
         ))
     )
     # Note that the rest of the parameters are defined as lists of their

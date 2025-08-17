@@ -51,7 +51,9 @@ def createConfig():
         description = (
             'A set of simulations configured using the Flusim Web Dashboard.'
         ),
-        community_used = [st.session_state.community], 
+        output_folder = './results/',
+        middle_joint = '-web-app',
+        community_used = [st.session_state.get('community', 'newcastle')], 
         shared_overrides = overrideParams(parameters = scenarioParams[0]),
         simulation_sets = [simulationSet(
             name = 'Dashboard Simulation Set', 
@@ -70,7 +72,7 @@ def createConfig():
     # TODO: DEBUG: Save config as file to check validity
     with open('modelConfig.guide.json', 'w') as f: f.write(
         configFile.model_dump_json(
-            indent = 4, exclude_unset = True, exclude_defaults = True
+            indent = 4, exclude_unset = True#, exclude_defaults = True
         )
     )
 
@@ -101,7 +103,6 @@ def runSimulationButton():
         parameters to valid values before running the simulation.
     ''')
     else:
-        scenarioNumber = st.session_state.get('scenarioCount', 0)
         # TODO: More detailed estimated time breakdown
         st.markdown(f'''
             With the current parameters, this simulation will use the 
@@ -109,13 +110,13 @@ def runSimulationButton():
                 st.session_state.get('community', 'newcastle').capitalize()
             }" community data, {
                 'with only a single baseline scenario.' 
-                if not scenarioNumber 
+                if not scenarioCount 
                 else f'''
-                    with the following {scenarioNumber + 1} scenarios:
+                    with the following {scenarioCount + 1} scenarios:
                     
                     - Baseline\n{'\n'.join(
                         f'- {st.session_state[f'scenarioName{id}']}' 
-                        for id in range(1, scenarioNumber)
+                        for id in range(1, scenarioCount + 1)
                     )}
                 '''
             }

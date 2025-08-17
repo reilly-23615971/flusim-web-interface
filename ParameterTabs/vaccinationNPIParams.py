@@ -3752,18 +3752,21 @@ def vaccineSchema(schema, id = 0):
         )
 
         # Load reused parameters immediately to save time
-        vaccineToggle = st.session_state[f'vaccineToggle{id}']
-        boosterToggle = st.session_state[f'boosterToggle{id}']
-        socialDistanceToggle = st.session_state[f'socialDistancingToggle{id}']
+        vaccineToggle = idGet('vaccineToggle', id, True)
+        boosterToggle = idGet('boosterToggle', id, True)
+        socialDistanceToggle = idGet('socialDistancingToggle', id, True)
 
         ageNames = list(ageCategories.keys())
-        primDoseCount = st.session_state[f'primaryDoseCount{id}']
-        primBaseEfficacy = [st.session_state[
-            f'primaryBaseEfficacy{id}-{i}'
-        ] for i in range(primDoseCount)]
-        primWanedEfficacy = st.session_state[f'primaryWanedEfficacy{id}']
-        boostBaseEfficacy = st.session_state[f'boosterBaseEfficacy{id}']
-        boostWanedEfficacy = st.session_state[f'boosterWanedEfficacy{id}']
+        primDoseCount = idGet('primaryDoseCount', id, 2)
+        primBaseEfficacy = [idGet(
+            'primaryBaseEfficacy', id, 0.5, f'-{i}'
+        ) for i in range(primDoseCount)]
+        primWanedEfficacy = idGet('primaryWanedEfficacy', id, 0.0)
+        boostBaseEfficacy = idGet('boosterBaseEfficacy', id, 0.9)
+        boostWanedEfficacy = idGet('boosterWanedEfficacy', id, 0.6)
+        initialProportion = idGet('initialVaccinated', id, 0.0)
+        targetProportion = idGet('targetVaccinated', id, 0.8)
+        socialCompliance = idGet('socialDistancingCompliance', id, 0.9)
 
 
             
@@ -3771,32 +3774,33 @@ def vaccineSchema(schema, id = 0):
         if vaccineToggle: 
             # Scenario Vaccine Coverage
             schema.Scenario_VaccineCoverage = [vaccineCoverage(
-                Age = None, 
-                Initial = st.session_state[f'initialVaccinated{id}'], 
-                Target = st.session_state[f'targetVaccinated{id}']
+                Age = None, Initial = initialProportion, 
+                Target = targetProportion
             )] + [vaccineCoverage(
                 Age = ageCast(st.session_state[f'vacAgeGroup{id}-{i}']),
-                Initial = st.session_state[f'vacAgeInitial{id}-{i}'],
-                Target = st.session_state[f'vacAgeTarget{id}-{i}']
+                Initial = idGet(
+                    'vacAgeInitial', id, initialProportion, f'-{i}'
+                ),
+                Target = idGet('vacAgeTarget', id, targetProportion, f'-{i}')
             ) for i in range(st.session_state[f'vacAgeRowCount{id}'])]
 
             # Scenario Vaccine Dose
             doseParams = [vaccineDose(
                 DoseType = 'primary', Count = primDoseCount,
-                DoseSpacingCycles = st.session_state[f'primaryDelay{id}'] * 60,
-                WaningDelay = st.session_state[f'primaryDuration{id}'] * 60,
+                DoseSpacingCycles = idGet('primaryDelay', id, 3) * 60,
+                WaningDelay = idGet('primaryDuration', id, 6) * 60,
                 WaningRatePerCycle = (
                     primBaseEfficacy[-1] - primWanedEfficacy
-                ) / (st.session_state[f'primaryWaningRate{id}'] * 60)
+                ) / (idGet('primaryWaningRate', id, 12) * 60)
             )]
             if boosterToggle: doseParams += [vaccineDose(
                 DoseType = 'booster', 
-                Count = st.session_state[f'boosterDoseCount{id}'],
-                DoseSpacingCycles = st.session_state[f'boosterDelay{id}'] * 60,
-                WaningDelay = st.session_state[f'boosterDuration{id}'] * 60,
+                Count = idGet('boosterDoseCount', id, 3),
+                DoseSpacingCycles = idGet('boosterDelay', id, 3) * 60,
+                WaningDelay = idGet('boosterDuration', id, 2) * 60,
                 WaningRatePerCycle = (
                     boostBaseEfficacy - boostWanedEfficacy
-                ) / (st.session_state[f'boosterWaningRate{id}'] * 60)
+                ) / (idGet('boosterWaningRate', id, 6) * 60)
             )]
             schema.Scenario_VaccineDose = doseParams
         
@@ -3813,7 +3817,9 @@ def vaccineSchema(schema, id = 0):
                 for j in range(st.session_state[f'primAgeRowCount{id}-{i}']):
                     primAgeEfficacies[
                         st.session_state[f'primAgeGroup{id}-{i}-{j}']
-                    ][i] = st.session_state[f'primAgeEfficacy{id}-{i}-{j}']
+                    ][i] = idGet(
+                        'primAgeEfficacy', id, primBaseEfficacy[i], f'-{i}-{j}'
+                    )
             agePrimEfficacyParams = [vaccineEfficacy(
                 DoseType = 'primary', Age = ageCast(age),
                 Efficacy = primAgeEfficacies[age], 
@@ -3822,9 +3828,9 @@ def vaccineSchema(schema, id = 0):
             for i in range(st.session_state[f'primWanedRowCount{id}']):
                 agePrimEfficacyParams[
                     ageNames.index(st.session_state[f'primWanedGroup{id}-{i}'])
-                ].WanedEfficacy = st.session_state[
-                    f'primAgeWanedEfficacy{id}-{i}'
-                ]
+                ].WanedEfficacy = idGet(
+                    'primAgeWanedEfficacy', id, primWanedEfficacy, f'-{i}'
+                )
             efficacyParams += agePrimEfficacyParams
             # Booster Efficacy Values
             if boosterToggle: efficacyParams += [vaccineEfficacy(
@@ -3833,10 +3839,12 @@ def vaccineSchema(schema, id = 0):
             )] + [vaccineEfficacy(
                 DoseType = 'booster', 
                 Age = ageCast(st.session_state[f'boostAgeGroup{id}-{i}']), 
-                Efficacy = st.session_state[f'boostAgeEfficacy{id}-{i}'],
-                WanedEfficacy = st.session_state[
-                    f'boostAgeWanedEfficacy{id}-{i}'
-                ]
+                Efficacy = idGet(
+                    'boostAgeEfficacy', id, boostBaseEfficacy, f'-{i}'
+                ),
+                WanedEfficacy = idGet(
+                    'boostAgeWanedEfficacy', id, boostWanedEfficacy, f'-{i}'
+                )
             ) for i in range(st.session_state[f'boostAgeRowCount{id}'])]
             # All together
             schema.Scenario_VaccineDoseEfficacy = efficacyParams
@@ -3847,9 +3855,9 @@ def vaccineSchema(schema, id = 0):
             if schema.Scenario_ParameterWithAgePrefix 
             else ageScenarioParameters()
         )
-        ageScenarioParams.social_distance = st.session_state[
-            f'socialDistancingCompliance{id}'
-        ] if socialDistanceToggle else 0.0
+        ageScenarioParams.social_distance = idGet(
+            'socialDistancingCompliance', id, 0.9
+        ) if socialDistanceToggle else 0.0
         schema.Scenario_ParameterWithAgePrefix = ageScenarioParams
         
         # Scenario Parameters
@@ -3859,13 +3867,13 @@ def vaccineSchema(schema, id = 0):
         )
         # Vaccination
         if vaccineToggle:
-            scenarioParams.vaccine_doses = st.session_state[
-                f'initialDoseReserve{id}'
-            ] if st.session_state[f'limitDosesToggle{id}'] else 999999
-            scenarioParams.vaccination_first_dose_rate = st.session_state[
-                f'firstDoseRate{id}'
-            ]
-            vaccineTrigger = st.session_state[f'vaccineTrigger{id}']
+            scenarioParams.vaccine_doses = idGet(
+                'initialDoseReserve', id, 0
+             ) if idGet('limitDosesToggle', id, False) else 999999
+            scenarioParams.vaccination_first_dose_rate = idGet(
+                'firstDoseRate', id, 300
+            )
+            vaccineTrigger = idGet('vaccineTrigger', id, 'Always')
             scenarioParams.vaccination_trigger = trigCast(vaccineTrigger)
             scenarioParams.vaccination_relaxation = trigCast(vaccineTrigger)
             if vaccineTrigger == 'Always':
@@ -3873,24 +3881,24 @@ def vaccineSchema(schema, id = 0):
                 scenarioParams.vaccination_duration = 999999
             elif vaccineTrigger == 'Timed':
                 vaccinePeriod = [
-                    i * 2 for i in st.session_state[f'vaccinePeriod{id}']
+                    i * 2 for i in idGet('vaccinePeriod', id, (29, 59))
                 ]
                 scenarioParams.vaccination_delay = vaccinePeriod[0]
                 scenarioParams.vaccination_duration = (
                     vaccinePeriod[1] - vaccinePeriod[0]
                 )
         # School Closure
-        if st.session_state[f'schoolClosureToggle{id}']:
-            scenarioParams.school_closure_compliance = st.session_state[
-                f'schoolClosureCompliance{id}'
-            ]
-            closedSchoolTypes = st.session_state[f'schoolClosureTypes{id}']
+        if idGet('schoolClosureToggle', id, True):
+            scenarioParams.school_closure_compliance = idGet(
+                'schoolClosureCompliance', id, 0.9
+            )
+            closedSchoolTypes = idGet('schoolClosureTypes', id, ['K-12'])
             scenarioParams.close_childcare = 'Childcare' in closedSchoolTypes
             scenarioParams.close_child_education = 'K-12' in closedSchoolTypes
             scenarioParams.close_adult_education = (
                 'Tertiary' in closedSchoolTypes
             )
-            schoolTrigger = st.session_state[f'schoolClosureTrigger{id}']
+            schoolTrigger = idGet('schoolClosureTrigger', id, 'Always')
             scenarioParams.school_closure_trigger = trigCast(schoolTrigger)
             scenarioParams.school_closure_relaxation = trigCast(schoolTrigger)
             if schoolTrigger == 'Always':
@@ -3898,23 +3906,23 @@ def vaccineSchema(schema, id = 0):
                 scenarioParams.school_closure_duration = 999999
             elif schoolTrigger == 'Timed':
                 schoolPeriod = [
-                    i * 2 for i in st.session_state[f'schoolClosurePeriod{id}']
+                    i * 2 for i in idGet('schoolClosurePeriod', id, (29, 59))
                 ]
                 scenarioParams.school_closure_delay = schoolPeriod[0]
                 scenarioParams.school_closure_duration = (
                     schoolPeriod[1] - schoolPeriod[0]
                 )
         # Withdrawal Increase
-        if st.session_state[f'withdrawalIncreaseToggle{id}']:    
-            scenarioParams.increased_withdrawal = st.session_state[
-                f'withdrawalIncreaseAdult{id}'
-            ]
-            scenarioParams.increased_withdrawal_child = st.session_state[
-                f'withdrawalIncreaseChild{id}'
-            ]
-            withdrawalTrigger = st.session_state[
-                f'withdrawalIncreaseTrigger{id}'
-            ]
+        if idGet('withdrawalIncreaseToggle', id, True):    
+            scenarioParams.increased_withdrawal = idGet(
+                'withdrawalIncreaseAdult', id, 0.9
+            )
+            scenarioParams.increased_withdrawal_child = idGet(
+                'withdrawalIncreaseChild', id, 1.0
+            )
+            withdrawalTrigger = idGet(
+                'withdrawalIncreaseTrigger', id, 'Always'
+            )
             scenarioParams.withdrawal_increase_trigger = trigCast(
                 withdrawalTrigger
             )
@@ -3925,19 +3933,21 @@ def vaccineSchema(schema, id = 0):
                 scenarioParams.withdrawal_increase_delay = 0
                 scenarioParams.withdrawal_increase_duration = 999999
             elif withdrawalTrigger == 'Timed':
-                withdrawalPeriod = [i * 2 for i in st.session_state[
-                    f'withdrawalIncreasePeriod{id}'
-                ]]
+                withdrawalPeriod = [i * 2 for i in idGet(
+                    'withdrawalIncreasePeriod', id, (29, 59)
+                )]
                 scenarioParams.withdrawal_increase_delay = withdrawalPeriod[0]
                 scenarioParams.withdrawal_increase_duration = (
                     withdrawalPeriod[1] - withdrawalPeriod[0]
                 )
         # Reduced Group Size
-        if st.session_state[f'reducedGroupToggle{id}']: 
-            scenarioParams.reduced_workgroup_size = st.session_state[
-                f'reducedGroupSize{id}'
-            ]
-            reducedGroupTrigger = st.session_state[f'reducedGroupTrigger{id}']
+        if idGet('reducedGroupToggle', id, True): 
+            scenarioParams.reduced_workgroup_size = idGet(
+                'reducedGroupSize', id, 5
+            )
+            reducedGroupTrigger = idGet(
+                'reducedGroupTrigger{id}', id, 'Always'
+            )
             scenarioParams.reduced_workgroup_trigger = trigCast(
                 reducedGroupTrigger
             )
@@ -3949,55 +3959,49 @@ def vaccineSchema(schema, id = 0):
                 scenarioParams.reduced_workgroup_duration = 999999
             elif reducedGroupTrigger == 'Timed':
                 reducedGroupPeriod = [
-                    i * 2 for i in st.session_state[f'reducedGroupPeriod{id}']
+                    i * 2 for i in idGet('reducedGroupPeriod', id, (29, 59))
                 ]
                 scenarioParams.reduced_workgroup_delay = reducedGroupPeriod[0]
                 scenarioParams.reduced_workgroup_duration = (
                     reducedGroupPeriod[1] - reducedGroupPeriod[0]
                 )
         # BCC Reduction
-        if st.session_state[f'bccToggle{id}']:
-            scenarioParams.bcc_reduction = st.session_state[
-                f'bccReducedRate{id}'
-            ]
-            bccTrigger = st.session_state[f'bccTrigger{id}']
+        if idGet('bccToggle', id, True):
+            scenarioParams.bcc_reduction = idGet('bccReducedRate', id, 0.2)
+            bccTrigger = idGet('bccTrigger', id, 'Always')
             scenarioParams.bcc_reduction_trigger = trigCast(bccTrigger)
             scenarioParams.bcc_reduction_relaxation = trigCast(bccTrigger)
             if bccTrigger == 'Always':
                 scenarioParams.bcc_reduction_delay = 0
                 scenarioParams.bcc_reduction_duration = 999999
             elif bccTrigger == 'Timed':
-                bccPeriod = [i * 2 for i in st.session_state[f'bccPeriod{id}']]
+                bccPeriod = [i * 2 for i in idGet('bccPeriod', id, (29, 59))]
                 scenarioParams.bcc_reduction_delay = bccPeriod[0]
                 scenarioParams.bcc_reduction_duration = (
                     bccPeriod[1] - bccPeriod[0]
                 )
         # Other NPIs
         if socialDistanceToggle:
-            scenarioParams.social_distance_compliance = st.session_state[
-                f'socialDistancingCompliance{id}'
-            ]
+            scenarioParams.social_distance_compliance = socialCompliance
             for i in range(st.session_state[f'socialRowCount{id}']): setattr(
                 scenarioParams, f'{ageCategories[
                     st.session_state[f'socialAgeGroup{id}-{i}']
                 ]}_social_distance', 
-                st.session_state[f'socialCompliance{id}-{i}']
+                idGet('socialCompliance', id, socialCompliance, f'-{i}')
             )
-        scenarioParams.diagnosed_case_isolation = st.session_state[
-            f'caseIsolation{id}'
-        ]
-        scenarioParams.class_dismissal = st.session_state[
-            f'classDismissal{id}'
-        ]
+        scenarioParams.diagnosed_case_isolation = idGet(
+            'caseIsolation', id, True
+        )
+        scenarioParams.class_dismissal = idGet('classDismissal', id, False)
         # Triggers
-        scenarioParams.case_trigger_threshold = st.session_state.get(
-            f'caseTotalThreshold{id}', 1
+        scenarioParams.case_trigger_threshold = idGet(
+            'caseTotalThreshold', id, 1000
         )
-        scenarioParams.rate_trigger_threshold = st.session_state.get(
-            f'rateStartThreshold{id}', 1
+        scenarioParams.rate_trigger_threshold = idGet(
+            'rateStartThreshold', id, 10
         )
-        scenarioParams.rate_relaxation_threshold = st.session_state.get(
-            f'rateRelaxThreshold{id}', 1
+        scenarioParams.rate_relaxation_threshold = idGet(
+            'rateRelaxThreshold', id, 5
         )
         scenarioParams.maximum_trigger_count = 250
         # Save the updated parameters

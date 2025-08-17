@@ -6,7 +6,9 @@
 import logging
 import streamlit as st
 from pydantic import ValidationError
-from ClientResources.InterfaceFunctions import saveKey, loadKey, dayCount
+from ClientResources.InterfaceFunctions import (
+    saveKey, loadKey, idGet, dayCount
+)
 from ClientResources.ModelSchema import (
     Parameters, scenarioParameters, commandArgument
 )
@@ -101,8 +103,8 @@ def basicSchema(schema, id = 0):
 
         # Command Arguments
         schema.Command_Argument = commandArgument(
-            n_runs = st.session_state[f'runCount{id}'], 
-            n_cycles = st.session_state[f'cycleCount{id}'] * 2
+            n_runs = idGet('runCount', id, 24), 
+            n_cycles = idGet('cycleCount', id, 360) * 2
         )
 
         # Scenario Parameters
@@ -110,7 +112,10 @@ def basicSchema(schema, id = 0):
             schema.Scenario_Parameter if schema.Scenario_Parameter 
             else scenarioParameters()
         )
-        scenarioParams.start_day_of_week = st.session_state[f'startDay{id}']
+        scenarioParams.start_day_of_week = (
+            'Monday', 'Tuesday', 'Wednesday', 
+            'Thursday', 'Friday', 'Saturday', 'Sunday'
+        ).index(idGet('startDay', id, 'Monday'))
         schema.Scenario_Parameter = scenarioParams
     except (ValueError, ValidationError) as e:
         basicLog.error((

@@ -188,7 +188,7 @@ for id in range(1, scenarioCount + 1):
         loadKey(f'scenarioName', id, f'Scenario #{id}')
         scenarioName = st.text_input(
             'Name of Scenario', f'Scenario #{id}', max_chars = 50, 
-            key = f'scenarioName{id}', autocomplete = 'off', 
+            key = f'_scenarioName{id}', autocomplete = 'off', 
             on_change = saveKey, args = [f'scenarioName{id}'], # type: ignore
             placeholder = 'Enter a name for this scenario', help = '''
                 The name to give to this scenario, which will display 
