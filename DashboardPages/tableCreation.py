@@ -9,7 +9,8 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
-from ClientResources.InterfaceFunctions import saveKey, loadKey, formatAsir
+from ClientResources.InterfaceFunctions import saveKey, loadKey
+from ClientResources.VisualisationFunctions import formatAsir
 from ClientResources.SharedResources import outcomeAdjectives, tableOutcomes
 
 # Page Functions

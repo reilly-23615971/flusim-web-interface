@@ -9,7 +9,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
-from ClientResources.InterfaceFunctions import (
+from ClientResources.VisualisationFunctions import (
     formatEpidemic, formatAsir, plotEpidemic
 )
 

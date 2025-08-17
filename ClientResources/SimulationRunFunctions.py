@@ -10,10 +10,16 @@ import threading
 from aiohttp import ClientSession
 import streamlit as st
 import streamlit_notify as stn
+from ParameterTabs.basicParams import basicSchema
+from ParameterTabs.diseaseParams import diseaseSchema
+from ParameterTabs.communityParams import communitySchema
+from ParameterTabs.vaccinationNPIParams import vaccineSchema
+from ParameterTabs.dynamicParams import dynamicSchema
 from ClientResources.ModelSchema import (
     Parameters, modelGuideFile, overrideParams, simulationSet, simulation
 )
-from ClientResources.InterfaceFunctions import formatEpidemic, checkErrors
+from ClientResources.InterfaceFunctions import checkErrors
+from ClientResources.VisualisationFunctions import formatEpidemic
 from ClientResources.SharedResources import (
     serverUrl, resultQueue
 )
@@ -22,42 +28,53 @@ from ClientResources.SharedResources import (
 functionLog = logging.getLogger(__name__)
 
 """
-Function to generate a JSON config file using the parameters set by the user
+Function to generate a JSON config file using the selected parameters
 """
-# Keep in mind that cycles are zero-indexed and each one is only half a 
-# day! Double or subtract one from days if necessary
 def createConfig():
-    # TODO: Properly check how many scenarios there are
-    scenarioCount = 0
-    scenarioNames = []
-
+    # Check number of extra scenarios
+    scenarioCount = st.session_state['scenarioCount'] + 1
 
     # Set up schema objects
-    baselineParams = Parameters()
     scenarioParams = [Parameters() for _ in range(scenarioCount)]
 
-    # TODO: Populate parameters with session_state values
+    # Populate parameters with session_state values
+    for id, scenario in enumerate(scenarioParams):
+        basicSchema(scenario, id)
+        diseaseSchema(scenario, id)
+        communitySchema(scenario, id)
+        vaccineSchema(scenario, id)
+        dynamicSchema(scenario, id)
 
     # Create config object
-    return modelGuideFile(
+    configFile = modelGuideFile(
         name = 'Flusim Dashboard Simulation',
         description = (
             'A set of simulations configured using the Flusim Web Dashboard.'
         ),
         community_used = [st.session_state.community], 
-        shared_overrides = overrideParams(parameters = baselineParams),
+        shared_overrides = overrideParams(parameters = scenarioParams[0]),
         simulation_sets = [simulationSet(
             name = 'Dashboard Simulation Set', 
             version = st.session_state.sessionID,
             simulations = [simulation(name = 'Baseline')] + [
                 simulation(
-                    name = scenarioNames[i], override_setting = overrideParams(
+                    name = st.session_state[f'scenarioName{i}'], 
+                    override_setting = overrideParams(
                         parameters = scenarioParams[i]
                     )
-                ) for i in range(scenarioCount)
+                ) for i in range(1, scenarioCount)
             ]
         )]
+    ) 
+
+    # TODO: DEBUG: Save config as file to check validity
+    with open('modelConfig.guide.json', 'w') as f: f.write(
+        configFile.model_dump_json(
+            indent = 4, exclude_unset = True, exclude_defaults = True
+        )
     )
+
+    return configFile
 
 """
 Callback function for the Run Simulation button
@@ -126,15 +143,18 @@ def runSimulationButton():
             selected parameters?
         ''')
         if st.button('Run Simulation'):
+            # Set params indicating model is simulating
             st.session_state.simulationInProgress = True
             st.session_state.simulationStartTime = time.time()
+
+            # Make the model call
+            createConfig()
             runModelWrapper()
             # TODO: Inform user if server doesn't respond
+
+            # Reset page to close popup
             stn.toast('Sending a request to run the simulation...')
             st.rerun()
-            
-
-
 
 """
 Function to send JSON model parameters to the server, awaiting a 
