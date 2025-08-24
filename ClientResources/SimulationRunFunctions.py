@@ -46,13 +46,12 @@ def createConfig():
         dynamicSchema(scenario, id)
 
     # Create config object
-    configFile = modelGuideFile(
+    return modelGuideFile(
         name = 'Flusim Dashboard Simulation',
-        description = (
-            'A set of simulations configured using the Flusim Web Dashboard.'
-        ),
+        description = str(st.session_state.sessionID),
         output_folder = './results/',
-        middle_joint = '-web-app',
+        # TODO: Use middle joint to telegraph what toolbox data to get
+        middle_joint = '-usingEpidemic',
         community_used = [st.session_state.get('community', 'newcastle')], 
         shared_overrides = overrideParams(parameters = scenarioParams[0]),
         simulation_sets = [simulationSet(
@@ -67,16 +66,7 @@ def createConfig():
                 ) for i in range(1, scenarioCount)
             ]
         )]
-    ) 
-
-    # TODO: DEBUG: Save config as file to check validity
-    with open('modelConfig.guide.json', 'w') as f: f.write(
-        configFile.model_dump_json(
-            indent = 4, exclude_unset = True#, exclude_defaults = True
-        )
     )
-
-    return configFile
 
 """
 Callback function for the Run Simulation button
@@ -149,7 +139,6 @@ def runSimulationButton():
             st.session_state.simulationStartTime = time.time()
 
             # Make the model call
-            createConfig()
             runModelWrapper()
             # TODO: Inform user if server doesn't respond
 
@@ -167,8 +156,9 @@ async def runModel():
         # TODO: Error handling
 
         # For testing use this default simulation JSON instead of parameters
-        parameterJSON = {
+        """parameterJSON = {
             "name": "Simple Test",
+            description = "2184"
             "output_folder": "./results/",
             "middle_joint": "-coronaV",
             "community_used": ["newcastle"],
@@ -177,13 +167,7 @@ async def runModel():
                 "parameters": {
                     "Command_Argument": {"n_runs": 24,"n_cycles": 720},
                     "Scenario_Strain": [{"StrainId": 0,"Beta": 0.11}]
-                }
-            },
-            "override_templates": [{
-                "name": "test_1",
-                "parameters": {
                     "Scenario_Parameter": {
-                        "seed_rate": 0.125,
                         "school_closure_trigger": "timed",
                         "school_closure_compliance": 0.5,
                         "school_closure_delay": 28,
@@ -194,16 +178,30 @@ async def runModel():
                         "work_nonattendance_delay": 28
                     }
                 }
+            },
+            "override_templates": [{
+                "name": "test_1",
+                "parameters": {
+                    "Scenario_Parameter": {
+                        "seed_rate": 1.5
+                    }
+                }
             }],
             "simulation_sets": [{
                 "name": "test_set_1",
                 "version": 230,
                 "simulations": [
-                    {"name": "test_sim_1","apply_template": ["test_1"]},
+                    {"name": "test_sim_1"},
                     {"name": "test_sim_2","apply_template": ["test_1"]}
                 ]
             }]
-        }
+        }"""
+        parameterJSON = createConfig().model_dump_json(
+            indent = 4, exclude_unset = True#, exclude_defaults = True
+        )
+
+        # TODO: Decide on what data must be gathered
+        dataForms = ['epidemic']
         
         # Send POST request to server with parameters
         # TODO: Return to idea of single client sessions; see if it 
@@ -230,7 +228,7 @@ async def runModel():
         raise e
 
 """
-Wrapper function for runModel, allowing HTTP requests to be made 
+Async wrapper function for runModel, allowing HTTP requests to be made 
 asynchronously without blocking Streamlit operations
 """
 def runModelWrapper():

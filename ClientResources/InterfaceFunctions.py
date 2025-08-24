@@ -14,7 +14,14 @@ functionLog = logging.getLogger(__name__)
 """
 Function to save widget values into permanent session state vars
 """
-def saveKey(key):  st.session_state[key] = st.session_state['_' + key]
+def saveKey(key, id, extra = None): 
+    keyString = f'{key}{id}{extra}' if extra else f'{key}{id}'
+    st.session_state[keyString] = st.session_state[f'_{keyString}']
+    if id != 0:
+        if extra: st.session_state['scenarioSetParamsExtra'][id].append(
+            (key, extra)
+        )
+        else: st.session_state['scenarioSetParams'][id].append(key)
 
 """
 Function to update widgets with permanent session state vars

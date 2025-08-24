@@ -111,7 +111,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 seedUpdatePoint = st.select_slider(
                     'Day to Update Parameter', range(720), 
                     15, key = f'_seedCycle{id}-{i}', 
-                    on_change = saveKey, args = [f'seedCycle{id}-{i}'], # type: ignore
+                    on_change = saveKey, args = [f'seedCycle', id, f'-{i}'], # type: ignore
                     format_func = lambda x: f'Day {x + 1}', help = '''
                         The day of the simulation upon which the new 
                         value for infection seeding rate will come into 
@@ -248,7 +248,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 'New Value (Average Individuals per Day)', 
                 np.linspace(0.005, 5.0, 1000), 0.25, 
                 key = f'_seedNewRate{id}-{i}', 
-                on_change = saveKey, args = [f'seedNewRate{id}-{i}'], # type: ignore
+                on_change = saveKey, args = [f'seedNewRate', id, f'-{i}'], # type: ignore
                 format_func = lambda x: f'{x:0.4g}', help = '''
                     The average number of individuals that will be 
                     infected directly via infection seeding each cycle 
@@ -331,7 +331,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 closeUpdatePoint = st.select_slider(
                     'Day to Update Parameter', range(720), 15, 
                     key = f'_closeCycle{id}-{i}', disabled = not closeActive, 
-                    on_change = saveKey, args = [f'closeCycle{id}-{i}'], # type: ignore
+                    on_change = saveKey, args = [f'closeCycle', id, f'-{i}'], # type: ignore
                     format_func = lambda x: f'Day {x + 1}', help = '''
                         The day of the simulation upon which the new 
                         value for school closure compliance will come 
@@ -483,7 +483,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 'New Value (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.9, 
                 key = f'_closeNewRate{id}-{i}', disabled = not closeActive, 
-                on_change = saveKey, args = [f'closeNewRate{id}-{i}'], # type: ignore
+                on_change = saveKey, args = [f'closeNewRate', id, f'-{i}'], # type: ignore
                 format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                     The probability that an individual will withdraw 
                     from schools when they are closed after the 
@@ -569,7 +569,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 bccUpdatePoint = st.select_slider(
                     'Day to Update Parameter', range(720), 
                     15, key = f'_bccCycle{id}-{i}', disabled = not bccActive, 
-                    on_change = saveKey, args = [f'bccCycle{id}-{i}'], # type: ignore
+                    on_change = saveKey, args = [f'bccCycle', id, f'-{i}'], # type: ignore
                     format_func = lambda x: f'Day {x + 1}', help = '''
                         The day of the simulation upon which the new value 
                         for reduced background contact count will come into 
@@ -717,7 +717,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
             with bccNewColumn: st.slider(
                 'New Value (Average Interactions/Person)',
                 0.0, 8.0, 0.2, disabled = not bccActive,
-                on_change = saveKey, args = [f'bccNewRate{id}-{i}'], # type: ignore
+                on_change = saveKey, args = [f'bccNewRate', id, f'-{i}'], # type: ignore
                 key = f'_bccNewRate{id}-{i}', help = '''
                     The average number of other people each individual 
                     will interact with in the background phase of the 

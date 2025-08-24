@@ -98,7 +98,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
             st.select_slider(
                 'Diagnosed Case Rate (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.5, key = f'_caseRatio{id}', 
-                on_change = saveKey, args = [f'caseRatio{id}'], # type: ignore
+                on_change = saveKey, args = [f'caseRatio', id], # type: ignore
                 format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                     The probability that an infected, symptomatic 
                     individual will be formally diagnosed as a 
@@ -109,7 +109,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
             st.select_slider(
                 'GP Visit Rate (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.333, key = f'_gpRatio{id}', 
-                on_change = saveKey, args = [f'gpRatio{id}'], # type: ignore
+                on_change = saveKey, args = [f'gpRatio', id], # type: ignore
                 format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                     The probability that an infected, symptomatic 
                     individual will visit their general practitioner 
@@ -120,7 +120,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
             st.select_slider(
                 'Hospitalisation Rate (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.25, key = f'_hospitalRatio{id}',
-                on_change = saveKey, args = [f'hospitalRatio{id}'], # type: ignore
+                on_change = saveKey, args = [f'hospitalRatio', id], # type: ignore
                 format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                     The probability that an infected, symptomatic 
                     individual will be admitted to a hospital as a 
@@ -131,7 +131,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
             st.select_slider(
                 'ICU Visit Rate (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.1, key = f'_icuRatio{id}', 
-                on_change = saveKey, args = [f'icuRatio{id}'], # type: ignore
+                on_change = saveKey, args = [f'icuRatio', id], # type: ignore
                 format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                     The probability that an infected, symptomatic 
                     individual will be admitted to a hospital's 
@@ -143,7 +143,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
             deathRate = st.select_slider(
                 'Mortality Rate (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.05, key = f'_deathRatio{id}', 
-                on_change = saveKey, args = [f'deathRatio{id}'], # type: ignore
+                on_change = saveKey, args = [f'deathRatio', id], # type: ignore
                 format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                     The base probability that an infected, symptomatic 
                     individual will die as a direct result of the 
@@ -189,7 +189,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                             if group != deathCurrentGroup
                         ] if deathCurrentGroup else deathRemainingGroups
                     ), 
-                    on_change = saveKey, args = [f'deathAgeGroup{id}-{i}'], # type: ignore
+                    on_change = saveKey, args = [f'deathAgeGroup', id, f'-{i}'], # type: ignore
                     disabled = not deathRowCount < 10, help = '''
                         An age group that will have specific mortality 
                         rates defined for it, overriding the base 
@@ -214,7 +214,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     'Mortality Rate (Probability)', 
                     np.linspace(0.0, 1.0, 1001), 0.05, 
                     key = f'_deathRatio{id}-{i}', 
-                    on_change = saveKey, args = [f'deathRatio{id}-{i}'], # type: ignore
+                    on_change = saveKey, args = [f'deathRatio', id, f'-{i}'], # type: ignore
                     format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                         The probability that an infected, symptomatic 
                         individual in this age group will die as a 
@@ -283,7 +283,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                 'Work Withdrawal Rate (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.5, 
                 format_func = lambda x: f'{100 * x:0.3g}%',
-                on_change = saveKey, args = [f'withdrawalWork{id}'], # type: ignore
+                on_change = saveKey, args = [f'withdrawalWork', id], # type: ignore
                 key = f'_withdrawalWork{id}', help = '''
                     The probability of an infected individual in the 
                     simulation voluntarily withdrawing from work after 
@@ -295,7 +295,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                 'School Withdrawal Rate (Probability)', 
                 np.linspace(0.0, 1.0, 1001), 0.9, 
                 format_func = lambda x: f'{100 * x:0.3g}%', 
-                on_change = saveKey, args = [f'withdrawalSchool{id}'], # type: ignore
+                on_change = saveKey, args = [f'withdrawalSchool', id], # type: ignore
                 key = f'_withdrawalSchool{id}', help = '''
                     The probability of an infected individual in the 
                     simulation voluntarily withdrawing from school 
@@ -305,7 +305,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
             loadKey(f'diagnosisDelay', id, 1)
             st.select_slider(
                 'Case Diagnosis Delay (Days)', range(15), 1, 
-                on_change = saveKey, args = [f'diagnosisDelay{id}'], # type: ignore
+                on_change = saveKey, args = [f'diagnosisDelay', id], # type: ignore
                 format_func = dayCount, key = f'_diagnosisDelay{id}', help = '''
                     The number of days after an individual begins 
                     showing symptoms of the disease before their 
@@ -334,7 +334,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                     'Number of Interactions per Person per Day)'
                 )),
                 0.0, 8.0, 4.0, key = f'_bccRate{id}', on_change = saveKey, 
-                args = [f'bccRate{id}'], # type: ignore
+                args = [f'bccRate', id], # type: ignore
                 help = '''
                     The average number of other people each individual 
                     will interact with in the background phase of each 
@@ -348,7 +348,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
                 'Child Supervision Rate (Probability)',
                 np.linspace(0.0, 1.0, 1001), 1.0, 
                 key = f'_childSupervision{id}', 
-                on_change = saveKey, args = [f'childSupervision{id}'], # type: ignore
+                on_change = saveKey, args = [f'childSupervision', id], # type: ignore
                 format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                     The probability that an adult in the simulation 
                     will remain at their household if there is at least 
@@ -358,7 +358,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
             loadKey(f'maxClassCount', id, 1)
             st.slider(
                 'Number of School Class Subgroups', 1, 5, 1, 
-                on_change = saveKey, args = [f'maxClassCount{id}'], # type: ignore
+                on_change = saveKey, args = [f'maxClassCount', id], # type: ignore
                 key = f'_maxClassCount{id}', help = '''
                     The maximum number of subgroups that may exist 
                     within a single school class in the simulation. 
@@ -374,7 +374,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
             st.slider(
                 'Maximum School Class Size (Number of People)', 
                 0, 25, 10, key = f'_maxClassSize{id}', on_change = saveKey, 
-                args = [f'maxClassSize{id}'], # type: ignore
+                args = [f'maxClassSize', id], # type: ignore
                 help = '''
                     The maximum size of school classes within K-12 
                     schools and childcare facilities in the simulation.
@@ -384,7 +384,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
             st.slider(
                 'Maximum Tertiary Class Size (Number of People)', 
                 0, 25, 10, key = f'_maxAdultClassSize{id}', 
-                on_change = saveKey, args = [f'maxAdultClassSize{id}'], # type: ignore
+                on_change = saveKey, args = [f'maxAdultClassSize', id], # type: ignore
                 help = '''
                     The maximum size of classes within universities and 
                     other tertiary education facilities in the 
@@ -395,7 +395,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
             st.slider(
                 'Maximum Work Group Size (Number of People)', 
                 0, 25, 10, key = f'_maxWorkGroupSize{id}', 
-                on_change = saveKey, args = [f'maxWorkGroupSize{id}'], # type: ignore
+                on_change = saveKey, args = [f'maxWorkGroupSize', id], # type: ignore
                 help = '''
                     The maximum size of groups within workplaces in the 
                     simulation.
@@ -405,7 +405,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
             st.slider(
                 'Maximum Neighbour Group Size (Number of People)', 
                 0, 25, 10, key = f'_maxNeighborGroupSize{id}', 
-                on_change = saveKey, args = [f'maxNeighborGroupSize{id}'], # type: ignore
+                on_change = saveKey, args = [f'maxNeighborGroupSize', id], # type: ignore
                 help = '''
                     The maximum size of groups within neighbourhoods in 
                     the simulation.
@@ -415,7 +415,7 @@ def buildCommunityTab(container, id, globalErrorContainer):
             st.slider(
                 'Maximum Church Group Size (Number of People)', 
                 0, 25, 10, key = f'_maxChurchGroupSize{id}', 
-                on_change = saveKey, args = [f'maxChurchGroupSize{id}'], # type: ignore
+                on_change = saveKey, args = [f'maxChurchGroupSize', id], # type: ignore
                 help = '''
                     The maximum size of groups within churches in the 
                     simulation.

@@ -76,9 +76,16 @@ tripleParameterSet = {
     'primAgeGroup', 'primAgeEfficacy'
 }
 
+# Check for active deletion
+
 
 # Simple function to add an additional scenario
-def addScenario(): st.session_state['scenarioCount'] += 1
+def addScenario(): 
+    st.session_state['scenarioCount'] += 1
+    newCount = st.session_state['scenarioCount']
+    st.session_state[f'scenarioName{newCount}'] = f'Scenario #{newCount}'
+    st.session_state['scenarioSetParams'][newCount] = []
+    st.session_state['scenarioSetParamsExtra'][newCount] = []
 
 # Function to delete a scenario from the page
 @st.dialog('Delete Scenario')
@@ -89,51 +96,44 @@ def deleteScenario(scenarioID):
         you sure you want to delete this scenario?
     ''')
     if st.button('Delete Scenario'):
-        # Shift any scenarios below the deleted one up
-        for s in range(scenarioID, scenarioCount - 1):
-            # Simple parameters
-            for param in parameterSet:
-                if f'{param}{s + 1}' in st.session_state: 
-                    st.session_state[f'{param}{s}'] = st.session_state[
-                        f'{param}{s + 1}'
-                    ]
-            
-            # Row field parameters
-            for param in doubleParameterSet:
-                for r in range(10):
-                    if f'{param}{s + 1}-{r}' in st.session_state: 
-                        st.session_state[f'{param}{s}-{r}'] = st.session_state[
-                            f'{param}{s + 1}-{r}'
-                        ]
+        # Get set of saved params
+        savedParams = st.session_state['scenarioSetParams']
+        savedExtraParams = st.session_state['scenarioSetParamsExtra']
 
-            # Primary dose field parameters
-            for param in tripleParameterSet:
-                for d in range(5):
-                    for r in range(10):
-                        if f'{param}{s + 1}-{d}-{r}' in st.session_state: 
-                            st.session_state[
-                                f'{param}{s}-{r}-{d}'
-                            ] = st.session_state[
-                                f'{param}{s + 1}-{d}-{r}'
-                            ]
-            
-        # Erase any lingering data
-        for param in parameterSet: st.session_state.pop(
-            f'{param}{scenarioCount - 1}', None
-        )
-        for param in doubleParameterSet: 
-            for r in range(10): st.session_state.pop(
-                f'{param}{scenarioCount - 1}-{r}', None
-        )     
-        for param in tripleParameterSet:
-            for d in range(5):
-                for r in range(10): st.session_state.pop(
-                f'{param}{scenarioCount - 1}-{d}-{r}', None
-        )
+        # Shift existing values down
+        for s in range(scenarioID, scenarioCount):
+            for param in savedParams[s]: 
+                st.session_state[f'{param}{s}'] = st.session_state[
+                    f'{param}{s + 1}'
+                ]
+                st.session_state[f'_{param}{s}'] = st.session_state[
+                    f'_{param}{s + 1}'
+                ]
+            for param, extra in savedExtraParams[s]: 
+                st.session_state[f'{param}{s}{extra}'] = st.session_state[
+                    f'{param}{s + 1}{extra}'
+                ]
+                st.session_state[f'_{param}{s}{extra}'] = st.session_state[
+                    f'_{param}{s + 1}{extra}'
+                ]
+            st.session_state['scenarioSetParams'][s] = savedParams[s + 1]
+            st.session_state['scenarioSetParamsExtra'][s] = savedExtraParams[
+                s + 1
+            ]
         
+        # Delete end scenario params
+        for param in savedParams[scenarioCount]: 
+            del st.session_state[f'{param}{scenarioCount}']
+            del st.session_state[f'_{param}{scenarioCount}']
+        for param, extra in savedExtraParams[scenarioCount]: 
+            del st.session_state[f'{param}{scenarioCount}{extra}']
+            del st.session_state[f'_{param}{scenarioCount}{extra}']
+        st.session_state['scenarioSetParams'][scenarioCount] = []
+        st.session_state['scenarioSetParamsExtra'][scenarioCount] = []  
 
-        # Update session count
+        # Update scenario count
         st.session_state['scenarioCount'] -= 1
+        st.rerun()
 
 
 
@@ -164,6 +164,11 @@ if scenarioCount == 0: st.markdown('''
     baseline scenario will be included in the model, using the 
     parameters defined at the Baseline Parameter Configuration page.
 ''')
+elif scenarioCount == 1: st.markdown(f'''
+    There is currently 1 additional scenario defined for the simulation 
+    (excluding the baseline scenario), 
+    named {st.session_state[f'scenarioName{1}']}.
+''')
 else: st.markdown(f'''
     There are currently {scenarioCount} additional scenarios defined 
     for the simulation (excluding the baseline scenario), with the 
@@ -171,7 +176,7 @@ else: st.markdown(f'''
     
     {'\n'.join(
         f'- {st.session_state[f'scenarioName{id}']}' 
-        for id in range(1, scenarioCount)
+        for id in range(1, scenarioCount + 1)
     )}
 ''')
     
@@ -189,7 +194,7 @@ for id in range(1, scenarioCount + 1):
         scenarioName = st.text_input(
             'Name of Scenario', f'Scenario #{id}', max_chars = 50, 
             key = f'_scenarioName{id}', autocomplete = 'off', 
-            on_change = saveKey, args = [f'scenarioName{id}'], # type: ignore
+            on_change = saveKey, args = [f'scenarioName', id], # type: ignore
             placeholder = 'Enter a name for this scenario', help = '''
                 The name to give to this scenario, which will display 
                 in tables and graphs generated by the dashboard.
@@ -257,5 +262,5 @@ st.button(
 )
 
 # TODO: Debug
-#st.header('DEBUG ZONE')
-#st.write(st.session_state)
+st.header('DEBUG ZONE')
+st.write(st.session_state)

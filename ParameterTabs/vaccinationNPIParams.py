@@ -144,7 +144,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
             loadKey(f'vaccineToggle', id, True)
             useVaccinesToggle = st.toggle(
                 'Enable Vaccines in Simulation', value = True, 
-                on_change = saveKey, args = [f'vaccineToggle{id}'], # type: ignore
+                on_change = saveKey, args = [f'vaccineToggle', id], # type: ignore
                 key = f'_vaccineToggle{id}', help = '''
                     Toggle whether or not individuals in the simulation 
                     will be vaccinated against the disease, overriding 
@@ -170,7 +170,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         'Vaccination Trigger Condition', 
                         key = f'_vaccineTrigger{id}', 
                         options = triggerNames[:-2], 
-                        on_change = saveKey, args = [f'vaccineTrigger{id}'], # type: ignore
+                        on_change = saveKey, args = [f'vaccineTrigger', id], # type: ignore
                         disabled = not useVaccinesToggle, help = '''
                             The type of condition that must be 
                             satisfied before vaccines will start being 
@@ -209,7 +209,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             key = f'_vaccinePeriod{id}', 
                             format_func = lambda x: f'Day {x + 1}', 
                             on_change = saveKey, 
-                            args = [f'vaccinePeriod{id}'], # type: ignore
+                            args = [f'vaccinePeriod', id], # type: ignore
                             disabled = not useVaccinesToggle, help = '''
                                 The time period during which 
                                 vaccinations will be administered in 
@@ -379,7 +379,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 limitDosesToggle = st.toggle(
                     'Enable Limited Number of Vaccine Doses', value = False, 
                     key = f'_limitDosesToggle{id}', on_change = saveKey, 
-                    args = [f'limitDosesToggle{id}'], # type: ignore
+                    args = [f'limitDosesToggle', id], # type: ignore
                     help = '''
                         Toggle whether the total number of vaccine 
                         first doses that can be administered across the 
@@ -394,7 +394,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     'Total Number of Vaccine First Doses', 
                     0, key = f'_initialDoseReserve{id}', 
                     disabled = not useVaccinesToggle or not limitDosesToggle, 
-                    on_change = saveKey, args = [f'initialDoseReserve{id}'], # type: ignore
+                    on_change = saveKey, args = [f'initialDoseReserve', id], # type: ignore
                     placeholder = 'Enter a whole number of doses', help = '''
                         The total number of vaccine first doses that 
                         will be available to administer to unvaccinated 
@@ -415,7 +415,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     'First Dose Vaccination Rate (Vaccinations per Day)', 
                     1, value = 300, key = f'_firstDoseRate{id}', 
                     placeholder = 'Enter a whole number of people', 
-                    on_change = saveKey, args = [f'firstDoseRate{id}'], # type: ignore
+                    on_change = saveKey, args = [f'firstDoseRate', id], # type: ignore
                     disabled = not useVaccinesToggle, help = '''
                         The number of unvaccinated individuals who will 
                         receive the first dose of the vaccine each day, 
@@ -428,7 +428,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     np.linspace(0.0, 1.0, 1001), 0.0, 
                     key = f'_initialVaccinated{id}', 
                     format_func = lambda x: f'{100 * x:0.3g}%', 
-                    on_change = saveKey, args = [f'initialVaccinated{id}'], # type: ignore
+                    on_change = saveKey, args = [f'initialVaccinated', id], # type: ignore
                     disabled = not useVaccinesToggle, help = '''
                         The percentage of the population that will 
                         already be vaccinated against the disease at 
@@ -441,7 +441,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     np.linspace(0.0, 1.0, 1001), 0.8, 
                     key = f'_targetVaccinated{id}', 
                     format_func = lambda x: f'{100 * x:0.3g}%', 
-                    on_change = saveKey, args = [f'targetVaccinated{id}'], # type: ignore
+                    on_change = saveKey, args = [f'targetVaccinated', id], # type: ignore
                     disabled = not useVaccinesToggle, help = '''
                         The percentage of the population that will be 
                         targeted by the vaccine schedule in the 
@@ -565,7 +565,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         disabled = (
                             not useVaccinesToggle or not vaccineRowCount < 10
                         ),
-                        on_change = saveKey, args = [f'vacAgeGroup{id}-{i}'], # type: ignore
+                        on_change = saveKey, args = [f'vacAgeGroup', id, f'-{i}'], # type: ignore
                         help = '''
                             An age group that will have specific 
                             vaccination initial and target proportions 
@@ -594,7 +594,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             format_func = lambda x: f'{100 * x:0.3g}%',
                             disabled = not useVaccinesToggle, 
                             on_change = saveKey, 
-                            args = [f'vacAgeInitial{id}-{i}'], # type: ignore
+                            args = [f'vacAgeInitial', id, f'-{i}'], # type: ignore
                             key = f'_vacAgeInitial{id}-{i}', help = '''
                                 The percentage of individuals in this 
                                 age group that will already be 
@@ -611,7 +611,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             format_func = lambda x: f'{100 * x:0.3g}%',
                             disabled = not useVaccinesToggle, 
                             on_change = saveKey, 
-                            args = [f'vacAgeTarget{id}-{i}'], # type: ignore
+                            args = [f'vacAgeTarget', id, f'-{i}'], # type: ignore
                             key = f'_vacAgeTarget{id}-{i}', help = '''
                                 The percentage of individuals in this 
                                 age group that will be targeted by the 
@@ -773,7 +773,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 primaryDoseCount = st.slider(
                     'Number of Vaccine Doses', 1, 5, 2, 
                     key = f'_primaryDoseCount{id}', 
-                    on_change = saveKey, args = [f'primaryDoseCount{id}'], # type: ignore
+                    on_change = saveKey, args = [f'primaryDoseCount', id], # type: ignore
                     disabled = not useVaccinesToggle, help = '''
                         The number of times each individual in the 
                         simulation will be administered a vaccine for 
@@ -789,7 +789,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 st.slider(
                     'Time Between Vaccine Doses (Months)', 
                     1, 36, 3, disabled = not useVaccinesToggle, 
-                    on_change = saveKey, args = [f'primaryDelay{id}'], # type: ignore
+                    on_change = saveKey, args = [f'primaryDelay', id], # type: ignore
                     key = f'_primaryDelay{id}', help = '''
                         The number of months after an individual 
                         receives a vaccine dose before they are able to 
@@ -800,7 +800,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 st.slider(
                     'Vaccine Immunity Waning Delay (Months)', 
                     1, 36, 6, disabled = not useVaccinesToggle, 
-                    on_change = saveKey, args = [f'primaryDuration{id}'], # type: ignore
+                    on_change = saveKey, args = [f'primaryDuration', id], # type: ignore
                     key = f'_primaryDuration{id}', help = '''
                         The number of months after an individual 
                         receives a vaccine dose before the immunity 
@@ -814,7 +814,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     np.linspace(0.0, 1.0, 1001), 0.0, 
                     format_func = lambda x: f'{100 * x:0.3g}%', 
                     disabled = not useVaccinesToggle, 
-                    on_change = saveKey, args = [f'primaryWanedEfficacy{id}'], # type: ignore
+                    on_change = saveKey, args = [f'primaryWanedEfficacy', id], # type: ignore
                     key = f'_primaryWanedEfficacy{id}', help = '''
                         The final efficacy value that the vaccine 
                         schedule will approach as the immunity it 
@@ -828,7 +828,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 st.slider(
                     'Vaccine Waning Duration (Months)', 
                     0, 36, 12, disabled = not useVaccinesToggle, 
-                    on_change = saveKey, args = [f'primaryWaningRate{id}'], # type: ignore
+                    on_change = saveKey, args = [f'primaryWaningRate', id], # type: ignore
                     key = f'_primaryWaningRate{id}', help = '''
                         The number of months after the immunity from a 
                         vaccine dose begins waning before the efficacy 
@@ -896,7 +896,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             or not primaryWanedRowCount < 10
                         ),
                         on_change = saveKey, 
-                        args = [f'primWanedGroup{id}-{i}'], # type: ignore
+                        args = [f'primWanedGroup', id, f'-{i}'], # type: ignore
                         help = '''
                             An age group that will have a specific 
                             final efficacy value after immunity waning 
@@ -928,7 +928,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             format_func = lambda x: f'{100 * x:0.3g}%', 
                             disabled = not useVaccinesToggle, 
                             on_change = saveKey, 
-                            args = [f'primAgeWanedEfficacy{id}-{i}'], # type: ignore
+                            args = [f'primAgeWanedEfficacy', id, f'-{i}'], # type: ignore
                             key = f'_primAgeWanedEfficacy{id}-{i}', help = '''
                                 The final efficacy value that the 
                                 vaccine schedule will approach for this 
@@ -1008,7 +1008,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         np.linspace(0.0, 1.0, 1001), 0.5, 
                         format_func = lambda x: f'{100 * x:0.3g}%', 
                         disabled = not useVaccinesToggle, on_change = saveKey, 
-                        args = [f'primaryBaseEfficacy{id}-{i}'], # type: ignore
+                        args = [f'primaryBaseEfficacy', id, f'-{i}'], # type: ignore
                         key = f'_primaryBaseEfficacy{id}-{i}', help = '''
                             The initial efficacy of this vaccine dose, 
                             represented as the probability that an 
@@ -1145,7 +1145,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 or not primaryAgeRowCounts[i] < 10
                             ), 
                             on_change = saveKey, 
-                            args = [f'primAgeGroup{id}-{i}-{j}'], # type: ignore
+                            args = [f'primAgeGroup', id, f'-{i}-{j}'], # type: ignore
                             help = '''
                                 An age group that will have specific 
                                 initial vaccine efficacy values defined 
@@ -1175,7 +1175,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 disabled = not useVaccinesToggle, 
                                 key = f'_primAgeEfficacy{id}-{i}-{j}', 
                                 on_change = saveKey, 
-                                args = [f'primAgeEfficacy{id}-{i}-{j}'], # type: ignore
+                                args = [f'primAgeEfficacy', id, f'-{i}-{j}'], # type: ignore
                                 help = '''
                                     The initial efficacy of this 
                                     vaccine dose for this age group, 
@@ -1410,7 +1410,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 useBoostersToggle = st.toggle(
                     'Enable Booster Vaccines', value = True, 
                     key = f'_boosterToggle{id}', on_change = saveKey, 
-                    args = [f'boosterToggle{id}'], # type: ignore
+                    args = [f'boosterToggle', id], # type: ignore
                     disabled = not useVaccinesToggle, help = '''
                         Toggle whether or not booster vaccines are 
                         administered in the simulation, overriding 
@@ -1422,7 +1422,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     'Number of Booster Doses', 
                     1, 10, 3, key = f'_boosterDoseCount{id}',
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
-                    on_change = saveKey, args = [f'boosterDoseCount{id}'], # type: ignore
+                    on_change = saveKey, args = [f'boosterDoseCount', id], # type: ignore
                     help = '''
                         The number of times each individual in the 
                         simulation will be administered a booster 
@@ -1433,7 +1433,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 boosterDelay = st.slider(
                     'Time Between Booster Doses (Months)', 1, 36, 3,
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
-                    on_change = saveKey, args = [f'boosterDelay{id}'], # type: ignore
+                    on_change = saveKey, args = [f'boosterDelay', id], # type: ignore
                     key = f'_boosterDelay{id}', help = '''
                         The number of months after an individual receives 
                         one booster vaccine dose before they are able 
@@ -1444,7 +1444,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 st.slider(
                     'Booster Immunity Waning Delay (Months)', 1, 36, 2,
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
-                    on_change = saveKey, args = [f'boosterDuration{id}'], # type: ignore
+                    on_change = saveKey, args = [f'boosterDuration', id], # type: ignore
                     key = f'_boosterDuration{id}', help = '''
                         The number of months after an individual receives 
                         a booster vaccine dose before the immunity 
@@ -1458,7 +1458,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     np.linspace(0.0, 1.0, 1001), 0.9, 
                     key = f'_boosterBaseEfficacy{id}',
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
-                    on_change = saveKey, args = [f'boosterBaseEfficacy{id}'], # type: ignore
+                    on_change = saveKey, args = [f'boosterBaseEfficacy', id], # type: ignore
                     format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                         The initial efficacy of each booster vaccine, 
                         represented as the probability that an 
@@ -1473,7 +1473,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     np.linspace(0.0, 1.0, 1001), 0.6, 
                     key = f'_boosterWanedEfficacy{id}', 
                     disabled = not useVaccinesToggle or not useBoostersToggle,
-                    on_change = saveKey, args = [f'boosterWanedEfficacy{id}'], # type: ignore
+                    on_change = saveKey, args = [f'boosterWanedEfficacy', id], # type: ignore
                     format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                         The final efficacy value that the booster 
                         vaccine will approach as the immunity it 
@@ -1553,7 +1553,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 st.slider(
                     'Booster Waning Duration (Months)', 0, 36, 6,
                     disabled = not useVaccinesToggle or not useBoostersToggle, 
-                    on_change = saveKey, args = [f'boosterWaningRate{id}'], # type: ignore
+                    on_change = saveKey, args = [f'boosterWaningRate', id], # type: ignore
                     key = f'_boosterWaningRate{id}', help = '''
                         The number of months after the immunity from a 
                         booster vaccine begins waning before the 
@@ -1621,7 +1621,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             or not boosterRowCount < 10
                         ), 
                         on_change = saveKey, 
-                        args = [f'boostAgeGroup{id}-{i}'], # type: ignore
+                        args = [f'boostAgeGroup', id, f'-{i}'], # type: ignore
                         help = '''
                             An age group that will have specific 
                             booster vaccine efficacy values defined for 
@@ -1651,7 +1651,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             ), 
                             format_func = lambda x: f'{100 * x:0.3g}%', 
                             on_change = saveKey, 
-                            args = [f'boostAgeEfficacy{id}-{i}'], # type: ignore
+                            args = [f'boostAgeEfficacy', id, f'-{i}'], # type: ignore
                             key = f'_boostAgeEfficacy{id}-{i}', help = '''
                                 The initial efficacy of each booster 
                                 vaccine for this age group, represented 
@@ -1674,7 +1674,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             ), 
                             format_func = lambda x: f'{100 * x:0.3g}%', 
                             on_change = saveKey, 
-                            args = [f'boostAgeWanedEfficacy{id}-{i}'], # type: ignore
+                            args = [f'boostAgeWanedEfficacy', id, f'-{i}'], # type: ignore
                             key = f'_boostAgeWanedEfficacy{id}-{i}', help = '''
                                 The final efficacy value that the 
                                 booster vaccine will approach for this 
@@ -1847,7 +1847,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 useSocialDistancingToggle = st.toggle(
                     'Enable Social Distancing', value = True, 
                     on_change = saveKey, 
-                    args = [f'socialDistancingToggle{id}'], # type: ignore
+                    args = [f'socialDistancingToggle', id], # type: ignore
                     key = f'_socialDistancingToggle{id}', help = '''
                         Toggle whether or not social distancing 
                         interventions are implemented in the 
@@ -1862,7 +1862,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     format_func = lambda x: f'{100 * x:0.3g}%', 
                     disabled = not useSocialDistancingToggle, 
                     on_change = saveKey, 
-                    args = [f'socialDistancingCompliance{id}'], # type: ignore
+                    args = [f'socialDistancingCompliance', id], # type: ignore
                     key = f'_socialDistancingCompliance{id}', help = '''
                         The probability that an individual will comply 
                         with social distancing interventions in the 
@@ -1914,7 +1914,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             or not socialRowCount < 10
                         ),
                         on_change = saveKey, 
-                        args = [f'socialAgeGroup{id}-{i}'], # type: ignore
+                        args = [f'socialAgeGroup', id, f'-{i}'], # type: ignore
                         help = '''
                             An age group that will have specific 
                             social distancing compliance probability 
@@ -1942,7 +1942,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         format_func = lambda x: f'{100 * x:0.3g}%', 
                         disabled = not useSocialDistancingToggle, 
                         on_change = saveKey, 
-                        args = [f'socialCompliance{id}-{i}'], # type: ignore
+                        args = [f'socialCompliance', id, f'-{i}'], # type: ignore
                         key = f'_socialCompliance{id}-{i}', help = '''
                             The probability that an individual in 
                             this age group will comply with social 
@@ -1998,7 +1998,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 loadKey(f'caseIsolation', id, True)
                 st.toggle(
                     'Enable Case Isolation', value = True, 
-                    on_change = saveKey, args = [f'caseIsolation{id}'], # type: ignore
+                    on_change = saveKey, args = [f'caseIsolation', id], # type: ignore
                     key = f'_caseIsolation{id}', help = '''
                         Toggle whether or not individuals who have been 
                         diagnosed as cases of the disease will be 
@@ -2010,7 +2010,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 loadKey(f'classDismissal', id, False)
                 classDismissal = st.toggle(
                     'Enable Class Dismissal', value = False, 
-                    on_change = saveKey, args = [f'classDismissal{id}'], # type: ignore
+                    on_change = saveKey, args = [f'classDismissal', id], # type: ignore
                     key = f'_classDismissal{id}', help = '''
                         Toggle whether or not classes in childcare and 
                         non-tertiary schools should dismiss classes 
@@ -2046,7 +2046,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 useSchoolClosureToggle = st.toggle(
                     'Enable School Closures', value = True, 
                     on_change = saveKey, 
-                    args = [f'schoolClosureToggle{id}'], # type: ignore
+                    args = [f'schoolClosureToggle', id], # type: ignore
                     key = f'_schoolClosureToggle{id}', help = '''
                         Toggle whether or not school closure 
                         interventions are implemented in the 
@@ -2062,7 +2062,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         'School Closure Trigger Condition', 
                         key = f'_schoolClosureTrigger{id}', 
                         options = triggerNames, on_change = saveKey, 
-                        args = [f'schoolClosureTrigger{id}'], # type: ignore
+                        args = [f'schoolClosureTrigger', id], # type: ignore
                         disabled = not useSchoolClosureToggle, help = '''
                             The type of condition that must be 
                             satisfied before schools will start being 
@@ -2114,7 +2114,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             (29, 59), key = f'_schoolClosurePeriod{id}', 
                             format_func = lambda x: f'Day {x + 1}', 
                             on_change = saveKey, 
-                            args = [f'schoolClosurePeriod{id}'], # type: ignore
+                            args = [f'schoolClosurePeriod', id], # type: ignore
                             disabled = not useSchoolClosureToggle, help = '''
                                 The time period during which schools 
                                 will be closed in the simulation. The 
@@ -2298,7 +2298,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     ('Childcare', 'K-12', 'Tertiary'), 
                     selection_mode = 'multi', default = 'K-12', 
                     disabled = not useSchoolClosureToggle, 
-                    on_change = saveKey, args = [f'schoolClosureTypes{id}'], # type: ignore
+                    on_change = saveKey, args = [f'schoolClosureTypes', id], # type: ignore
                     key = f'_schoolClosureTypes{id}', help = '''
                         The types of schools that will close under the 
                         effects of this NPI. Multiple school types may 
@@ -2320,7 +2320,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     format_func = lambda x: f'{100 * x:0.3g}%',
                     disabled = not useSchoolClosureToggle, 
                     on_change = saveKey, 
-                    args = [f'schoolClosureCompliance{id}'], # type: ignore
+                    args = [f'schoolClosureCompliance', id], # type: ignore
                     key = f'_schoolClosureCompliance{id}', help = '''
                         The probability that an individual will 
                         withdraw from schools when they are closed in 
@@ -2384,7 +2384,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 useWithdrawalIncreaseToggle = st.toggle(
                     'Enable Withdrawal Increases', value = True, 
                     on_change = saveKey, 
-                    args = [f'withdrawalIncreaseToggle{id}'], # type: ignore
+                    args = [f'withdrawalIncreaseToggle', id], # type: ignore
                     key = f'_withdrawalIncreaseToggle{id}', help = '''
                         Toggle whether or not withdrawal increasing 
                         interventions are implemented in the 
@@ -2400,7 +2400,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         'Withdrawal Increase Trigger Condition', 
                         key = f'_withdrawalIncreaseTrigger{id}', 
                         options = triggerNames[:-2], on_change = saveKey, 
-                        args = [f'withdrawalIncreaseTrigger{id}'], # type: ignore
+                        args = [f'withdrawalIncreaseTrigger', id], # type: ignore
                         disabled = not useWithdrawalIncreaseToggle, help = '''
                             The type of condition that must be 
                             satisfied before the rate of withdrawal 
@@ -2441,7 +2441,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             (29, 59), key = f'_withdrawalIncreasePeriod{id}', 
                             disabled = not useWithdrawalIncreaseToggle, 
                             on_change = saveKey, 
-                            args = [f'withdrawalIncreasePeriod{id}'], # type: ignore
+                            args = [f'withdrawalIncreasePeriod', id], # type: ignore
                             format_func = lambda x: f'Day {x + 1}', help = '''
                                 The time period during which withdrawal 
                                 rates will be increased in the 
@@ -2630,7 +2630,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     format_func = lambda x: f'{100 * x:0.3g}%',
                     disabled = not useWithdrawalIncreaseToggle, 
                     on_change = saveKey, 
-                    args = [f'withdrawalIncreaseAdult{id}'], # type: ignore
+                    args = [f'withdrawalIncreaseAdult', id], # type: ignore
                     key = f'_withdrawalIncreaseAdult{id}', help = '''
                         The probability of an infected adult 
                         withdrawing from work after becoming 
@@ -2647,7 +2647,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     format_func = lambda x: f'{100 * x:0.3g}%', 
                     disabled = not useWithdrawalIncreaseToggle, 
                     on_change = saveKey, 
-                    args = [f'withdrawalIncreaseChild{id}'], # type: ignore
+                    args = [f'withdrawalIncreaseChild', id], # type: ignore
                     key = f'_withdrawalIncreaseChild{id}', help = '''
                         The probability of an infected child 
                         withdrawing from school after becoming 
@@ -2810,7 +2810,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 loadKey(f'reducedGroupToggle', id, True)
                 useReducedGroupToggle = st.toggle(
                     'Enable Group Size Reductions', value = True, 
-                    on_change = saveKey, args = [f'reducedGroupToggle{id}'], # type: ignore
+                    on_change = saveKey, args = [f'reducedGroupToggle', id], # type: ignore
                     key = f'_reducedGroupToggle{id}', help = '''
                         Toggle whether or not group size reduction 
                         interventions are implemented in the 
@@ -2826,7 +2826,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         'Reduced Group Size Trigger Condition', 
                         key = f'_reducedGroupTrigger{id}', 
                         options = triggerNames[:-2], on_change = saveKey, 
-                        args = [f'reducedGroupTrigger{id}'], # type: ignore
+                        args = [f'reducedGroupTrigger', id], # type: ignore
                         disabled = not useReducedGroupToggle, help = '''
                             The type of condition that must be 
                             satisfied before the size of work groups 
@@ -2866,7 +2866,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             (29, 59), key = f'_reducedGroupPeriod{id}', 
                             disabled = not useReducedGroupToggle, 
                             on_change = saveKey, 
-                            args = [f'reducedGroupPeriod{id}'], # type: ignore
+                            args = [f'reducedGroupPeriod', id], # type: ignore
                             format_func = lambda x: f'Day {x + 1}', help = '''
                                 The time period during which work 
                                 group sizes will be smaller in the 
@@ -3045,7 +3045,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 reducedGroupSize = st.slider(
                     'Reduced Work Group Size (Number of People)', 0, 25, 5, 
                     disabled = not useReducedGroupToggle, on_change = saveKey, 
-                    args = [f'reducedGroupSize{id}'], # type: ignore
+                    args = [f'reducedGroupSize', id], # type: ignore
                     key = f'_reducedGroupSize{id}', help = '''
                         The maximum size of work groups while a reduced 
                         group size intervention is in effect, 
@@ -3136,7 +3136,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 loadKey(f'bccToggle', id, True)
                 useBCCToggle = st.toggle(
                     'Enable BCC Reduction', value = True, on_change = saveKey, 
-                    args = [f'bccToggle{id}'], # type: ignore
+                    args = [f'bccToggle', id], # type: ignore
                     key = f'_bccToggle{id}', help = '''
                         Toggle whether or not background contact count 
                         reduction interventions are implemented in the 
@@ -3152,7 +3152,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         'BCC Reduction Trigger Condition', 
                         key = f'_bccTrigger{id}', 
                         options = triggerNames[:-2], on_change = saveKey, 
-                        args = [f'bccTrigger{id}'], # type: ignore
+                        args = [f'bccTrigger', id], # type: ignore
                         disabled = not useBCCToggle, help = '''
                             The type of condition that must be 
                             satisfied before background contact count 
@@ -3192,7 +3192,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             'BCC Reduction Time Period', range(720), 
                             (29, 59), key = f'_bccPeriod{id}', 
                             disabled = not useBCCToggle, on_change = saveKey, 
-                            args = [f'bccPeriod{id}'], # type: ignore
+                            args = [f'bccPeriod', id], # type: ignore
                             format_func = lambda x: f'Day {x + 1}', help = '''
                                 The time period during which background 
                                 contact count (BCC) will be reduced in 
@@ -3369,7 +3369,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         'Number of Interactions per Person per Day)'
                     )),
                     0.0, 8.0, 0.2, disabled = not useBCCToggle, 
-                    on_change = saveKey, args = [f'bccReducedRate{id}'], # type: ignore
+                    on_change = saveKey, args = [f'bccReducedRate', id], # type: ignore
                     key = f'_bccReducedRate{id}', help = '''
                         The average number of other people each 
                         individual will interact with in the background 
@@ -3530,7 +3530,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         'Start Trigger Threshold Rate (Cases per Day)', 0, 
                         100, 10, key = f'_rateStartThreshold{id}', 
                         on_change = saveKey, 
-                        args = [f'rateStartThreshold{id}'], # type: ignore
+                        args = [f'rateStartThreshold', id], # type: ignore
                         help = '''
                             Any interventions set to trigger using the 
                             "Community Case Rate" condition will begin 
@@ -3544,7 +3544,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         'Relaxation Trigger Threshold Rate (Cases per Day)', 0,
                         100, 5, key = f'_rateRelaxThreshold{id}', 
                         on_change = saveKey, 
-                        args = [f'rateRelaxThreshold{id}'], # type: ignore
+                        args = [f'rateRelaxThreshold', id], # type: ignore
                         help = '''
                             Any active interventions set to trigger 
                             using the "Community Case Rate" condition 
@@ -3641,7 +3641,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         'Start Trigger Case Threshold (Total Community Cases)', 
                         0, 300000, 1000, key = f'_caseTotalThreshold{id}', 
                         on_change = saveKey, 
-                        args = [f'caseTotalThreshold{id}'], # type: ignore
+                        args = [f'caseTotalThreshold', id], # type: ignore
                         placeholder = 'Enter a whole number of cases', help = '''
                             Any interventions set to trigger using the 
                             "Community Case Total", "Cases per School", 
