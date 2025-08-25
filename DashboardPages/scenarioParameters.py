@@ -170,14 +170,14 @@ elif scenarioCount == 1: st.markdown(f'''
     named {st.session_state[f'scenarioName{1}']}.
 ''')
 else: st.markdown(f'''
-    There are currently {scenarioCount} additional scenarios defined 
-    for the simulation (excluding the baseline scenario), with the 
-    following names: 
+There are currently {scenarioCount} additional scenarios defined for 
+the simulation (excluding the baseline scenario), with the following 
+names: 
     
-    {'\n'.join(
-        f'- {st.session_state[f'scenarioName{id}']}' 
-        for id in range(1, scenarioCount + 1)
-    )}
+{'\n'.join(
+    f'- {st.session_state[f'scenarioName{id}']}' 
+    for id in range(1, scenarioCount + 1)
+)}
 ''')
     
 # TODO: Run simulation button again?
@@ -262,5 +262,5 @@ st.button(
 )
 
 # TODO: Debug
-st.header('DEBUG ZONE')
-st.write(st.session_state)
+#st.header('DEBUG ZONE')
+#st.write(st.session_state)

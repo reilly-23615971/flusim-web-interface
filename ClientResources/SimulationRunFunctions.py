@@ -3,13 +3,10 @@
 # Functions used to make requests to the server for running the simulation
 
 # Imports
-import time
-import asyncio
-import logging
-import threading
+import time, asyncio, logging, threading
 from io import BytesIO
 from zipfile import ZipFile
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientConnectorError
 import streamlit as st
 import streamlit_notify as stn
 from ParameterTabs.basicParams import basicSchema
@@ -79,60 +76,56 @@ Callback function for the Run Simulation button
 def runSimulationButton():
     scenarioCount = st.session_state.get('scenarioCount', 0)
     errors = [checkErrors(id) for id in range(scenarioCount + 1)]
-    if max((max(e) for e in errors)) >= 2: st.error(f'''
-        There are errors with the parameters that have currently been 
-        selected for the following scenarios:
-                                                      
-        {'\n'.join(
-            f'''
-                - {
-                    st.session_state[f'scenarioName{id}'] 
-                    if id > 0 else 'Baseline'
-                } ({errors[id].count(2)} errors)
-            ''' 
-            for id in range(scenarioCount + 1) if max(errors[id]) >= 2
-        )}                            
+    if max((max(e) for e in errors)) >= 2: st.error(
+f'''
+There are errors with the parameters that have currently been selected 
+for the following scenarios: {'\n'.join(
+f'''
+- {
+    st.session_state[f'scenarioName{id}'] if id > 0 else 'Baseline'
+} ({errors[id].count(2)} errors)
+''' 
+for id in range(scenarioCount + 1) if max(errors[id]) >= 2)
+}                            
         
-        Please correct these errors by modifying the corresponding 
-        parameters to valid values before running the simulation.
-    ''')
+Please correct these errors by modifying the corresponding parameters 
+to valid values before running the simulation.
+'''
+    )
     else:
         # TODO: More detailed estimated time breakdown
-        st.markdown(f'''
-            With the current parameters, this simulation will use the 
-            "{
-                st.session_state.get('community', 'newcastle').capitalize()
-            }" community data, {
-                'with only a single baseline scenario.' 
-                if not scenarioCount 
-                else f'''
-                    with the following {scenarioCount + 1} scenarios:
+        st.markdown(
+f'''
+With the current parameters, this simulation will use the 
+"{st.session_state.get('community', 'newcastle').capitalize()}" 
+community data, {'with only a single baseline scenario.' if not scenarioCount 
+else f'''
+with the following {scenarioCount + 1} scenarios:
                     
-                    - Baseline\n{'\n'.join(
-                        f'- {st.session_state[f'scenarioName{id}']}' 
-                        for id in range(1, scenarioCount + 1)
-                    )}
-                '''
-            }
-        ''')
-        if max((max(e) for e in errors)) >= 1: st.warning(f'''
-            There are minor issues with the parameters that have 
-            currently been selected for the following scenarios:
-                                                      
-            {'\n'.join(
-                f'''
-                    - {
-                        st.session_state[f'scenarioName{id}'] 
-                        if id > 0 else 'Baseline'
-                    } ({errors[id].count(1)} issues)
-                ''' 
-                for id in range(scenarioCount + 1) if max(errors[id]) >= 1
-            )}                            
+- Baseline
+{'\n'.join(
+    f'- {st.session_state[f'scenarioName{id}']}' 
+    for id in range(1, scenarioCount + 1)
+)}
+'''}
+'''
+        )
+        if max((max(e) for e in errors)) >= 1: st.warning(
+f'''
+There are minor issues with the parameters that have currently been 
+selected for the following scenarios:
+
+- Baseline                                 
+{'\n'.join(
+f'''
+- {st.session_state[f'scenarioName{id}']} ({errors[id].count(1)} issues)
+''' 
+for id in range(1, scenarioCount + 1) if max(errors[id]) >= 1)}                            
         
-            Please make sure that these issues do not interfere with 
-            your intended simulation design before running the 
-            simulation.
-        ''')
+Please make sure that these issues do not interfere with your intended 
+simulation design before running the simulation.
+'''
+        )
         st.markdown('''
             Are you sure you want to run the simulation with the 
             selected parameters?
@@ -142,8 +135,14 @@ def runSimulationButton():
             st.session_state.simulationInProgress = True
             st.session_state.simulationStartTime = time.time()
 
+            # Get scenario names
+            scenarioNames = ['Baseline'] + [
+                st.session_state[f'scenarioName{i}'] 
+                for i in range(1, st.session_state['scenarioCount'] + 1)
+            ]
+
             # Make the model call
-            runModelWrapper()
+            runModelWrapper(scenarioNames)
             # TODO: Inform user if server doesn't respond
 
             # Reset page to close popup
@@ -157,7 +156,7 @@ def runSimulationButton():
 Function to send JSON model parameters to the server, awaiting a 
 response containing the results of the simulation
 """
-async def runModel():
+async def runModel(scenarioNames):
     try:
         # TODO: Better error handling
 
@@ -207,12 +206,6 @@ async def runModel():
             indent = 4, exclude_unset = True#, exclude_defaults = True
         )"""
 
-        # Get scenario names
-        scenarioNames = ['Baseline'] + [
-            st.session_state[f'scenarioName{i}'] 
-            for i in range(1, st.session_state.scenarioCount + 1)
-        ]
-
         # TODO: Decide on what data must be gathered
         # TODO: Make alphabetical by prospective filename
         dataForms = [AnalysisFile(tool = 'epidemic', names = scenarioNames)]
@@ -234,7 +227,6 @@ async def runModel():
         # TODO: Store different data based on the request parameters
         # TODO: Determine if doing all analysis tasks with each model 
         # call is necessary/useful for the user
-        processedDataList = []
         functionLog.info(
             f'[runModel] Preparing to process {len(dataForms)} analyses...'
         )
@@ -249,6 +241,15 @@ async def runModel():
                 for index, file in enumerate(fileNames)
             ]
         return processedData
+    except ClientConnectorError as e:
+        functionLog.error(f'[runner] Couldn\'t connect to server: {e}')
+        # TODO: Figure out why this toast isn't displaying
+        stn.toast(f'''
+            Error: Could not connect to the simulation server. 
+            Please make sure you are connected to the same network 
+            as the server, then try again.
+        ''')
+        return None
     except Exception as e:
         functionLog.error(f'[runModel] Encountered {type(e).__name__}: {e}')
         raise e
@@ -257,13 +258,13 @@ async def runModel():
 Async wrapper function for runModel, allowing HTTP requests to be made 
 asynchronously without blocking Streamlit operations
 """
-def runModelWrapper():
+def runModelWrapper(scenarioNames):
     # Inner function to asynchronously call the server and await results
     # Needed to avoid interrupting Streamlit UI functionality
     def runner():
         try:
-            formattedData = asyncio.run(runModel())
-            resultQueue.put(formattedData)
+            formattedData = asyncio.run(runModel(scenarioNames))
+            if formattedData: resultQueue.put(formattedData)
         except Exception as e:
             # TODO: Inform the user of server errors (make toasts?)
             functionLog.error(f'[runner] Encountered {type(e).__name__}: {e}')

@@ -65,21 +65,21 @@ else:
 # Debug case plot
 scenarios = ['Baseline', 'Surged']
 
-with open('./TestData/epidemicMedianDaily.csv', 'r') as csv:
-    meanData = formatEpidemic(csv.read(), scenarios, 'Cases')
+with open('./TestData/epidemicMedianDaily.csv', 'rb') as csv:
+    meanData, _ = formatEpidemic(csv.read(), scenarios, 'Cases')
 
 st.altair_chart(plotEpidemic(meanData, 'Cases'))
 
 
-with open('./TestData/epidemicMedianCumulative.csv', 'r') as csv:
-    sumData = formatEpidemic(csv.read(), scenarios, 'Cases', True)
+with open('./TestData/epidemicMedianCumulative.csv', 'rb') as csv:
+    sumData, _ = formatEpidemic(csv.read(), scenarios, 'Cases', True)
 
 st.altair_chart(plotEpidemic(sumData, 'Cases', True))
 
-with open('./TestData/asirMedianAbsolute.csv', 'r') as csv:
-    ageData = formatAsir(csv.read(), scenarios, 'Cases', False, 'absolute')
+with open('./TestData/asirMedianAbsolute.csv', 'rb') as csv:
+    ageData, _ = formatAsir(csv.read(), scenarios, 'Cases', False, 'absolute')
 
-with open('./TestData/asirMedianAbsolute.csv', 'r') as csv:
-    ageData = formatAsir(csv.read(), scenarios, 'Cases', False, 'percentage')
+with open('./TestData/asirMedianAbsolute.csv', 'rb') as csv:
+    ageData, _ = formatAsir(csv.read(), scenarios, 'Cases', False, 'percentage')
 
 #******************************************************************

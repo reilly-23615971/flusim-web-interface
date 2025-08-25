@@ -74,7 +74,7 @@ runModelButton = parameterSidebar.button(
 )
 """
 # Update toasts and the like
-stn.notify(remove = False)
+stn.notify(remove = True)
 
 # Initialise and run the application pages
 flusimPages = st.navigation(pages)
