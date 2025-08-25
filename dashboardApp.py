@@ -87,6 +87,9 @@ flusimPages.run()
 @st.fragment(run_every = 1)
 def updateData():
     if session.simulationInProgress and not resultQueue.empty():
-        session.modelData = resultQueue.get()
+        #TODO: Analyze model data to determine where to place in session
+        processedData = resultQueue.get()
+        for data, tag in processedData: session[f'modelData{tag}'] = data
+        stn.toast('Simulation complete!', icon = ":material/check_circle:")
         session.simulationInProgress = False
 updateData()

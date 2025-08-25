@@ -3,8 +3,9 @@
 # Constants and other stored variables used by the client application
 
 # Imports
-from queue import Queue
 import logging
+from queue import Queue
+from typing import List, Literal
 import streamlit as st
 
 # Logging
@@ -80,3 +81,31 @@ kappaLocations = {
 def backgroundColour(): return (
     '#0F1116' if st.context.theme.type == 'dark' else '#FFFFFF'
 )
+
+
+
+
+
+"""
+Class for analysis file parameters
+"""
+class AnalysisFile:
+    def __init__(
+        self, tool: Literal['epidemic', 'asir'], names: List[str], 
+        summaryValue: Literal['mean', 'median'] = 'median', 
+        outcome: Literal[
+            'Infections', 'Cases', 'Hospitalisations', 
+            'Deaths', 'ICU Visits', 'GP Visits'
+        ] = 'Infections', **kwargs
+    ):
+        self.tool = tool
+        self.names = names
+        self.summaryValue = summaryValue
+        self.outcome = outcome
+        # Check required values for different tools
+        if tool == 'epidemic':
+            self.useCumulative = kwargs.get('useProportion', False)
+            self.splitByAge = kwargs.get('splitByAge', False)
+        if tool == 'asir':
+            self.useProportion = kwargs.get('useProportion', False)
+            self.differenceType = kwargs.get('differenceType', '')

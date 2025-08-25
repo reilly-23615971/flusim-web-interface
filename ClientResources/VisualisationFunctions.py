@@ -4,17 +4,35 @@
 
 # Imports
 from math import ceil
-from io import StringIO
+from io import BytesIO
 import logging
 import pandas as pd
 import altair as alt
 from ClientResources.SharedResources import (
-    ageCategories, tableOutcomes, outcomeAdjectives
+    AnalysisFile, ageCategories, tableOutcomes, outcomeAdjectives
 )
 
 # Logging
 functionLog = logging.getLogger(__name__)
 
+
+
+"""
+Wrapper function to perform the correct formatting process on csv data
+
+Parameters:
+    data: The CSV data to process.
+    settings: The AnalysisFile containing the settings to use.
+"""
+def formatData(data, settings: AnalysisFile):
+    if settings.tool == 'epidemic': return formatEpidemic(
+        data, settings.names, settings.outcome, 
+        settings.useCumulative, settings.splitByAge
+    )
+    elif settings.tool == 'asir': return formatAsir(
+        data, settings.names, settings.outcome, 
+        settings.useProportion, settings.differenceType
+    )
 
 
 """
@@ -78,7 +96,7 @@ def formatEpidemic(
         return pd.DataFrame()
     else:
         framedData = pd.read_csv(
-            StringIO(rawCSV), header = 0, 
+            BytesIO(rawCSV), header = 0, 
             names = ['Days Since First Infection'] + scenarioNames
         )
 
@@ -87,7 +105,7 @@ def formatEpidemic(
         return framedData.melt(
             'Days Since First Infection', var_name = 'Scenario', 
             value_name = valueLabel
-        )
+        ), 'epidemic'
 
 """
 Function to convert raw data from the age-specific infection rate 
@@ -155,7 +173,7 @@ def formatAsir(
 
     # Generate and format the dataframe
     framedData = pd.read_csv(
-        StringIO(rawCSV), header = 0, index_col = 0,
+        BytesIO(rawCSV), header = 0, index_col = 0,
         names = ['Total'].extend(ageCategories.keys())
     )
     framedData.index = pd.Index(scenarioNames)
@@ -185,7 +203,7 @@ def formatAsir(
     ).abs() / meltedData['Age Group'].map(baselineRows)
     
     meltedData['Difference from Baseline'] = diffFromBaseline
-    return meltedData
+    return meltedData, 'asir'
 
 """
 Function to create an Altair line graph of time-series data obtained 

@@ -7,6 +7,8 @@ import time
 import asyncio
 import logging
 import threading
+from io import BytesIO
+from zipfile import ZipFile
 from aiohttp import ClientSession
 import streamlit as st
 import streamlit_notify as stn
@@ -19,13 +21,15 @@ from ClientResources.ModelSchema import (
     Parameters, modelGuideFile, overrideParams, simulationSet, simulation
 )
 from ClientResources.InterfaceFunctions import checkErrors
-from ClientResources.VisualisationFunctions import formatEpidemic
+from ClientResources.VisualisationFunctions import formatData
 from ClientResources.SharedResources import (
-    serverUrl, resultQueue
+    AnalysisFile, tableOutcomes, serverUrl, resultQueue
 )
 
 # Logging
 functionLog = logging.getLogger(__name__)
+
+
 
 """
 Function to generate a JSON config file using the selected parameters
@@ -143,7 +147,10 @@ def runSimulationButton():
             # TODO: Inform user if server doesn't respond
 
             # Reset page to close popup
-            stn.toast('Sending a request to run the simulation...')
+            stn.toast(
+                'Sending a request to run the simulation...', 
+                icon = ":material/experiment:"
+            )
             st.rerun()
 
 """
@@ -152,21 +159,19 @@ response containing the results of the simulation
 """
 async def runModel():
     try:
-        # TODO: Convert parameters from Streamlit into valid JSON file
-        # TODO: Error handling
+        # TODO: Better error handling
 
         # For testing use this default simulation JSON instead of parameters
-        """parameterJSON = {
+        parameterJSON = {
             "name": "Simple Test",
-            description = "2184"
+            "description": "2184",
             "output_folder": "./results/",
-            "middle_joint": "-coronaV",
+            "middle_joint": "-usingEpidemic-Emean",
             "community_used": ["newcastle"],
-            "community_overrides": [{"name": "newcastle","parameters": {}}],
             "shared_overrides": {
                 "parameters": {
                     "Command_Argument": {"n_runs": 24,"n_cycles": 720},
-                    "Scenario_Strain": [{"StrainId": 0,"Beta": 0.11}]
+                    "Scenario_Strain": [{"StrainId": 0,"Beta": 0.11}],
                     "Scenario_Parameter": {
                         "school_closure_trigger": "timed",
                         "school_closure_compliance": 0.5,
@@ -189,23 +194,30 @@ async def runModel():
             }],
             "simulation_sets": [{
                 "name": "test_set_1",
-                "version": 230,
+                "version": 2184,
                 "simulations": [
                     {"name": "test_sim_1"},
-                    {"name": "test_sim_2","apply_template": ["test_1"]}
+                    {"name": "test_sim_2", "apply_template": ["test_1"]}
                 ]
             }]
-        }"""
-        parameterJSON = createConfig().model_dump_json(
+        }
+
+        # Use this version in final dashboard
+        """parameterJSON = createConfig().model_dump_json(
             indent = 4, exclude_unset = True#, exclude_defaults = True
-        )
+        )"""
+
+        # Get scenario names
+        scenarioNames = ['Baseline'] + [
+            st.session_state[f'scenarioName{i}'] 
+            for i in range(1, st.session_state.scenarioCount + 1)
+        ]
 
         # TODO: Decide on what data must be gathered
-        dataForms = ['epidemic']
+        # TODO: Make alphabetical by prospective filename
+        dataForms = [AnalysisFile(tool = 'epidemic', names = scenarioNames)]
         
         # Send POST request to server with parameters
-        # TODO: Return to idea of single client sessions; see if it 
-        # improves performance significantly
         functionLog.info(
             f'[runModel] Initialising session with base url {serverUrl}...'
         )
@@ -214,15 +226,29 @@ async def runModel():
         ) as session:
             functionLog.info(f'[runModel] Sending post request...')
             async with session.post('runModel', json = parameterJSON) as response:
-                csvData = await response.text()
+                responseData = await response.read()
             functionLog.info(f'[runModel] Response received! Returning data...')
-        # Convert CSV statistics into DataFrame
-        formattedData = formatEpidemic(csvData, ['Baseline', 'Surged'])
+        
+        # Convert CSV statistics into DataFrame(s)
         # TODO: Use JSON parameters to determine how to format CSV data
         # TODO: Store different data based on the request parameters
         # TODO: Determine if doing all analysis tasks with each model 
         # call is necessary/useful for the user
-        return formattedData
+        processedDataList = []
+        functionLog.info(
+            f'[runModel] Preparing to process {len(dataForms)} analyses...'
+        )
+        # Process without unzipping if there's only one analysis
+        if len(dataForms) == 1: return [formatData(responseData, dataForms[0])]
+        # Unzip data and format each analysis file
+        with ZipFile(BytesIO(responseData)) as analyses:
+            fileNames = analyses.namelist()
+            # TODO: Make sure file order matches analyses
+            processedData = [
+                formatData(analyses.read(file), dataForms[index]) 
+                for index, file in enumerate(fileNames)
+            ]
+        return processedData
     except Exception as e:
         functionLog.error(f'[runModel] Encountered {type(e).__name__}: {e}')
         raise e
