@@ -95,15 +95,15 @@ def updateData():
                 :red-badge[Error: Could not connect to the simulation server. 
                 Please make sure you are connected to the same network 
                 as the server, then try again.]
-            ''', icon = ':material/link_off:', duration = 'long')
+            ''', icon = ':material/link_off:')
             elif processedData == 'ClientResponseError500': stn.toast(f'''
                 :red-badge[Error: Simulation server had an internal error. 
                 Please try again later.]
-            ''', icon = ':material/error:', duration = 'long')
+            ''', icon = ':material/error:')
             else: stn.toast(f'''
                 :red-badge[Error: The simulation server encountered an error. 
                 Please try again later.]
-            ''', icon = ':material/error:', duration = 'long')
+            ''', icon = ':material/error:')
         else:
             for data, tag in processedData: session[f'modelData{tag}'] = data
             stn.toast('Simulation complete!', icon = ":material/check_circle:")

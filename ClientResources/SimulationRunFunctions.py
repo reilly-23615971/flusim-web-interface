@@ -246,18 +246,8 @@ async def runModel(scenarioNames):
         return 'ClientConnectorError'
     except ClientResponseError as e:
         functionLog.error(f'[runner] Server returned status {e.status}: {e}')
-        if e.status in {500, '500'}:
-            stn.toast(f'''
-                Error: Simulation server had an internal error. 
-                Please try again later.
-            ''', icon = ':material/error:')
-            return 'ClientResponseError500'
-        else:
-            stn.toast(f'''
-                Error: Simulation server responded poorly. 
-                Please try again later.
-            ''', icon = ':material/error:')
-            return 'ClientResponseError'
+        if e.status in {500, '500'}:return 'ClientResponseError500'
+        else: return 'ClientResponseError'
     except Exception as e:
         functionLog.error(f'[runModel] Encountered {type(e).__name__}: {e}')
         return 'UncaughtError'
