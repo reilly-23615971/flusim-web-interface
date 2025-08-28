@@ -20,6 +20,8 @@ logging.basicConfig(
     datefmt = '%Y-%m-%d %H:%M:%S', level = logging.INFO
 )
 
+appLog = logging.getLogger(__name__)
+
 # Keep session state variables loaded
 session = st.session_state
 
@@ -90,6 +92,9 @@ flusimPages.run()
 def updateData():
     if session.simulationInProgress and not resultQueue.empty():
         processedData = resultQueue.get()
+        appLog.info(
+            f'[updateData] Processing the following data:\n{processedData}'
+        )
         # Check if this was an error
         if isinstance(processedData, tuple):
             # Store the data appropriately
@@ -105,7 +110,10 @@ def updateData():
                 f'Simulation complete! Total duration: {totalTime}', 
                 icon = ":material/check_circle:"
             )
+            appLog.info(f'[updateData] Data processing was successful')
         else:
+            appLog.info(f'[updateData] Data was atypical')
+            appLog.error(f'[updateData] Data was atypical')
             # Show different toast messages for different errors
             if processedData == 'ClientConnectorError': stn.toast(f'''
                 :red-background[Error: Could not connect to the 

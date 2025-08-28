@@ -236,8 +236,11 @@ async def runModel(scenarioNames):
         with ZipFile(BytesIO(responseData)) as analyses:
             fileNames = analyses.namelist()
             if len(fileNames) == 0:
+                functionLog.info(
+                    f'[runModel] Server returned no readable files'
+                )
                 functionLog.error(
-                    f'[runner] Server returned no readable files'
+                    f'[runModel] Server returned no readable files'
                 )
                 return 'EmptyZipFile'
             # TODO: Make sure file order matches analyses
@@ -247,17 +250,31 @@ async def runModel(scenarioNames):
                 for index, file in enumerate(fileNames)
             ]
             except ValueError as e: 
-                functionLog.error(f'[runner] Server returned malformed files')
+                functionLog.info(f'[runModel] Server returned malformed files')
+                functionLog.error(f'[runModel] Server returned malformed files')
                 return 'ValueError'
+            except Exception as e:
+                functionLog.info(
+                    '[runModel] Server returned '
+                    f'unspecified malformed files: {e}'
+                )
+                functionLog.error(
+                    '[runModel] Server returned '
+                    f'unspecified malformed files: {e}'
+                )
+                return 'UncaughtFormatError'
         return processedData
     except ClientConnectorError as e:
-        functionLog.error(f'[runner] Couldn\'t connect to server: {e}')
+        functionLog.info(f'[runModel] Couldn\'t connect to server: {e}')
+        functionLog.error(f'[runModel] Couldn\'t connect to server: {e}')
         return 'ClientConnectorError'
     except ClientResponseError as e:
-        functionLog.error(f'[runner] Server returned status {e.status}: {e}')
+        functionLog.info(f'[runModel] Server returned status {e.status}: {e}')
+        functionLog.error(f'[runModel] Server returned status {e.status}: {e}')
         if e.status in {500, '500'}:return 'ClientResponseError500'
         else: return 'ClientResponseError'
     except Exception as e:
+        functionLog.info(f'[runModel] Encountered {type(e).__name__}: {e}')
         functionLog.error(f'[runModel] Encountered {type(e).__name__}: {e}')
         return 'UncaughtError'
 
@@ -273,7 +290,7 @@ def runModelWrapper(scenarioNames):
             formattedData = asyncio.run(runModel(scenarioNames))
             if formattedData: resultQueue.put(formattedData)
         except Exception as e:
-            # TODO: Inform the user of server errors (make toasts?)
+            functionLog.info(f'[runner] Encountered {type(e).__name__}: {e}')
             functionLog.error(f'[runner] Encountered {type(e).__name__}: {e}')
             raise e
     st.session_state.simulationInProgress = True
