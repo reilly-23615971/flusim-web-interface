@@ -4,7 +4,7 @@
 
 # Imports
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import streamlit as st
 import streamlit_notify as stn
 from ClientResources.SharedResources import resultQueue
@@ -89,24 +89,42 @@ def updateData():
     if session.simulationInProgress and not resultQueue.empty():
         processedData = resultQueue.get()
         # Check if this was an error
-        if isinstance(processedData, str):
+        if isinstance(processedData, tuple):
+            # Store the data appropriately
+            for data, tag in processedData: session[f'modelData{tag}'] = data
+
+            # Update parameters
+            st.session_state.simulationEndTime = datetime.now().timestamp()
+            totalTime = timedelta(
+                st.session_state.simulationEndTime 
+                - st.session_state.simulationStartTime
+            )
+            stn.toast(
+                f'Simulation complete! Total duration: {totalTime}', 
+                icon = ":material/check_circle:"
+            )
+        else:
             # Show different toast messages for different errors
             if processedData == 'ClientConnectorError': stn.toast(f'''
-                :red-background[Error: Could not connect to the simulation server. 
-                Please make sure you are connected to the same network 
-                as the server, then try again.]
+                :red-background[Error: Could not connect to the 
+                simulation server. Please make sure you are connected 
+                to the same network as the server, then try again.]
             ''', icon = ':material/link_off:')
             elif processedData == 'ClientResponseError500': stn.toast(f'''
-                :red-background[Error: Simulation server had an internal error. 
-                Please try again later.]
+                :red-background[Error: Simulation server had an 
+                internal error. Please try again later.]
             ''', icon = ':material/error:')
+            elif processedData == 'EmptyZipFile': stn.toast(f'''
+                :red-background[Error: The simulation server did not 
+                return any readable files. Please make sure your 
+                parameters do not possess any errors and try again 
+                later.]
+            ''', icon = ':material/broken_image:')
             else: stn.toast(f'''
-                :red-background[Error: The simulation server encountered an error. 
-                Please try again later.]
+                :red-background[Error: The simulation server 
+                encountered an error. Please try again later.]
             ''', icon = ':material/error:')
-        else:
-            for data, tag in processedData: session[f'modelData{tag}'] = data
-            stn.toast('Simulation complete!', icon = ":material/check_circle:")
+        # Re-enable running new simulations
         session.simulationInProgress = False
         st.rerun()
 updateData()

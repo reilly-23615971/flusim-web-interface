@@ -48,16 +48,8 @@ if st.session_state.modelDataEpidemic is None: st.write((
     'to run a simulation and get some data to plot!'
 ))
 else:
-    data = formatInfectionData(st.session_state.modelDataEpidemic)
-    plottedData = alt.Chart(
-        data, title = 'Mean Daily Infection Rate Over Time'
-    ).mark_line().encode(
-        x = 'Day:Q', y = 'Rate:Q', 
-        color = 'Simulation:N'
-    )
-
-    # Display the plot
-    st.altair_chart(plottedData)
+    data = st.session_state.modelDataEpidemic
+    st.altair_chart(plotEpidemic(data, 'Cases'))
 
 
 

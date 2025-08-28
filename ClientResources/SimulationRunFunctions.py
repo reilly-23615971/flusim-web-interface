@@ -3,8 +3,9 @@
 # Functions used to make requests to the server for running the simulation
 
 # Imports
-import time, asyncio, logging, threading
+import asyncio, logging, threading
 from io import BytesIO
+from datetime import datetime
 from zipfile import ZipFile
 from aiohttp import ClientSession, ClientConnectorError, ClientResponseError
 import streamlit as st
@@ -133,7 +134,7 @@ simulation design before running the simulation.
         if st.button('Run Simulation'):
             # Set params indicating model is simulating
             st.session_state.simulationInProgress = True
-            st.session_state.simulationStartTime = time.time()
+            st.session_state.simulationStartTime = datetime.now().timestamp()
 
             # Get scenario names
             scenarioNames = ['Baseline'] + [
@@ -145,7 +146,7 @@ simulation design before running the simulation.
             runModelWrapper(scenarioNames)
             # TODO: Inform user if server doesn't respond
 
-            # Reset page to close popup
+            # Generate popup to let the user know it worked
             stn.toast(
                 'Sending a request to run the simulation...', 
                 icon = ":material/experiment:"
@@ -224,7 +225,6 @@ async def runModel(scenarioNames):
         
         # Convert CSV statistics into DataFrame(s)
         # TODO: Use JSON parameters to determine how to format CSV data
-        # TODO: Store different data based on the request parameters
         # TODO: Determine if doing all analysis tasks with each model 
         # call is necessary/useful for the user
         functionLog.info(
@@ -235,6 +235,11 @@ async def runModel(scenarioNames):
         # Unzip data and format each analysis file
         with ZipFile(BytesIO(responseData)) as analyses:
             fileNames = analyses.namelist()
+            if len(fileNames) == 0:
+                functionLog.error(
+                    f'[runner] Server returned no readable files'
+                )
+                return 'EmptyZipFile'
             # TODO: Make sure file order matches analyses
             processedData = [
                 formatData(analyses.read(file), dataForms[index]) 
