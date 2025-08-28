@@ -243,25 +243,24 @@ async def runModel(scenarioNames):
         return processedData
     except ClientConnectorError as e:
         functionLog.error(f'[runner] Couldn\'t connect to server: {e}')
-        return ['ClientConnectorError']
+        return 'ClientConnectorError'
     except ClientResponseError as e:
         functionLog.error(f'[runner] Server returned status {e.status}: {e}')
-        # TODO: Figure out why this toast isn't displaying
         if e.status in {500, '500'}:
             stn.toast(f'''
                 Error: Simulation server had an internal error. 
                 Please try again later.
             ''', icon = ':material/error:')
-            return ['ClientResponseError500']
+            return 'ClientResponseError500'
         else:
             stn.toast(f'''
                 Error: Simulation server responded poorly. 
                 Please try again later.
             ''', icon = ':material/error:')
-            return ['ClientResponseError']
+            return 'ClientResponseError'
     except Exception as e:
         functionLog.error(f'[runModel] Encountered {type(e).__name__}: {e}')
-        return ['UncaughtError']
+        return 'UncaughtError'
 
 """
 Async wrapper function for runModel, allowing HTTP requests to be made 
