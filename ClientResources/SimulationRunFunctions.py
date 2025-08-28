@@ -6,7 +6,7 @@
 import time, asyncio, logging, threading
 from io import BytesIO
 from zipfile import ZipFile
-from aiohttp import ClientSession, ClientConnectorError
+from aiohttp import ClientSession, ClientConnectorError, ClientResponseError
 import streamlit as st
 import streamlit_notify as stn
 from ParameterTabs.basicParams import basicSchema
@@ -243,16 +243,25 @@ async def runModel(scenarioNames):
         return processedData
     except ClientConnectorError as e:
         functionLog.error(f'[runner] Couldn\'t connect to server: {e}')
+        return ['ClientConnectorError']
+    except ClientResponseError as e:
+        functionLog.error(f'[runner] Server returned status {e.status}: {e}')
         # TODO: Figure out why this toast isn't displaying
-        stn.toast(f'''
-            Error: Could not connect to the simulation server. 
-            Please make sure you are connected to the same network 
-            as the server, then try again.
-        ''')
-        return None
+        if e.status in {500, '500'}:
+            stn.toast(f'''
+                Error: Simulation server had an internal error. 
+                Please try again later.
+            ''', icon = ':material/error:')
+            return ['ClientResponseError500']
+        else:
+            stn.toast(f'''
+                Error: Simulation server responded poorly. 
+                Please try again later.
+            ''', icon = ':material/error:')
+            return ['ClientResponseError']
     except Exception as e:
         functionLog.error(f'[runModel] Encountered {type(e).__name__}: {e}')
-        raise e
+        return ['UncaughtError']
 
 """
 Async wrapper function for runModel, allowing HTTP requests to be made 

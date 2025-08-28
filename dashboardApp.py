@@ -87,9 +87,25 @@ flusimPages.run()
 @st.fragment(run_every = 1)
 def updateData():
     if session.simulationInProgress and not resultQueue.empty():
-        #TODO: Analyze model data to determine where to place in session
         processedData = resultQueue.get()
-        for data, tag in processedData: session[f'modelData{tag}'] = data
-        stn.toast('Simulation complete!', icon = ":material/check_circle:")
+        # Check if this was an error
+        if isinstance(processedData, str):
+            # Show different toast messages for different errors
+            if processedData == 'ClientConnectorError': stn.toast(f'''
+                :red-badge[Error: Could not connect to the simulation server. 
+                Please make sure you are connected to the same network 
+                as the server, then try again.]
+            ''', icon = ':material/link_off:', duration = 'long')
+            elif processedData == 'ClientResponseError500': stn.toast(f'''
+                :red-badge[Error: Simulation server had an internal error. 
+                Please try again later.]
+            ''', icon = ':material/error:', duration = 'long')
+            else: stn.toast(f'''
+                :red-badge[Error: The simulation server encountered an error. 
+                Please try again later.]
+            ''', icon = ':material/error:', duration = 'long')
+        else:
+            for data, tag in processedData: session[f'modelData{tag}'] = data
+            stn.toast('Simulation complete!', icon = ":material/check_circle:")
         session.simulationInProgress = False
 updateData()
