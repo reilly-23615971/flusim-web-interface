@@ -43,7 +43,7 @@ def formatInfectionData(data):
 st.title('Flusim Disease Model Web Dashboard')
 
 # Get data and plot as a line graph
-if st.session_state.modelDataEpidemic is None: st.write((
+if not st.session_state.get('modelDataEpidemic'): st.write((
     'No data loaded. Click "Run Simulation" on the sidebar '
     'to run a simulation and get some data to plot!'
 ))

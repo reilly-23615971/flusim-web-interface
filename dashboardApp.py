@@ -10,6 +10,14 @@ import streamlit as st
 import streamlit_notify as stn
 from ClientResources.SharedResources import resultQueue
 
+# Set this early to minimise the time spent with a different page title
+# TODO: Populate About section
+st.set_page_config(
+    page_title = 'SMRG Flusim Web Dashboard', 
+    page_icon = ':material/microbiology:',
+    menu_items = {'About': '[TODO]'}
+)
+
 
 
 # Logging config
@@ -83,10 +91,6 @@ stn.notify(remove = True)
 
 # Initialise and run the application pages
 flusimPages = st.navigation(pages)
-st.set_page_config(
-    page_title = 'SMRG Flusim Web Dashboard', 
-    page_icon = ':material/microbiology:'
-)
 flusimPages.run()
 
 # TODO: Add sim progress in sidebar
