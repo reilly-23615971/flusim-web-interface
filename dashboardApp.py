@@ -117,9 +117,14 @@ def updateData():
             elif processedData == 'EmptyZipFile': stn.toast(f'''
                 :red-background[Error: The simulation server did not 
                 return any readable files. Please make sure your 
-                parameters do not possess any errors and try again 
-                later.]
-            ''', icon = ':material/broken_image:')
+                parameters do not possess any errors and try again.]
+            ''', icon = ':material/unknown_document:')
+            elif processedData == 'ValueError': stn.toast(f'''
+                :red-background[Error: The data received from the 
+                simulation server was incorrectly formatted. Please 
+                make sure your parameters do not possess any errors and 
+                try again.]
+            ''', icon = ':material/broken_image:')  
             else: stn.toast(f'''
                 :red-background[Error: The simulation server 
                 encountered an error. Please try again later.]

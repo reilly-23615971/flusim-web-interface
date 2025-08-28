@@ -241,10 +241,14 @@ async def runModel(scenarioNames):
                 )
                 return 'EmptyZipFile'
             # TODO: Make sure file order matches analyses
-            processedData = [
+
+            try: processedData = [
                 formatData(analyses.read(file), dataForms[index]) 
                 for index, file in enumerate(fileNames)
             ]
+            except ValueError as e: 
+                functionLog.error(f'[runner] Server returned malformed files')
+                return 'ValueError'
         return processedData
     except ClientConnectorError as e:
         functionLog.error(f'[runner] Couldn\'t connect to server: {e}')
