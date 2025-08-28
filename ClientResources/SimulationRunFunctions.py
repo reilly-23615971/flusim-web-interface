@@ -165,7 +165,7 @@ async def runModel(scenarioNames):
             "name": "Simple Test",
             "description": "2184",
             "output_folder": "./results/",
-            "middle_joint": "-usingEpidemic-Emean",
+            "middle_joint": "-usingEpidemic_Emean",
             "community_used": ["newcastle"],
             "shared_overrides": {
                 "parameters": {
