@@ -83,8 +83,13 @@ stn.notify(remove = True)
 
 # Initialise and run the application pages
 flusimPages = st.navigation(pages)
-st.set_page_config(page_title = 'SMRG Flusim Web Dashboard', page_icon = '🦠')
+st.set_page_config(
+    page_title = 'SMRG Flusim Web Dashboard', 
+    page_icon = ':material/microbiology:'
+)
 flusimPages.run()
+
+# TODO: Add sim progress in sidebar
 
 
 
@@ -105,17 +110,17 @@ def updateData():
                 # Further error checking
                 if len(processedData) == 0: stn.toast(
                     f'''
-                    :red-background[Error: No data was present on one 
+                    :red-badge[Error]: No data was present on one 
                     or more of the files received from the server. 
                     Please make sure your parameters do not possess any 
-                    errors and try again.]
+                    errors and try again.
                 ''', icon = ':material/tab_unselected:')
                 elif len(data['Scenario'].value_counts()) <= scenarios: 
                     stn.toast(f'''
-                        :red-background[Error: One or more scenarios 
+                        :red-badge[Error]: One or more scenarios 
                         were not run correctly by the simulation 
                         server. Please ensure all scenarios do not 
-                        possess any errors and try again.]
+                        possess any errors and try again.
                     ''', icon = ':material/donut_small:')
                 else: 
                     successes += 1
@@ -131,8 +136,8 @@ def updateData():
                 icon = ":material/check_circle:"
             )
             elif successes > 0: stn.toast(f'''
-                :yellow-background[Simulation complete (though some 
-                analyses had errors). Total duration: {totalTime}]
+                Simulation complete :yellow-background[(though some 
+                analyses had errors)]. Total duration: {totalTime}
             ''', icon = ":material/check_circle_unread:")
             appLog.info(f'''
                 [updateData] Data processing is complete, 
@@ -142,32 +147,32 @@ def updateData():
             appLog.error(f'[updateData] Data was atypical')
             # Show different toast messages for different errors
             if isinstance(processedData, pd.DataFrame): stn.toast(f'''
-                :red-background[Error: The data was not processed 
-                correctly. Please try again later.]
+                :red-badge[Error]: The data was not processed 
+                correctly. Please try again later.
             ''', icon = ':material/data_alert:')
             elif processedData == 'ClientConnectorError': stn.toast(f'''
-                :red-background[Error: Could not connect to the 
+                :red-badge[Error]: Could not connect to the 
                 simulation server. Please make sure you are connected 
-                to the same network as the server, then try again.]
+                to the same network as the server, then try again.
             ''', icon = ':material/link_off:')
             elif processedData == 'ClientResponseError500': stn.toast(f'''
-                :red-background[Error: Simulation server had an 
-                internal error. Please try again later.]
+                :red-badge[Error]: Simulation server had an 
+                internal error. Please try again later.
             ''', icon = ':material/error:')
             elif processedData == 'EmptyZipFile': stn.toast(f'''
-                :red-background[Error: The simulation server did not 
+                :red-badge[Error]: The simulation server did not 
                 return any readable files. Please make sure your 
-                parameters do not possess any errors and try again.]
+                parameters do not possess any errors and try again.
             ''', icon = ':material/unknown_document:')
             elif processedData == 'ValueError': stn.toast(f'''
-                :red-background[Error: The data received from the 
+                :red-badge[Error]: The data received from the 
                 simulation server was incorrectly formatted. Please 
                 make sure your parameters do not possess any errors and 
-                try again.]
+                try again.
             ''', icon = ':material/broken_image:')  
             else: stn.toast(f'''
-                :red-background[Error: The simulation server 
-                encountered an error. Please try again later.]
+                :red-badge[Error]: The simulation server 
+                encountered an error. Please try again later.
             ''', icon = ':material/error:')
         # Re-enable running new simulations
         session.simulationInProgress = False
