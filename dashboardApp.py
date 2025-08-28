@@ -5,6 +5,7 @@
 # Imports
 import logging
 from datetime import datetime, timedelta
+from pandas import DataFrame
 import streamlit as st
 import streamlit_notify as stn
 from ClientResources.SharedResources import resultQueue
@@ -96,7 +97,9 @@ def updateData():
             f'[updateData] Processing the following data:\n{processedData}'
         )
         # Check if this was an error
-        if isinstance(processedData, tuple):
+        if isinstance(processedData, tuple) and not (
+            isinstance(processedData, DataFrame) and processedData.empty
+        ):
             # Store the data appropriately
             for data, tag in processedData: session[f'modelData{tag}'] = data
 
@@ -112,10 +115,16 @@ def updateData():
             )
             appLog.info(f'[updateData] Data processing was successful')
         else:
-            appLog.info(f'[updateData] Data was atypical')
             appLog.error(f'[updateData] Data was atypical')
             # Show different toast messages for different errors
-            if processedData == 'ClientConnectorError': stn.toast(f'''
+            if isinstance(processedData, DataFrame): 
+                stn.toast(f'''
+                    :red-background[Error: No data was present on the 
+                    file received from the server. Please make sure 
+                    your parameters do not possess any errors and try 
+                    again.]
+                ''', icon = ':material/tab_unselected:')
+            elif processedData == 'ClientConnectorError': stn.toast(f'''
                 :red-background[Error: Could not connect to the 
                 simulation server. Please make sure you are connected 
                 to the same network as the server, then try again.]
