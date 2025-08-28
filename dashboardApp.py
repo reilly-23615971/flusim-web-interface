@@ -5,7 +5,7 @@
 # Imports
 import logging
 from datetime import datetime, timedelta
-from pandas import DataFrame
+import pandas as pd
 import streamlit as st
 import streamlit_notify as stn
 from ClientResources.SharedResources import resultQueue
@@ -97,9 +97,7 @@ def updateData():
             f'[updateData] Processing the following data:\n{processedData}'
         )
         # Check if this was an error
-        if isinstance(processedData, tuple) and not (
-            isinstance(processedData, DataFrame) and processedData.empty
-        ):
+        if isinstance(processedData, tuple) and not (len(processedData) == 0):
             # Store the data appropriately
             for data, tag in processedData: session[f'modelData{tag}'] = data
 
@@ -117,13 +115,24 @@ def updateData():
         else:
             appLog.error(f'[updateData] Data was atypical')
             # Show different toast messages for different errors
-            if isinstance(processedData, DataFrame): 
+            if len(processedData) == 0: 
                 stn.toast(f'''
                     :red-background[Error: No data was present on the 
                     file received from the server. Please make sure 
                     your parameters do not possess any errors and try 
                     again.]
                 ''', icon = ':material/tab_unselected:')
+            elif isinstance(processedData, pd.DataFrame) and len(
+                processedData['Scenario'].value_counts()
+            ) <= st.session_state.scenarioCount: stn.toast(f'''
+                :red-background[Error: One or more scenarios were not 
+                run correctly by the simulation server. Please ensure 
+                all scenarios do not possess any errors and try again.]
+            ''', icon = ':material/donut_small:')
+            elif isinstance(processedData, pd.DataFrame): stn.toast(f'''
+                :red-background[Error: The data was not processed 
+                correctly. Please try again later.]
+            ''', icon = ':material/data_alert:')
             elif processedData == 'ClientConnectorError': stn.toast(f'''
                 :red-background[Error: Could not connect to the 
                 simulation server. Please make sure you are connected 
