@@ -169,7 +169,7 @@ async def runModel(scenarioNames):
             "community_used": ["newcastle"],
             "shared_overrides": {
                 "parameters": {
-                    "Command_Argument": {"n_runs": 24,"n_cycles": 720},
+                    "Command_Argument": {"n_runs": 12,"n_cycles": 180},
                     "Scenario_Strain": [{"StrainId": 0,"Beta": 0.11}],
                     "Scenario_Parameter": {
                         "school_closure_trigger": "timed",

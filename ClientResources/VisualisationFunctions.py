@@ -105,7 +105,7 @@ def formatEpidemic(
         return framedData.melt(
             'Days Since First Infection', var_name = 'Scenario', 
             value_name = valueLabel
-        ), 'epidemic'
+        ), 'Epidemic'
 
 """
 Function to convert raw data from the age-specific infection rate 
@@ -203,7 +203,7 @@ def formatAsir(
     ).abs() / meltedData['Age Group'].map(baselineRows)
     
     meltedData['Difference from Baseline'] = diffFromBaseline
-    return meltedData, 'asir'
+    return meltedData, 'Asir'
 
 """
 Function to create an Altair line graph of time-series data obtained 

@@ -71,7 +71,7 @@ if st.session_state.asirData is None: st.write((
 with open('./TestData/asirMedianAbsolute.csv', 'r') as csv:
     st.session_state.asirData = formatAsir(
         csv.read(), ['Baseline', 'Surged'], 'Cases', False, 'absolute'
-    )
+    )[0]
 st.session_state.scenarios = ['Baseline', 'Surged']
 
 # Form (container) for selecting health outcomes to use for the table
@@ -85,8 +85,8 @@ with tableForm:
     leftCol, centreCol, rightCol = st.columns((0.4, 0.4, 0.2))
     # Health Outcome Selection Box
     for i in range(st.session_state.outcomeFieldCount): 
-        loadKey(f'outcome{i}', 'Infections')
-        loadKey(f'type{i}', 'Frequency')
+        loadKey('outcome', i, 'Infections')
+        loadKey('type', i, 'Frequency')
     with leftCol: outcomeSelections = [
         st.selectbox(
             label = 'Health Outcome', options = tableOutcomes, 
