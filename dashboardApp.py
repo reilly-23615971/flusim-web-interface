@@ -97,39 +97,51 @@ def updateData():
             f'[updateData] Processing the following data:\n{processedData}'
         )
         # Check if this was an error
-        if isinstance(processedData, tuple) and not (len(processedData) == 0):
+        if isinstance(processedData, list):
             # Store the data appropriately
-            for data, tag in processedData: session[f'modelData{tag}'] = data
-
+            successes = 0
+            scenarios = st.session_state.scenarioCount
+            for data, tag in processedData: 
+                # Further error checking
+                if len(processedData) == 0: stn.toast(
+                    f'''
+                    :red-background[Error: No data was present on one 
+                    or more of the files received from the server. 
+                    Please make sure your parameters do not possess any 
+                    errors and try again.]
+                ''', icon = ':material/tab_unselected:')
+                elif len(data['Scenario'].value_counts()) <= scenarios: 
+                    stn.toast(f'''
+                        :red-background[Error: One or more scenarios 
+                        were not run correctly by the simulation 
+                        server. Please ensure all scenarios do not 
+                        possess any errors and try again.]
+                    ''', icon = ':material/donut_small:')
+                else: 
+                    successes += 1
+                    session[f'modelData{tag}'] = data
             # Update parameters
             st.session_state.simulationEndTime = datetime.now().timestamp()
             totalTime = timedelta(
                 st.session_state.simulationEndTime 
                 - st.session_state.simulationStartTime
             )
-            stn.toast(
+            if successes == scenarios + 1: stn.toast(
                 f'Simulation complete! Total duration: {totalTime}', 
                 icon = ":material/check_circle:"
             )
-            appLog.info(f'[updateData] Data processing was successful')
+            elif successes > 0: stn.toast(f'''
+                :yellow-background[Simulation complete (though some 
+                analyses had errors). Total duration: {totalTime}]
+            ''', icon = ":material/check_circle_unread:")
+            appLog.info(f'''
+                [updateData] Data processing is complete, 
+                with {scenarios - successes + 1} errors.
+            ''')
         else:
             appLog.error(f'[updateData] Data was atypical')
             # Show different toast messages for different errors
-            if len(processedData) == 0: 
-                stn.toast(f'''
-                    :red-background[Error: No data was present on the 
-                    file received from the server. Please make sure 
-                    your parameters do not possess any errors and try 
-                    again.]
-                ''', icon = ':material/tab_unselected:')
-            elif isinstance(processedData, pd.DataFrame) and len(
-                processedData['Scenario'].value_counts()
-            ) <= st.session_state.scenarioCount: stn.toast(f'''
-                :red-background[Error: One or more scenarios were not 
-                run correctly by the simulation server. Please ensure 
-                all scenarios do not possess any errors and try again.]
-            ''', icon = ':material/donut_small:')
-            elif isinstance(processedData, pd.DataFrame): stn.toast(f'''
+            if isinstance(processedData, pd.DataFrame): stn.toast(f'''
                 :red-background[Error: The data was not processed 
                 correctly. Please try again later.]
             ''', icon = ':material/data_alert:')
