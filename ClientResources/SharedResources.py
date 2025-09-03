@@ -44,6 +44,11 @@ tableOutcomes = {
     'Infections', 'Cases', 'Hospitalisations', 
     'Deaths', 'ICU Visits', 'GP Visits'
 }
+tableTypes = {
+    'Frequency', 'Percentage of Population', 
+    'Difference from Baseline (Frequency)', 
+    'Difference from Baseline (Percentage)'
+}
 # Dictionary getting adjective forms of health outcomes
 outcomeAdjectives = {
     'Infections': 'Infected', 'Cases': 'Diagnosed', 

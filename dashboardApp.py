@@ -148,36 +148,49 @@ def updateData():
                 with {scenarios - successes + 1} errors.
             ''')
         else:
-            appLog.error(f'[updateData] Data was atypical')
+            appLog.error(
+                '[updateData] Received data was atypical. Contents: ' 
+                + str(processedData)
+            )
+            # TODO: Show proper error messages if available
             # Show different toast messages for different errors
-            if isinstance(processedData, pd.DataFrame): stn.toast(f'''
+            if isinstance(processedData, tuple):
+                # Errors with exceptions attached
+                errorType, e = processedData
+                if errorType == 'ClientConnectorError': stn.toast(f'''
+                    :red-badge[Error]: Could not connect to the 
+                    simulation server. Please make sure you are connected 
+                    to the same network as the server, then try again.
+                ''', icon = ':material/link_off:')
+                elif errorType == 'ClientResponseError500': stn.toast(f'''
+                    :red-badge[Error]: Simulation server had an 
+                    internal error. Please try again later.
+                ''', icon = ':material/error:')
+                elif errorType == 'ValueError': stn.toast(f'''
+                    :red-badge[Error]: The data received from the 
+                    simulation server was incorrectly formatted. Please 
+                    make sure your parameters do not possess any errors and 
+                    try again.
+                ''', icon = ':material/broken_image:')  
+                else: stn.toast(f'''
+                    :red-badge[Error]: The simulation server 
+                    encountered an error. Please try again later.
+                ''', icon = ':material/error:')
+                stn.toast(f':red-badge[Full Error Message]: {e}')
+            # Errors without exception messages to send
+            elif isinstance(processedData, pd.DataFrame): stn.toast(f'''
                 :red-badge[Error]: The data was not processed 
                 correctly. Please try again later.
             ''', icon = ':material/data_alert:')
-            elif processedData == 'ClientConnectorError': stn.toast(f'''
-                :red-badge[Error]: Could not connect to the 
-                simulation server. Please make sure you are connected 
-                to the same network as the server, then try again.
-            ''', icon = ':material/link_off:')
-            elif processedData == 'ClientResponseError500': stn.toast(f'''
-                :red-badge[Error]: Simulation server had an 
-                internal error. Please try again later.
-            ''', icon = ':material/error:')
             elif processedData == 'EmptyZipFile': stn.toast(f'''
                 :red-badge[Error]: The simulation server did not 
                 return any readable files. Please make sure your 
                 parameters do not possess any errors and try again.
             ''', icon = ':material/unknown_document:')
-            elif processedData == 'ValueError': stn.toast(f'''
-                :red-badge[Error]: The data received from the 
-                simulation server was incorrectly formatted. Please 
-                make sure your parameters do not possess any errors and 
-                try again.
-            ''', icon = ':material/broken_image:')  
             else: stn.toast(f'''
-                :red-badge[Error]: The simulation server 
-                encountered an error. Please try again later.
+                :red-badge[Error]: An unknown error occurred. Please try again later
             ''', icon = ':material/error:')
+        
         # Re-enable running new simulations
         session.simulationInProgress = False
         st.rerun()

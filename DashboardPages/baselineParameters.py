@@ -96,7 +96,8 @@ alertContainer = st.container()
 
 runModelButton = st.button(
     'Run Simulation', key = 'baselineRunModel', on_click = runSimulationButton,
-    disabled = st.session_state.simulationInProgress, help = '''
+    disabled = st.session_state.simulationInProgress, type = 'primary', 
+    help = '''
         Send a request to the *Flusim* model server to run the model 
         with the specified parameters. Once the request has been made, 
         you will be unable to run the model again until it completes, 
