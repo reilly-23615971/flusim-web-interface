@@ -24,9 +24,13 @@ ordinals = {
     1: 'First', 2: 'Second', 3: 'Third', 4: 'Fourth', 5: 'Fifth', 
     6: 'Sixth', 7: 'Seventh', 8: 'Eighth', 9: 'Ninth', 10: 'Tenth'
 }
+
+
+
 # Dictionary getting the population of each community the simulator uses
 communityPopulation = {'newcastle': 272407, 'cairns': 140402}
-# Tuple holding the possible age categories used by the simulator
+
+# Dictionary holding the possible age categories used by the simulator
 ageCategories = {
     'Young Infant': 'young_infant',  # 0-6 months
     'Infant': 'infant',              # 7-24 months (0.5-2 years)
@@ -39,16 +43,37 @@ ageCategories = {
     'Senior': 'senior',              # 65-79 years
     'Older Senior': 'older_senior'   # 80+ years
 }
+# Nested dictionary holding number of individuals in each age bracket
+communityAgePops = {
+    'newcastle': {
+        'Young Infant': 2742, 'Infant': 6641, 'Young Child': 10242, 
+        'Child': 20603, 'Adolescent': 18513, 'Young Adult': 27015, 
+        'Adult': 71299, 'Older Adult': 69949, 'Senior': 31384, 
+        'Older Senior': 14019
+    }, 
+    'cairns': {
+        'Young Infant': 1837, 'Infant': 4277, 'Young Child': 6381, 
+        'Child': 12650, 'Adolescent': 10432, 'Young Adult': 12074, 
+        'Adult': 42394, 'Older Adult': 36541, 'Senior': 10675, 
+        'Older Senior': 3141
+    }
+}
+
+
+
 # Set containing health outcomes selectable for tables
 tableOutcomes = {
     'Infections', 'Cases', 'Hospitalisations', 
     'Deaths', 'ICU Visits', 'GP Visits'
 }
+
+"""
+# Set containing possible forms the health outcomes can take
 tableTypes = {
-    'Frequency', 'Percentage of Population', 
-    'Difference from Baseline (Frequency)', 
-    'Difference from Baseline (Percentage)'
+    'Frequency', 'Percentage of Population'
 }
+"""
+
 # Dictionary getting adjective forms of health outcomes
 outcomeAdjectives = {
     'Infections': 'Infected', 'Cases': 'Diagnosed', 
@@ -56,15 +81,31 @@ outcomeAdjectives = {
     'ICU Visits': 'Severely Ill', 'GP Visits': 'Visiting'
 }
 
+# Dictionary getting session_state variables for outcome rates
+outcomeRateVariables = {
+    'Cases': 'caseRatio', 'Hospitalisations': 'hospitalRatio', 
+    'Deaths': 'deathRatio', 'ICU Visits': 'icuRatio', 'GP Visits': 'gpRatio'
+}
+
+# Default values for rates
+outcomeRateDefaults = {
+    'Cases': 0.5, 'Hospitalisations': 0.25, 
+    'Deaths': 0.05, 'ICU Visits': 0.1, 'GP Visits': 0.333
+}
+
+
+
 # Tuple holding the names of the different possible NPIs
 npis = (
     'Vaccination', 'School Closure', 'Withdrawal Increase', 
     'Reduced Group Size', 'Background Contact Count Reduction'
 )
+
 # Tuple holding the camelCase names of NPIs for anchor tags and the like
 npiCamel = (
     'vaccination', 'schoolClosure', 'withdrawalIncrease', 'reducedGroup', 'bcc'
 )
+
 # Tuple holding the possible trigger conditions for NPIs
 triggerConditions = {
     'Always': 'timed', 'Timed': 'timed', 
@@ -73,6 +114,7 @@ triggerConditions = {
     'Cases per School': 'per_school_cases', 
     'Cases per K-12 School': 'per_primary_high_school_cases'  
 }
+
 # Tuple holding the different location types for kappa selection
 kappaLocations = {
     'Households': 'household', 'K-12 Education': 'child_education', 
@@ -81,13 +123,13 @@ kappaLocations = {
     'Background Interactions': 'background'
 }
 
+
+
 # Simple function to get theme colours
 # Change these values if background colour changes
 def backgroundColour(): return (
     '#0F1116' if st.context.theme.type == 'dark' else '#FFFFFF'
 )
-
-
 
 
 

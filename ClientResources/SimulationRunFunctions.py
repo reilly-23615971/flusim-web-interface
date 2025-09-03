@@ -18,10 +18,11 @@ from ParameterTabs.dynamicParams import dynamicSchema
 from ClientResources.ModelSchema import (
     Parameters, modelGuideFile, overrideParams, simulationSet, simulation
 )
-from ClientResources.InterfaceFunctions import checkErrors
+from ClientResources.InterfaceFunctions import idGet, checkErrors
 from ClientResources.VisualisationFunctions import formatData
 from ClientResources.SharedResources import (
-    AnalysisFile, tableOutcomes, serverUrl, resultQueue
+    AnalysisFile, tableOutcomes, outcomeRateVariables, 
+    outcomeRateDefaults, serverUrl, resultQueue
 )
 
 # Logging
@@ -139,8 +140,28 @@ simulation design before running the simulation.
             # Get scenario names
             scenarioNames = ['Baseline'] + [
                 st.session_state[f'scenarioName{i}'] 
-                for i in range(1, st.session_state['scenarioCount'] + 1)
+                for i in range(1, scenarioCount + 1)
             ]
+
+            # Save current parameter values that'll be used for 
+            # visualisation when the user has potentially changed them
+            st.session_state.DataCommunity = st.session_state.get(
+                'community', 'newcastle'
+            )
+            st.session_state.DataScenarioNames = scenarioNames
+            st.session_state.DataScenarioCount = st.session_state[
+                'scenarioCount'
+            ]
+            st.session_state.DataHealthOutcomeRates = {
+                outcome: {
+                    scenario: idGet(
+                        outcomeRateVariables[outcome], i, 
+                        outcomeRateDefaults[outcome]
+                    ) 
+                    for i, scenario in enumerate(scenarioNames)
+                }
+                for outcome in outcomeRateDefaults.keys()
+            }
 
             # Make the model call
             runModelWrapper(scenarioNames)
@@ -250,33 +271,30 @@ async def runModel(scenarioNames):
                 for index, file in enumerate(fileNames)
             ]
             except ValueError as e: 
-                functionLog.info(f'[runModel] Server returned malformed files')
-                functionLog.error(f'[runModel] Server returned malformed files')
-                return 'ValueError'
-            except Exception as e:
-                functionLog.info(
-                    '[runModel] Server returned '
-                    f'unspecified malformed files: {e}'
+                functionLog.error(
+                    f'[runModel] Server returned malformed files: {e}'
                 )
+                return ('ValueError', e)
+            except Exception as e:
                 functionLog.error(
                     '[runModel] Server returned '
                     f'unspecified malformed files: {e}'
                 )
-                return 'UncaughtFormatError'
+                return ('UncaughtFormatError', e)
         return processedData
     except ClientConnectorError as e:
         functionLog.info(f'[runModel] Couldn\'t connect to server: {e}')
         functionLog.error(f'[runModel] Couldn\'t connect to server: {e}')
-        return 'ClientConnectorError'
+        return ('ClientConnectorError', e)
     except ClientResponseError as e:
         functionLog.info(f'[runModel] Server returned status {e.status}: {e}')
         functionLog.error(f'[runModel] Server returned status {e.status}: {e}')
-        if e.status in {500, '500'}:return 'ClientResponseError500'
-        else: return 'ClientResponseError'
+        if e.status in {500, '500'}: return ('ClientResponseError500', e)
+        else: return ('ClientResponseError', e)
     except Exception as e:
         functionLog.info(f'[runModel] Encountered {type(e).__name__}: {e}')
         functionLog.error(f'[runModel] Encountered {type(e).__name__}: {e}')
-        return 'UncaughtError'
+        return ('UncaughtError', e)
 
 """
 Async wrapper function for runModel, allowing HTTP requests to be made 

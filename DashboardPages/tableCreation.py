@@ -9,62 +9,61 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
+
 from ClientResources.InterfaceFunctions import (
     saveKey, loadKey, getRemainingGroups, 
     addFormRow, deleteFormRow, dayCount, idGet
 )
 from ClientResources.VisualisationFunctions import formatAsir
-from ClientResources.SharedResources import outcomeAdjectives, tableOutcomes, tableTypes
+from ClientResources.SharedResources import (
+    outcomeAdjectives, outcomeRateVariables, outcomeRateDefaults, tableOutcomes
+)
 
 # Page Functions
-old = """
-# Callback for function to add inputs to form
-def addFormRow(): st.session_state.outcomeFieldCount += 1
-
-# Callback for function to remove inputs from form
-def deleteFormRow(index):
-    # Make sure there's at least 1 row remaining
-    if st.session_state.outcomeFieldCount < 2: raise ValueError(
-        'Cannot remove row from form when only one row remains.'
-    )
-
-    # Shift any rows below the deleted one up
-    for row in range(index, st.session_state.outcomeFieldCount - 1):
-        for property in {'outcome', 'type'}:
-            st.session_state[f'{property}{row}'] = st.session_state[
-                f'{property}{row+1}'
-            ]
-    
-    # Erase any lingering data
-    for property in {'outcome', 'type'}: 
-        del st.session_state[
-            f'{property}{st.session_state.outcomeFieldCount - 1}'
-        ]
-    st.session_state.outcomeFieldCount -= 1
 
 # Callback function to generate the table
-def generateTable():
-    outcomeColumnCount = st.session_state.outcomeFieldCount
+def generateTable(container):
+    outcomeColumnCount = st.session_state.healthOutcomeRowCount
     #TODO: Check if any column fields are empty
     columnDetails = [
         (
-            st.session_state[f'outcome{colNumber}'], 
-            st.session_state[f'type{colNumber}']
+            st.session_state[f'healthOutcome{colNumber}'], 
+            st.session_state[f'useBaselineDifference{colNumber}'],
+            st.session_state[f'useProportion{colNumber}'],
         ) for colNumber in range(0, outcomeColumnCount)
     ]
-    return
-"""
+    # Debug code for testing
+
+    st.session_state.DataCommunity = 'newcastle'
+    st.session_state.DataHealthOutcomeRates = {
+        outcome: {
+            scenario: idGet(
+                outcomeRateVariables[outcome], i, 
+                outcomeRateDefaults[outcome]
+            ) 
+            for i, scenario in enumerate(['Baseline', 'Surged'])
+        }
+        for outcome in outcomeRateDefaults.keys()
+    }
+    with open('./TestData/asirMedianAbsolute.csv', 'rb') as csv:
+        rawAsir = ageData = formatAsir(
+            csv.read(), ['Baseline', 'Surged'], [('Cases', False, False)]
+        )
+    
+    container.dataframe(rawAsir, key = 'healthOutcomeTable')
+
 
 # Initialise session variables needed by the vaccination/NPI forms
 sessionParameters = {
-    f'healthOutcomeRowCount': 1,
+    'healthOutcomeRowCount': 1,
+    'DataCommunity': 'newcastle'
 }
 for parameter, default in sessionParameters.items(): 
     st.session_state[parameter] = st.session_state.get(parameter, default)
 
 
 
-st.title('Flusim Disease Model Web Dashboard')
+st.title('Flusim Disease Model Dashboard')
 
 st.write((
     'This page allows for the creation of tables comparing various '
@@ -79,16 +78,7 @@ if not currentDataExists: st.warning((
     'obtain the data necessary to generate a table.'
 ))
 
-# Data for testing [DEBUG]
-with open('./TestData/asirMedianAbsolute.csv', 'rb') as csv:
-    st.session_state.modelDataAsir = formatAsir(
-        csv.read(), ['Baseline', 'Surged'], 'Cases', False, 'absolute'
-    )[0]
-st.session_state.scenarios = ['Baseline', 'Surged']
-
 # Form (container) for selecting health outcomes to use for the table
-
-
 # Save relevant params as variables to avoid lookups
 healthOutcomeRowCount = st.session_state[f'healthOutcomeRowCount']
 healthOutcomeForm = st.container(border = True)
@@ -96,13 +86,13 @@ healthOutcomeErrorContainer = st.container()
 healthOutcomeForm.title('Select Health Burden Outcomes')
 for i in range(healthOutcomeRowCount): 
     (
-        healthOutcomeColumn, outcomeTypeColumn, healthRemoveColumn
-    ) = healthOutcomeForm.columns((0.4, 0.4, 0.2))
+        healthOutcomeColumn, healthDifferenceColumn, 
+        outcomeTypeColumn, healthRemoveColumn
+    ) = healthOutcomeForm.columns((0.25, 0.275, 0.275, 0.2))
     currentOutcome = st.session_state.get(f'healthOutcome{i}', 'Infections')
-    currentType = st.session_state.get(f'outcomeType{i}', 'Frequency')
 
     # Health burden outcome column
-    loadKey(f'healthOutcome', i, currentOutcome)
+    loadKey(f'healthOutcome', i, currentOutcome, noZeroDefault = True)
     with healthOutcomeColumn: st.selectbox(
         'Health Burden Outcome', key = f'_healthOutcome{i}', 
         # Set health burden options such that only outcomes
@@ -111,7 +101,8 @@ for i in range(healthOutcomeRowCount):
             outcome for outcome in tableOutcomes 
             if outcome != currentOutcome
         ]), 
-        on_change = saveKey, args = [f'healthOutcome', id], # type: ignore
+        on_change = saveKey, args = [f'healthOutcome', i], # type: ignore
+        kwargs = {'notScenario': False},
         help = '''
             Select the health burden outcome you would like to be 
             included as a column on the table.
@@ -134,42 +125,62 @@ for i in range(healthOutcomeRowCount):
             simulation.
         '''
     )
-    
-    # Initial proportion column
-    loadKey(f'outcomeType', id, currentType)
-    with outcomeTypeColumn: st.selectbox(
-        'Outcome Type', key = f'_outcomeType{i}', 
-        options = ([currentType] + [
-            type for type in tableTypes if type != currentType
-        ]), 
-        on_change = saveKey, args = [f'outcomeType', id], # type: ignore
-        help = '''
-            Select the form in which the desired health burden outcome 
-            will be displayed.
-
-            ### Options:
-            - Frequency: the median total number of occurrences of this 
-            health outcome between all simulation runs within each 
-            scenario.
-            - Percentage of Population: the median proportion of the 
-            total population within the simulation that achieves this 
-            health outcome within each scenario, expressed as a 
-            percentage.
-            - Difference from Baseline (Frequency): The difference 
-            between the median occurrences of this health outcome in 
-            the baseline scenario and the median occurrences of this 
-            health outcome in each other scenario.
-            - Difference from Baseline (Percentage): The difference 
-            between the median population proportion of this health 
-            outcome in the baseline scenario and the median population 
-            proportion of this health outcome in each other scenario.
+        
+    # Difference from baseline column
+    loadKey('useBaselineDifference', i, False, noZeroDefault = True)
+    with healthDifferenceColumn: st.toggle(
+        'Difference from Baseline', False, key = f'_useBaselineDifference{i}', 
+        on_change = saveKey, args = ['useBaselineDifference', i], # type: ignore
+        disabled = st.session_state.get('DataScenarioCount', -1) == 0,
+        kwargs = {'notScenario': False}, help = '''
+            Toggle whether this column should display the difference 
+            between the specified health burden outcome's result in the 
+            baseline simulation and the result in the simulation the 
+            row is for. For example, if the number of infected 
+            individuals was 300 in the baseline scenario and 400 in 
+            Scenario 1, an 'Infections' column with this setting 
+            enabled would display +100 in the row for Scenario 1.
+        ''' if st.session_state.get('DataScenarioCount', -1) != 0 else '''
+            There are currently no additional scenarios defined for the 
+            simulation data, so a difference from baseline column would 
+            display no useful information.
         '''
     )
+        
+    # Proportion column
+    loadKey(f'useProportion', i, False, noZeroDefault = True)
+    with outcomeTypeColumn: st.toggle(
+        'Percentage', False, key = f'_useProportion{i}', 
+        on_change = saveKey, args = [f'useProportion', i], # type: ignore
+        kwargs = {'notScenario': False}, help = '''
+            Toggle whether this column should display its value as a 
+            percentage rather than as a standard number. 
+            
+            If 'Difference from Baseline' is disabled, this percentage 
+            will be relative to the total population of each age group 
+            in each scenario's community. For example, if the number of 
+            infected adults was 20,000 in a scenario with the Newcastle 
+            community (which has 71,299 adults), an 'Infections' column 
+            with 'Percentage' disabled would display 20,000 while a 
+            column with it enabled would display 28.051%.
+
+            If 'Difference from Baseline' is enabled, this percentage 
+            will be relative to the value of the column in the baseline 
+            scenario for the given age group. For example, if the 
+            number of infected individuals was 300 in the baseline 
+            scenario and 400 in Scenario 1, an 'Infections' column with 
+            both 'Percentage' and 'Difference from Baseline' enabled 
+            would display +33.333% in the row for Scenario 1.
+        '''
+    )
+    
     # Delete button column
     with healthRemoveColumn: st.button(
         label = 'Remove Column', icon = ':material/delete:',
         key = f'healthOutcomeRemove{i}', on_click = deleteFormRow, args = (
-            i, 'healthOutcomeRowCount', {f'healthOutcome', f'outcomeType'}, 1
+            i, 'healthOutcomeRowCount', {
+                'healthOutcome', 'outcomeType', 'useBaselineDifference'
+            }, 1
         ),
         disabled = healthOutcomeRowCount <= 1, help = '''
             Remove this row of the form and do not display this column 
@@ -187,15 +198,30 @@ healthOutcomeForm.button(
         Add another row to this form, where you can select an 
         additional health burden outcome to be included in the table.
     ''' if healthOutcomeRowCount <= 6 else '''
-            The maximum number of columns has been added to this table.
+        The maximum number of columns has been added to this table.
     '''
 )
 
 # Button to generate the table itself
-#TODO: Build the table
-generateTableButton = st.button(
+buttonContainer = st.empty()
+
+tableContainer = st.empty()
+
+buttonContainer.button(
     label = 'Create Table', icon = ':material/backup_table:', 
-    key = 'generateTable', type = 'primary'
+    key = 'generateTable', type = 'primary', on_click = generateTable, 
+    args = [tableContainer], # type: ignore
+    disabled = not st.session_state.get('modelDataRawAsir'), help = '''
+        Use the data from the last simulation to generate a table 
+        displaying different health outcomes on the scenarios in the 
+        simulation, with the specific columns displayed depending on 
+        the parameters selected above.
+    ''' if st.session_state.get('modelDataRawAsir') else '''
+        No simulations have completed yet, so there is no data to 
+        tabulate.
+    '''
 )
 
 #TODO: Select table units based on what's most appropriate
+#st.header('DEBUG ZONE')
+#st.session_state

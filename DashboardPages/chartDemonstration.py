@@ -40,7 +40,7 @@ def formatInfectionData(data):
         'Day', var_name = 'Simulation', value_name = 'Rate'
     )
 
-st.title('Flusim Disease Model Web Dashboard')
+st.title('Flusim Disease Model Dashboard')
 
 # Get data and plot as a line graph
 if not st.session_state.get('modelDataEpidemic'): st.write((
@@ -58,20 +58,21 @@ else:
 scenarios = ['Baseline', 'Surged']
 
 with open('./TestData/epidemicMedianDaily.csv', 'rb') as csv:
-    meanData, _ = formatEpidemic(csv.read(), scenarios, 'Cases')
+    meanData = formatEpidemic(csv.read(), scenarios, 'Cases')
 
 st.altair_chart(plotEpidemic(meanData, 'Cases'))
 
 
 with open('./TestData/epidemicMedianCumulative.csv', 'rb') as csv:
-    sumData, _ = formatEpidemic(csv.read(), scenarios, 'Cases', True)
+    sumData = formatEpidemic(csv.read(), scenarios, 'Cases', True)
 
 st.altair_chart(plotEpidemic(sumData, 'Cases', True))
 
-with open('./TestData/asirMedianAbsolute.csv', 'rb') as csv:
-    ageData, _ = formatAsir(csv.read(), scenarios, 'Cases', False, 'absolute')
+if st.session_state.modelDataRawAsir:
+    with open('./TestData/asirMedianAbsolute.csv', 'rb') as csv:
+        ageData = formatAsir(csv.read(), scenarios, [('Cases', False, 'absolute')])
 
-with open('./TestData/asirMedianAbsolute.csv', 'rb') as csv:
-    ageData, _ = formatAsir(csv.read(), scenarios, 'Cases', False, 'percentage')
+    with open('./TestData/asirMedianAbsolute.csv', 'rb') as csv:
+        ageData = formatAsir(csv.read(), scenarios, [('Cases', True, True)])
 
 #******************************************************************

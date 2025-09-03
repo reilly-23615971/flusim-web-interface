@@ -71,7 +71,7 @@ pages = {
 # aren't mixed up by the server
 sessionParameters = {
     'modelData': None, 'simulationInProgress': False, 'scenarioCount': 0,
-    'outcomeFieldCount': 1, 'sessionID': int(datetime.now().timestamp()),
+    'sessionID': int(datetime.now().timestamp()),
     'scenarioSetParamsExtra': {1: [], 2: [], 3: [], 4: [], 5: []}, 
     'scenarioSetParams': {1: [], 2: [], 3: [], 4: [], 5: []}
 }
@@ -119,7 +119,9 @@ def updateData():
                     Please make sure your parameters do not possess any 
                     errors and try again.
                 ''', icon = ':material/tab_unselected:')
-                elif len(data['Scenario'].value_counts()) <= scenarios: 
+                elif tag == 'epidemic' and len(
+                    data['Scenario'].value_counts()
+                ) <= scenarios: 
                     stn.toast(f'''
                         :red-badge[Error]: One or more scenarios 
                         were not run correctly by the simulation 
@@ -159,8 +161,9 @@ def updateData():
                 errorType, e = processedData
                 if errorType == 'ClientConnectorError': stn.toast(f'''
                     :red-badge[Error]: Could not connect to the 
-                    simulation server. Please make sure you are connected 
-                    to the same network as the server, then try again.
+                    simulation server. Please make sure you are 
+                    connected to the same network as the server, then 
+                    try again.
                 ''', icon = ':material/link_off:')
                 elif errorType == 'ClientResponseError500': stn.toast(f'''
                     :red-badge[Error]: Simulation server had an 
@@ -169,8 +172,8 @@ def updateData():
                 elif errorType == 'ValueError': stn.toast(f'''
                     :red-badge[Error]: The data received from the 
                     simulation server was incorrectly formatted. Please 
-                    make sure your parameters do not possess any errors and 
-                    try again.
+                    make sure your parameters do not possess any errors 
+                    and try again.
                 ''', icon = ':material/broken_image:')  
                 else: stn.toast(f'''
                     :red-badge[Error]: The simulation server 
@@ -188,7 +191,8 @@ def updateData():
                 parameters do not possess any errors and try again.
             ''', icon = ':material/unknown_document:')
             else: stn.toast(f'''
-                :red-badge[Error]: An unknown error occurred. Please try again later
+                :red-badge[Error]: An unknown error occurred. Please 
+                try again later.
             ''', icon = ':material/error:')
         
         # Re-enable running new simulations

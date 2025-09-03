@@ -8,8 +8,10 @@ from io import BytesIO
 import logging
 import pandas as pd
 import altair as alt
+import streamlit as st
 from ClientResources.SharedResources import (
-    AnalysisFile, ageCategories, tableOutcomes, outcomeAdjectives
+    AnalysisFile, communityPopulation, communityAgePops, ageCategories, 
+    tableOutcomes, outcomeAdjectives, outcomeRateVariables
 )
 
 # Logging
@@ -28,11 +30,9 @@ def formatData(data, settings: AnalysisFile):
     if settings.tool == 'epidemic': return formatEpidemic(
         data, settings.names, settings.outcome, 
         settings.useCumulative, settings.splitByAge
-    )
-    elif settings.tool == 'asir': return formatAsir(
-        data, settings.names, settings.outcome, 
-        settings.useProportion, settings.differenceType
-    )
+    ), 'Epidemic'
+    # Leave asir alone since it gets formatted when generating the table
+    elif settings.tool == 'asir': return data, 'RawAsir'
 
 
 """
@@ -105,7 +105,7 @@ def formatEpidemic(
         return framedData.melt(
             'Days Since First Infection', var_name = 'Scenario', 
             value_name = valueLabel
-        ), 'Epidemic'
+        )
 
 """
 Function to convert raw data from the age-specific infection rate 
@@ -120,30 +120,22 @@ Parameters:
     different scenarios that were simulated (since the CSV just uses 
     non-descriptive placeholders).
 
-    outcome: A string indicating the health outcome the asir
-    data represents. Can be either 'Infections', 'Cases', 
-    'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
-
-    proportion: A Boolean that is True when the CSV contains 
-    proportional/fractional results instead of the direct number of 
-    infections per category.
-
-    difference: A string that is not empty when the outputted DataFrame 
-    should contain a column indicating the difference between the 
-    baseline scenario (assumed to be the first in the CSV file) and 
-    the other scenarios. Can be either 'absolute', 'percentage' or an 
-    empty string/False.
+    columns: A list of tuples representing the health burden outcome 
+    and formatting of each column the dataframe should have.
 
 Output:
     formattedData: A pandas DataFrame containing the data, reshaped into
     a format more easily used for table construction.
 """
+# TODO: Age-specific mortality, more options
 def formatAsir(
-    rawCSV, scenarioNames, outcome = 'Infections', 
-    proportion = False, difference = ''
+    rawCSV, scenarioNames, columns = [('Infections', False, False)]
 ):
     # Validate parameters
     try:
+        if not scenarioNames: raise ValueError(
+            'scenarioNames should not be empty.'
+        )
         if (
             not isinstance(scenarioNames, list) 
             or not all(isinstance(name, str) for name in scenarioNames)
@@ -151,19 +143,17 @@ def formatAsir(
             'scenarioNames should be a list of '
             f'strings; was {type(scenarioNames)}.'
         ))
-        if not scenarioNames: raise ValueError(
-            'scenarioNames should not be empty.'
+        if not columns: raise ValueError(
+            'columns should not be empty.'
         )
-        if outcome not in tableOutcomes: raise ValueError((
-            'outcome should be either "Infections", "Cases", '
-            '"Hospitalisations", "ICU Visits", "GP Visits", '
-            f'or "Deaths"; was "{outcome}".'
+        if not isinstance(columns, list) or not all(
+            isinstance(col, tuple) and len(col) == 3 
+            and col[0] in tableOutcomes for col in columns
+        ): raise ValueError((
+            'columns should be a list of tuples containing health '
+            'outcome strings and proportion/baseline difference '
+            f'booleans; was {columns}.'
         ))
-        if difference and difference not in {'absolute', 'percentage'}: 
-            raise ValueError((
-                'difference should be either "absolute", "percentage", '
-                f'or an empty string; was "{difference}".'
-            ))
     except Exception as e:
         functionLog.error(
             f'[formatAsir] Encountered {type(e).__name__} '
@@ -179,31 +169,57 @@ def formatAsir(
     framedData.index = pd.Index(scenarioNames)
     framedData.reset_index(names = 'Scenario', inplace = True)
 
-    # Reshape data for better Altair usage
-    valueLabel = (
-        f'{outcomeAdjectives[outcome]} Proportion of Population' if proportion 
-        else f'Number of {outcome}'
-    )
+    # Reshape data for better Altair usage with placeholder infections
     meltedData = framedData.melt(
-        'Scenario', var_name = 'Age Group', value_name = valueLabel
+        'Scenario', var_name = 'Age Group', value_name = 'Base Values'
     )
-    if not difference: return meltedData
     
-    # Generate difference column if specified
+    # Get base data to use when creating specified columns
     baselineScenario = scenarioNames[0]
-    baselineRows = (meltedData.loc[
+    baselineRows = meltedData.loc[
         meltedData['Scenario'] == baselineScenario
-    ].set_index('Age Group')[valueLabel])
-    
-    if difference == 'absolute': diffFromBaseline = (
-        meltedData[valueLabel] - meltedData['Age Group'].map(baselineRows)
-    ).abs()
-    else: diffFromBaseline = (
-        meltedData[valueLabel] - meltedData['Age Group'].map(baselineRows)
-    ).abs() / meltedData['Age Group'].map(baselineRows)
-    
-    meltedData['Difference from Baseline'] = diffFromBaseline
-    return meltedData, 'Asir'
+    ].set_index('Age Group')['Base Values']
+    community = st.session_state.DataCommunity
+
+    # Generate columns
+    for outcome, baselineDifference, proportion in columns:
+        # Multiply base infection rate with corresponding outcome rate
+        if outcome != 'Infections': currentColumn = (
+            meltedData['Base Values'] * meltedData['Scenario'].map(
+                st.session_state['DataHealthOutcomeRates'][outcome]
+            )
+        )
+        else: currentColumn = meltedData['Base Values']
+
+        # Apply proportion/difference modifications
+        if proportion and not baselineDifference: 
+            currentColumn /= meltedData['Age Group'].map(
+                communityAgePops[community]
+            )
+            columnName = (
+                f'{outcomeAdjectives[outcome]} Percentage of Population'
+            )
+        elif not proportion and baselineDifference:
+            currentColumn -= (
+                meltedData['Age Group'].map(baselineRows)['Base Values']
+            )
+            columnName = f'{outcome} (Difference from Baseline)'
+        elif proportion and baselineDifference:
+            currentColumn -= (
+                meltedData['Age Group'].map(baselineRows)['Base Values']
+            )
+            currentColumn /= (
+                meltedData['Age Group'].map(baselineRows)['Base Values']
+            )
+            columnName = f'{outcome} (Percentage Difference from Baseline)'
+        else: columnName = outcome
+        
+        # Formally create the column
+        meltedData[columnName] = currentColumn
+
+    # Remove the base values column once it's redundant
+    meltedData.drop('Base Values', axis = 1, inplace = True)
+    return meltedData
 
 """
 Function to create an Altair line graph of time-series data obtained 

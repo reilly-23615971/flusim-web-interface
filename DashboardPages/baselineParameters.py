@@ -22,7 +22,7 @@ baselineLog = logging.getLogger(__name__)
 
 # Page Content
 
-st.title('Flusim Disease Model Web Dashboard')
+st.title('Flusim Disease Model Dashboard')
 
 st.markdown(f'''
     This page allows for configuring the parameters that will be used 
