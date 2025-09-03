@@ -40,7 +40,7 @@ loadKey('community', '', 'newcastle')
 community = st.selectbox(
     'Simulated Community', communityPopulation.keys(), key = '_community', 
     format_func = lambda x: x.capitalize(), 
-    on_change = saveKey, args = ['community'],  # type: ignore
+    on_change = saveKey, args = ['community', ''],  # type: ignore
     help = '''
         The Australian city whose community data will be used as the 
         basis for the population and demographic distribution in the 
@@ -97,7 +97,7 @@ alertContainer = st.container()
 runModelButton = st.button(
     'Run Simulation', key = 'baselineRunModel', on_click = runSimulationButton,
     disabled = st.session_state.simulationInProgress, type = 'primary', 
-    help = '''
+    icon = ':material/motion_play:', help = '''
         Send a request to the *Flusim* model server to run the model 
         with the specified parameters. Once the request has been made, 
         you will be unable to run the model again until it completes, 
@@ -119,10 +119,11 @@ runModelButton = st.button(
     basicTab, diseaseTab, communityTab, 
     interventionTab, dynamicTab
 ) = st.tabs([
-    'Initialisation', 'Disease', 'Community', 
-    'Vaccination and NPIs', 'Dynamic'
+    ':material/start: Initialisation', ':material/coronavirus: Disease', 
+    ':material/groups: Community', ':material/vaccines: Vaccination and NPIs', 
+    ':material/manage_history: Dynamic'
 ])
-
+# :material/pattern: for the template tab
 # Basic parameters
 buildBasicTab(basicTab, 0, alertContainer)
 

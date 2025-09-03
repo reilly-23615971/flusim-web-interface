@@ -45,23 +45,26 @@ pages = {
     'SMRG Flusim Web Dashboard': [
         st.Page(
             'DashboardPages/modelDescription.py', 
-            title = 'Model Description'
+            title = 'Model Description', icon = ':material/description:'
         ),
         st.Page(
             'DashboardPages/chartDemonstration.py', 
-            title = 'Chart Demonstration'
+            title = 'Chart Demonstration', icon = ':material/chart_data:'
         ),
         st.Page(
             'DashboardPages/baselineParameters.py', 
-            title = 'Baseline Parameter Configuration'
+            title = 'Baseline Parameters', 
+            icon = ':material/variable_insert:'
         ),
         st.Page(
             'DashboardPages/scenarioParameters.py', 
-            title = 'Scenario Parameter Configuration'
+            title = 'Scenario Parameters', 
+            icon = ':material/variable_add:'
         ),
         st.Page(
             'DashboardPages/tableCreation.py', 
-            title = 'Health Outcome Tables'
+            title = 'Health Outcome Tables', 
+            icon = ':material/table_chart_view:'
         )
     ]
 }

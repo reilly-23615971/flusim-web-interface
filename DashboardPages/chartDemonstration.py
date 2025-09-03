@@ -68,7 +68,7 @@ with open('./TestData/epidemicMedianCumulative.csv', 'rb') as csv:
 
 st.altair_chart(plotEpidemic(sumData, 'Cases', True))
 
-if st.session_state.modelDataRawAsir:
+if st.session_state.get('modelDataRawAsir'):
     with open('./TestData/asirMedianAbsolute.csv', 'rb') as csv:
         ageData = formatAsir(csv.read(), scenarios, [('Cases', False, 'absolute')])
 

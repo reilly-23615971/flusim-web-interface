@@ -228,8 +228,11 @@ for id in range(1, scenarioCount + 1):
                 basicTab, diseaseTab, communityTab, 
                 interventionTab, dynamicTab
             ) = st.tabs([
-                'Initialisation', 'Disease', 'Community', 
-                'Vaccination and NPIs', 'Dynamic'
+                ':material/start: Initialisation', 
+                ':material/coronavirus: Disease', 
+                ':material/groups: Community', 
+                ':material/vaccines: Vaccination and NPIs', 
+                ':material/manage_history: Dynamic'
             ])
 
             # Basic parameters
