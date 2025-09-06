@@ -71,9 +71,6 @@ st.markdown(f'''
 
 # Button to run the model
 # TODO: Check if server is available and grey out button if not
-# TODO: Vary message depending on scenario presence, server 
-# availability, errors, etc.
-# TODO: Add 'are you sure' prompt when pressing button
 scenarioCount = st.session_state.get('scenarioCount', 0)
 errors = [checkErrors(id) for id in range(scenarioCount + 1)]
 

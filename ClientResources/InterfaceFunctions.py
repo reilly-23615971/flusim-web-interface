@@ -109,7 +109,7 @@ def addFormRow(rowCounter, forceSetParams = None):
     st.session_state[rowCounter] += 1
     if forceSetParams: 
         for var, value in forceSetParams.items(): 
-            if value: st.session_state[var] = value
+            if value is not None: st.session_state[var] = value
 
 """
 Function to remove a row from a specific variable-length form
@@ -129,6 +129,7 @@ Parameters:
 """
 def deleteFormRow(deletedRowIndex, rowCounter, inputPrefixes, minRows = 0):
     numberOfRows = st.session_state[rowCounter]
+    #functionLog.info(f'Deleting row {deletedRowIndex} from the row moderated by {rowCounter}; there\'s {numberOfRows} here, and we\'re modifying the values ')
     # Make sure there's at least 1 row remaining
     if numberOfRows <= minRows: raise ValueError((
         'Tried to delete a row from a form that '

@@ -13,6 +13,13 @@ sharedLog = logging.getLogger(__name__)
 
 # Constants
 
+# Toggle to use preset JSON config with runSimulation instead of using 
+# the parameters set by the user, for testing
+usePresetParams = True
+
+# Toggle to use built-in data instead of model output
+usePresetData = True
+
 # URLs where client/server is located (change to proxy URL)
 clientUrl = 'http://localhost:8501/'
 serverUrl = 'http://127.0.0.1:8000/'
@@ -43,19 +50,31 @@ ageCategories = {
     'Senior': 'senior',              # 65-79 years
     'Older Senior': 'older_senior'   # 80+ years
 }
+# List of age categories with times included, for tabling
+ageWithTime = [
+    'Young Infant (0-6 Months)', 'Infant (7-24 Months)', 
+    'Young Child (3-5 Years)', 'Child (6-12 Years)', 
+    'Adolescent (13-17 Years)', 'Young Adult (18-24 Years)', 
+    'Adult (25-44 Years)', 'Older Adult (45-64 Years)', 
+    'Senior (65-79 Years)', 'Older Senior (80+ Years)'
+]
 # Nested dictionary holding number of individuals in each age bracket
 communityAgePops = {
     'newcastle': {
-        'Young Infant': 2742, 'Infant': 6641, 'Young Child': 10242, 
-        'Child': 20603, 'Adolescent': 18513, 'Young Adult': 27015, 
-        'Adult': 71299, 'Older Adult': 69949, 'Senior': 31384, 
-        'Older Senior': 14019
+        'Young Infant (0-6 Months)': 2742, 'Infant (7-24 Months)': 6641, 
+        'Young Child (3-5 Years)': 10242, 'Child (6-12 Years)': 20603, 
+        'Adolescent (13-17 Years)': 18513, 'Young Adult (18-24 Years)': 27015, 
+        'Adult (25-44 Years)': 71299, 'Older Adult (45-64 Years)': 69949, 
+        'Senior (65-79 Years)': 31384, 'Older Senior (80+ Years)': 14019, 
+        'Total': 272407
     }, 
     'cairns': {
-        'Young Infant': 1837, 'Infant': 4277, 'Young Child': 6381, 
-        'Child': 12650, 'Adolescent': 10432, 'Young Adult': 12074, 
-        'Adult': 42394, 'Older Adult': 36541, 'Senior': 10675, 
-        'Older Senior': 3141
+        'Young Infant (0-6 Months)': 1837, 'Infant (7-24 Months)': 4277, 
+        'Young Child (3-5 Years)': 6381, 'Child (6-12 Years)': 12650, 
+        'Adolescent (13-17 Years)': 10432, 'Young Adult (18-24 Years)': 12074, 
+        'Adult (25-44 Years)': 42394, 'Older Adult (45-64 Years)': 36541, 
+        'Senior (65-79 Years)': 10675, 'Older Senior (80+ Years)': 3141, 
+        'Total': 140402
     }
 }
 

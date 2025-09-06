@@ -21,8 +21,8 @@ from ClientResources.ModelSchema import (
 from ClientResources.InterfaceFunctions import idGet, checkErrors
 from ClientResources.VisualisationFunctions import formatData
 from ClientResources.SharedResources import (
-    AnalysisFile, tableOutcomes, outcomeRateVariables, 
-    outcomeRateDefaults, serverUrl, resultQueue
+    AnalysisFile, usePresetParams, tableOutcomes, outcomeRateVariables, 
+    outcomeRateDefaults, serverUrl, resultQueue, ageCategories
 )
 
 # Logging
@@ -53,7 +53,6 @@ def createConfig():
         name = 'Flusim Dashboard Simulation',
         description = str(st.session_state.sessionID),
         output_folder = './results/',
-        # TODO: Use middle joint to telegraph what toolbox data to get
         middle_joint = '-usingEpidemic',
         community_used = [st.session_state.get('community', 'newcastle')], 
         shared_overrides = overrideParams(parameters = scenarioParams[0]),
@@ -128,6 +127,13 @@ Please make sure that these issues do not interfere with your intended
 simulation design before running the simulation.
 '''
         )
+        # TODO: Make warning display for the chart one too
+        if st.session_state.get('ChartGenerated'): st.warning('''
+Running a new simulation will result in future tables and graphs using 
+the new simulation's data. Please make sure to save any tables or graphs 
+you wish to keep with the current simulation data before running a new 
+simulation.
+        ''')
         st.markdown('''
             Are you sure you want to run the simulation with the 
             selected parameters?
@@ -145,14 +151,14 @@ simulation design before running the simulation.
 
             # Save current parameter values that'll be used for 
             # visualisation when the user has potentially changed them
-            st.session_state.DataCommunity = st.session_state.get(
+            st.session_state.PendingDataCommunity = st.session_state.get(
                 'community', 'newcastle'
             )
-            st.session_state.DataScenarioNames = scenarioNames
-            st.session_state.DataScenarioCount = st.session_state[
+            st.session_state.PendingDataScenarioNames = scenarioNames
+            st.session_state.PendingDataScenarioCount = st.session_state[
                 'scenarioCount'
             ]
-            st.session_state.DataHealthOutcomeRates = {
+            st.session_state.PendingDataHealthOutcomeRates = {
                 outcome: {
                     scenario: idGet(
                         outcomeRateVariables[outcome], i, 
@@ -162,14 +168,26 @@ simulation design before running the simulation.
                 }
                 for outcome in outcomeRateDefaults.keys()
             }
+            st.session_state.PendingDataMortalityRates = {
+                scenarioNames[scenarioID]: {
+                    idGet('deathAgeGroup', scenarioID, None, f'-{rowID}'): 
+                    idGet(
+                        'deathRatio', scenarioID, 
+                        outcomeRateDefaults['Deaths'], f'-{rowID}'
+                    ) 
+                    for rowID in range(idGet('deathRowCount', scenarioID, 0))
+                } 
+                for scenarioID in range(
+                    st.session_state.PendingDataScenarioCount + 1
+                )
+            }
 
             # Make the model call
             runModelWrapper(scenarioNames)
-            # TODO: Inform user if server doesn't respond
 
-            # Generate popup to let the user know it worked
+            # Generate popup to let the user know it's pending
             stn.toast(
-                'Sending a request to run the simulation...', 
+                'Sending a request to run the simulation. Please wait...', 
                 icon = ":material/experiment:"
             )
             st.rerun()
@@ -180,10 +198,8 @@ response containing the results of the simulation
 """
 async def runModel(scenarioNames):
     try:
-        # TODO: Better error handling
-
-        # For testing use this default simulation JSON instead of parameters
-        parameterJSON = {
+        # For testing use this JSON instead of parameters
+        if usePresetParams: parameterJSON = {
             "name": "Simple Test",
             "description": "2184",
             "output_folder": "./results/",
@@ -223,14 +239,15 @@ async def runModel(scenarioNames):
             }]
         }
 
-        # Use this version in final dashboard
-        """parameterJSON = createConfig().model_dump_json(
+        # Use this version in production
+        else: parameterJSON = createConfig().model_dump_json(
             indent = 4, exclude_unset = True#, exclude_defaults = True
-        )"""
+        )
 
-        # TODO: Decide on what data must be gathered
-        # TODO: Make alphabetical by prospective filename
-        dataForms = [AnalysisFile(tool = 'epidemic', names = scenarioNames)]
+        dataForms = [
+            AnalysisFile(tool = 'epidemic', names = scenarioNames), 
+            AnalysisFile(tool = 'asir', names = scenarioNames)
+        ]
         
         # Send POST request to server with parameters
         functionLog.info(
@@ -245,9 +262,6 @@ async def runModel(scenarioNames):
             functionLog.info(f'[runModel] Response received! Returning data...')
         
         # Convert CSV statistics into DataFrame(s)
-        # TODO: Use JSON parameters to determine how to format CSV data
-        # TODO: Determine if doing all analysis tasks with each model 
-        # call is necessary/useful for the user
         functionLog.info(
             f'[runModel] Preparing to process {len(dataForms)} analyses...'
         )
@@ -264,7 +278,6 @@ async def runModel(scenarioNames):
                     f'[runModel] Server returned no readable files'
                 )
                 return 'EmptyZipFile'
-            # TODO: Make sure file order matches analyses
 
             try: processedData = [
                 formatData(analyses.read(file), dataForms[index]) 

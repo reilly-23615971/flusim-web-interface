@@ -31,7 +31,7 @@ logging.basicConfig(
 
 appLog = logging.getLogger(__name__)
 
-# Keep session state variables loaded
+# Load session state as variable for easy access
 session = st.session_state
 
 # Set environment variables for config
@@ -40,16 +40,12 @@ session = st.session_state
 
 
 # Define application pages
-# TODO: Determine ideal page layout/what goes where
+# TODO: Confirm ideal page layout/what goes where
 pages = {
     'SMRG Flusim Web Dashboard': [
         st.Page(
             'DashboardPages/modelDescription.py', 
             title = 'Model Description', icon = ':material/description:'
-        ),
-        st.Page(
-            'DashboardPages/chartDemonstration.py', 
-            title = 'Chart Demonstration', icon = ':material/chart_data:'
         ),
         st.Page(
             'DashboardPages/baselineParameters.py', 
@@ -62,6 +58,10 @@ pages = {
             icon = ':material/variable_add:'
         ),
         st.Page(
+            'DashboardPages/chartDemonstration.py', 
+            title = 'Chart Demonstration', icon = ':material/chart_data:'
+        ),
+        st.Page(
             'DashboardPages/tableCreation.py', 
             title = 'Health Outcome Tables', 
             icon = ':material/table_chart_view:'
@@ -69,11 +69,11 @@ pages = {
     ]
 }
 
-# Initialise session variables used by this page
+# Initialise session variables used globally by the dashboard
 # Use current time (Unix) as session ID so that different simulations 
 # aren't mixed up by the server
 sessionParameters = {
-    'modelData': None, 'simulationInProgress': False, 'scenarioCount': 0,
+    'simulationInProgress': False, 'scenarioCount': 0,
     'sessionID': int(datetime.now().timestamp()),
     'scenarioSetParamsExtra': {1: [], 2: [], 3: [], 4: [], 5: []}, 
     'scenarioSetParams': {1: [], 2: [], 3: [], 4: [], 5: []}
@@ -81,23 +81,16 @@ sessionParameters = {
 for parameter, default in sessionParameters.items(): 
     session[parameter] = session.get(parameter, default)
 
-# TODO: consider adding progress updates to the sidebar (time remaining,
-# progress bars, server availability etc.)
-parameterSidebar = st.sidebar
-runModelButtonCode = """
-runModelButton = parameterSidebar.button(
-    'Run Simulation', on_click = runSimulationButton, key = 'sidebarRunModel'
-)
-"""
-# Update toasts and the like
+# Display toasts
 stn.notify(remove = True)
 
 # Initialise and run the application pages
 flusimPages = st.navigation(pages)
 flusimPages.run()
 
-# TODO: Add sim progress in sidebar
-
+# TODO: consider adding progress updates to the sidebar (time remaining,
+# progress bars, server availability etc.)
+# parameterSidebar = st.sidebar
 
 
 # Fragment to regularly check if model results have been received yet
@@ -108,11 +101,11 @@ def updateData():
         appLog.info(
             f'[updateData] Processing the following data:\n{processedData}'
         )
-        # Check if this was an error
+
+        # Check if the server returned an error instead of proper data
         if isinstance(processedData, list):
-            # Store the data appropriately
             successes = 0
-            scenarios = st.session_state.scenarioCount
+            scenarios = session.scenarioCount
             for data, tag in processedData: 
                 # Further error checking
                 if len(processedData) == 0: stn.toast(
@@ -134,11 +127,11 @@ def updateData():
                 else: 
                     successes += 1
                     session[f'modelData{tag}'] = data
+            
             # Update parameters
-            st.session_state.simulationEndTime = datetime.now().timestamp()
+            session.simulationEndTime = datetime.now().timestamp()
             totalTime = timedelta(
-                st.session_state.simulationEndTime 
-                - st.session_state.simulationStartTime
+                session.simulationEndTime - session.simulationStartTime
             )
             if successes == scenarios + 1: stn.toast(
                 f'Simulation complete! Total duration: {totalTime}', 
@@ -157,7 +150,7 @@ def updateData():
                 '[updateData] Received data was atypical. Contents: ' 
                 + str(processedData)
             )
-            # TODO: Show proper error messages if available
+
             # Show different toast messages for different errors
             if isinstance(processedData, tuple):
                 # Errors with exceptions attached
@@ -183,6 +176,7 @@ def updateData():
                     encountered an error. Please try again later.
                 ''', icon = ':material/error:')
                 stn.toast(f':red-badge[Full Error Message]: {e}')
+            
             # Errors without exception messages to send
             elif isinstance(processedData, pd.DataFrame): stn.toast(f'''
                 :red-badge[Error]: The data was not processed 
@@ -197,8 +191,18 @@ def updateData():
                 :red-badge[Error]: An unknown error occurred. Please 
                 try again later.
             ''', icon = ':material/error:')
-        
-        # Re-enable running new simulations
+                
+        # Make pending data no longer pending
+        pendingData = {
+            'Community', 'ScenarioNames', 'ScenarioCount', 
+            'HealthOutcomeRates', 'MortalityRates'
+        }
+        for name in pendingData: 
+            session[f'Data{name}'] = session.get(f'PendingData{name}')
+        session.scenariosToUse = session.DataScenarioNames
+
+        # Re-enable running new simulations and using their data
+        session.ChartGenerated = False
         session.simulationInProgress = False
         st.rerun()
 updateData()

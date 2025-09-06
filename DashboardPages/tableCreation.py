@@ -4,9 +4,13 @@
 
 # Imports
 import inspect
+import logging
 import altair as alt
 import streamlit as st
+import numpy as np
 import pandas as pd
+import matplotlib as mpl
+from matplotlib.colors import ListedColormap, TwoSlopeNorm
 import matplotlib.pyplot as plt
 from io import BytesIO
 
@@ -16,42 +20,12 @@ from ClientResources.InterfaceFunctions import (
 )
 from ClientResources.VisualisationFunctions import formatAsir
 from ClientResources.SharedResources import (
-    outcomeAdjectives, outcomeRateVariables, outcomeRateDefaults, tableOutcomes
+   usePresetData, ageWithTime, outcomeRateVariables, 
+   outcomeRateDefaults, tableOutcomes
 )
 
-# Page Functions
-
-# Callback function to generate the table
-def generateTable(container):
-    outcomeColumnCount = st.session_state.healthOutcomeRowCount
-    #TODO: Check if any column fields are empty
-    columnDetails = [
-        (
-            st.session_state[f'healthOutcome{colNumber}'], 
-            st.session_state[f'useBaselineDifference{colNumber}'],
-            st.session_state[f'useProportion{colNumber}'],
-        ) for colNumber in range(0, outcomeColumnCount)
-    ]
-    # Debug code for testing
-
-    st.session_state.DataCommunity = 'newcastle'
-    st.session_state.DataHealthOutcomeRates = {
-        outcome: {
-            scenario: idGet(
-                outcomeRateVariables[outcome], i, 
-                outcomeRateDefaults[outcome]
-            ) 
-            for i, scenario in enumerate(['Baseline', 'Surged'])
-        }
-        for outcome in outcomeRateDefaults.keys()
-    }
-    with open('./TestData/asirMedianAbsolute.csv', 'rb') as csv:
-        rawAsir = ageData = formatAsir(
-            csv.read(), ['Baseline', 'Surged'], [('Cases', False, False)]
-        )
-    
-    container.dataframe(rawAsir, key = 'healthOutcomeTable')
-
+# Logging
+tableLog = logging.getLogger(__name__)
 
 # Initialise session variables needed by the vaccination/NPI forms
 sessionParameters = {
@@ -61,157 +35,417 @@ sessionParameters = {
 for parameter, default in sessionParameters.items(): 
     st.session_state[parameter] = st.session_state.get(parameter, default)
 
+ageGroups = ageWithTime + ['Total']
+
+
+
+# Callback function to generate and format the table
+def generateTable():
+    # Throw error if no data is present
+    if not usePresetData and not st.session_state.get('modelDataRawAsir'): 
+        raise FileNotFoundError((
+            'No simulation ASIR data was available to plot; please '
+            'run a simulation before attempting to generate a table.'
+        ))
+    
+    scenarioNames = st.session_state.get(
+        'DataScenarioNames', ['Baseline', 'Surged']
+    )
+
+    outcomeColumnCount = st.session_state.get('healthOutcomeRowCount', 1)
+    columnDetails = [
+        (
+            st.session_state.get(f'healthOutcome{colNumber}', 'Infections'), 
+            st.session_state.get(f'useBaselineDifference{colNumber}', False),
+            st.session_state.get(f'useProportion{colNumber}', False),
+        ) for colNumber in range(0, outcomeColumnCount)
+    ]
+    scenariosUsed = st.session_state.get('healthOutcomeScenariosToUse', 'all')
+    agesUsed = (
+        False if not st.session_state.get('healthOutcomeAgeGroupToggle')
+        else st.session_state.get('healthOutcomeAgesToUse', 'all')
+    )
+    tableLog.info(f'''
+        [generateTable] Formatting Asir data using the scenarios 
+        {scenariosUsed}, the age groups {agesUsed} and the following 
+        columns: {columnDetails}'
+    ''')
+
+    # Debug code for loading data in testing
+    if usePresetData:
+        # Set default session_state params
+        st.session_state.DataCommunity = 'newcastle'
+        st.session_state.DataHealthOutcomeRates = {
+            outcome: {
+                scenario: idGet(
+                    outcomeRateVariables[outcome], i, 
+                    outcomeRateDefaults[outcome]
+                ) 
+                for i, scenario in enumerate(scenarioNames)
+            }
+            for outcome in outcomeRateDefaults.keys()
+        }
+        
+        st.session_state.DataMortalityRates = {
+            scenarioNames[scenarioID]: {
+                idGet('deathAgeGroup', scenarioID, None, f'-{rowID}'): 
+                idGet(
+                    'deathRatio', scenarioID, 
+                    outcomeRateDefaults['Deaths'], f'-{rowID}'
+                ) 
+                for rowID in range(idGet('deathRowCount', scenarioID, 0))
+            } 
+            for scenarioID in range(2)
+        }
+        # Load test data from file
+        with open('./TestData/asirMedianAbsolute.csv', 'rb') as csv:
+            unformattedData = csv.read()
+
+    # Load data from session_state
+    else: unformattedData = st.session_state.get('modelDataRawAsir')
+    
+    ageData, columnConfig, percentColumns, differenceColumns = formatAsir(
+        unformattedData, scenarioNames, columnDetails, 
+        includedScenarios = scenariosUsed, includedAges = agesUsed
+    )
+    
+    # Initialise styler and set cell background colour
+    ageStyle = ageData.style
+    ageStyle.set_properties(
+        **{'background-color': '#F7F7F7'}, color = 'black' # type: ignore
+    )
+
+    # Format data according to column type
+    diffSet = set(differenceColumns)
+    percSet = set(percentColumns)
+    formatValues = {
+        column: '{:+.5n}' for column in diffSet - percSet
+    } | {
+        column: '{:+.3%}' for column in diffSet & percSet
+    } | {
+        column: '{:.3%}' for column in percSet - diffSet
+    } | {
+        column: '{:.5n}' for column in set(ageData.columns) - (diffSet | percSet)
+    }
+
+    # Get norms needed for proper background gradients
+    def getSlopeNorm(column): 
+        minVal, maxVal = column.min(), column.max()
+        return TwoSlopeNorm(
+            vcenter = 0, vmin = (
+                -1e-9 if minVal >= 0 else minVal - 1e-9 
+                if minVal == maxVal else column.min()
+            ), vmax = (
+                1e-9 if maxVal <= 0 else maxVal + 1e-9 
+                if maxVal == minVal else column.max()
+            )
+        )
+    
+    # Use background gradients on difference from baseline columns
+    for column in differenceColumns: 
+        colVals = ageData[column]
+        ageStyle = ageStyle.background_gradient(
+            'RdBu', vmin = 0, vmax = 1, 
+            subset = column, gmap = getSlopeNorm(colVals)(colVals)
+        )
+    
+    # Save the generated table
+    st.session_state.HealthOutcomeTableData = ageStyle.format(formatValues) # type: ignore
+    st.session_state.HealthOutcomeTableConfig = columnConfig
+    st.session_state.ChartGenerated = True
+
+
+
 
 
 st.title('Flusim Disease Model Dashboard')
 
-st.write((
-    'This page allows for the creation of tables comparing various '
-    'health burden outcomes between different scenarios.'
-))
+st.markdown('''
+    Here you can generate and save tables comparing various health 
+    burden outcomes (e.g. infections, diagnosed cases, deaths) between 
+    the different scenarios from the most recently ran simulation. 
+''')
+
+# Modify CSS to avoid age group names being cut off
+st.html('''
+    <style>
+        .stMultiSelect [data-baseweb=select] span{max-width: 500px;}
+    </style>
+''')
+
+# Form (container) for selecting table settings
+# Save relevant params as variables to avoid lookups
+healthOutcomeRowCount = st.session_state[f'healthOutcomeRowCount']
+healthOutcomeErrorContainer = st.container()
 
 # Check if there is data to tabulate
 currentDataExists = not (st.session_state.get('modelDataAsir') is None)
-if not currentDataExists: st.warning((
-    'No simulation data has been generated. Click "Run Simulation" at '
-    'the Baseline Parameter Configuration page to run a simulation and '
-    'obtain the data necessary to generate a table.'
-))
+if not currentDataExists: healthOutcomeErrorContainer.warning('''
+    No simulation data has been generated. Click "Run Simulation" at 
+    the Baseline Parameter Configuration page to run a simulation and 
+    obtain the data necessary to generate a table.
+''')
+if currentDataExists and st.session_state.simulationInProgress: 
+    healthOutcomeErrorContainer.warning('''
+        Warning: A new simulation is currently in progress. Since the 
+        data is not yet ready to process, attempting to create a table 
+        now will use the data from the previous simulation. Once the 
+        in-progress simulation is complete, it will not be possible to 
+        generate tables with the previous simulation's data, though the 
+        current table will still be available to view and download 
+        until you generate a new table.
+    ''')
 
-# Form (container) for selecting health outcomes to use for the table
-# Save relevant params as variables to avoid lookups
-healthOutcomeRowCount = st.session_state[f'healthOutcomeRowCount']
-healthOutcomeForm = st.container(border = True)
-healthOutcomeErrorContainer = st.container()
-healthOutcomeForm.title('Select Health Burden Outcomes')
-for i in range(healthOutcomeRowCount): 
-    (
-        healthOutcomeColumn, healthDifferenceColumn, 
-        outcomeTypeColumn, healthRemoveColumn
-    ) = healthOutcomeForm.columns((0.25, 0.275, 0.275, 0.2))
-    currentOutcome = st.session_state.get(f'healthOutcome{i}', 'Infections')
+tableSettings = st.expander('Table Settings')
+with tableSettings:
+    st.markdown('''
+        Use these parameters to configure how the table will be generated. 
+        Hover your mouse over the :material/help: help icon next to a 
+        setting's input field to show an explanation of what that setting 
+        does. Hover your mouse over any buttons to show an explanation of 
+        what that button does.  
+    ''')
 
-    # Health burden outcome column
-    loadKey(f'healthOutcome', i, currentOutcome, noZeroDefault = True)
-    with healthOutcomeColumn: st.selectbox(
-        'Health Burden Outcome', key = f'_healthOutcome{i}', 
-        # Set health burden options such that only outcomes
-        # that haven't been selected yet can be selected
-        options = ([currentOutcome] + [
-            outcome for outcome in tableOutcomes 
-            if outcome != currentOutcome
-        ]), 
-        on_change = saveKey, args = [f'healthOutcome', i], # type: ignore
-        kwargs = {'notScenario': False},
+    # Scenario and age group selection
+    st.subheader('Scenario and Age Group Selection')
+    scenarioNames = st.session_state.get(
+        'DataScenarioNames', ['Baseline', 'Surged']
+    )
+    if currentDataExists or usePresetData: 
+        loadKey(
+            'healthOutcomeScenariosToUse', '', 
+            scenarioNames, noZeroDefault = True
+        )
+        scenariosToUse = st.multiselect(
+            'Scenarios to Include in Table', scenarioNames, 
+            default = scenarioNames, key = '_healthOutcomeScenariosToUse', 
+            on_change = saveKey, args = [f'healthOutcomeScenariosToUse', ''], # type: ignore
+            placeholder = 'Please select at least 1 scenario', 
+            kwargs = {'notScenario': True}, help = '''
+Select which scenarios should be included in the table. 
+You may select as many scenarios as you wish, but you 
+must select at least one. Each scenario will have its 
+own row in the table, displaying the values of the 
+specified health burden outcomes in that scenario.
+            '''
+        )
+        if not scenariosToUse: healthOutcomeErrorContainer.error('''
+            Error: No scenarios have been included in the table. If you 
+            attempt to generate the table now, it will be empty. Please 
+            select at least one scenario to include with the 'Scenarios 
+            to Use' setting.
+        ''')
+    else: 
+        st.markdown('''
+            No simulation data has been generated, so there are 
+            currently no scenarios to select. Click "Run Simulation" at 
+            the Baseline Parameter Configuration page to run a 
+            simulation and obtain the data necessary to generate a 
+            table.
+        ''')
+        scenariosToUse = None
+
+    loadKey(f'healthOutcomeAgeGroupToggle', '', False, noZeroDefault = True)
+    useAgeGroupsToggle = st.toggle(
+        'Separate Results by Age Group', value = False, 
+        on_change = saveKey, args = [f'healthOutcomeAgeGroupToggle', ''], # type: ignore
+        kwargs = {'notScenario': True}, key = f'_healthOutcomeAgeGroupToggle',
         help = '''
-            Select the health burden outcome you would like to be 
-            included as a column on the table.
+            Toggle whether or not the table should include separate 
+            rows for each age group in the simulation population.
+        '''
+    )
 
-            ### Options:
-            - Infections: the number of individuals infected with the 
-            disease in the simulation.
-            - Cases: the number of individuals formally diagnosed with 
-            the disease in the simulation.
-            - Hospitalisations: the number of individuals who go to the 
-            hospital for treatment as a result of the disease in the 
-            simulation.
-            - Deaths: the number of individuals killed by the disease 
-            in the simulation.
-            - ICU Visits: the number of individuals who are admitted to 
-            an Intensive Care Unit (ICU) as a result of the disease in 
-            the simulation.
-            - GP Visits: the number of individuals who visit their 
-            general practitioner due to symptoms of the disease in the 
-            simulation.
+    loadKey('healthOutcomeAgesToUse', '', ageGroups, noZeroDefault = True)
+    agesToUse = st.multiselect(
+        'Age Groups to Include in Table', ageGroups, default = ageGroups, 
+        key = '_healthOutcomeAgesToUse', on_change = saveKey, 
+        args = [f'healthOutcomeAgesToUse', ''], # type: ignore
+        placeholder = 'Please select at least 1 age group', 
+        kwargs = {'notScenario': True}, disabled = not useAgeGroupsToggle, 
+        help = '''
+Select which age groups should be included in the table. 
+You may select as many groups as you wish. Each age group 
+will have its own row in the table, displaying the values 
+of the specified health burden outcomes for members of the 
+population in that age group (or for the entire population 
+in the case of the 'Total' group).
         '''
     )
-        
-    # Difference from baseline column
-    loadKey('useBaselineDifference', i, False, noZeroDefault = True)
-    with healthDifferenceColumn: st.toggle(
-        'Difference from Baseline', False, key = f'_useBaselineDifference{i}', 
-        on_change = saveKey, args = ['useBaselineDifference', i], # type: ignore
-        disabled = st.session_state.get('DataScenarioCount', -1) == 0,
-        kwargs = {'notScenario': False}, help = '''
-            Toggle whether this column should display the difference 
-            between the specified health burden outcome's result in the 
-            baseline simulation and the result in the simulation the 
-            row is for. For example, if the number of infected 
-            individuals was 300 in the baseline scenario and 400 in 
-            Scenario 1, an 'Infections' column with this setting 
-            enabled would display +100 in the row for Scenario 1.
-        ''' if st.session_state.get('DataScenarioCount', -1) != 0 else '''
-            There are currently no additional scenarios defined for the 
-            simulation data, so a difference from baseline column would 
-            display no useful information.
+    if not agesToUse: healthOutcomeErrorContainer.error('''
+        Error: No age groups have been included in the table. If you 
+        attempt to generate the table now, it will be empty. Please 
+        select at least one age group to include with the 'Age Groups 
+        to Use' setting.
+    ''')
+
+
+
+    # Variable-length form for choosing columns
+    st.subheader('Select Health Burden Columns')
+    st.markdown(
         '''
-    )
-        
-    # Proportion column
-    loadKey(f'useProportion', i, False, noZeroDefault = True)
-    with outcomeTypeColumn: st.toggle(
-        'Percentage', False, key = f'_useProportion{i}', 
-        on_change = saveKey, args = [f'useProportion', i], # type: ignore
-        kwargs = {'notScenario': False}, help = '''
-            Toggle whether this column should display its value as a 
-            percentage rather than as a standard number. 
+        Here you may specify health burden outcomes to include as 
+        columns in the table and how to format them. Each outcome 
+        selected here will be listed for each age group in each 
+        scenario from the simulation. Note that if multiple columns are 
+        defined with identical parameters, only the first instance of 
+        them will be included in the table.
+    ''')
+    for i in range(healthOutcomeRowCount): 
+        (
+            healthOutcomeColumn, healthDifferenceColumn, 
+            outcomeTypeColumn, healthRemoveColumn
+        ) = st.columns((0.25, 0.275, 0.275, 0.2))
+        currentOutcome = st.session_state.get(
+            f'healthOutcome{i}', 'Infections'
+        )
+
+        # Health burden outcome column
+        loadKey(f'healthOutcome', i, currentOutcome, noZeroDefault = True)
+        with healthOutcomeColumn: st.selectbox(
+            'Health Burden Outcome', key = f'_healthOutcome{i}', 
+            # Set health burden options such that only outcomes
+            # that haven't been selected yet can be selected
+            options = ([currentOutcome] + [
+                outcome for outcome in tableOutcomes 
+                if outcome != currentOutcome
+            ]), 
+            on_change = saveKey, args = [f'healthOutcome', i], # type: ignore
+            kwargs = {'notScenario': True}, help = '''
+                Select the health burden outcome you would like to be 
+                included as a column on the table.
+
+                ### Options:
+                - Infections: the number of individuals infected with 
+                the disease in the simulation.
+                - Cases: the number of individuals formally diagnosed 
+                with the disease in the simulation.
+                - Hospitalisations: the number of individuals who go to 
+                the hospital for treatment as a result of the disease 
+                in the simulation.
+                - Deaths: the number of individuals killed by the 
+                disease in the simulation.
+                - ICU Visits: the number of individuals who are 
+                admitted to an Intensive Care Unit (ICU) as a result of 
+                the disease in the simulation.
+                - GP Visits: the number of individuals who visit their 
+                general practitioner due to symptoms of the disease in 
+                the simulation.
+            '''
+        )
             
-            If 'Difference from Baseline' is disabled, this percentage 
-            will be relative to the total population of each age group 
-            in each scenario's community. For example, if the number of 
-            infected adults was 20,000 in a scenario with the Newcastle 
-            community (which has 71,299 adults), an 'Infections' column 
-            with 'Percentage' disabled would display 20,000 while a 
-            column with it enabled would display 28.051%.
+        # Difference from baseline column
+        # Force set to false if only one scenario is in use
+        if (
+            st.session_state.get('DataScenarioCount', -1) == 0 
+            or scenariosToUse == ['Baseline']
+        ): 
+            st.session_state[f'useBaselineDifference{i}'] = False
+        loadKey('useBaselineDifference', i, False, noZeroDefault = True)
+        with healthDifferenceColumn: st.toggle(
+            'Difference from Baseline', False, 
+            key = f'_useBaselineDifference{i}', on_change = saveKey, 
+            args = ['useBaselineDifference', i], # type: ignore
+            disabled = (
+                st.session_state.get('DataScenarioCount', -1) == 0 
+                or scenariosToUse == ['Baseline']
+            ),
+            kwargs = {'notScenario': True}, help = '''
+                Toggle whether this column should display the 
+                difference between the specified health burden 
+                outcome's result in the baseline simulation and the 
+                result in the simulation the row is for. For example, 
+                if the number of infected individuals was 300 in the 
+                baseline scenario and 400 in Scenario 1, an 
+                'Infections' column with this setting enabled would 
+                display +100 in the row for Scenario 1.
 
-            If 'Difference from Baseline' is enabled, this percentage 
-            will be relative to the value of the column in the baseline 
-            scenario for the given age group. For example, if the 
-            number of infected individuals was 300 in the baseline 
-            scenario and 400 in Scenario 1, an 'Infections' column with 
-            both 'Percentage' and 'Difference from Baseline' enabled 
-            would display +33.333% in the row for Scenario 1.
+                Note that this option will always be set to False if 
+                only one scenario is included in the table.
+            ''' if (
+                st.session_state.get('DataScenarioCount', -1) != 0 
+                and scenariosToUse != ['Baseline']
+            ) else '''
+                There are currently no additional scenarios defined for 
+                the simulation data, so a difference from baseline 
+                column would display no useful information.
+            '''
+        )
+            
+        # Proportion column
+        loadKey(f'useProportion', i, False, noZeroDefault = True)
+        with outcomeTypeColumn: st.toggle(
+            'Percentage', False, key = f'_useProportion{i}', 
+            on_change = saveKey, args = [f'useProportion', i], # type: ignore
+            kwargs = {'notScenario': True}, help = '''
+                Toggle whether this column should display its value as 
+                a percentage rather than as a standard number. 
+                
+                If 'Difference from Baseline' is disabled, this 
+                percentage will be relative to the total population of 
+                each age group in each scenario's community. For 
+                example, if the number of infected adults was 20,000 in 
+                a scenario with the Newcastle community (which has 
+                71,299 adults), an 'Infections' column with 
+                'Percentage' disabled would display 20,000 while a 
+                column with it enabled would display 28.051%.
+
+                If 'Difference from Baseline' is enabled, this 
+                percentage will be relative to the value of the column 
+                in the baseline scenario for the given age group. For 
+                example, if the number of infected individuals was 300 
+                in the baseline scenario and 400 in Scenario 1, an 
+                'Infections' column with both 'Percentage' and 
+                'Difference from Baseline' enabled would display 
+                +33.333% in the row for Scenario 1.
+            '''
+        )
+        
+        # Delete button column
+        with healthRemoveColumn: st.button(
+            label = 'Remove Column', icon = ':material/delete:',
+            key = f'healthOutcomeRemove{i}', on_click = deleteFormRow, args = (
+                i, 'healthOutcomeRowCount', {
+                    'healthOutcome', 'useBaselineDifference', 'useProportion'
+                }, 1
+            ),
+            disabled = healthOutcomeRowCount <= 1, help = '''
+                Remove this row of the form and do not display this column 
+                in the table.
+            ''' if healthOutcomeRowCount >= 2 else '''
+                The table must have at least one column.
+            '''
+        )
+    # Button to add another row for age specific params
+    tableSettings.button(
+        label = 'Add Burden Column', icon = ':material/add:', 
+        on_click = addFormRow, key = f'healthOutcomeAdd', 
+        args = (f'healthOutcomeRowCount', {
+            f'healthOutcome{healthOutcomeRowCount}': 'Infections',
+            f'useBaselineDifference{healthOutcomeRowCount}': False,
+            f'useProportion{healthOutcomeRowCount}': False
+        }), 
+        disabled = healthOutcomeRowCount >= 7, help = '''
+            Add another row to this form, where you can select an 
+            additional health burden outcome to be included in the 
+            table.
+        ''' if healthOutcomeRowCount <= 6 else '''
+            The maximum number of columns has been added to this table.
         '''
     )
-    
-    # Delete button column
-    with healthRemoveColumn: st.button(
-        label = 'Remove Column', icon = ':material/delete:',
-        key = f'healthOutcomeRemove{i}', on_click = deleteFormRow, args = (
-            i, 'healthOutcomeRowCount', {
-                'healthOutcome', 'outcomeType', 'useBaselineDifference'
-            }, 1
-        ),
-        disabled = healthOutcomeRowCount <= 1, help = '''
-            Remove this row of the form and do not display this column 
-            in the table.
-        ''' if healthOutcomeRowCount >= 2 else '''
-            The table must have at least one column.
-        '''
-    )
-# Button to add another row for age specific params
-healthOutcomeForm.button(
-    label = 'Add Burden Column', icon = ':material/add:', 
-    on_click = addFormRow, key = f'healthOutcomeAdd', 
-    args = (f'healthOutcomeRowCount',), disabled = healthOutcomeRowCount >= 7,
-    help = '''
-        Add another row to this form, where you can select an 
-        additional health burden outcome to be included in the table.
-    ''' if healthOutcomeRowCount <= 6 else '''
-        The maximum number of columns has been added to this table.
-    '''
-)
+
+
 
 # Button to generate the table itself
-buttonContainer = st.empty()
-
-tableContainer = st.empty()
-
-buttonContainer.button(
+st.button(
     label = 'Create Table', icon = ':material/backup_table:', 
     key = 'generateTable', type = 'primary', on_click = generateTable, 
-    args = [tableContainer], # type: ignore
-    disabled = not st.session_state.get('modelDataRawAsir'), help = '''
+    disabled = (
+        (not usePresetData and not currentDataExists) 
+        or not scenariosToUse
+    ), 
+    help = '''
         Use the data from the last simulation to generate a table 
         displaying different health outcomes on the scenarios in the 
         simulation, with the specific columns displayed depending on 
@@ -222,6 +456,68 @@ buttonContainer.button(
     '''
 )
 
-#TODO: Select table units based on what's most appropriate
+# Display the table itself
+tableData = st.session_state.get('HealthOutcomeTableData')
+tableConfig = st.session_state.get('HealthOutcomeTableConfig')
+if tableData is not None: 
+    st.header('Health Burden Outcome Table')
+    st.dataframe(tableData, column_config = tableConfig)
+
+    buttonCode = """
+    # Button to download the table as an image (omitted due to style differences)
+    if st.button(
+        'Download Table as Image', key = 'healthOutcomeImageDownload', 
+        icon = ':material/image_arrow_up:', help = '''
+            Download the currently generated table as a PNG image. If 
+            you wish to download the table as a CSV file, use the 
+            :material/download: download button that appears when 
+            hovering your mouse over the table.
+        '''
+    ):
+        st.markdown('''
+            <script src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'></script>
+            <script>
+            const tableNode = parent.document.querySelector('[data-testid = "stDataFrame"]');
+            if (tableNode) {
+                html2canvas(tableNode).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = 'FlusimHealthBurdenOutcomeTable.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                });
+            }
+            </script>
+        ''', unsafe_allow_html = True)
+    """
+    
+    st.subheader('Using the Table')
+    st.markdown('''
+        - Use the scroll bars on the right and bottom edges of the 
+        table to scroll and view rows/columns that are not immediately 
+        visible.
+        - Double-click on a cell in the table to view its exact value.
+        - Click on one of the column headers to sort the table using 
+        the values of that column. 
+        - Adjust column widths by clicking and dragging the lines 
+        between each column in the header row. 
+        - Click the :material/more_vert: menu button that appears when 
+        hovering your mouse over a column header to view more 
+        formatting options for that column.
+                
+        Hovering your mouse over the table will display icons for 
+        additional icons on the top-right corner, which can be used for 
+        the following actions:
+        
+        - Click the :material/download: download symbol to download the 
+        table as a CSV file. 
+        - Click the :material/search: magnifying glass symbol to search 
+        for a specific scenario, age group or value in the table.
+        - Click the :material/fullscreen: fullscreen symbol to put the 
+        table in fullscreen; click it again to return to viewing the 
+        whole dashboard.
+    ''')
+    
+
+
 #st.header('DEBUG ZONE')
 #st.session_state
