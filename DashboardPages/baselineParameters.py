@@ -66,8 +66,6 @@ st.markdown(f'''
     is the Simulated Community parameter defined above, which applies 
     to all scenarios and cannot be overwritten.
 ''')
-# TODO: Consider displaying more comprehensive community info regarding 
-# the one the user selects
 
 # Button to run the model
 # TODO: Check if server is available and grey out button if not
@@ -88,7 +86,7 @@ elif max(errors[0]) == 0: st.warning(f'''
     Please examine and correct these errors if necessary before running 
     the simulation. If any errors are detected with the parameters 
     selected for the baseline scenario, they will be described here.
-''')
+''', icon = ':material/variable_remove:')
 alertContainer = st.container()
 
 runModelButton = st.button(

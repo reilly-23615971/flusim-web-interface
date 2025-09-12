@@ -42,11 +42,18 @@ def formatInfectionData(data):
 
 st.title('Flusim Disease Model Dashboard')
 
+st.markdown('''
+    Here you can generate line graphs plotting infection rates over 
+    time for different scenarios in the most recently run simulation.
+''')
+
+
+
 # Get data and plot as a line graph
-if not st.session_state.get('modelDataEpidemic'): st.write((
-    'No data loaded. Click "Run Simulation" on the sidebar '
-    'to run a simulation and get some data to plot!'
-))
+if not st.session_state.get('modelDataEpidemic'): st.markdown('''
+    No data loaded. Click "Run Simulation" at the Baseline Parameters 
+    page to run a simulation and get some data to plot!
+''')
 else:
     data = st.session_state.modelDataEpidemic
     st.altair_chart(plotEpidemic(data, 'Cases'))
@@ -67,12 +74,5 @@ with open('./TestData/epidemicMedianCumulative.csv', 'rb') as csv:
     sumData = formatEpidemic(csv.read(), scenarios, 'Cases', True)
 
 st.altair_chart(plotEpidemic(sumData, 'Cases', True))
-
-if st.session_state.get('modelDataRawAsir'):
-    with open('./TestData/asirMedianAbsolute.csv', 'rb') as csv:
-        ageData = formatAsir(csv.read(), scenarios, [('Cases', False, 'absolute')])
-
-    with open('./TestData/asirMedianAbsolute.csv', 'rb') as csv:
-        ageData = formatAsir(csv.read(), scenarios, [('Cases', True, True)])
 
 #******************************************************************

@@ -253,7 +253,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {vaccinePeriod[0] + 1} days or 
                                 more.
-                            ''')
+                            ''', icon = ':material/error:')
                             globalErrorContainer.error(f'''
                                 Error: The {
                                     'baseline scenario' if id == 0 
@@ -285,7 +285,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {vaccinePeriod[0] + 1} days or 
                                 more.
-                            ''')
+                            ''', icon = ':material/error:')
                             st.session_state[f'vaccinePeriodError{id}'] = 2
                         elif vaccinePeriod[1] >= simLength: 
                             vaccinePeriodErrorContainer.warning(f'''
@@ -317,7 +317,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {vaccinePeriod[1] + 1} days or 
                                 more.
-                            ''')
+                            ''', icon = ':material/warning:')
                             globalErrorContainer.warning(f'''
                                 Warning: The {
                                     'baseline scenario' if id == 0 
@@ -350,7 +350,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {vaccinePeriod[1] + 1} days or 
                                 more.
-                            ''')
+                            ''', icon = ':material/warning:')
                             st.session_state[f'vaccinePeriodError{id}'] = 1
                         else: st.session_state[f'vaccinePeriodError{id}'] = 0
                     
@@ -363,7 +363,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         the bottom of this page (click 
                         [this link](#thresholdTriggerCondition) to go 
                         there directly).
-                    ''')
+                    ''', icon = ':material/info:')
                     # Case triggers
                     elif vaccineTrigger == 'Community Case Total': st.info('''
                         Due to the design of the *Flusim* model, case 
@@ -373,7 +373,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         the bottom of this page (click 
                         [this link](#thresholdTriggerCondition) to go 
                         there directly).
-                    ''')
+                    ''', icon = ':material/info:')
                 # Other vaccine schedule parameters
                 loadKey(f'limitDosesToggle', id, False)
                 limitDosesToggle = st.toggle(
@@ -481,7 +481,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         - Decrease the scenario's Target Vaccinated 
                         Proportion of Population to be lower 
                         than {100 * initialVaccinated:0.3g}%. 
-                    ''')
+                    ''', icon = ':material/warning:')
                     globalErrorContainer.warning(f'''
                         Warning: The target vaccinated proportion in 
                         the {
@@ -512,7 +512,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         Programs" section of the "Vaccinations and 
                         NPIs" tab to be lower 
                         than {100 * initialVaccinated:0.3g}%. 
-                    ''')
+                    ''', icon = ':material/warning:')
                     st.session_state[f'baseVacPropError{id}'] = 1
                 else: st.session_state[f'baseVacPropError{id}'] = 0
 
@@ -706,7 +706,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             Proportion of Population for the "{age}" 
                             age group to be lower 
                             than {100 * currentInitial:0.3g}%. 
-                        ''')
+                        ''', icon = ':material/warning:')
                         globalErrorContainer.warning(f'''
                             Warning: The target vaccinated proportion 
                             in the {
@@ -746,7 +746,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             section of the "Vaccinations and NPIs" tab 
                             to be lower 
                             than {100 * currentInitial:0.3g}%. 
-                        ''')
+                        ''', icon = ':material/warning:')
                         st.session_state[f'ageVacPropError{id}'] = 1
                         ageVacPropError = True
                 # Reset error parameter if none of the age levels error
@@ -1055,7 +1055,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 - Decrease the scenario's Dose Efficacy 
                                 After Immunity Waning to be lower than 
                                 {100 * primaryInitialEfficacy:0.3g}%. 
-                            ''')
+                            ''', icon = ':material/error:')
                             globalErrorContainer.error(f'''
                                 Error: The initial vaccine efficacy in 
                                 the {
@@ -1089,7 +1089,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 "Vaccinations and NPIs" tab to be lower 
                                 than 
                                 {100 * primaryInitialEfficacy:0.3g}%. 
-                            ''')
+                            ''', icon = ':material/error:')
                             st.session_state[f'basePrimEfficacyError{id}'] = 2
                         else: 
                             st.session_state[f'basePrimEfficacyError{id}'] = 0
@@ -1313,8 +1313,8 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                     } Dose Efficacy After Immunity 
                                     Waning to be lower than 
                                     {100 * initialAgeEfficacy:0.3g}%. 
-                                ''')
-                                globalErrorContainer.warning(f'''
+                                ''', icon = ':material/error:')
+                                globalErrorContainer.error(f'''
                                     Error: The initial vaccine efficacy 
                                     in the {
                                         'baseline scenario' if id == 0 
@@ -1378,7 +1378,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                     "Vaccinations and NPIs" tab to be 
                                     lower than 
                                     {100 * initialAgeEfficacy:0.3g}%. 
-                                ''')
+                                ''', icon = ':material/error:')
                                 st.session_state[
                                     f'agePrimEfficacyError{id}'
                                 ] = 2
@@ -1516,7 +1516,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         - Decrease the scenario's Booster Efficacy 
                         After Immunity Waning to be lower 
                         than {100 * boosterBaseEfficacy:0.3g}%. 
-                    ''')
+                    ''', icon = ':material/error:')
                     globalErrorContainer.error(f'''
                         Error: The initial booster vaccine efficacy in 
                         the {
@@ -1545,7 +1545,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         After Immunity Waning in the "Booster Vaccines" 
                         section of the "Vaccinations and NPIs" tab to 
                         be lower than {100 * boosterBaseEfficacy:0.3g}%.
-                    ''')
+                    ''', icon = ':material/error:')
                     st.session_state[f'baseBoostEfficacyError{id}'] = 2
                 else: st.session_state[f'baseBoostEfficacyError{id}'] = 0
 
@@ -1777,8 +1777,8 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             After Immunity Waning for the "{age}" age 
                             group to be lower 
                             than {100 * currentInitial:0.3g}%. 
-                        ''')
-                        globalErrorContainer.warning(f'''
+                        ''', icon = ':material/error:')
+                        globalErrorContainer.error(f'''
                             Error: The initial booster vaccine efficacy 
                             in the {
                                 'baseline scenario' if id == 0 
@@ -1816,7 +1816,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             group in the "Booster Vaccines" section of 
                             the "Vaccinations and NPIs" tab to be lower 
                             than {100 * currentInitial:0.3g}%. 
-                        ''')
+                        ''', icon = ':material/error:')
                         st.session_state[f'ageBoostEfficacyError{id}'] = 2
                         ageBoostEfficacyError = True
                 # Reset error parameter if none of the age levels error
@@ -2031,7 +2031,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                     Thresholds" parameters at the bottom of this page 
                     (click [this link](#thresholdTriggerCondition) to 
                     go there directly).
-                ''')
+                ''', icon = ':material/info:')
 
 
 
@@ -2157,7 +2157,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {schoolClosurePeriod[0] + 1} days 
                                 or more.
-                            ''')
+                            ''', icon = ':material/error:')
                             globalErrorContainer.error(f'''
                                 Error: The {
                                     'baseline scenario' if id == 0 
@@ -2190,7 +2190,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {schoolClosurePeriod[0] + 1} days 
                                 or more.
-                            ''')
+                            ''', icon = ':material/error:')
                             st.session_state[
                                 f'schoolClosurePeriodError{id}'
                             ] = 2
@@ -2224,7 +2224,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {schoolClosurePeriod[1] + 1} days 
                                 or more.
-                            ''')
+                            ''', icon = ':material/warning:')
                             globalErrorContainer.warning(f'''
                                 Warning: The {
                                     'baseline scenario' if id == 0 
@@ -2257,7 +2257,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {schoolClosurePeriod[1] + 1} days 
                                 or more. 
-                            ''')
+                            ''', icon = ':material/warning:')
                             st.session_state[
                                 f'schoolClosurePeriodError{id}'
                             ] = 1
@@ -2276,7 +2276,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             this page (click 
                             [this link](#thresholdTriggerCondition) to 
                             go there directly).
-                        ''')
+                        ''', icon = ':material/info:')
                     # Case triggers
                     elif schoolClosureTrigger in {
                         'Community Case Total', 'Cases per School', 
@@ -2289,7 +2289,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         the bottom of this page (click 
                         [this link](#thresholdTriggerCondition) to go 
                         there directly).
-                    ''')
+                    ''', icon = ':material/info:')
                 
                 # School types and compliance
                 loadKey(f'schoolClosureTypes', id, ['K-12'])
@@ -2344,7 +2344,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         To address this error, please select at least 
                         one of the Types of School to Close before 
                         running the simulation.
-                    ''')
+                    ''', icon = ':material/error:')
                     globalErrorContainer.error(f'''
                         Error: The {
                             'baseline scenario' if id == 0 
@@ -2360,7 +2360,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         one of the Types of School to Close in the 
                         "School Closure" section of the "Vaccinations 
                         and NPIs" tab before running the simulation.
-                    ''')
+                    ''', icon = ':material/error:')
                     st.session_state[f'schoolTypeError{id}'] = 2
                 else: st.session_state[f'schoolTypeError{id}'] = 0
             
@@ -2487,7 +2487,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {withdrawalIncreasePeriod[0] + 1} 
                                 days or more.
-                            ''')
+                            ''', icon = ':material/error:')
                             globalErrorContainer.error(f'''
                                 Error: The {
                                     'baseline scenario' if id == 0 
@@ -2521,7 +2521,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {withdrawalIncreasePeriod[0] + 1} 
                                 days or more. 
-                            ''')
+                            ''', icon = ':material/error:')
                             st.session_state[
                                 f'withdrawalIncreasePeriodError{id}'
                             ] = 2
@@ -2555,7 +2555,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {withdrawalIncreasePeriod[1] + 1} 
                                 days or more.
-                            ''')
+                            ''', icon = ':material/warning:')
                             globalErrorContainer.warning(f'''
                                 Warning: The {
                                     'baseline scenario' if id == 0 
@@ -2589,7 +2589,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {withdrawalIncreasePeriod[1] + 1} 
                                 days or more. 
-                            ''')
+                            ''', icon = ':material/warning:')
                             st.session_state[
                                 f'withdrawalIncreasePeriodError{id}'
                                 ] = 1
@@ -2608,7 +2608,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             this page (click 
                             [this link](#thresholdTriggerCondition) to 
                             go there directly).
-                        ''')
+                        ''', icon = ':material/info:')
                     # Case triggers
                     elif withdrawalIncreaseTrigger == 'Community Case Total': 
                         st.info('''
@@ -2620,7 +2620,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             this page (click 
                             [this link](#thresholdTriggerCondition) to 
                             go there directly).
-                        ''')
+                        ''', icon = ':material/info:')
                 
                 # Increased withdrawal
                 loadKey(f'withdrawalIncreaseAdult', id, 0.9)
@@ -2693,7 +2693,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         in the "Withdrawals and Diagnosis" section of 
                         the "Community" tab to any probability 
                         below {100 * withdrawalIncreaseAdult:0.3g}%. 
-                    ''')
+                    ''', icon = ':material/error:')
                     globalErrorContainer.error(f'''
                         Error: The work withdrawal probability during 
                         withdrawal increase NPIs in the {
@@ -2724,7 +2724,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         in the "Withdrawals and Diagnosis" section of 
                         the "Community" tab to any probability 
                         below {100 * withdrawalIncreaseAdult:0.3g}%. 
-                    ''')
+                    ''', icon = ':material/error:')
                     st.session_state[f'adultWithdrawalError{id}'] = 2
                 else: st.session_state[f'adultWithdrawalError{id}'] = 0
                 if (
@@ -2759,7 +2759,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         in the "Withdrawals and Diagnosis" section of 
                         the "Community" tab to any probability 
                         below {100 * withdrawalIncreaseChild:0.3g}%. 
-                    ''')
+                    ''', icon = ':material/error:')
                     globalErrorContainer.error(f'''
                         Error: The school withdrawal probability during 
                         withdrawal increase NPIs in the {
@@ -2790,7 +2790,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         in the "Withdrawals and Diagnosis" section of 
                         the "Community" tab to any probability 
                         below {100 * withdrawalIncreaseChild:0.3g}%. 
-                    ''')
+                    ''', icon = ':material/error:')
                     st.session_state[f'childWithdrawalError{id}'] = 2
                 else: st.session_state[f'childWithdrawalError{id}'] = 0
 
@@ -2911,7 +2911,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {reducedGroupPeriod[0] + 1} 
                                 days or more. 
-                            ''')
+                            ''', icon = ':material/error:')
                             globalErrorContainer.error(f'''
                                 Error: The {
                                     'baseline scenario' if id == 0 
@@ -2944,7 +2944,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {reducedGroupPeriod[0] + 1} 
                                 days or more. 
-                            ''')
+                            ''', icon = ':material/error:')
                             st.session_state[
                                 f'reducedGroupPeriodError{id}'
                             ] = 2
@@ -2978,7 +2978,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {reducedGroupPeriod[1] + 1} 
                                 days or more. 
-                            ''')
+                            ''', icon = ':material/warning:')
                             globalErrorContainer.warning(f'''
                                 Warning: The {
                                     'baseline scenario' if id == 0 
@@ -3011,7 +3011,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {reducedGroupPeriod[1] + 1} 
                                 days or more. 
-                            ''')
+                            ''', icon = ':material/warning:')
                             st.session_state[f'reducedGroupPeriodError{id}'] = 1
                         else: st.session_state[f'reducedGroupPeriodError{id}'] = 0
 
@@ -3026,7 +3026,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             this page (click 
                             [this link](#thresholdTriggerCondition) to 
                             go there directly).
-                        ''')
+                        ''', icon = ':material/info:')
                     # Case triggers
                     elif reducedGroupTrigger == 'Community Case Total': 
                         st.info('''
@@ -3038,7 +3038,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             this page (click 
                             [this link](#thresholdTriggerCondition) to 
                             go there directly).
-                        ''')
+                        ''', icon = ':material/info:')
                 
                 # Reduced group size
                 loadKey(f'reducedGroupSize', id, 5)
@@ -3083,7 +3083,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         Size in the "Population Behaviours" section of 
                         the "Community" tab to any value above 
                         {reducedGroupSize} people. 
-                    ''')
+                    ''', icon = ':material/error:')
                     globalErrorContainer.error(f'''
                         Error: The reduced work group size during 
                         reduced group size NPIs in the {
@@ -3112,7 +3112,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         Size in the "Population Behaviours" section of 
                         the "Community" tab to any value above 
                         {reducedGroupSize} people. 
-                    ''')
+                    ''', icon = ':material/error:')
                     st.session_state[f'reducedGroupError{id}'] = 2
                 else: st.session_state[f'reducedGroupError{id}'] = 0
 
@@ -3236,7 +3236,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {bccPeriod[0] + 1} 
                                 days or more. 
-                            ''')
+                            ''', icon = ':material/error:')
                             globalErrorContainer.error(f'''
                                 Error: The {
                                     'baseline scenario' if id == 0 
@@ -3270,7 +3270,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 Simulation in the "Initialisation" tab 
                                 to be {bccPeriod[0] + 1} 
                                 days or more. 
-                            ''')
+                            ''', icon = ':material/error:')
                             st.session_state[
                                 f'bccPeriodError{id}'
                             ] = 2
@@ -3303,7 +3303,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 - Increase the scenario's Length of 
                                 Simulation in the "Initialisation" tab 
                                 to be {bccPeriod[1] + 1} days or more. 
-                            ''')
+                            ''', icon = ':material/warning:')
                             globalErrorContainer.warning(f'''
                                 Warning: The {
                                     'baseline scenario' if id == 0 
@@ -3336,7 +3336,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                                 - Increase the scenario's Length of 
                                 Simulation in the "Initialisation" tab 
                                 to be {bccPeriod[1] + 1} days or more. 
-                            ''')
+                            ''', icon = ':material/warning:')
                             st.session_state[f'bccPeriodError{id}'] = 1
                         else: st.session_state[f'bccPeriodError{id}'] = 0
                     
@@ -3349,7 +3349,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         the bottom of this page (click 
                         [this link](#thresholdTriggerCondition) to go 
                         there directly).
-                    ''')
+                    ''', icon = ':material/info:')
                     # Case triggers
                     elif bccTrigger == 'Community Case Total': st.info('''
                         Due to the design of the *Flusim* model, case 
@@ -3359,7 +3359,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         the bottom of this page (click 
                         [this link](#thresholdTriggerCondition) to go 
                         there directly).
-                    ''')
+                    ''', icon = ':material/info:')
                 
                 # Reduced BCC rate
                 loadKey(f'bccReducedRate', id, 0.2)
@@ -3412,7 +3412,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         the "Community" tab to any value above 
                         {bccReducedRate} interactions per person per 
                         day. 
-                    ''')
+                    ''', icon = ':material/error:')
                     globalErrorContainer.error(f'''
                         Error: The reduced background contact count 
                         (BCC) value during BCC reduction NPIs in the {
@@ -3443,7 +3443,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                         the "Community" tab to any value above 
                         {bccReducedRate} interactions per person per 
                         day. 
-                    ''')
+                    ''', icon = ':material/error:')
                     st.session_state[f'bccError{id}'] = 2
                 else: st.session_state[f'bccError{id}'] = 0
         
@@ -3501,7 +3501,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                 configuring the trigger thresholds will appear here if 
                 you select any value other than "Always" and "Timed" 
                 for an intervention's trigger condition.
-            ''')
+            ''', icon = ':material/info:')
             else:
                 # Case rates
                 if rateConditions or classDismissal:
@@ -3583,7 +3583,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             - Decrease the scenario's Relaxation 
                             Trigger Threshold Rate to any value below 
                             {rateStartThreshold} cases per day. 
-                        ''')
+                        ''', icon = ':material/error:')
                         globalErrorContainer.error(f'''
                             Error: The start trigger threshold case 
                             rate for medical interventions in the {
@@ -3614,7 +3614,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             Trigger Thresholds" section of the 
                             "Vaccinations and NPIs" tab to any value 
                             below {rateStartThreshold} cases per day. 
-                        ''')
+                        ''', icon = ':material/error:')
                         st.session_state[f'triggerRateError{id}'] = 2
                     else: st.session_state[f'triggerRateError{id}'] = 0
                 
@@ -3684,7 +3684,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             To address this error, please increase the 
                             scenario's Start Trigger Case Threshold to 
                             any value above {population} cases. 
-                        ''')
+                        ''', icon = ':material/error:')
                         globalErrorContainer.error(f'''
                             Error: The trigger threshold case total for 
                             medical interventions in the {
@@ -3710,7 +3710,7 @@ def buildVaccinationNPITab(container, id, globalErrorContainer):
                             the "Intervention Trigger Thresholds" 
                             section of the "Vaccinations and NPIs" tab 
                             to any value above {population} cases. 
-                        ''')
+                        ''', icon = ':material/error:')
                         st.session_state[f'triggerRateError{id}'] = 2
                     else: st.session_state[f'triggerRateError{id}'] = 0
 

@@ -91,7 +91,7 @@ for id in range(scenarioCount + 1) if max(errors[id]) >= 2)
         
 Please correct these errors by modifying the corresponding parameters 
 to valid values before running the simulation.
-'''
+''', icon = ':material/error:'
     )
     else:
         # TODO: More detailed estimated time breakdown
@@ -125,7 +125,7 @@ for id in range(1, scenarioCount + 1) if max(errors[id]) >= 1)}
         
 Please make sure that these issues do not interfere with your intended 
 simulation design before running the simulation.
-'''
+''', icon = ':material/warning:'
         )
         # TODO: Make warning display for the chart one too
         if st.session_state.get('ChartGenerated'): st.warning('''
@@ -133,7 +133,7 @@ Running a new simulation will result in future tables and graphs using
 the new simulation's data. Please make sure to save any tables or graphs 
 you wish to keep with the current simulation data before running a new 
 simulation.
-        ''')
+        ''', icon = ':material/bar_chart_off:')
         st.markdown('''
             Are you sure you want to run the simulation with the 
             selected parameters?

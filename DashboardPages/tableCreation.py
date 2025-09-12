@@ -184,7 +184,7 @@ if not currentDataExists: healthOutcomeErrorContainer.warning('''
     No simulation data has been generated. Click "Run Simulation" at 
     the Baseline Parameter Configuration page to run a simulation and 
     obtain the data necessary to generate a table.
-''')
+''', icon = ':material/science_off:')
 if currentDataExists and st.session_state.simulationInProgress: 
     healthOutcomeErrorContainer.warning('''
         Warning: A new simulation is currently in progress. Since the 
@@ -194,7 +194,7 @@ if currentDataExists and st.session_state.simulationInProgress:
         generate tables with the previous simulation's data, though the 
         current table will still be available to view and download 
         until you generate a new table.
-    ''')
+    ''', icon = ':material/av_timer:')
 
 tableSettings = st.expander('Table Settings')
 with tableSettings:
@@ -234,7 +234,7 @@ specified health burden outcomes in that scenario.
             attempt to generate the table now, it will be empty. Please 
             select at least one scenario to include with the 'Scenarios 
             to Use' setting.
-        ''')
+        ''', icon = ':material/tab_unselected:')
     else: 
         st.markdown('''
             No simulation data has been generated, so there are 
@@ -277,7 +277,7 @@ in the case of the 'Total' group).
         attempt to generate the table now, it will be empty. Please 
         select at least one age group to include with the 'Age Groups 
         to Use' setting.
-    ''')
+    ''', icon = ':material/tab_unselected:')
 
 
 

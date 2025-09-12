@@ -62,7 +62,6 @@ def buildCommunityTab(container, id, globalErrorContainer):
 
 
     # Tab Content
-    # TODO: Warn for nonsensical conditions
     with container:
         st.header('Community Parameters')
         st.markdown('''

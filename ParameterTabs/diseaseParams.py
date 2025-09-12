@@ -152,7 +152,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     - Increase the scenario's Length of Simulation in 
                     the "Initialisation" tab to be 
                     {seedingPeriod[0] + 1} days or more.
-                ''')
+                ''', icon = ':material/error:')
                 globalErrorContainer.error(f'''
                     Error: The {
                         'baseline scenario' if id == 0 
@@ -175,7 +175,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     - Increase the scenario's Length of Simulation in 
                     the "Initialisation" tab to be 
                     {seedingPeriod[0] + 1} days or more.
-                ''')
+                ''', icon = ':material/error:')
                 st.session_state[f'seedPeriodError{id}'] = 2
             elif seedingPeriod[1] >= simLength: 
                 seedPeriodErrorContainer.warning(f'''
@@ -201,7 +201,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     - Increase the scenario's Length of Simulation in 
                     the "Initialisation" tab to be 
                     {seedingPeriod[1] + 1} days or more.
-                ''')
+                ''', icon = ':material/warning:')
                 globalErrorContainer.warning(f'''
                     Warning: The {
                         'baseline scenario' if id == 0 
@@ -225,7 +225,7 @@ def buildDiseaseTab(container, id, globalErrorContainer):
                     - Increase the scenario's Length of Simulation in 
                     the "Initialisation" tab to be 
                     {seedingPeriod[1] + 1} days or more.
-                ''')
+                ''', icon = ':material/warning:')
                 st.session_state[f'seedPeriodError{id}'] = 1
             else: st.session_state[f'seedPeriodError{id}'] = 0
 

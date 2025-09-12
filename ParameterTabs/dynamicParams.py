@@ -144,7 +144,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         - Increase the scenario's Length of Simulation 
                         in the "Initialisation" tab to be 
                         {seedUpdatePoint + 1} days or more.
-                    ''')
+                    ''', icon = ':material/error:')
                     globalErrorContainer.error(f'''
                         Error: The {
                             'baseline scenario' if id == 0 
@@ -170,7 +170,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         - Increase the scenario's Length of Simulation 
                         in the "Initialisation" tab to be 
                         {seedUpdatePoint + 1} days or more.
-                    ''')
+                    ''', icon = ':material/error:')
                     st.session_state[f'seedDynamicError{id}'] = 2
                     firstSeedError = False
                 elif firstSeedError and (
@@ -207,7 +207,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         the "Disease" tab to include Day {
                             seedUpdatePoint + 1
                         }.
-                    ''')
+                    ''', icon = ':material/error:')
                     globalErrorContainer.error(f'''
                         Error: The infection seeding period for the {
                             'baseline scenario' if id == 0 
@@ -238,7 +238,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         the "Disease" tab to include Day {
                             seedUpdatePoint + 1
                         }.
-                    ''')
+                    ''', icon = ':material/error:')
                     st.session_state[f'seedDynamicError{id}'] = 2
                     firstSeedError = False
                 else: st.session_state[f'seedDynamicError{id}'] = 0
@@ -309,7 +309,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 NPI in the "School Closure" section of the 
                 "Vaccinations and NPIs" tab prior to running the 
                 simulation.
-            ''')
+            ''', icon = ':material/info:')
             else: st.warning(f'''
                 Note: School closures are currently disabled in 
                 {'the baseline' if id == 0 else 'this'} scenario. As 
@@ -318,7 +318,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 you enable the NPI in the "School Closure" section of 
                 the "Vaccinations and NPIs" tab prior to running the 
                 simulation.
-            ''')
+            ''', icon = ':material/warning:')
         closeContainer = st.container()
         closeErrorContainer = st.container()
         for i in range(closeRowCount): 
@@ -367,7 +367,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         - Increase the scenario's Length of Simulation 
                         in the "Initialisation" tab to be 
                         {closeUpdatePoint + 1} days or more.
-                    ''')
+                    ''', icon = ':material/error:')
                     globalErrorContainer.error(f'''
                         Error: The {
                             'baseline scenario' if id == 0 
@@ -394,7 +394,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         - Increase the scenario's Length of Simulation 
                         in the "Initialisation" tab to be 
                         {closeUpdatePoint + 1} days or more.
-                    ''')
+                    ''', icon = ':material/error:')
                     st.session_state[f'closeDynamicError{id}'] = 2
                     firstCloseError = False
                 elif firstCloseError and closeTrigger == 'Timed' and (
@@ -436,7 +436,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         "Vaccinations and NPIs" tab to include Day {
                             closeUpdatePoint + 1
                         }.
-                    ''')
+                    ''', icon = ':material/error:')
                     globalErrorContainer.error(f'''
                         Error: The school closure NPI for the {
                             'baseline scenario' if id == 0 
@@ -473,7 +473,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         "Vaccinations and NPIs" tab to include Day {
                             closeUpdatePoint + 1
                         }.
-                    ''')
+                    ''', icon = ':material/error:')
                     st.session_state[f'closeDynamicError{id}'] = 2
                     firstCloseError = False
                 else: st.session_state[f'closeDynamicError{id}'] = 0
@@ -545,7 +545,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 "Background Contact Count Reduction" section of the 
                 "Vaccinations and NPIs" tab prior to running the 
                 simulation.
-            ''')
+            ''', icon = ':material/info:')
             else: st.warning(
             f'''
                 Note: Background contact count (BCC) 
@@ -556,7 +556,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                 NPI in the "Background Contact Count Reduction" section 
                 of the "Vaccinations and NPIs" tab prior to running the 
                 simulation.
-            ''')
+            ''', icon = ':material/warning:')
         bccContainer = st.container()
         bccErrorContainer = st.container()
         for i in range(bccRowCount): 
@@ -604,7 +604,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         - Increase the scenario's Length of Simulation 
                         in the "Initialisation" tab to be 
                         {bccUpdatePoint + 1} days or more.
-                    ''')
+                    ''', icon = ':material/error:')
                     globalErrorContainer.error(f'''
                         Error: The {
                             'baseline scenario' if id == 0 
@@ -632,7 +632,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         - Increase the scenario's Length of Simulation 
                         in the "Initialisation" tab to be 
                         {bccUpdatePoint + 1} days or more.
-                    ''')
+                    ''', icon = ':material/error:')
                     st.session_state[f'bccDynamicError{id}'] = 2
                     firstBCCError = False
                 elif firstBCCError and bccTrigger == 'Timed' and (
@@ -671,7 +671,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         Period in the "Background Contact Count 
                         Reduction" section of the "Vaccinations and 
                         NPIs" tab to include Day {bccUpdatePoint + 1}.
-                    ''')
+                    ''', icon = ':material/error:')
                     globalErrorContainer.error(f'''
                         Error: The reduced background contact count NPI 
                         for the {
@@ -707,7 +707,7 @@ def buildDynamicTab(container, id, globalErrorContainer):
                         Period in the "Background Contact Count 
                         Reduction" section of the "Vaccinations and 
                         NPIs" tab to include Day {bccUpdatePoint + 1}.
-                    ''')
+                    ''', icon = ':material/error:')
                     st.session_state[f'bccDynamicError{id}'] = 2
                     firstBCCError = False
                 else: st.session_state[f'bccDynamicError{id}'] = 0

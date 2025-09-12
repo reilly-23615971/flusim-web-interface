@@ -1455,8 +1455,6 @@ class simulationSet(BaseModel):
 
 # Model for the full configuration JSON file
 class modelGuideFile(BaseModel):
-    # TODO: better default values for stuff the user can't modify
-    # TODO: validate that template/community names are correct
     name: str = Field(
         title = 'Name', description = (
             'The name of the simulation guide file.'
