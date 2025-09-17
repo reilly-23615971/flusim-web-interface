@@ -70,6 +70,10 @@ def createConfig():
         )]
     )
 
+
+
+
+
 """
 Callback function for the Run Simulation button
 """
@@ -192,6 +196,10 @@ simulation.
             )
             st.rerun()
 
+
+
+
+
 """
 Function to send JSON model parameters to the server, awaiting a 
 response containing the results of the simulation
@@ -308,6 +316,10 @@ async def runModel(scenarioNames):
         functionLog.info(f'[runModel] Encountered {type(e).__name__}: {e}')
         functionLog.error(f'[runModel] Encountered {type(e).__name__}: {e}')
         return ('UncaughtError', e)
+
+
+
+
 
 """
 Async wrapper function for runModel, allowing HTTP requests to be made 

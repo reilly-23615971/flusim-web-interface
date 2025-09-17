@@ -14,6 +14,7 @@ from matplotlib.colors import ListedColormap, TwoSlopeNorm
 import matplotlib.pyplot as plt
 from io import BytesIO
 
+from dashboardApp import baselineParameters
 from ClientResources.InterfaceFunctions import (
     saveKey, loadKey, getRemainingGroups, 
     addFormRow, deleteFormRow, dayCount, idGet
@@ -158,7 +159,7 @@ def generateTable():
 
 
 
-st.title('Flusim Disease Model Dashboard')
+st.title('Health Burden Tables')
 
 st.markdown('''
     Here you can generate and save tables comparing various health 
@@ -180,11 +181,16 @@ healthOutcomeErrorContainer = st.container()
 
 # Check if there is data to tabulate
 currentDataExists = not (st.session_state.get('modelDataAsir') is None)
-if not currentDataExists: healthOutcomeErrorContainer.warning('''
-    No simulation data has been generated. Click "Run Simulation" at 
-    the Baseline Parameter Configuration page to run a simulation and 
-    obtain the data necessary to generate a table.
-''', icon = ':material/science_off:')
+if not currentDataExists: 
+    healthOutcomeErrorContainer.warning('''
+        No simulation data has been generated. Click 
+        :primary-badge[:material/motion_play: Run Simulation] in the 
+        sidebar to run a simulation and obtain the data necessary to 
+        generate a table.
+    ''', icon = ':material/science_off:')
+    if st.button(
+        'Go to Baseline Parameters', icon = ':material/variable_insert:'
+    ): st.switch_page(baselineParameters)
 if currentDataExists and st.session_state.simulationInProgress: 
     healthOutcomeErrorContainer.warning('''
         Warning: A new simulation is currently in progress. Since the 
@@ -236,13 +242,13 @@ specified health burden outcomes in that scenario.
             to Use' setting.
         ''', icon = ':material/tab_unselected:')
     else: 
-        st.markdown('''
+        st.info('''
             No simulation data has been generated, so there are 
-            currently no scenarios to select. Click "Run Simulation" at 
-            the Baseline Parameter Configuration page to run a 
-            simulation and obtain the data necessary to generate a 
-            table.
-        ''')
+            currently no scenarios to select. Click 
+            :primary-badge[:material/motion_play: Run Simulation] in 
+            the sidebar to run a simulation and obtain the data 
+            necessary to generate a table.
+        ''', icon = ':material/tab_unselected:')
         scenariosToUse = None
 
     loadKey(f'healthOutcomeAgeGroupToggle', '', False, noZeroDefault = True)

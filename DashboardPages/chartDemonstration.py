@@ -1,6 +1,6 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
-# Temporary page demonstrating the application's graphing capabilities
+# Page for displaying line graphs of infection over time
 
 # Imports
 import logging
@@ -9,6 +9,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
+from dashboardApp import baselineParameters
 from ClientResources.VisualisationFunctions import (
     formatEpidemic, formatAsir, plotEpidemic
 )
@@ -40,7 +41,7 @@ def formatInfectionData(data):
         'Day', var_name = 'Simulation', value_name = 'Rate'
     )
 
-st.title('Flusim Disease Model Dashboard')
+st.title('Infection Over Time Graphs')
 
 st.markdown('''
     Here you can generate line graphs plotting infection rates over 
@@ -50,10 +51,16 @@ st.markdown('''
 
 
 # Get data and plot as a line graph
-if not st.session_state.get('modelDataEpidemic'): st.markdown('''
-    No data loaded. Click "Run Simulation" at the Baseline Parameters 
-    page to run a simulation and get some data to plot!
-''')
+if not st.session_state.get('modelDataEpidemic'): 
+    st.warning('''
+        No simulation data has been generated. Click 
+        :primary-badge[:material/motion_play: Run Simulation] in the 
+        sidebar to run a simulation and obtain the data necessary to 
+        generate a graph.
+    ''', icon = ':material/science_off:')
+    if st.button(
+        'Go to Baseline Parameters', icon = ':material/variable_insert:'
+    ): st.switch_page(baselineParameters)
 else:
     data = st.session_state.modelDataEpidemic
     st.altair_chart(plotEpidemic(data, 'Cases'))
