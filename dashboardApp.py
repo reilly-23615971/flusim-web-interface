@@ -9,6 +9,7 @@ import pandas as pd
 import streamlit as st
 import streamlit_notify as stn
 from ClientResources.SharedResources import resultQueue
+from ClientResources.SimulationRunFunctions import runSimulationButton
 
 # Set this early to minimise the time spent with a different page title
 # TODO: Populate About section
@@ -41,32 +42,31 @@ session = st.session_state
 
 # Define application pages
 # TODO: Confirm ideal page layout/what goes where
+modelDescription = st.Page(
+    'DashboardPages/modelDescription.py', title = 'Model Description', 
+    icon = ':material/description:'
+)
+baselineParameters = st.Page(
+    'DashboardPages/baselineParameters.py', title = 'Baseline Parameters', 
+    icon = ':material/variable_insert:'
+)
+scenarioParameters = st.Page(
+    'DashboardPages/scenarioParameters.py', title = 'Scenario Parameters', 
+    icon = ':material/variable_add:'
+)
+infectionGraphs = st.Page(
+    'DashboardPages/chartDemonstration.py', 
+    title = 'Infection Over Time Graphs', icon = ':material/chart_data:'
+)
+healthTables = st.Page(
+    'DashboardPages/tableCreation.py', title = 'Health Burden Tables', 
+    icon = ':material/table_chart_view:'
+)
+
 pages = {
-    'SMRG Flusim Web Dashboard': [
-        st.Page(
-            'DashboardPages/modelDescription.py', 
-            title = 'Model Description', icon = ':material/description:'
-        ),
-        st.Page(
-            'DashboardPages/baselineParameters.py', 
-            title = 'Baseline Parameters', 
-            icon = ':material/variable_insert:'
-        ),
-        st.Page(
-            'DashboardPages/scenarioParameters.py', 
-            title = 'Scenario Parameters', 
-            icon = ':material/variable_add:'
-        ),
-        st.Page(
-            'DashboardPages/chartDemonstration.py', 
-            title = 'Chart Demonstration', icon = ':material/chart_data:'
-        ),
-        st.Page(
-            'DashboardPages/tableCreation.py', 
-            title = 'Health Outcome Tables', 
-            icon = ':material/table_chart_view:'
-        )
-    ]
+    'SMRG Flusim Web Dashboard': [modelDescription],
+    'Parameter Configuration': [baselineParameters, scenarioParameters],
+    'Results Visualisation': [infectionGraphs, healthTables]
 }
 
 # Initialise session variables used globally by the dashboard
@@ -88,9 +88,24 @@ stn.notify(remove = True)
 flusimPages = st.navigation(pages)
 flusimPages.run()
 
+# Add run simulation button to sidebar below pages
+# TODO: Check if server is available and grey out button if not
 # TODO: consider adding progress updates to the sidebar (time remaining,
 # progress bars, server availability etc.)
-# parameterSidebar = st.sidebar
+runModelButton = st.sidebar.button(
+    'Run Simulation', on_click = runSimulationButton, key = '_runSim',
+    disabled = st.session_state.simulationInProgress, type = 'primary', 
+    icon = ':material/motion_play:', help = '''
+        Send a request to the *Flusim* model server to run the model 
+        with the specified parameters. Once the request has been made, 
+        you will be unable to run the model again until it completes, 
+        so make sure you have configured your parameters to appropriate 
+        values before clicking.
+    ''' if not st.session_state.simulationInProgress else '''
+        A simulation is already running; please wait for it to conclude 
+        before running another one.
+    '''
+)
 
 
 # Fragment to regularly check if model results have been received yet
@@ -175,7 +190,10 @@ def updateData():
                     :red-badge[Error]: The simulation server 
                     encountered an error. Please try again later.
                 ''', icon = ':material/error:')
-                stn.toast(f':red-badge[Full Error Message]: {e}')
+                stn.toast(
+                    f':red-badge[Full Error Message]: {e}', 
+                    icon = 'material/breaking_news'
+                )
             
             # Errors without exception messages to send
             elif isinstance(processedData, pd.DataFrame): stn.toast(f'''

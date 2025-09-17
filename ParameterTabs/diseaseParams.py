@@ -28,17 +28,12 @@ Function to generate the parameters for the disease in a specified
 container with scenario differentiation
 
 Parameters:
-    container: The Streamlit container (likely a tab or expander) in 
-    which the parameters will be generated.
-
     id: An integer that will be used to differentiate the parameters in 
     different instances of the tab by adding a number to the Streamlit 
     session state variables.
-
-    globalErrorContainer: A container outside of the tab where error 
-    messages will be placed.
 """
-def buildDiseaseTab(container, id, globalErrorContainer):
+@st.fragment
+def buildDiseaseTab(id):
     # Initialise session variables needed by the disease forms
     sessionParameters = {
         f'transRowCount{id}': 0,
@@ -76,786 +71,786 @@ def buildDiseaseTab(container, id, globalErrorContainer):
 
 
     # Tab Content
-    with container:
-        st.header('Disease Parameters')
+    st.header('Disease Parameters')
+    st.markdown('''
+        This tab contains parameters relating to the disease 
+        itself, including how it initially enters the community, 
+        the rate at which it spreads and how long infection lasts 
+        before recovery.
+        
+        Note that despite being related to the disease's effects, 
+        hospitalisation and mortality rate are defined in the 
+        "Health Burden Outcomes" section of the "Community" tab 
+        instead of being in this tab, in order to group them with 
+        other health burden outcomes.
+    ''')
+    globalErrorContainer = st.container()
+
+    # Seeding Parameters
+    with st.expander('Infection Seeding'):
+        # Describe what sort of parameters are here
         st.markdown('''
-            This tab contains parameters relating to the disease 
-            itself, including how it initially enters the community, 
-            the rate at which it spreads and how long infection lasts 
-            before recovery.
-            
-            Note that despite being related to the disease's effects, 
-            hospitalisation and mortality rate are defined in the 
-            "Health Burden Outcomes" section of the "Community" tab 
-            instead of being in this tab, in order to group them with 
-            other health burden outcomes.
+            These parameters control how infected individuals 
+            are directly seeded into the community. Seeding is 
+            typically used to kickstart the initial epidemic by 
+            ensuring a steady number of people are infected 
+            daily.
         ''')
 
-        # Seeding Parameters
-        with st.expander('Infection Seeding'):
-            # Describe what sort of parameters are here
-            st.markdown('''
-                These parameters control how infected individuals 
-                are directly seeded into the community. Seeding is 
-                typically used to kickstart the initial epidemic by 
-                ensuring a steady number of people are infected 
-                daily.
-            ''')
+        loadKey(f'seedRate', id, 0.25)
+        st.select_slider(
+            'Infection Seeding Rate (Average Individuals per Day)', 
+            np.linspace(0.005, 5.0, 1000), 0.25, key = f'_seedRate{id}', 
+            on_change = saveKey, args = [f'seedRate', id], # type: ignore
+            format_func = lambda x: f'{x:0.4g}', help = '''
+                The average number of individuals that will be 
+                infected directly via infection seeding each cycle.
+            '''
+        )
+        seedPeriodErrorContainer = st.empty()
+        loadKey(f'seedPeriod', id, (0, 29))
+        seedingPeriod = st.select_slider(
+            'Infection Seeding Time Period (Days)', range(720), (0, 29), 
+            format_func = lambda x: f'Day {x + 1}', 
+            on_change = saveKey, args = [f'seedPeriod', id], # type: ignore
+            key = f'_seedPeriod{id}', help = '''
+                The time period during which infection seeding will 
+                occur in the simulation. The first value is the day 
+                on which seeding will begin (where Day 1 is the 
+                first day of the simulation), and the second value 
+                is the day on which it will stop.
+            '''
+        )
 
-            loadKey(f'seedRate', id, 0.25)
-            st.select_slider(
-                'Infection Seeding Rate (Average Individuals per Day)', 
-                np.linspace(0.005, 5.0, 1000), 0.25, key = f'_seedRate{id}', 
-                on_change = saveKey, args = [f'seedRate', id], # type: ignore
-                format_func = lambda x: f'{x:0.4g}', help = '''
-                    The average number of individuals that will be 
-                    infected directly via infection seeding each cycle.
-                '''
-            )
-            loadKey(f'seedPeriod', id, (0, 29))
-            seedingPeriod = st.select_slider(
-                'Infection Seeding Time Period (Days)', range(720), (0, 29), 
-                format_func = lambda x: f'Day {x + 1}', 
-                on_change = saveKey, args = [f'seedPeriod', id], # type: ignore
-                key = f'_seedPeriod{id}', help = '''
-                    The time period during which infection seeding will 
-                    occur in the simulation. The first value is the day 
-                    on which seeding will begin (where Day 1 is the 
-                    first day of the simulation), and the second value 
-                    is the day on which it will stop.
-                '''
-            )
+        # Show error if seeding period is beyond simulation length
+        simLength = idGet('cycleCount', id, 360)
+        if seedingPeriod[0] >= simLength: 
+            seedPeriodErrorContainer.error(f'''
+                Error: The {
+                    'baseline scenario' if id == 0 
+                    else f'scenario named "{
+                        st.session_state[f'scenarioName{id}']
+                    }"'
+                } is currently set to last {simLength} days, but 
+                the infection seeding period for this scenario 
+                (defined below) is set to begin on Day 
+                {seedingPeriod[0] + 1}. As such, no infections will 
+                ever occur in this scenario under these parameters. 
 
-            # Show error if seeding period is beyond simulation length
-            seedPeriodErrorContainer = st.empty()
-            simLength = idGet('cycleCount', id, 360)
-            if seedingPeriod[0] >= simLength: 
-                seedPeriodErrorContainer.error(f'''
-                    Error: The {
-                        'baseline scenario' if id == 0 
-                        else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
-                        }"'
-                    } is currently set to last {simLength} days, but 
-                    the infection seeding period for this scenario 
-                    (defined above) is set to begin on Day 
-                    {seedingPeriod[0] + 1}. As such, no infections will 
-                    ever occur in this scenario under these parameters. 
-
-                    To address this error, please make one of the 
-                    following changes before running the simulation:
-                    
-                    - Move the start point of the scenario's Infection 
-                    Seeding Time Period to any point before Day {
-                        simLength
-                    }. 
-                    - Increase the scenario's Length of Simulation in 
-                    the "Initialisation" tab to be 
-                    {seedingPeriod[0] + 1} days or more.
-                ''', icon = ':material/error:')
-                globalErrorContainer.error(f'''
-                    Error: The {
-                        'baseline scenario' if id == 0 
-                        else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
-                        }"'
-                    } is currently set to last {simLength} days, but 
-                    the infection seeding period for this scenario is 
-                    set to begin on Day {seedingPeriod[0] + 1}. As 
-                    such, no infections will ever occur in this 
-                    scenario under these parameters. 
-                    
-                    To address this error, please make one of the 
-                    following changes before running the simulation:
-                    
-                    - Move the start point of the scenario's Infection 
-                    Seeding Time Period in the "Infection Seeding" 
-                    section of the "Disease" tab to any point before 
-                    Day {simLength}. 
-                    - Increase the scenario's Length of Simulation in 
-                    the "Initialisation" tab to be 
-                    {seedingPeriod[0] + 1} days or more.
-                ''', icon = ':material/error:')
-                st.session_state[f'seedPeriodError{id}'] = 2
-            elif seedingPeriod[1] >= simLength: 
-                seedPeriodErrorContainer.warning(f'''
-                    Warning: The {
-                        'baseline scenario' if id == 0 
-                        else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
-                        }"'
-                    } is currently set to last {simLength} days, but 
-                    the infection seeding period for this scenario 
-                    (defined above) is set to end on Day 
-                    {seedingPeriod[1] + 1}. As such, infection seeding 
-                    will still be ongoing when the scenario ends. 
-
-                    If this is not desired behaviour, please address 
-                    this error by making one of the following changes 
-                    before running the simulation:
-
-                    - Move the end point of the scenario's Infection 
-                    Seeding Time Period to any point before Day {
-                        simLength
-                    }. 
-                    - Increase the scenario's Length of Simulation in 
-                    the "Initialisation" tab to be 
-                    {seedingPeriod[1] + 1} days or more.
-                ''', icon = ':material/warning:')
-                globalErrorContainer.warning(f'''
-                    Warning: The {
-                        'baseline scenario' if id == 0 
-                        else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
-                        }"'
-                    } is currently set to last {simLength} days, but 
-                    the infection seeding period for this scenario is 
-                    set to end on Day {seedingPeriod[1] + 1}. As such, 
-                    infection seeding will still be ongoing when the 
-                    scenario ends. 
-
-                    If this is not desired behaviour, please address 
-                    this error by making one of the following changes 
-                    before running the simulation:
-
-                    - Move the end point of the scenario's Infection 
-                    Seeding Time Period in the "Infection Seeding" 
-                    section of the "Disease" tab to any point before 
-                    Day {simLength}. 
-                    - Increase the scenario's Length of Simulation in 
-                    the "Initialisation" tab to be 
-                    {seedingPeriod[1] + 1} days or more.
-                ''', icon = ':material/warning:')
-                st.session_state[f'seedPeriodError{id}'] = 1
-            else: st.session_state[f'seedPeriodError{id}'] = 0
-
-
-        # Transmission Parameters
-        with st.expander('Disease Transmission'):
-            # Describe what sort of parameters are here
-            st.markdown('''
-                These parameters control the likelihood that the 
-                disease will spread when an infected individual 
-                interacts with others. 
-                        
-                The probability that an interaction between an infected 
-                individual $I_i$ and an uninfected, non-immune 
-                individual $I_s$ will result in the infection of $I_s$ 
-                is calculated with the following formula 
-                [[1](https://www.doi.org/10.1371/journal.pone.0004005)]:
-                        
-                $$
-                P_{trans}(I_i, I_s) = 1 - \\exp{(-\\beta \\times 
-                sym(I_i) \\times inf(I_i) \\times susc(I_s) \\times 
-                \\kappa)}
-                $$
+                To address this error, please make one of the 
+                following changes before running the simulation:
                 
-                In this formula:
-                - $\\beta$ (beta) is the basic transmission parameter 
-                for the disease
-                - $sym(I_i)$ is a parameter based on whether or not the 
-                infected individual has shown symptoms
-                - $inf(I_i)$ is the infectiousness parameter for the 
-                infected individual
-                - $susc(I_s)$ is the susceptibility parameter for the 
-                uninfected individual
-                - $\\kappa$ is the location parameter for the area the 
-                interaction is occurring in
+                - Move the start point of the scenario's Infection 
+                Seeding Time Period to any point before Day {
+                    simLength
+                }. 
+                - Increase the scenario's Length of Simulation in 
+                the "Initialisation" tab to be 
+                {seedingPeriod[0] + 1} days or more.
+            ''', icon = ':material/error:')
+            globalErrorContainer.error(f'''
+                Error: The {
+                    'baseline scenario' if id == 0 
+                    else f'scenario named "{
+                        st.session_state[f'scenarioName{id}']
+                    }"'
+                } is currently set to last {simLength} days, but 
+                the infection seeding period for this scenario is 
+                set to begin on Day {seedingPeriod[0] + 1}. As 
+                such, no infections will ever occur in this 
+                scenario under these parameters. 
                 
-                The parameters in this section will control the values 
-                of each of these parameters under various conditions.
-            ''')
+                To address this error, please make one of the 
+                following changes before running the simulation:
+                
+                - Move the start point of the scenario's Infection 
+                Seeding Time Period in the "Infection Seeding" 
+                section of the "Disease" tab to any point before 
+                Day {simLength}. 
+                - Increase the scenario's Length of Simulation in 
+                the "Initialisation" tab to be 
+                {seedingPeriod[0] + 1} days or more.
+            ''', icon = ':material/error:')
+            st.session_state[f'seedPeriodError{id}'] = 2
+        elif seedingPeriod[1] >= simLength: 
+            seedPeriodErrorContainer.warning(f'''
+                Warning: The {
+                    'baseline scenario' if id == 0 
+                    else f'scenario named "{
+                        st.session_state[f'scenarioName{id}']
+                    }"'
+                } is currently set to last {simLength} days, but 
+                the infection seeding period for this scenario 
+                (defined below) is set to end on Day 
+                {seedingPeriod[1] + 1}. As such, infection seeding 
+                will still be ongoing when the scenario ends. 
 
-            # Beta and symptom multipliers
-            loadKey(f'beta', id, 0.11)
-            st.select_slider(
-                'Basic Transmission Parameter (β)', 
-                np.linspace(0.001, 1.0, 1000), 0.11, 
-                format_func = lambda x: f'{x:0.3g}', key = f'_beta{id}', 
-                on_change = saveKey, args = [f'beta', id], # type: ignore
-                help = '''
-                    The value of the basic transmission parameter 
-                    $\\beta$, the base constant used to calculate the 
-                    probability of an individual being infected with 
-                    the disease upon interacting with an infected 
-                    individual. The higher this value is, the more 
-                    likely it is for uninfected individuals to contract 
-                    the disease in any interaction with infected 
-                    individuals.
-                '''
-            )
-            loadKey(f'betaAsymptomatic', id, 0.55)
-            st.select_slider(
-                'Asymptomatic Transmission Multiplier', 
-                np.linspace(0.0, 1.0, 1001), 0.55, 
-                format_func = lambda x: f'{x:0.3g}', 
-                on_change = saveKey, args = [f'betaAsymptomatic', id], # type: ignore
-                key = f'_betaAsymptomatic{id}', help = '''
-                    The value of the transmissibility modifier 
-                    $sym(I_i)$ when the infected individual in an 
-                    interaction ($I_i$) is asymptomatic (i.e. has not 
-                    shown any symptoms of the disease despite being 
-                    infectious). This applies to both individuals who 
-                    are too early in the disease's lifespan to show 
-                    symptoms as well as individuals who never show 
-                    symptoms throughout their infectious period. The 
-                    lower this value is, the less likely it is for 
-                    uninfected individuals to contract the disease when 
-                    interacting with asymptomatic individuals.
-                '''
-            )
-            loadKey(f'betaPostSymptomatic', id, 0.55)
-            st.select_slider(
-                'Post-Symptomatic Transmission Multiplier', 
-                np.linspace(0.0, 1.0, 1001), 0.55, 
-                format_func = lambda x: f'{x:0.3g}', 
-                on_change = saveKey, args = [f'betaPostSymptomatic', id], # type: ignore
-                key = f'_betaPostSymptomatic{id}', help = '''
-                    The value of the transmissibility modifier 
-                    $sym(I_i)$ when the infected individual in an 
-                    interaction ($I_i$) is post-symptomatic (i.e. 
-                    previously showed symptoms of the disease, but no 
-                    longer does). The lower this value is, the less 
-                    likely it is for uninfected individuals to contract 
-                    the disease when interacting with post-symptomatic 
-                    individuals.
-                '''
-            )
-            loadKey(f'householdKappa', id, 2.2)
-            st.select_slider(
-                'Household Transmission Multiplier', 
-                np.linspace(0.0, 5.0, 1001), 2.2, key = f'_householdKappa{id}',
-                on_change = saveKey, args = [f'householdKappa', id], # type: ignore
-                format_func = lambda x: f'{x:0.4g}', help = '''
-                    The value of the transmissibility modifier 
-                    $\\kappa$ when an interaction takes place in a 
-                    household. The higher this value is, the more 
-                    likely it is for uninfected individuals to contract 
-                    the disease when interacting with infected 
-                    individuals in households.
-                    '''
-                )
+                If this is not desired behaviour, please address 
+                this error by making one of the following changes 
+                before running the simulation:
 
-            # Age-based infectiousness and susceptibility parameters
-            st.markdown('''
-                ### Age-Specific Infectiousness/Susceptibility
+                - Move the end point of the scenario's Infection 
+                Seeding Time Period to any point before Day {
+                    simLength
+                }. 
+                - Increase the scenario's Length of Simulation in 
+                the "Initialisation" tab to be 
+                {seedingPeriod[1] + 1} days or more.
+            ''', icon = ':material/warning:')
+            globalErrorContainer.warning(f'''
+                Warning: The {
+                    'baseline scenario' if id == 0 
+                    else f'scenario named "{
+                        st.session_state[f'scenarioName{id}']
+                    }"'
+                } is currently set to last {simLength} days, but 
+                the infection seeding period for this scenario is 
+                set to end on Day {seedingPeriod[1] + 1}. As such, 
+                infection seeding will still be ongoing when the 
+                scenario ends. 
+
+                If this is not desired behaviour, please address 
+                this error by making one of the following changes 
+                before running the simulation:
+
+                - Move the end point of the scenario's Infection 
+                Seeding Time Period in the "Infection Seeding" 
+                section of the "Disease" tab to any point before 
+                Day {simLength}. 
+                - Increase the scenario's Length of Simulation in 
+                the "Initialisation" tab to be 
+                {seedingPeriod[1] + 1} days or more.
+            ''', icon = ':material/warning:')
+            st.session_state[f'seedPeriodError{id}'] = 1
+        else: st.session_state[f'seedPeriodError{id}'] = 0
+
+
+    # Transmission Parameters
+    with st.expander('Disease Transmission'):
+        # Describe what sort of parameters are here
+        st.markdown('''
+            These parameters control the likelihood that the 
+            disease will spread when an infected individual 
+            interacts with others. 
                     
-                This section allows for unique values of $inf(I_i)$ and 
-                $susc(I_s)$ to be defined for each age group, modifying 
-                the probability of infection for interactions involving 
-                individuals in said age groups. These parameters will 
-                assume a default value of 1 (i.e. no change in 
-                probability) if they are not specified for a specific 
-                age group. 
-            ''')
-            # Save relevant params as variables to avoid lookups
-            transRowCount = st.session_state[f'transRowCount{id}']
-            transRemainingGroups = st.session_state[
-                f'transRemainingAgeGroups{id}'
-            ]
-            transAgeContainer = st.container()
-            for i in range(transRowCount): 
-                (
-                    transGroupColumn, transInfectColumn, 
-                    transSusceptColumn, transRemoveColumn
-                ) = transAgeContainer.columns((0.25, 0.275, 0.275, 0.2))
-                transCurrentGroup = st.session_state.get(
-                    f'transAgeGroup{id}-{i}'
-                )
+            The probability that an interaction between an infected 
+            individual $I_i$ and an uninfected, non-immune 
+            individual $I_s$ will result in the infection of $I_s$ 
+            is calculated with the following formula 
+            [[1](https://www.doi.org/10.1371/journal.pone.0004005)]:
+                    
+            $$
+            P_{trans}(I_i, I_s) = 1 - \\exp{(-\\beta \\times 
+            sym(I_i) \\times inf(I_i) \\times susc(I_s) \\times 
+            \\kappa)}
+            $$
+            
+            In this formula:
+            - $\\beta$ (beta) is the basic transmission parameter 
+            for the disease
+            - $sym(I_i)$ is a parameter based on whether or not the 
+            infected individual has shown symptoms
+            - $inf(I_i)$ is the infectiousness parameter for the 
+            infected individual
+            - $susc(I_s)$ is the susceptibility parameter for the 
+            uninfected individual
+            - $\\kappa$ is the location parameter for the area the 
+            interaction is occurring in
+            
+            The parameters in this section will control the values 
+            of each of these parameters under various conditions.
+        ''')
 
-                # Age group column
-                loadKey(
-                    f'transAgeGroup', id, 
-                    transCurrentGroup if transCurrentGroup 
-                    else transRemainingGroups[0], f'-{i}'
-                )
-                with transGroupColumn: st.selectbox(
-                    'Age Group', key = f'_transAgeGroup{id}-{i}', options = (
-                        # Set age group options such that only ages 
-                        # that haven't been selected yet can be selected
-                        [transCurrentGroup] + [
-                            group for group in transRemainingGroups 
-                            if group != transCurrentGroup
-                        ] if transCurrentGroup else transRemainingGroups
-                    ), 
-                    on_change = saveKey, args = [f'transAgeGroup', id, f'-{i}'], # type: ignore
-                    disabled = not transRowCount < 10, help = '''
-                        An age group that will have specific 
-                        infectiousness and susceptibility parameters 
-                        defined for it, modifying the base transmission 
-                        probability for interactions involving 
-                        individuals in that age group.
+        # Beta and symptom multipliers
+        loadKey(f'beta', id, 0.11)
+        st.select_slider(
+            'Basic Transmission Parameter (β)', 
+            np.linspace(0.001, 1.0, 1000), 0.11, 
+            format_func = lambda x: f'{x:0.3g}', key = f'_beta{id}', 
+            on_change = saveKey, args = [f'beta', id], # type: ignore
+            help = '''
+                The value of the basic transmission parameter 
+                $\\beta$, the base constant used to calculate the 
+                probability of an individual being infected with 
+                the disease upon interacting with an infected 
+                individual. The higher this value is, the more 
+                likely it is for uninfected individuals to contract 
+                the disease in any interaction with infected 
+                individuals.
+            '''
+        )
+        loadKey(f'betaAsymptomatic', id, 0.55)
+        st.select_slider(
+            'Asymptomatic Transmission Multiplier', 
+            np.linspace(0.0, 1.0, 1001), 0.55, 
+            format_func = lambda x: f'{x:0.3g}', 
+            on_change = saveKey, args = [f'betaAsymptomatic', id], # type: ignore
+            key = f'_betaAsymptomatic{id}', help = '''
+                The value of the transmissibility modifier 
+                $sym(I_i)$ when the infected individual in an 
+                interaction ($I_i$) is asymptomatic (i.e. has not 
+                shown any symptoms of the disease despite being 
+                infectious). This applies to both individuals who 
+                are too early in the disease's lifespan to show 
+                symptoms as well as individuals who never show 
+                symptoms throughout their infectious period. The 
+                lower this value is, the less likely it is for 
+                uninfected individuals to contract the disease when 
+                interacting with asymptomatic individuals.
+            '''
+        )
+        loadKey(f'betaPostSymptomatic', id, 0.55)
+        st.select_slider(
+            'Post-Symptomatic Transmission Multiplier', 
+            np.linspace(0.0, 1.0, 1001), 0.55, 
+            format_func = lambda x: f'{x:0.3g}', 
+            on_change = saveKey, args = [f'betaPostSymptomatic', id], # type: ignore
+            key = f'_betaPostSymptomatic{id}', help = '''
+                The value of the transmissibility modifier 
+                $sym(I_i)$ when the infected individual in an 
+                interaction ($I_i$) is post-symptomatic (i.e. 
+                previously showed symptoms of the disease, but no 
+                longer does). The lower this value is, the less 
+                likely it is for uninfected individuals to contract 
+                the disease when interacting with post-symptomatic 
+                individuals.
+            '''
+        )
+        loadKey(f'householdKappa', id, 2.2)
+        st.select_slider(
+            'Household Transmission Multiplier', 
+            np.linspace(0.0, 5.0, 1001), 2.2, key = f'_householdKappa{id}',
+            on_change = saveKey, args = [f'householdKappa', id], # type: ignore
+            format_func = lambda x: f'{x:0.4g}', help = '''
+                The value of the transmissibility modifier 
+                $\\kappa$ when an interaction takes place in a 
+                household. The higher this value is, the more 
+                likely it is for uninfected individuals to contract 
+                the disease when interacting with infected 
+                individuals in households.
+                '''
+            )
 
-                        ##### Options:
-                        - Young Infant: 0-6 months old.
-                        - Infant: 7-24 months old.
-                        - Young Child: 3-5 years old.
-                        - Child: 6-12 years old.
-                        - Adolescent: 13-17 years old.
-                        - Young Adult: 18-24 years old.
-                        - Adult: 25-44 years old.
-                        - Older Adult: 45-64 years old.
-                        - Senior: 65-79 years old.
-                        - Older Senior: 80+ years old.
-                    '''
-                )
-                # Infectiousness column
-                loadKey(f'transInfect', id, 1.0, f'-{i}')
-                with transInfectColumn: st.select_slider(
-                    'Infectiousness', np.linspace(0.0, 1.0, 1001), 1.0, 
-                    key = f'_transInfect{id}-{i}', 
-                    on_change = saveKey, args = [f'transInfect', id, f'-{i}'], # type: ignore
-                    format_func = lambda x: f'{x:0.3g}', help = '''
-                        The value of the infectiousness parameter 
-                        $inf(I_i)$ when the infected individual in an 
-                        interaction ($I_i$) is a member of this age 
-                        group. The lower this value is, the less likely 
-                        it is for uninfected individuals to contract 
-                        the disease when interacting with infected 
-                        individuals in this age group.
-                    '''
-                )
-                # Susceptibility column
-                loadKey(f'transSuscept', id, 1.0, f'-{i}')
-                with transSusceptColumn: st.select_slider(
-                    'Susceptibility', np.linspace(0.0, 1.0, 1001), 1.0, 
-                    key = f'_transSuscept{id}-{i}', 
-                    on_change = saveKey, args = [f'transSuscept', id, f'-{i}'], # type: ignore
-                    format_func = lambda x: f'{x:0.3g}', help = '''
-                        The value of the susceptibility parameter 
-                        $susc(I_s)$ when the uninfected individual in 
-                        an interaction ($I_s$) is a member of this age 
-                        group. The lower this value is, the less likely 
-                        it is for uninfected individuals in this age 
-                        group to contract the disease when interacting 
-                        with infected individuals.
-                    '''
-                )
-                # Delete button column
-                with transRemoveColumn: st.button(
-                    label = 'Remove Age Group', icon = ':material/delete:', 
-                    key = f'transRemove{id}-{i}', on_click = deleteFormRow, 
-                    args = (
-                        i, f'transRowCount{id}', {
-                            f'transAgeGroup{id}-', f'transInfect{id}-', 
-                            f'transSuscept{id}-'
-                        }
-                    ),
-                    help = '''
-                        Remove this row of the form and remove these 
-                        age-specific transmission parameters from the 
-                        simulation.
-                    '''
-                )
-            # Button to add another row for age specific params
-            transAgeContainer.button(
-                label = 'Add Age Group', icon = ':material/add:', 
-                on_click = addFormRow, key = f'transAdd{id}', args = (
-                    f'transRowCount{id}', {
-                        f'transAgeGroup{id}-{transRowCount}': (
-                            transRemainingGroups[0] 
-                            if transRemainingGroups else None
-                        ),
-                        f'transInfect{id}-{transRowCount}': 1.0,
-                        f'transSuscept{id}-{transRowCount}': 1.0
-                    }
+        # Age-based infectiousness and susceptibility parameters
+        st.markdown('''
+            ### Age-Specific Infectiousness/Susceptibility
+                
+            This section allows for unique values of $inf(I_i)$ and 
+            $susc(I_s)$ to be defined for each age group, modifying 
+            the probability of infection for interactions involving 
+            individuals in said age groups. These parameters will 
+            assume a default value of 1 (i.e. no change in 
+            probability) if they are not specified for a specific 
+            age group. 
+        ''')
+        # Save relevant params as variables to avoid lookups
+        transRowCount = st.session_state[f'transRowCount{id}']
+        transRemainingGroups = st.session_state[
+            f'transRemainingAgeGroups{id}'
+        ]
+        transAgeContainer = st.container()
+        for i in range(transRowCount): 
+            (
+                transGroupColumn, transInfectColumn, 
+                transSusceptColumn, transRemoveColumn
+            ) = transAgeContainer.columns((0.25, 0.275, 0.275, 0.2))
+            transCurrentGroup = st.session_state.get(
+                f'transAgeGroup{id}-{i}'
+            )
+
+            # Age group column
+            loadKey(
+                f'transAgeGroup', id, 
+                transCurrentGroup if transCurrentGroup 
+                else transRemainingGroups[0], f'-{i}'
+            )
+            with transGroupColumn: st.selectbox(
+                'Age Group', key = f'_transAgeGroup{id}-{i}', options = (
+                    # Set age group options such that only ages 
+                    # that haven't been selected yet can be selected
+                    [transCurrentGroup] + [
+                        group for group in transRemainingGroups 
+                        if group != transCurrentGroup
+                    ] if transCurrentGroup else transRemainingGroups
                 ), 
+                on_change = saveKey, args = [f'transAgeGroup', id, f'-{i}'], # type: ignore
                 disabled = not transRowCount < 10, help = '''
-                    Add another row to this form, where you can select 
-                    an additional age group to have unique transmission 
-                    parameters.
-                ''' if transRowCount <= 9 else '''
-                    All age groups have been given unique transmission 
-                    parameters, so a new age group cannot be added.
+                    An age group that will have specific 
+                    infectiousness and susceptibility parameters 
+                    defined for it, modifying the base transmission 
+                    probability for interactions involving 
+                    individuals in that age group.
+
+                    ##### Options:
+                    - Young Infant: 0-6 months old.
+                    - Infant: 7-24 months old.
+                    - Young Child: 3-5 years old.
+                    - Child: 6-12 years old.
+                    - Adolescent: 13-17 years old.
+                    - Young Adult: 18-24 years old.
+                    - Adult: 25-44 years old.
+                    - Older Adult: 45-64 years old.
+                    - Senior: 65-79 years old.
+                    - Older Senior: 80+ years old.
                 '''
             )
-
-            # Location-based kappa parameters
-            st.markdown('''
-                ### Location-Specific Transmission Multipliers
-                    
-                This section allows for unique multipliers for the 
-                transmissibility function (represented in the formula 
-                as $\\kappa$) to be defined for each location type used 
-                in the simulation (excluding households, whose value is 
-                already defined above). These values modify the 
-                probability of infection for interactions that take 
-                place in the corresponding locations. If you do not 
-                specify a value for a specific location, it will assume 
-                a default value of 1 (i.e. the likelihood of infection 
-                remains at the default value in said location).
-            ''')
-            # Save relevant params as variables to avoid lookups
-            kappaRowCount = st.session_state[f'kappaRowCount{id}']
-            kappaRemainingLocations = st.session_state[
-                f'kappaRemainingLocations{id}'
-            ]
-            kappaContainer = st.container()
-            for i in range(kappaRowCount): 
-                (
-                    kappaLocationColumn, kappaValueColumn, 
-                    kappaRemoveColumn
-                ) = kappaContainer.columns((0.25, 0.55, 0.2))
-                kappaCurrentLocation = st.session_state.get(
-                    f'kappaLocation{id}-{i}'
-                )
-
-                # Age group column
-                loadKey(
-                    f'kappaLocation', id, 
-                    kappaCurrentLocation if kappaCurrentLocation 
-                    else kappaRemainingLocations[0], f'-{i}'
-                )
-                with kappaLocationColumn: st.selectbox(
-                    'Location', key = f'_kappaLocation{id}-{i}', options = (
-                        # Set location options such that only places 
-                        # that haven't been selected yet can be selected
-                        [kappaCurrentLocation] + [
-                            place for place in kappaRemainingLocations 
-                            if place != kappaCurrentLocation
-                        ] if kappaCurrentLocation else kappaRemainingLocations
-                    ), 
-                    on_change = saveKey, args = [f'kappaLocation', id, f'-{i}'], # type: ignore
-                    disabled = not kappaRowCount < 6, help = '''
-                        A location that will have a specific 
-                        transmissibility modifier defined for it, 
-                        modifying the base transmission probability for 
-                        interactions occurring in that location.
-
-                        ##### Options:
-                        - K-12 Education: Primary or secondary schools, 
-                        and other facilities for educating children.
-                        - Tertiary Education: Universities, and other 
-                        facilities for educating adults.
-                        - Workplaces: Locations where adults go to work.
-                        - Childcare: Daycare centres, and other places 
-                        that supervise preschool children.
-                        - Hospitals: Places that care for sick 
-                        individuals.
-                        - Background Interactions: Any interactions 
-                        taking place during the model's background 
-                        phase, simulating any contact that occurs 
-                        outside of the other locations. Note that the 
-                        rate at which these interactions occur (the 
-                        Background Contact Count) can be set in the 
-                        "Population Behaviours" section of the "Community" tab, 
-                        and this rate will be affected by the 
-                        BCC Reduction non-pharmaceutical intervention 
-                        configured in the "Background Contact Count 
-                        Reduction" section of the "Vaccinations and NPIs" tab.
-                    '''
-                )
-                # Kappa value column
-                loadKey(f'kappaValue', id, 1.0, f'-{i}')
-                with kappaValueColumn: st.select_slider(
-                    'Transmission Multiplier', np.linspace(0.0, 1.0, 1001), 
-                    1.0, key = f'_kappaValue{id}-{i}', 
-                    on_change = saveKey, args = [f'kappaValue', id, f'-{i}'], # type: ignore
-                    format_func = lambda x: f'{x:0.3g}', help = '''
-                        The value of the transmissibility modifier 
-                        $\\kappa$ when an interaction takes place in 
-                        this location. The higher this value is, the 
-                        more likely it is for uninfected individuals to 
-                        contract the disease when interacting with 
-                        infected individuals in this location.
-                    '''
-                )
-                # Delete button column
-                with kappaRemoveColumn: st.button(
-                    label = 'Remove Location', icon = ':material/delete:', 
-                    key = f'kappaRemove{id}-{i}', on_click = deleteFormRow, 
-                    args = (
-                        i, f'kappaRowCount{id}', {
-                            f'kappaLocation{id}-', f'kappaValue{id}-'
-                        }
-                    ),
-                    help = '''
-                        Remove this row of the form and remove these 
-                        location-specific transmissibility parameters 
-                        from the simulation.
-                    '''
-                )
-            # Button to add another row for age specific params
-            kappaContainer.button(
-                label = 'Add Location', icon = ':material/add:', 
-                on_click = addFormRow, key = f'kappaAdd{id}', args = (
-                    f'kappaRowCount{id}', {
-                        f'kappaLocation{id}-{kappaRowCount}': (
-                            kappaRemainingLocations[0] 
-                            if kappaRemainingLocations else None
-                        )
+            # Infectiousness column
+            loadKey(f'transInfect', id, 1.0, f'-{i}')
+            with transInfectColumn: st.select_slider(
+                'Infectiousness', np.linspace(0.0, 1.0, 1001), 1.0, 
+                key = f'_transInfect{id}-{i}', 
+                on_change = saveKey, args = [f'transInfect', id, f'-{i}'], # type: ignore
+                format_func = lambda x: f'{x:0.3g}', help = '''
+                    The value of the infectiousness parameter 
+                    $inf(I_i)$ when the infected individual in an 
+                    interaction ($I_i$) is a member of this age 
+                    group. The lower this value is, the less likely 
+                    it is for uninfected individuals to contract 
+                    the disease when interacting with infected 
+                    individuals in this age group.
+                '''
+            )
+            # Susceptibility column
+            loadKey(f'transSuscept', id, 1.0, f'-{i}')
+            with transSusceptColumn: st.select_slider(
+                'Susceptibility', np.linspace(0.0, 1.0, 1001), 1.0, 
+                key = f'_transSuscept{id}-{i}', 
+                on_change = saveKey, args = [f'transSuscept', id, f'-{i}'], # type: ignore
+                format_func = lambda x: f'{x:0.3g}', help = '''
+                    The value of the susceptibility parameter 
+                    $susc(I_s)$ when the uninfected individual in 
+                    an interaction ($I_s$) is a member of this age 
+                    group. The lower this value is, the less likely 
+                    it is for uninfected individuals in this age 
+                    group to contract the disease when interacting 
+                    with infected individuals.
+                '''
+            )
+            # Delete button column
+            with transRemoveColumn: st.button(
+                label = 'Remove Age Group', icon = ':material/delete:', 
+                key = f'transRemove{id}-{i}', on_click = deleteFormRow, 
+                args = (
+                    i, f'transRowCount{id}', {
+                        f'transAgeGroup{id}-', f'transInfect{id}-', 
+                        f'transSuscept{id}-'
                     }
+                ),
+                help = '''
+                    Remove this row of the form and remove these 
+                    age-specific transmission parameters from the 
+                    simulation.
+                '''
+            )
+        # Button to add another row for age specific params
+        transAgeContainer.button(
+            label = 'Add Age Group', icon = ':material/add:', 
+            on_click = addFormRow, key = f'transAdd{id}', args = (
+                f'transRowCount{id}', {
+                    f'transAgeGroup{id}-{transRowCount}': (
+                        transRemainingGroups[0] 
+                        if transRemainingGroups else None
+                    ),
+                    f'transInfect{id}-{transRowCount}': 1.0,
+                    f'transSuscept{id}-{transRowCount}': 1.0
+                }
+            ), 
+            disabled = not transRowCount < 10, help = '''
+                Add another row to this form, where you can select 
+                an additional age group to have unique transmission 
+                parameters.
+            ''' if transRowCount <= 9 else '''
+                All age groups have been given unique transmission 
+                parameters, so a new age group cannot be added.
+            '''
+        )
+
+        # Location-based kappa parameters
+        st.markdown('''
+            ### Location-Specific Transmission Multipliers
+                
+            This section allows for unique multipliers for the 
+            transmissibility function (represented in the formula 
+            as $\\kappa$) to be defined for each location type used 
+            in the simulation (excluding households, whose value is 
+            already defined above). These values modify the 
+            probability of infection for interactions that take 
+            place in the corresponding locations. If you do not 
+            specify a value for a specific location, it will assume 
+            a default value of 1 (i.e. the likelihood of infection 
+            remains at the default value in said location).
+        ''')
+        # Save relevant params as variables to avoid lookups
+        kappaRowCount = st.session_state[f'kappaRowCount{id}']
+        kappaRemainingLocations = st.session_state[
+            f'kappaRemainingLocations{id}'
+        ]
+        kappaContainer = st.container()
+        for i in range(kappaRowCount): 
+            (
+                kappaLocationColumn, kappaValueColumn, 
+                kappaRemoveColumn
+            ) = kappaContainer.columns((0.25, 0.55, 0.2))
+            kappaCurrentLocation = st.session_state.get(
+                f'kappaLocation{id}-{i}'
+            )
+
+            # Age group column
+            loadKey(
+                f'kappaLocation', id, 
+                kappaCurrentLocation if kappaCurrentLocation 
+                else kappaRemainingLocations[0], f'-{i}'
+            )
+            with kappaLocationColumn: st.selectbox(
+                'Location', key = f'_kappaLocation{id}-{i}', options = (
+                    # Set location options such that only places 
+                    # that haven't been selected yet can be selected
+                    [kappaCurrentLocation] + [
+                        place for place in kappaRemainingLocations 
+                        if place != kappaCurrentLocation
+                    ] if kappaCurrentLocation else kappaRemainingLocations
                 ), 
+                on_change = saveKey, args = [f'kappaLocation', id, f'-{i}'], # type: ignore
                 disabled = not kappaRowCount < 6, help = '''
-                    Add another row to this form, where you can select 
-                    an additional location to have unique 
-                    transmissibility parameters.
-                ''' if kappaRowCount <= 5 else '''
-                    All locations have been given unique 
-                    transmissibility parameters, so a new location 
-                    cannot be added.
+                    A location that will have a specific 
+                    transmissibility modifier defined for it, 
+                    modifying the base transmission probability for 
+                    interactions occurring in that location.
+
+                    ##### Options:
+                    - K-12 Education: Primary or secondary schools, 
+                    and other facilities for educating children.
+                    - Tertiary Education: Universities, and other 
+                    facilities for educating adults.
+                    - Workplaces: Locations where adults go to work.
+                    - Childcare: Daycare centres, and other places 
+                    that supervise preschool children.
+                    - Hospitals: Places that care for sick 
+                    individuals.
+                    - Background Interactions: Any interactions 
+                    taking place during the model's background 
+                    phase, simulating any contact that occurs 
+                    outside of the other locations. Note that the 
+                    rate at which these interactions occur (the 
+                    Background Contact Count) can be set in the 
+                    "Population Behaviours" section of the "Community" tab, 
+                    and this rate will be affected by the 
+                    BCC Reduction non-pharmaceutical intervention 
+                    configured in the "Background Contact Count 
+                    Reduction" section of the "Vaccinations and NPIs" tab.
                 '''
             )
-
-
-
-
-
-        # Life Cycle Parameters
-        with st.expander('Disease Life Cycle'):
-            # Describe what sort of parameters are here
-            st.markdown('''
-                These parameters control the disease's life cycle, 
-                including how long individuals are infectious for and 
-                the likelihood of developing symptoms.
-            ''')
-
-            # Asymptomatic params
-            loadKey(f'asymptomaticChild', id, 0.35)
-            st.select_slider(
-                'Probability of Young (0-24) Asymptomatic Case', 
-                np.linspace(0.0, 1.0, 1001), 0.35, 
-                format_func = lambda x: f'{100 * x:0.3g}%', 
-                on_change = saveKey, args = [f'asymptomaticChild', id], # type: ignore
-                key = f'_asymptomaticChild{id}', help = '''
-                    The probability that an infected young person 
-                    (defined as 0-24 years old) in the simulation will 
-                    be asymptomatic (i.e. they never show any symptoms 
-                    of the disease despite being infectious).
+            # Kappa value column
+            loadKey(f'kappaValue', id, 1.0, f'-{i}')
+            with kappaValueColumn: st.select_slider(
+                'Transmission Multiplier', np.linspace(0.0, 1.0, 1001), 
+                1.0, key = f'_kappaValue{id}-{i}', 
+                on_change = saveKey, args = [f'kappaValue', id, f'-{i}'], # type: ignore
+                format_func = lambda x: f'{x:0.3g}', help = '''
+                    The value of the transmissibility modifier 
+                    $\\kappa$ when an interaction takes place in 
+                    this location. The higher this value is, the 
+                    more likely it is for uninfected individuals to 
+                    contract the disease when interacting with 
+                    infected individuals in this location.
                 '''
             )
-            loadKey(f'asymptomaticAdult', id, 0.35)
-            st.select_slider(
-                'Probability of Adult (24+) Asymptomatic Case', 
-                np.linspace(0.0, 1.0, 1001), 0.35, 
-                format_func = lambda x: f'{100 * x:0.3g}%', 
-                on_change = saveKey, args = [f'asymptomaticAdult', id], # type: ignore
-                key = f'_asymptomaticAdult{id}', help = '''
-                    The probability that an infected adult (defined as 
-                    24+ years old) in the simulation will be 
-                    asymptomatic (i.e. they never show any symptoms of 
-                    the disease despite being infectious).
-                '''
-            )
-
-            # Duration Parameters
-            st.markdown('''
-                ### Disease Life Stages
-                
-                Diseases in the simulation have 5 distinct stages in 
-                their life cycle:
-                        
-                1. Latent: The disease is still developing in the body 
-                of the infected individual; they do not yet show 
-                symptoms and are not infectious.
-                2. Pre-Symptomatic: The disease has developed further 
-                and the infected individual can now spread the disease 
-                to others, but they still do not show any symptoms.
-                3. Symptomatic: The disease is now showing symptoms in 
-                the infected individual, and thus can now be diagnosed.
-                4. Post-Symptomatic: The infected individual's 
-                condition has improved enough that they no longer show 
-                symptoms of the disease, but they are still infectious.
-                5. Recovered: The individual is no longer infectious 
-                and is considered to have recovered from the disease.
-                
-                If an infected individual is asymptomatic, their 
-                infection will not progress into the symptomatic stage; 
-                they will remain in the pre-symptomatic stage without 
-                symptoms for the disease's entire duration. 
-                
-                The following parameters configure the length of each 
-                stage in the disease's life cycle.
-            ''')
-
-            # Alternate period definitions
-            loadKey(f'latencyPeriod', id, 10)
-            latencyPeriod = st.select_slider(
-                'Latency Period Length (Days)', range(51), 10, 
-                on_change = saveKey, args = [f'latencyPeriod', id], # type: ignore
-                format_func = dayCount, key = f'_latencyPeriod{id}', help = '''
-                    The length in days of the disease's latency period, 
-                    i.e. the length of time between an individual 
-                    initially being infected by the disease and said 
-                    individual becoming infectious themselves.
-                '''
-            )
-            loadKey(f'preSymptomPeriod', id, 2)
-            preSymptomPeriod = st.select_slider(
-                'Pre-Symptomatic Period Length (Days)', range(51), 2, 
-                format_func = dayCount, key = f'_preSymptomPeriod{id}', 
-                on_change = saveKey, args = [f'preSymptomPeriod', id], # type: ignore
+            # Delete button column
+            with kappaRemoveColumn: st.button(
+                label = 'Remove Location', icon = ':material/delete:', 
+                key = f'kappaRemove{id}-{i}', on_click = deleteFormRow, 
+                args = (
+                    i, f'kappaRowCount{id}', {
+                        f'kappaLocation{id}-', f'kappaValue{id}-'
+                    }
+                ),
                 help = '''
-                    The length in days of the disease's pre-symptomatic 
-                    period, i.e. the length of time between an 
-                    infected individual becoming capable of infecting 
-                    others with the disease and said individual 
-                    beginning to show symptoms.
+                    Remove this row of the form and remove these 
+                    location-specific transmissibility parameters 
+                    from the simulation.
                 '''
             )
-            loadKey(f'symptomPeriod', id, 7)
-            symptomPeriod = st.select_slider(
-                'Symptomatic Period Length (Days)', range(51), 7, 
-                on_change = saveKey, args = [f'symptomPeriod', id], # type: ignore
-                format_func = dayCount, key = f'_symptomPeriod{id}', help = '''
-                    The length in days of the disease's symptomatic 
-                    period, i.e. the length of time during which an 
-                    infected individual will show symptoms of the 
-                    disease.
-                '''
-            )
-            loadKey(f'postSymptomPeriod', id, 1)
-            postSymptomPeriod = st.select_slider(
-                'Post-Symptomatic Period Length (Days)', range(51), 1, 
-                format_func = dayCount, key = f'_postSymptomPeriod{id}', 
-                on_change = saveKey, args = [f'postSymptomPeriod', id], # type: ignore
-                help = '''
-                    The length in days of the disease's 
-                    post-symptomatic period, i.e. the length of time 
-                    between an individual ceasing to show symptoms of 
-                    the disease and said individual being fully 
-                    recovered/no longer infectious.
-                '''
-            )
+        # Button to add another row for age specific params
+        kappaContainer.button(
+            label = 'Add Location', icon = ':material/add:', 
+            on_click = addFormRow, key = f'kappaAdd{id}', args = (
+                f'kappaRowCount{id}', {
+                    f'kappaLocation{id}-{kappaRowCount}': (
+                        kappaRemainingLocations[0] 
+                        if kappaRemainingLocations else None
+                    )
+                }
+            ), 
+            disabled = not kappaRowCount < 6, help = '''
+                Add another row to this form, where you can select 
+                an additional location to have unique 
+                transmissibility parameters.
+            ''' if kappaRowCount <= 5 else '''
+                All locations have been given unique 
+                transmissibility parameters, so a new location 
+                cannot be added.
+            '''
+        )
 
-            # Display duration lengths via Cool Bar Graph Thing™
-            stageNames = [
-                'Latent', 'Pre-Symptomatic', 'Symptomatic', 'Post-Symptomatic'
-            ]
-            data = pd.DataFrame({
-                'Life Stage': stageNames,
-                'Length (Days)': [
-                    latencyPeriod, preSymptomPeriod, 
-                    symptomPeriod, postSymptomPeriod
-                ],
-            })
-            data['end'] = data['Length (Days)'].cumsum()
-            data['start'] = data['end'].shift(fill_value = 0)
-            data['tooltip'] = data['Life Stage'] + ": " + data[
-                'Length (Days)'
-            ].astype(str)
-            chart = alt.Chart(
-                data, title = 'Current Disease Life Cycle'
-            ).mark_bar(stroke = backgroundColour(), strokeWidth = 1).encode(
-                x = alt.X(
-                    'start:Q', title = 'Length (Days)', 
-                    scale = alt.Scale(domain = [0, (
-                        latencyPeriod + preSymptomPeriod 
-                        + symptomPeriod + postSymptomPeriod
-                    )])
-                ), x2 = 'end:Q', y = alt.value(0), color = alt.Color(
-                    'Life Stage:N', sort = stageNames, 
-                    scale = alt.Scale(scheme = 'reds')
-                ), tooltip = ['Life Stage', 'Length (Days)']
-            ).properties(width = 600, height = 175)
-            st.altair_chart(chart)
 
-            # Written period lengths
-            st.markdown('''
-                With the parameters defined above, the following time 
-                periods can be defined:
-            ''')
-            totalCol, incubationCol, infectiousCol = st.columns(
-                (0.33333, 0.33333, 0.33333)
-            )
-            totalCol.metric(
-                'Total Length of Infection', dayCount(
+
+
+
+    # Life Cycle Parameters
+    with st.expander('Disease Life Cycle'):
+        # Describe what sort of parameters are here
+        st.markdown('''
+            These parameters control the disease's life cycle, 
+            including how long individuals are infectious for and 
+            the likelihood of developing symptoms.
+        ''')
+
+        # Asymptomatic params
+        loadKey(f'asymptomaticChild', id, 0.35)
+        st.select_slider(
+            'Probability of Young (0-24) Asymptomatic Case', 
+            np.linspace(0.0, 1.0, 1001), 0.35, 
+            format_func = lambda x: f'{100 * x:0.3g}%', 
+            on_change = saveKey, args = [f'asymptomaticChild', id], # type: ignore
+            key = f'_asymptomaticChild{id}', help = '''
+                The probability that an infected young person 
+                (defined as 0-24 years old) in the simulation will 
+                be asymptomatic (i.e. they never show any symptoms 
+                of the disease despite being infectious).
+            '''
+        )
+        loadKey(f'asymptomaticAdult', id, 0.35)
+        st.select_slider(
+            'Probability of Adult (24+) Asymptomatic Case', 
+            np.linspace(0.0, 1.0, 1001), 0.35, 
+            format_func = lambda x: f'{100 * x:0.3g}%', 
+            on_change = saveKey, args = [f'asymptomaticAdult', id], # type: ignore
+            key = f'_asymptomaticAdult{id}', help = '''
+                The probability that an infected adult (defined as 
+                24+ years old) in the simulation will be 
+                asymptomatic (i.e. they never show any symptoms of 
+                the disease despite being infectious).
+            '''
+        )
+
+        # Duration Parameters
+        st.markdown('''
+            ### Disease Life Stages
+            
+            Diseases in the simulation have 5 distinct stages in 
+            their life cycle:
+                    
+            1. Latent: The disease is still developing in the body 
+            of the infected individual; they do not yet show 
+            symptoms and are not infectious.
+            2. Pre-Symptomatic: The disease has developed further 
+            and the infected individual can now spread the disease 
+            to others, but they still do not show any symptoms.
+            3. Symptomatic: The disease is now showing symptoms in 
+            the infected individual, and thus can now be diagnosed.
+            4. Post-Symptomatic: The infected individual's 
+            condition has improved enough that they no longer show 
+            symptoms of the disease, but they are still infectious.
+            5. Recovered: The individual is no longer infectious 
+            and is considered to have recovered from the disease.
+            
+            If an infected individual is asymptomatic, their 
+            infection will not progress into the symptomatic stage; 
+            they will remain in the pre-symptomatic stage without 
+            symptoms for the disease's entire duration. 
+            
+            The following parameters configure the length of each 
+            stage in the disease's life cycle.
+        ''')
+
+        # Alternate period definitions
+        loadKey(f'latencyPeriod', id, 10)
+        latencyPeriod = st.select_slider(
+            'Latency Period Length (Days)', range(51), 10, 
+            on_change = saveKey, args = [f'latencyPeriod', id], # type: ignore
+            format_func = dayCount, key = f'_latencyPeriod{id}', help = '''
+                The length in days of the disease's latency period, 
+                i.e. the length of time between an individual 
+                initially being infected by the disease and said 
+                individual becoming infectious themselves.
+            '''
+        )
+        loadKey(f'preSymptomPeriod', id, 2)
+        preSymptomPeriod = st.select_slider(
+            'Pre-Symptomatic Period Length (Days)', range(51), 2, 
+            format_func = dayCount, key = f'_preSymptomPeriod{id}', 
+            on_change = saveKey, args = [f'preSymptomPeriod', id], # type: ignore
+            help = '''
+                The length in days of the disease's pre-symptomatic 
+                period, i.e. the length of time between an 
+                infected individual becoming capable of infecting 
+                others with the disease and said individual 
+                beginning to show symptoms.
+            '''
+        )
+        loadKey(f'symptomPeriod', id, 7)
+        symptomPeriod = st.select_slider(
+            'Symptomatic Period Length (Days)', range(51), 7, 
+            on_change = saveKey, args = [f'symptomPeriod', id], # type: ignore
+            format_func = dayCount, key = f'_symptomPeriod{id}', help = '''
+                The length in days of the disease's symptomatic 
+                period, i.e. the length of time during which an 
+                infected individual will show symptoms of the 
+                disease.
+            '''
+        )
+        loadKey(f'postSymptomPeriod', id, 1)
+        postSymptomPeriod = st.select_slider(
+            'Post-Symptomatic Period Length (Days)', range(51), 1, 
+            format_func = dayCount, key = f'_postSymptomPeriod{id}', 
+            on_change = saveKey, args = [f'postSymptomPeriod', id], # type: ignore
+            help = '''
+                The length in days of the disease's 
+                post-symptomatic period, i.e. the length of time 
+                between an individual ceasing to show symptoms of 
+                the disease and said individual being fully 
+                recovered/no longer infectious.
+            '''
+        )
+
+        # Display duration lengths via Cool Bar Graph Thing™
+        stageNames = [
+            'Latent', 'Pre-Symptomatic', 'Symptomatic', 'Post-Symptomatic'
+        ]
+        data = pd.DataFrame({
+            'Life Stage': stageNames,
+            'Length (Days)': [
+                latencyPeriod, preSymptomPeriod, 
+                symptomPeriod, postSymptomPeriod
+            ],
+        })
+        data['end'] = data['Length (Days)'].cumsum()
+        data['start'] = data['end'].shift(fill_value = 0)
+        data['tooltip'] = data['Life Stage'] + ": " + data[
+            'Length (Days)'
+        ].astype(str)
+        chart = alt.Chart(
+            data, title = 'Current Disease Life Cycle'
+        ).mark_bar(stroke = backgroundColour(), strokeWidth = 1).encode(
+            x = alt.X(
+                'start:Q', title = 'Length (Days)', 
+                scale = alt.Scale(domain = [0, (
                     latencyPeriod + preSymptomPeriod 
                     + symptomPeriod + postSymptomPeriod
-                ), help = '''
-                    The length in days of the disease's total lifespan, 
-                    i.e. the length of time between an individual 
-                    initially being infected by the disease and said 
-                    individual being fully recovered/no longer 
-                    infectious.
-                '''
-            )
-            incubationCol.metric(
-                'Incubation Period', dayCount(
-                    latencyPeriod + preSymptomPeriod
-                ), help = '''
-                    The length in days of the disease's incubation 
-                    period, i.e. the length of time between an 
-                    individual initially being infected by the disease 
-                    and said individual beginning to show symptoms.
-                '''
-            )
-            infectiousCol.metric(
-                'Infectious Period', dayCount(
-                    preSymptomPeriod + symptomPeriod + postSymptomPeriod
-                ), help = '''
-                    The length in days of the disease's infectious 
-                    period, i.e. the length of time during which an 
-                    infected individual is capable of spreading the 
-                    disease to others.
-                '''
-            )
+                )])
+            ), x2 = 'end:Q', y = alt.value(0), color = alt.Color(
+                'Life Stage:N', sort = stageNames, 
+                scale = alt.Scale(scheme = 'reds')
+            ), tooltip = ['Life Stage', 'Length (Days)']
+        ).properties(width = 600, height = 175)
+        st.altair_chart(chart)
+
+        # Written period lengths
+        st.markdown('''
+            With the parameters defined above, the following time 
+            periods can be defined:
+        ''')
+        totalCol, incubationCol, infectiousCol = st.columns(
+            (0.33333, 0.33333, 0.33333)
+        )
+        totalCol.metric(
+            'Total Length of Infection', dayCount(
+                latencyPeriod + preSymptomPeriod 
+                + symptomPeriod + postSymptomPeriod
+            ), help = '''
+                The length in days of the disease's total lifespan, 
+                i.e. the length of time between an individual 
+                initially being infected by the disease and said 
+                individual being fully recovered/no longer 
+                infectious.
+            '''
+        )
+        incubationCol.metric(
+            'Incubation Period', dayCount(
+                latencyPeriod + preSymptomPeriod
+            ), help = '''
+                The length in days of the disease's incubation 
+                period, i.e. the length of time between an 
+                individual initially being infected by the disease 
+                and said individual beginning to show symptoms.
+            '''
+        )
+        infectiousCol.metric(
+            'Infectious Period', dayCount(
+                preSymptomPeriod + symptomPeriod + postSymptomPeriod
+            ), help = '''
+                The length in days of the disease's infectious 
+                period, i.e. the length of time during which an 
+                infected individual is capable of spreading the 
+                disease to others.
+            '''
+        )
 
 
 
-        # Waning Immunity Parameters
-        with st.expander('Immunity Waning'):
-            # Describe what sort of parameters are here
-            st.markdown('''
-                These parameters control how immunity to the disease 
-                conferred by having been infected by it in the past 
-                will become less effective over time. Note that 
-                individuals in the simulation are assumed to be 
-                completely immune to the disease immediately after 
-                recovering from it; the efficacy before waning is 100%.
-                
-                Note that these parameters do not affect immunity to 
-                the disease that is obtained from vaccination. This 
-                type of immunity can be configured using the parameters 
-                in the "Vaccinations and NPIs" tab.
-            ''')
+    # Waning Immunity Parameters
+    with st.expander('Immunity Waning'):
+        # Describe what sort of parameters are here
+        st.markdown('''
+            These parameters control how immunity to the disease 
+            conferred by having been infected by it in the past 
+            will become less effective over time. Note that 
+            individuals in the simulation are assumed to be 
+            completely immune to the disease immediately after 
+            recovering from it; the efficacy before waning is 100%.
+            
+            Note that these parameters do not affect immunity to 
+            the disease that is obtained from vaccination. This 
+            type of immunity can be configured using the parameters 
+            in the "Vaccinations and NPIs" tab.
+        ''')
 
-            # Waning immunity
-            loadKey(f'naturalImmunityDuration', id, 2)
-            st.slider(
-                'Natural Immunity Waning Delay (Months)', 1, 36, 2, 
-                on_change = saveKey, args = [f'naturalImmunityDuration', id], # type: ignore
-                key = f'_naturalImmunityDuration{id}', help = '''
-                    The number of months after an individual fully 
-                    recovers from the disease before the immunity 
-                    conferred by having been infected begins to 
-                    diminish, where a month is 30 days.
-                '''
-            )
-            loadKey(f'naturalWanedEfficacy', id, 0.5)
-            st.select_slider(
-                'Natural Immunity After Waning (Probability)',
-                np.linspace(0.0, 1.0, 1001), 0.5, 
-                key = f'_naturalWanedEfficacy{id}', 
-                on_change = saveKey, args = [f'naturalWanedEfficacy', id], # type: ignore
-                format_func = lambda x: f'{100 * x:0.3g}%', help = '''
-                    The final efficacy value that an individual's 
-                    natural immunity after recovering from the disease 
-                    will approach as it begins to diminish, represented 
-                    as the probability that the individual will remain 
-                    healthy when exposed to the disease after their 
-                    immunity is fully waned.
-                '''
-            )
-            loadKey(f'naturalWaningRate', id, 6)
-            st.slider(
-                'Natural Immunity Waning Duration (Months)', 0, 36, 6, 
-                on_change = saveKey, args = [f'naturalWaningRate', id], # type: ignore
-                key = f'_naturalWaningRate{id}', help = '''
-                    The number of months after the immunity from having 
-                    fully recovered from the disease begins waning 
-                    before the efficacy of the immunity stabilises, 
-                    where a month is 30 days. Natural immunity in the 
-                    *Flusim* simulation will wane at a linear rate, so 
-                    this parameter represents how long it takes for the 
-                    immunity level to decrease from 100% immunity to 
-                    the final immunity probability defined above.
+        # Waning immunity
+        loadKey(f'naturalImmunityDuration', id, 2)
+        st.slider(
+            'Natural Immunity Waning Delay (Months)', 1, 36, 2, 
+            on_change = saveKey, args = [f'naturalImmunityDuration', id], # type: ignore
+            key = f'_naturalImmunityDuration{id}', help = '''
+                The number of months after an individual fully 
+                recovers from the disease before the immunity 
+                conferred by having been infected begins to 
+                diminish, where a month is 30 days.
+            '''
+        )
+        loadKey(f'naturalWanedEfficacy', id, 0.5)
+        st.select_slider(
+            'Natural Immunity After Waning (Probability)',
+            np.linspace(0.0, 1.0, 1001), 0.5, 
+            key = f'_naturalWanedEfficacy{id}', 
+            on_change = saveKey, args = [f'naturalWanedEfficacy', id], # type: ignore
+            format_func = lambda x: f'{100 * x:0.3g}%', help = '''
+                The final efficacy value that an individual's 
+                natural immunity after recovering from the disease 
+                will approach as it begins to diminish, represented 
+                as the probability that the individual will remain 
+                healthy when exposed to the disease after their 
+                immunity is fully waned.
+            '''
+        )
+        loadKey(f'naturalWaningRate', id, 6)
+        st.slider(
+            'Natural Immunity Waning Duration (Months)', 0, 36, 6, 
+            on_change = saveKey, args = [f'naturalWaningRate', id], # type: ignore
+            key = f'_naturalWaningRate{id}', help = '''
+                The number of months after the immunity from having 
+                fully recovered from the disease begins waning 
+                before the efficacy of the immunity stabilises, 
+                where a month is 30 days. Natural immunity in the 
+                *Flusim* simulation will wane at a linear rate, so 
+                this parameter represents how long it takes for the 
+                immunity level to decrease from 100% immunity to 
+                the final immunity probability defined above.
 
-                    If this parameter is set to 0, the immunity 
-                    provided by recovering from the disease will never 
-                    diminish.
-                '''
-            )
+                If this parameter is set to 0, the immunity 
+                provided by recovering from the disease will never 
+                diminish.
+            '''
+        )
 
 
 

@@ -15,6 +15,33 @@ from ClientResources.InterfaceFunctions import saveKey, loadKey, checkErrors
 # Logging
 scenarioLog = logging.getLogger(__name__)
 
+
+
+# Function for displaying status of error messages here
+@st.fragment(run_every = 1)
+def scenarioErrorChecker(id):
+    scenarioErrors = max(checkErrors(id))
+    if scenarioErrors == 2: st.error(f'''
+        Error: The parameters defined for this scenario contain 
+        unresolvable errors. These errors must be corrected before the 
+        model can be ran. Check the individual tabs for detailed error 
+        messages.
+    ''', icon = ':material/error:')
+    elif scenarioErrors == 1: st.warning(f'''
+        Warning: The parameters defined for this scenario contain 
+        logical issues. The simulation may still be ran, but the results 
+        may differ from what was intended. Check the individual tabs for 
+        detailed error messages.
+    ''', icon = ':material/warning:')
+    else: st.markdown(f'''
+        Currently, all parameters have been set to valid values; the 
+        simulation should run as intended. If any errors are detected with 
+        the parameters selected for this scenario, they will be 
+        described here.
+    ''')
+
+
+
 # Load necessary parameter values
 scenarioCount = st.session_state.get('scenarioCount', 0)
 errors = [checkErrors(id) for id in range(scenarioCount + 1)]
@@ -76,7 +103,6 @@ tripleParameterSet = {
     'primAgeGroup', 'primAgeEfficacy'
 }
 
-# Check for active deletion
 
 
 # Simple function to add an additional scenario
@@ -138,7 +164,7 @@ def deleteScenario(scenarioID):
 
 
 # Page Content
-st.title('Flusim Disease Model Dashboard')
+st.title('Scenario Parameters')
 
 st.markdown((f'''
     This page allows for configuring the parameters that will be used 
@@ -162,7 +188,7 @@ if scenarioCount == 0: st.markdown('''
     No additional scenarios have been defined. If you run the 
     simulation now without adding any additional scenarios, only the 
     baseline scenario will be included in the model, using the 
-    parameters defined at the Baseline Parameter Configuration page.
+    parameters defined at the :grey-badge[:material/variable_insert: Baseline Parameters] page.
 ''')
 elif scenarioCount == 1: st.markdown(f'''
     There is currently 1 additional scenario defined for the simulation 
@@ -179,8 +205,6 @@ names:
     for id in range(1, scenarioCount + 1)
 )}
 ''')
-    
-# TODO: Run simulation button again?
 
 # TODO: Loadable parameter templates (part of template tab?)
 
@@ -215,40 +239,30 @@ for id in range(1, scenarioCount + 1):
         st.subheader('Parameters')
 
         # Place to put warnings and errors in the current parameter selection
-        if max(errors[id]) == 0: st.markdown(
-            f'''
-            Currently, all parameters for this scenario have been set 
-            to valid values. If any errors are detected with the 
-            parameters selected for this scenario, they will be 
-            described here.
-        ''')
-        scenarioErrorContainer = st.container()
-        with st.container(border = True): 
-            (
-                basicTab, diseaseTab, communityTab, 
-                interventionTab, dynamicTab
-            ) = st.tabs([
-                ':material/start: Initialisation', 
-                ':material/coronavirus: Disease', 
-                ':material/groups: Community', 
-                ':material/vaccines: Vaccination and NPIs', 
-                ':material/manage_history: Dynamic'
-            ])
+        scenarioErrorChecker(id)
 
-            # Basic parameters
-            buildBasicTab(basicTab, id, scenarioErrorContainer)
+        # Create tabs for each category of parameters
+        (basicTab, diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs([
+            ':material/start: Initialisation', ':material/coronavirus: Disease', 
+            ':material/groups: Community', ':material/vaccines: Vaccination and NPIs', 
+            ':material/manage_history: Dynamic'
+        ])
+        # :material/pattern: for the template tab
+        # Basic parameters
+        with basicTab: buildBasicTab(id)
 
-            # Disease parameters
-            buildDiseaseTab(diseaseTab, id, scenarioErrorContainer)
+        # Disease parameters
+        with diseaseTab: buildDiseaseTab(id)
 
-            # Environment parameters
-            buildCommunityTab(communityTab, id, scenarioErrorContainer)
+        # Environment parameters
+        with communityTab: buildCommunityTab(id)
 
-            # Vaccination and NPIs
-            buildVaccinationNPITab(interventionTab, id, scenarioErrorContainer)
+        # Vaccination and NPIs
+        with interventionTab: buildVaccinationNPITab(id)
 
-            # Dynamic parameters
-            buildDynamicTab(dynamicTab, id, scenarioErrorContainer)
+        # Dynamic parameters
+        with dynamicTab: buildDynamicTab(id)
+
 # Button to add another scenario
 st.button(
     label = 'Add Scenario', icon = ':material/add:', 

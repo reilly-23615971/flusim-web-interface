@@ -6,23 +6,46 @@
 import logging
 import streamlit as st
 #from streamlit_push_notifications import send_push, send_alert
+from dashboardApp import scenarioParameters
 from ParameterTabs.basicParams import buildBasicTab
 from ParameterTabs.diseaseParams import buildDiseaseTab
 from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
 from ParameterTabs.dynamicParams import buildDynamicTab
 from ClientResources.InterfaceFunctions import saveKey, loadKey, checkErrors
-from ClientResources.SimulationRunFunctions import runSimulationButton
 from ClientResources.SharedResources import communityPopulation
 
 # Logging
 baselineLog = logging.getLogger(__name__)
 
+# Function for displaying status of error messages here
+@st.fragment(run_every = 1)
+def baseErrorChecker():
+    baselineErrors = max(checkErrors(0))
+    if baselineErrors == 2: st.error(f'''
+        Error: The parameters defined for the baseline simulation contain 
+        unresolvable errors. These errors must be corrected before the 
+        model can be ran. Check the individual tabs for detailed error 
+        messages.
+    ''', icon = ':material/error:')
+    elif baselineErrors == 1: st.warning(f'''
+        Warning: The parameters defined for the baseline simulation contain 
+        logical issues. The simulation may still be ran, but the results 
+        may differ from what was intended. Check the individual tabs for 
+        detailed error messages.
+    ''', icon = ':material/warning:')
+    else: st.markdown(f'''
+        Currently, all parameters have been set to valid values; the 
+        simulation should run as intended. If any errors are detected with 
+        the parameters selected for the baseline scenario, they will be 
+        described here.
+    ''')
+
 
 
 # Page Content
 
-st.title('Flusim Disease Model Dashboard')
+st.title('Baseline Parameters')
 
 st.markdown(f'''
     This page allows for configuring the parameters that will be used 
@@ -33,6 +56,13 @@ st.markdown(f'''
     parameter's input field to show an explanation of what that 
     parameter represents. Hover your mouse over any buttons to show an 
     explanation of what that button does.
+
+    All scenarios in the simulation will use the parameters on this 
+    page as a baseline; however, individual scenarios can have 
+    different values defined at the :grey-badge[:material/variable_add: Scenario Parameters] 
+    page, overwriting these base values. The sole exception to this 
+    is the Simulated Community parameter defined below, which applies 
+    to all scenarios and cannot be overwritten.
 ''')
 
 # Community Selection
@@ -58,51 +88,9 @@ community = st.selectbox(
     '''
 )
 
-st.markdown(f'''
-    All scenarios in the simulation will use the parameters on this 
-    page as a baseline; however, individual scenarios can have 
-    different values defined at the Scenario Parameter Configuration 
-    page, overwriting these base values. The sole exception to this 
-    is the Simulated Community parameter defined above, which applies 
-    to all scenarios and cannot be overwritten.
-''')
+# Display notice if there are errors
+baseErrorChecker()
 
-# Button to run the model
-# TODO: Check if server is available and grey out button if not
-scenarioCount = st.session_state.get('scenarioCount', 0)
-errors = [checkErrors(id) for id in range(scenarioCount + 1)]
-
-# Place to put warnings and errors in the current parameter selection
-if max((max(e) for e in errors)) == 0: st.markdown(f'''
-    Currently, all parameters have been set to valid values; the 
-    simulation should run as intended. If any errors are detected with 
-    the parameters selected for the baseline scenario, they will be 
-    described here.
-''')
-elif max(errors[0]) == 0: st.warning(f'''
-    Currently, all parameters for the baseline scenario have been set 
-    to valid values; however, there is at least 1 error present in the 
-    scenarios defined at the Scenario Parameter Configuration page. 
-    Please examine and correct these errors if necessary before running 
-    the simulation. If any errors are detected with the parameters 
-    selected for the baseline scenario, they will be described here.
-''', icon = ':material/variable_remove:')
-alertContainer = st.container()
-
-runModelButton = st.button(
-    'Run Simulation', key = 'baselineRunModel', on_click = runSimulationButton,
-    disabled = st.session_state.simulationInProgress, type = 'primary', 
-    icon = ':material/motion_play:', help = '''
-        Send a request to the *Flusim* model server to run the model 
-        with the specified parameters. Once the request has been made, 
-        you will be unable to run the model again until it completes, 
-        so make sure you have configured your parameters to appropriate 
-        values before clicking.
-    ''' if not st.session_state.simulationInProgress else '''
-        A simulation is already running; please wait for it to conclude 
-        before running another one.
-    '''
-)
 
 # TODO: Consider having a tab for templates that load parameters for 
 # specific stuff (e.g. influenza, NPI presets)
@@ -110,29 +98,27 @@ runModelButton = st.button(
 # TODO: Check parameters where slider is bad for selecting and either 
 # change scale or switch to number input
 
-(
-    basicTab, diseaseTab, communityTab, 
-    interventionTab, dynamicTab
-) = st.tabs([
+# Create tabs for each category of parameters
+(basicTab, diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs([
     ':material/start: Initialisation', ':material/coronavirus: Disease', 
     ':material/groups: Community', ':material/vaccines: Vaccination and NPIs', 
     ':material/manage_history: Dynamic'
 ])
 # :material/pattern: for the template tab
 # Basic parameters
-buildBasicTab(basicTab, 0, alertContainer)
+with basicTab: buildBasicTab(0)
 
 # Disease parameters
-buildDiseaseTab(diseaseTab, 0, alertContainer)
+with diseaseTab: buildDiseaseTab(0)
 
 # Environment parameters
-buildCommunityTab(communityTab, 0, alertContainer)
+with communityTab: buildCommunityTab(0)
 
 # Vaccination and NPIs
-buildVaccinationNPITab(interventionTab, 0, alertContainer)
+with interventionTab: buildVaccinationNPITab(0)
 
 # Dynamic parameters
-buildDynamicTab(dynamicTab, 0, alertContainer)
+with dynamicTab: buildDynamicTab(0)
 
 # TODO: Debug
 #st.header('DEBUG ZONE')

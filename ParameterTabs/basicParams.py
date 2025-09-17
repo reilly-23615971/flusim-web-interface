@@ -21,61 +21,56 @@ Function to generate the parameters for the simulation in a specified
 container with scenario differentiation
 
 Parameters:
-    container: The Streamlit container (likely a tab or expander) in 
-    which the parameters will be generated.
-
     id: An integer that will be used to differentiate the parameters in 
     different instances of the tab by adding a number to the Streamlit 
     session state variables.
-
-    globalErrorContainer: A container outside of the tab where error 
-    messages will be placed.
 """
-def buildBasicTab(container, id, globalErrorContainer):
+@st.fragment
+def buildBasicTab(id):
     # Tab Content
-    with container:
-        st.header('Initialisation Parameters')
-        st.markdown('''
-            This tab contains several key parameters that are 
-            fundamental to starting the simulation, including the 
-            length it runs for and the number of times to run each 
-            scenario.
-        ''')
+    st.header('Initialisation Parameters')
+    st.markdown('''
+        This tab contains several key parameters that are 
+        fundamental to starting the simulation, including the 
+        length it runs for and the number of times to run each 
+        scenario.
+    ''')
+    globalErrorContainer = st.container()
 
-        # Time Parameters
-        loadKey(f'runCount', id, 24)
-        st.slider(
-            'Number of Simulation Runs', 1, 24, 24, key = f'_runCount{id}', 
-            on_change = saveKey, args = ['runCount', id], # type: ignore
-            help = f'''
-                The number of times that {'each' if id == 0 else 'this'} 
-                scenario will be ran. Higher values lead to longer 
-                simulations but more accurate results due to averaging.
-            '''
-        ) 
-        loadKey(f'cycleCount', id, 360)
-        st.select_slider(
-            'Length of Simulation (Days)', range(30, 721), 360, 
-            format_func = dayCount, key = f'_cycleCount{id}', 
-            on_change = saveKey, args = ['cycleCount', id], # type: ignore
-            help = '''
-                The number of days that will be simulated in each 
-                simulation run.
-            '''
-        )
-        loadKey(f'startDay', id, 'Monday')
-        st.select_slider(
-            'Simulation Starting Day of the Week', (
-                'Monday', 'Tuesday', 'Wednesday', 
-                'Thursday', 'Friday', 'Saturday', 'Sunday'
-            ),
-            'Monday', key = f'_startDay{id}', on_change = saveKey, 
-            args = ['startDay', id], # type: ignore
-            help = '''
-                The day of the week that the first day of the 
-                simulation will be.
-            '''
-        )
+    # Time Parameters
+    loadKey(f'runCount', id, 24)
+    st.slider(
+        'Number of Simulation Runs', 1, 24, 24, key = f'_runCount{id}', 
+        on_change = saveKey, args = ['runCount', id], # type: ignore
+        help = f'''
+            The number of times that {'each' if id == 0 else 'this'} 
+            scenario will be ran. Higher values lead to longer 
+            simulations but more accurate results due to averaging.
+        '''
+    ) 
+    loadKey(f'cycleCount', id, 360)
+    st.select_slider(
+        'Length of Simulation (Days)', range(30, 721), 360, 
+        format_func = dayCount, key = f'_cycleCount{id}', 
+        on_change = saveKey, args = ['cycleCount', id], # type: ignore
+        help = '''
+            The number of days that will be simulated in each 
+            simulation run.
+        '''
+    )
+    loadKey(f'startDay', id, 'Monday')
+    st.select_slider(
+        'Simulation Starting Day of the Week', (
+            'Monday', 'Tuesday', 'Wednesday', 
+            'Thursday', 'Friday', 'Saturday', 'Sunday'
+        ),
+        'Monday', key = f'_startDay{id}', on_change = saveKey, 
+        args = ['startDay', id], # type: ignore
+        help = '''
+            The day of the week that the first day of the 
+            simulation will be.
+        '''
+    )
 
 
 

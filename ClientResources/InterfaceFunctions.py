@@ -16,7 +16,7 @@ Function to save widget values into permanent session state vars
 """
 def saveKey(key, id, extra = None, notScenario = False): 
     keyString = f'{key}{id}{extra}' if extra else f'{key}{id}'
-    st.session_state[keyString] = st.session_state[f'_{keyString}']
+    st.session_state[keyString] = st.session_state.get(f'_{keyString}')
     if not notScenario and id != 0:
         if extra: st.session_state['scenarioSetParamsExtra'][id].append(
             (key, extra)

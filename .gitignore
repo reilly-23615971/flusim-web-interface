@@ -6,3 +6,4 @@
 TestData/*
 modelConfig.guide.json
 samples/*
+__pycache__/*
