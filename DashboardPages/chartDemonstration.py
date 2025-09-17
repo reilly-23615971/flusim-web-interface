@@ -9,7 +9,6 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
-from dashboardApp import baselineParameters
 from ClientResources.VisualisationFunctions import (
     formatEpidemic, formatAsir, plotEpidemic
 )
@@ -58,9 +57,6 @@ if not st.session_state.get('modelDataEpidemic'):
         sidebar to run a simulation and obtain the data necessary to 
         generate a graph.
     ''', icon = ':material/science_off:')
-    if st.button(
-        'Go to Baseline Parameters', icon = ':material/variable_insert:'
-    ): st.switch_page(baselineParameters)
 else:
     data = st.session_state.modelDataEpidemic
     st.altair_chart(plotEpidemic(data, 'Cases'))

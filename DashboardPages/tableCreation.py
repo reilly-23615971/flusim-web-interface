@@ -14,7 +14,6 @@ from matplotlib.colors import ListedColormap, TwoSlopeNorm
 import matplotlib.pyplot as plt
 from io import BytesIO
 
-from dashboardApp import baselineParameters
 from ClientResources.InterfaceFunctions import (
     saveKey, loadKey, getRemainingGroups, 
     addFormRow, deleteFormRow, dayCount, idGet
@@ -188,9 +187,6 @@ if not currentDataExists:
         sidebar to run a simulation and obtain the data necessary to 
         generate a table.
     ''', icon = ':material/science_off:')
-    if st.button(
-        'Go to Baseline Parameters', icon = ':material/variable_insert:'
-    ): st.switch_page(baselineParameters)
 if currentDataExists and st.session_state.simulationInProgress: 
     healthOutcomeErrorContainer.warning('''
         Warning: A new simulation is currently in progress. Since the 

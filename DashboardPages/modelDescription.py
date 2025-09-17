@@ -4,9 +4,6 @@
 
 # Imports
 import streamlit as st
-from dashboardApp import (
-    baselineParameters, scenarioParameters, infectionGraphs, healthTables
-)
 
 
 
@@ -30,10 +27,16 @@ st.markdown(
 
 if st.button(
     'Go to Baseline Parameters', icon = ':material/variable_insert:'
-): st.switch_page(baselineParameters)
+): st.switch_page(st.Page(
+    'DashboardPages/baselineParameters.py', title = 'Baseline Parameters', 
+    icon = ':material/variable_insert:'
+))
 if st.button(
     'Go to Scenario Parameters', icon = ':material/variable_add:'
-): st.switch_page(scenarioParameters)
+): st.switch_page(st.Page(
+    'DashboardPages/scenarioParameters.py', title = 'Scenario Parameters', 
+    icon = ':material/variable_add:'
+))
 
 st.markdown(
     '''
@@ -44,10 +47,16 @@ st.markdown(
 
 if st.button(
     'Go to Infection Over Time Graphs', icon = ':material/chart_data:'
-): st.switch_page(infectionGraphs)
+): st.switch_page(st.Page(
+    'DashboardPages/chartDemonstration.py', 
+    title = 'Infection Over Time Graphs', icon = ':material/chart_data:'
+))
 if st.button(
     'Go to Health Burden Tables', icon = ':material/table_chart_view:'
-): st.switch_page(healthTables)
+): st.switch_page(st.Page(
+    'DashboardPages/tableCreation.py', title = 'Health Burden Tables', 
+    icon = ':material/table_chart_view:'
+))
 
 st.header('Model Details')
 

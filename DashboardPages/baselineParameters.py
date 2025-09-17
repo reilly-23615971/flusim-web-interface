@@ -6,7 +6,6 @@
 import logging
 import streamlit as st
 #from streamlit_push_notifications import send_push, send_alert
-from dashboardApp import scenarioParameters
 from ParameterTabs.basicParams import buildBasicTab
 from ParameterTabs.diseaseParams import buildDiseaseTab
 from ParameterTabs.communityParams import buildCommunityTab

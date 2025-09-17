@@ -88,7 +88,7 @@ for the following scenarios: {'\n'.join(
 f'''
 - {
     st.session_state[f'scenarioName{id}'] if id > 0 else 'Baseline'
-} ({errors[id].count(2)} errors)
+}: {errors[id].count(2)} error(s)
 ''' 
 for id in range(scenarioCount + 1) if max(errors[id]) >= 2)
 }                            
@@ -123,7 +123,7 @@ selected for the following scenarios:
 - Baseline                                 
 {'\n'.join(
 f'''
-- {st.session_state[f'scenarioName{id}']} ({errors[id].count(1)} issues)
+- {st.session_state[f'scenarioName{id}']}: {errors[id].count(1)} issue(s)
 ''' 
 for id in range(1, scenarioCount + 1) if max(errors[id]) >= 1)}                            
         
