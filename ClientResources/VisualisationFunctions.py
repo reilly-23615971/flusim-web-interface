@@ -41,10 +41,12 @@ Parameters:
     settings: The AnalysisFile containing the settings to use.
 """
 def formatData(data, settings: AnalysisFile):
-    if settings.tool == 'epidemic': return formatEpidemic(
-        data, settings.names, settings.outcome, 
-        settings.useCumulative, settings.splitByAge
-    ), 'Epidemic'
+    if settings.tool == 'epidemic': 
+        typeTag = 'Cumulative' if settings.useCumulative else 'Daily'
+        return formatEpidemic(
+            data, settings.names, settings.outcome, 
+            settings.useCumulative, settings.splitByAge
+        ), f'Epidemic{typeTag}'
     # Leave asir alone since it gets formatted when generating the table
     elif settings.tool == 'asir': return data, 'RawAsir'
 
@@ -105,7 +107,7 @@ def formatEpidemic(
 
     # Generate and format the dataframe
     if splitByAge:
-        # Complete if necessary; not sure how useful/desirable 
+        # TODO: Complete if desired; not sure how useful/desirable 
         # age-split time series graphs will be (redundant with asir)
         return pd.DataFrame()
     else:
@@ -145,7 +147,10 @@ Output:
     data with a point chart that allows tooltips to appear on the line 
     without needing to hover over the line exactly.
 """
-def plotEpidemic(data, outcome = 'Infections', cumulative = False):
+def plotEpidemic(
+    data, outcome = 'Infections', cumulative = False, 
+    includedScenarios: Any = 'all'
+):
     # Validate parameters
     try:
         if not isinstance(data, pd.DataFrame): raise ValueError(
@@ -179,8 +184,13 @@ def plotEpidemic(data, outcome = 'Infections', cumulative = False):
     )
     tooltipCondition = alt.when(tooltipPicker)
 
+    # Remove any scenarios/age groups not specified in the data
+    if includedScenarios != 'all': 
+        newData = data[data['Scenario'].isin(includedScenarios)]
+    else: newData = data
+
     # Plot the line graph itself
-    epidemicPlot = alt.Chart(data, title = plotTitle).mark_line(
+    epidemicPlot = alt.Chart(newData, title = plotTitle).mark_line(
         interpolate = 'natural'
     ).encode(
         x = alt.X(xLabel).scale(nice = False, domain = (
@@ -197,7 +207,7 @@ def plotEpidemic(data, outcome = 'Infections', cumulative = False):
     )
 
     # Plot vertical lines to display tooltips with data from all scenarios
-    epidemicRule = alt.Chart(data).transform_pivot(
+    epidemicRule = alt.Chart(newData).transform_pivot(
         colourLabel[:-2], value = yLabel[:-2], groupby = [xLabel[:-2]]
     ).mark_rule(color = 'gray').encode(
         x = xLabel, opacity = (
@@ -206,7 +216,7 @@ def plotEpidemic(data, outcome = 'Infections', cumulative = False):
             alt.Tooltip(
                 scenario, type = 'quantitative', 
                 title = f'{scenario} {outcome}'
-            ) for scenario in data['Scenario'].unique()
+            ) for scenario in newData['Scenario'].unique()
         ],
     ).add_params(tooltipPicker)
 

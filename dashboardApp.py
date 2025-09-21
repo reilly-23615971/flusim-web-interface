@@ -123,14 +123,14 @@ def updateData():
             scenarios = session.scenarioCount
             for data, tag in processedData: 
                 # Further error checking
-                if len(processedData) == 0: stn.toast(
+                if len(data) == 0: stn.toast(
                     f'''
                     :red-badge[Error]: No data was present on one 
                     or more of the files received from the server. 
                     Please make sure your parameters do not possess any 
                     errors and try again.
                 ''', icon = ':material/tab_unselected:')
-                elif tag == 'epidemic' and len(
+                elif tag in {'EpidemicCumulative', 'EpidemicDaily'} and len(
                     data['Scenario'].value_counts()
                 ) <= scenarios: 
                     stn.toast(f'''

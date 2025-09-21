@@ -170,7 +170,7 @@ class AnalysisFile:
         self.outcome = outcome
         # Check required values for different tools
         if tool == 'epidemic':
-            self.useCumulative = kwargs.get('useProportion', False)
+            self.useCumulative = kwargs.get('useCumulative', False)
             self.splitByAge = kwargs.get('splitByAge', False)
         if tool == 'asir':
             self.useProportion = kwargs.get('useProportion', False)

@@ -27,7 +27,7 @@ from ClientResources.SharedResources import (
 # Logging
 tableLog = logging.getLogger(__name__)
 
-# Initialise session variables needed by the vaccination/NPI forms
+# Initialise session variables needed by the table
 sessionParameters = {
     'healthOutcomeRowCount': 1,
     'DataCommunity': 'newcastle'
@@ -173,14 +173,13 @@ st.html('''
     </style>
 ''')
 
-# Form (container) for selecting table settings
 # Save relevant params as variables to avoid lookups
 healthOutcomeRowCount = st.session_state[f'healthOutcomeRowCount']
 healthOutcomeErrorContainer = st.container()
 
 # Check if there is data to tabulate
 currentDataExists = not (st.session_state.get('modelDataAsir') is None)
-if not currentDataExists: 
+if not currentDataExists and not usePresetData: 
     healthOutcomeErrorContainer.warning('''
         No simulation data has been generated. Click 
         :primary-badge[:material/motion_play: Run Simulation] in the 
@@ -198,6 +197,7 @@ if currentDataExists and st.session_state.simulationInProgress:
         until you generate a new table.
     ''', icon = ':material/av_timer:')
 
+# Form (container) for selecting table settings
 tableSettings = st.expander('Table Settings')
 with tableSettings:
     st.markdown('''

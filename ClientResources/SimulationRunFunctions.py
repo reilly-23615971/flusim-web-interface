@@ -253,7 +253,12 @@ async def runModel(scenarioNames):
         )
 
         dataForms = [
-            AnalysisFile(tool = 'epidemic', names = scenarioNames), 
+            AnalysisFile(
+                tool = 'epidemic', names = scenarioNames, useCumulative = True
+            ), 
+            AnalysisFile(
+                tool = 'epidemic', names = scenarioNames, useCumulative = False
+            ), 
             AnalysisFile(tool = 'asir', names = scenarioNames)
         ]
         
@@ -279,9 +284,6 @@ async def runModel(scenarioNames):
         with ZipFile(BytesIO(responseData)) as analyses:
             fileNames = analyses.namelist()
             if len(fileNames) == 0:
-                functionLog.info(
-                    f'[runModel] Server returned no readable files'
-                )
                 functionLog.error(
                     f'[runModel] Server returned no readable files'
                 )
@@ -303,17 +305,15 @@ async def runModel(scenarioNames):
                 )
                 return ('UncaughtFormatError', e)
         return processedData
+    # Catch errors and return specific values to indicate them
     except ClientConnectorError as e:
-        functionLog.info(f'[runModel] Couldn\'t connect to server: {e}')
         functionLog.error(f'[runModel] Couldn\'t connect to server: {e}')
         return ('ClientConnectorError', e)
     except ClientResponseError as e:
-        functionLog.info(f'[runModel] Server returned status {e.status}: {e}')
         functionLog.error(f'[runModel] Server returned status {e.status}: {e}')
         if e.status in {500, '500'}: return ('ClientResponseError500', e)
         else: return ('ClientResponseError', e)
     except Exception as e:
-        functionLog.info(f'[runModel] Encountered {type(e).__name__}: {e}')
         functionLog.error(f'[runModel] Encountered {type(e).__name__}: {e}')
         return ('UncaughtError', e)
 
