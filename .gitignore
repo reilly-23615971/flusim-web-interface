@@ -3,3 +3,7 @@
 */__pycache__/*
 *Logs/*
 *interfaceAppLogs.txt
+TestData/*
+modelConfig.guide.json
+samples/*
+__pycache__/*
