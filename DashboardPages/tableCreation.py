@@ -3,6 +3,7 @@
 # Page where users can generate tables with infection data
 
 # Imports
+import time
 import inspect
 import logging
 import altair as alt
@@ -465,32 +466,17 @@ if tableData is not None:
     st.header('Health Burden Outcome Table')
     st.dataframe(tableData, column_config = tableConfig)
 
-    buttonCode = """
-    # Button to download the table as an image (omitted due to style differences)
-    if st.button(
-        'Download Table as Image', key = 'healthOutcomeImageDownload', 
-        icon = ':material/image_arrow_up:', help = '''
-            Download the currently generated table as a PNG image. If 
-            you wish to download the table as a CSV file, use the 
-            :material/download: download button that appears when 
-            hovering your mouse over the table.
+    # Button to download the CSV data used by the table
+    @st.fragment()
+    def burdenDataDownload(): st.download_button(
+        'Download Table Data', tableData.data.to_csv(),  # type: ignore
+        f'FlusimHealthBurdenData_{time.strftime('%Y.%m.%d_%I.%M.%S%p')}.csv', 
+        mime = 'text/csv', key = 'infectionDataDownload', 
+        icon = ':material/download:', help = '''
+            Download the above table as a CSV file.
         '''
-    ):
-        st.markdown('''
-            <script src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'></script>
-            <script>
-            const tableNode = parent.document.querySelector('[data-testid = "stDataFrame"]');
-            if (tableNode) {
-                html2canvas(tableNode).then(canvas => {
-                    const link = document.createElement('a');
-                    link.download = 'FlusimHealthBurdenOutcomeTable.png';
-                    link.href = canvas.toDataURL('image/png');
-                    link.click();
-                });
-            }
-            </script>
-        ''', unsafe_allow_html = True)
-    """
+    )
+    burdenDataDownload()
     
     st.subheader('Using the Table')
     st.markdown('''
@@ -511,7 +497,9 @@ if tableData is not None:
         the following actions:
         
         - Click the :material/download: download symbol to download the 
-        table as a CSV file. 
+        table as a CSV file. Note that the 
+        :grey-badge[:material/download: Download Table Data] button 
+        above can also be used. 
         - Click the :material/search: magnifying glass symbol to search 
         for a specific scenario, age group or value in the table.
         - Click the :material/fullscreen: fullscreen symbol to put the 

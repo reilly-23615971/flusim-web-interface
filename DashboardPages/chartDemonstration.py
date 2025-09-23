@@ -132,7 +132,6 @@ with graphSettings:
     )
 
     # Scenario selection
-    st.subheader('Scenario Selection')
     scenarioNames = st.session_state.get(
         'DataScenarioNames', ['Baseline', 'Surged']
     )
@@ -204,7 +203,7 @@ if chartData is not None:
         )
         if dataToDownload: st.download_button(
             'Download Infection Data', dataToDownload, 
-            f'FlusimInfectionData{chartTypeTag}{time.strftime('%Y%m%d-%H%M%S')}.csv', 
+            f'FlusimInfectionData{chartTypeTag}_{time.strftime('%Y.%m.%d_%I.%M.%S%p')}.csv', 
             mime = 'text/csv', key = 'infectionDataDownload', 
             disabled = st.session_state.get('modelDataEpidemicDaily') == None,
             icon = ':material/download:', help = '''
@@ -228,7 +227,7 @@ if chartData is not None:
                 )
             st.download_button(
                 'Download Infection Data', epidemicData.to_csv(index = False), 
-                f'FlusimInfectionData{chartTypeTag}{time.strftime('%Y%m%d-%H%M%S')}.csv', 
+                f'FlusimInfectionData{chartTypeTag}_{time.strftime('%Y.%m.%d_%I.%M.%S%p')}.csv', 
                 mime = 'text/csv', key = 'infectionDataDownload', 
                 disabled = (
                     not usePresetData 
