@@ -33,10 +33,7 @@ functionLog = logging.getLogger(__name__)
 """
 Function to generate a JSON config file using the selected parameters
 """
-def createConfig():
-    # Check number of extra scenarios
-    scenarioCount = st.session_state['scenarioCount'] + 1
-
+def createConfig(scenarioCount):
     # Set up schema objects
     scenarioParams = [Parameters() for _ in range(scenarioCount)]
 
@@ -187,7 +184,7 @@ simulation.
             }
 
             # Make the model call
-            runModelWrapper(scenarioNames)
+            runModelWrapper(scenarioNames, scenarioCount + 1)
 
             # Generate popup to let the user know it's pending
             stn.toast(
@@ -204,7 +201,7 @@ simulation.
 Function to send JSON model parameters to the server, awaiting a 
 response containing the results of the simulation
 """
-async def runModel(scenarioNames):
+async def runModel(scenarioNames, scenarioCount):
     try:
         # For testing use this JSON instead of parameters
         if usePresetParams: parameterJSON = {
@@ -248,7 +245,7 @@ async def runModel(scenarioNames):
         }
 
         # Use this version in production
-        else: parameterJSON = createConfig().model_dump_json(
+        else: parameterJSON = createConfig(scenarioCount).model_dump_json(
             indent = 4, exclude_unset = True#, exclude_defaults = True
         )
 
@@ -325,12 +322,12 @@ async def runModel(scenarioNames):
 Async wrapper function for runModel, allowing HTTP requests to be made 
 asynchronously without blocking Streamlit operations
 """
-def runModelWrapper(scenarioNames):
+def runModelWrapper(scenarioNames, scenarioCount):
     # Inner function to asynchronously call the server and await results
     # Needed to avoid interrupting Streamlit UI functionality
     def runner():
         try:
-            formattedData = asyncio.run(runModel(scenarioNames))
+            formattedData = asyncio.run(runModel(scenarioNames, scenarioCount))
             if formattedData: resultQueue.put(formattedData)
         except Exception as e:
             functionLog.info(f'[runner] Encountered {type(e).__name__}: {e}')
