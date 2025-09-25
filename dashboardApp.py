@@ -192,7 +192,7 @@ def updateData():
                 ''', icon = ':material/error:')
                 stn.toast(
                     f':red-badge[Full Error Message]: {e}', 
-                    icon = 'material/breaking_news'
+                    icon = ':material/breaking_news:'
                 )
             
             # Errors without exception messages to send
