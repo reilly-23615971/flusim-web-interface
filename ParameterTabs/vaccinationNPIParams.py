@@ -421,7 +421,7 @@ def buildVaccinationNPITab(id):
             loadKey(f'initialVaccinated', id, 0.0)
             initialVaccinated = st.select_slider(
                 'Initial Vaccinated Proportion of Population', 
-                np.linspace(0.0, 1.0, 1001), 0.0, 
+                np.linspace(0.0, 1.0, 201), 0.0, 
                 key = f'_initialVaccinated{id}', 
                 format_func = lambda x: f'{100 * x:0.3g}%', 
                 on_change = saveKey, args = [f'initialVaccinated', id], # type: ignore
@@ -434,7 +434,7 @@ def buildVaccinationNPITab(id):
             loadKey(f'targetVaccinated', id, 0.8)
             targetVaccinated = st.select_slider(
                 'Target Vaccinated Proportion of Population', 
-                np.linspace(0.0, 1.0, 1001), 0.8, 
+                np.linspace(0.0, 1.0, 201), 0.8, 
                 key = f'_targetVaccinated{id}', 
                 format_func = lambda x: f'{100 * x:0.3g}%', 
                 on_change = saveKey, args = [f'targetVaccinated', id], # type: ignore
@@ -532,10 +532,9 @@ def buildVaccinationNPITab(id):
             vacAgeProportionContainer = st.container()
             for i in range(vaccineRowCount): 
                 (
-                    vacAgeGroupColumn, vacAgeInitialColumn, 
-                    vacAgeTargetColumn, vacAgeRemoveColumn
+                    vacAgeGroupColumn, vacAgeInitialColumn, vacAgeRemoveColumn
                 ) = vacAgeProportionContainer.columns(
-                    (0.25, 0.275, 0.275, 0.2)
+                    (0.25, 0.55, 0.2), vertical_alignment = 'center'
                 )
                 vacAgeCurrentGroup = st.session_state.get(
                     f'vacAgeGroup{id}-{i}'
@@ -585,7 +584,7 @@ def buildVaccinationNPITab(id):
                 with vacAgeInitialColumn: 
                     vacAgeInitials[vacAgeGroup] = st.select_slider(
                         'Initial Vaccinated Proportion of Population', 
-                        np.linspace(0.0, 1.0, 1001), 0.0,  
+                        np.linspace(0.0, 1.0, 201), 0.0,  
                         format_func = lambda x: f'{100 * x:0.3g}%',
                         disabled = not useVaccinesToggle, 
                         on_change = saveKey, 
@@ -599,10 +598,10 @@ def buildVaccinationNPITab(id):
                     )
                 # Target proportion column
                 loadKey(f'vacAgeTarget', id, 0.8, f'-{i}')
-                with vacAgeTargetColumn: 
+                with vacAgeInitialColumn: 
                     vacAgeTargets[vacAgeGroup] = st.select_slider(
                         'Target Vaccinated Proportion of Population', 
-                        np.linspace(0.0, 1.0, 1001), 0.8, 
+                        np.linspace(0.0, 1.0, 201), 0.8, 
                         format_func = lambda x: f'{100 * x:0.3g}%',
                         disabled = not useVaccinesToggle, 
                         on_change = saveKey, 
@@ -806,7 +805,7 @@ def buildVaccinationNPITab(id):
             loadKey(f'primaryWanedEfficacy', id, 0.0)
             primaryWanedEfficacy = st.select_slider(
                 'Dose Efficacy After Immunity Waning (Probability)', 
-                np.linspace(0.0, 1.0, 1001), 0.0, 
+                np.linspace(0.0, 1.0, 201), 0.0, 
                 format_func = lambda x: f'{100 * x:0.3g}%', 
                 disabled = not useVaccinesToggle, 
                 on_change = saveKey, args = [f'primaryWanedEfficacy', id], # type: ignore
@@ -864,7 +863,9 @@ def buildVaccinationNPITab(id):
                 (
                     primWanedGroupColumn, primWanedEffColumn, 
                     primWanedRemoveColumn
-                ) = primWanedContainer.columns((0.25, 0.55, 0.2))
+                ) = primWanedContainer.columns(
+                    (0.25, 0.55, 0.2), vertical_alignment = 'center'
+                )
                 primWanedCurrentGroup = st.session_state.get(
                     f'primWanedGroup{id}-{i}'
                 )
@@ -919,7 +920,7 @@ def buildVaccinationNPITab(id):
                             'Dose Efficacy After Immunity '
                             'Waning (Probability)'
                         )), 
-                        np.linspace(0.0, 1.0, 1001), 0.0, 
+                        np.linspace(0.0, 1.0, 201), 0.0, 
                         format_func = lambda x: f'{100 * x:0.3g}%', 
                         disabled = not useVaccinesToggle, 
                         on_change = saveKey, 
@@ -1000,7 +1001,7 @@ def buildVaccinationNPITab(id):
                 loadKey(f'primaryBaseEfficacy', id, 0.5, f'-{i}')
                 baseDoseEfficacy = doseEfficacyContainer.select_slider(
                     'Initial Dose Efficacy (Probability)', 
-                    np.linspace(0.0, 1.0, 1001), 0.5, 
+                    np.linspace(0.0, 1.0, 201), 0.5, 
                     format_func = lambda x: f'{100 * x:0.3g}%', 
                     disabled = not useVaccinesToggle, on_change = saveKey, 
                     args = [f'primaryBaseEfficacy', id, f'-{i}'], # type: ignore
@@ -1112,7 +1113,7 @@ def buildVaccinationNPITab(id):
                         primAgeGroupColumn, primAgeEfficacyColumn, 
                         primAgeRemoveColumn
                     ) = primEfficacyContainer.columns(
-                        (0.25, 0.55, 0.2)
+                        (0.25, 0.55, 0.2), vertical_alignment = 'center'
                     )
                     primAgeCurrentGroup = st.session_state.get(
                         f'primAgeGroup{id}-{i}-{j}'
@@ -1165,7 +1166,7 @@ def buildVaccinationNPITab(id):
                     with primAgeEfficacyColumn: 
                         ageInitialEfficacy = st.select_slider(
                             'Initial Dose Efficacy (Probability)',
-                            np.linspace(0.0, 1.0, 1001), 0.5, 
+                            np.linspace(0.0, 1.0, 201), 0.5, 
                             format_func = lambda x: f'{100 * x:0.3g}%', 
                             disabled = not useVaccinesToggle, 
                             key = f'_primAgeEfficacy{id}-{i}-{j}', 
@@ -1451,7 +1452,7 @@ def buildVaccinationNPITab(id):
             loadKey(f'boosterBaseEfficacy', id, 0.9)
             boosterBaseEfficacy = st.select_slider(
                 'Initial Booster Efficacy (Probability)', 
-                np.linspace(0.0, 1.0, 1001), 0.9, 
+                np.linspace(0.0, 1.0, 201), 0.9, 
                 key = f'_boosterBaseEfficacy{id}',
                 disabled = not useVaccinesToggle or not useBoostersToggle, 
                 on_change = saveKey, args = [f'boosterBaseEfficacy', id], # type: ignore
@@ -1466,7 +1467,7 @@ def buildVaccinationNPITab(id):
             loadKey(f'boosterWanedEfficacy', id, 0.6)
             boosterWanedEfficacy = st.select_slider(
                 'Booster Efficacy After Immunity Waning (Probability)',
-                np.linspace(0.0, 1.0, 1001), 0.6, 
+                np.linspace(0.0, 1.0, 201), 0.6, 
                 key = f'_boosterWanedEfficacy{id}', 
                 disabled = not useVaccinesToggle or not useBoostersToggle,
                 on_change = saveKey, args = [f'boosterWanedEfficacy', id], # type: ignore
@@ -1587,9 +1588,9 @@ def buildVaccinationNPITab(id):
             for i in range(boosterRowCount):
                 (
                     boostAgeGroupColumn, boostAgeEfficacyColumn, 
-                    boostAgeWanedColumn, boostAgeRemoveColumn
+                    boostAgeRemoveColumn
                 ) = boostAgeEfficacyContainer.columns(
-                    (0.25, 0.275, 0.275, 0.2)
+                    (0.25, 0.55, 0.2), vertical_alignment = 'center'
                 )
                 boostAgeCurrentGroup = st.session_state.get(
                     f'boostAgeGroup{id}-{i}'
@@ -1641,7 +1642,7 @@ def buildVaccinationNPITab(id):
                 with boostAgeEfficacyColumn: 
                     boostAgeInitials[boostAgeGroup] = st.select_slider(
                         'Initial Booster Efficacy (Probability)', 
-                        np.linspace(0.0, 1.0, 1001), 0.9, disabled = (
+                        np.linspace(0.0, 1.0, 201), 0.9, disabled = (
                             not useVaccinesToggle or not useBoostersToggle
                         ), 
                         format_func = lambda x: f'{100 * x:0.3g}%', 
@@ -1658,13 +1659,13 @@ def buildVaccinationNPITab(id):
                     )
                 # Waned efficacy column
                 loadKey(f'boostAgeWanedEfficacy', id, 0.6, f'-{i}')
-                with boostAgeWanedColumn: 
+                with boostAgeEfficacyColumn: 
                     boostAgeWaneds[boostAgeGroup] = st.select_slider(
                         ((
                             'Booster Efficacy After '
                             'Immunity Waning (Probability)'
                         )), 
-                        np.linspace(0.0, 1.0, 1001), 0.6, disabled = (
+                        np.linspace(0.0, 1.0, 201), 0.6, disabled = (
                             not useVaccinesToggle or not useBoostersToggle
                         ), 
                         format_func = lambda x: f'{100 * x:0.3g}%', 
@@ -1853,7 +1854,7 @@ def buildVaccinationNPITab(id):
             loadKey(f'socialDistancingCompliance', id, 0.9)
             socialDistancingCompliance = st.select_slider(
                 'Social Distancing Compliance (Probability)', 
-                np.linspace(0.0, 1.0, 1001), 0.9, 
+                np.linspace(0.0, 1.0, 201), 0.9, 
                 format_func = lambda x: f'{100 * x:0.3g}%', 
                 disabled = not useSocialDistancingToggle, 
                 on_change = saveKey, 
@@ -1883,7 +1884,9 @@ def buildVaccinationNPITab(id):
                 (
                     socialGroupColumn, socialComplianceColumn, 
                     socialRemoveColumn
-                ) = socialAgeContainer.columns((0.25, 0.55, 0.2))
+                ) = socialAgeContainer.columns(
+                    (0.25, 0.55, 0.2), vertical_alignment = 'center'
+                )
                 socialCurrentGroup = st.session_state.get(
                     f'socialAgeGroup{id}-{i}'
                 )
@@ -1933,7 +1936,7 @@ def buildVaccinationNPITab(id):
                 loadKey(f'socialCompliance', id, 0.9, f'-{i}')
                 with socialComplianceColumn: st.select_slider(
                     'Social Distancing Compliance (Probability)', 
-                    np.linspace(0.0, 1.0, 1001), 0.9, 
+                    np.linspace(0.0, 1.0, 201), 0.9, 
                     format_func = lambda x: f'{100 * x:0.3g}%', 
                     disabled = not useSocialDistancingToggle, 
                     on_change = saveKey, 
@@ -2311,7 +2314,7 @@ def buildVaccinationNPITab(id):
             loadKey(f'schoolClosureCompliance', id, 0.9)
             st.select_slider(
                 'School Closure Compliance (Probability)', 
-                np.linspace(0.0, 1.0, 1001), 0.9, 
+                np.linspace(0.0, 1.0, 201), 0.9, 
                 format_func = lambda x: f'{100 * x:0.3g}%',
                 disabled = not useSchoolClosureToggle, 
                 on_change = saveKey, 
@@ -2622,7 +2625,7 @@ def buildVaccinationNPITab(id):
             loadKey(f'withdrawalIncreaseAdult', id, 0.9)
             withdrawalIncreaseAdult = st.select_slider(
                 'Adult Increased Withdrawal Rate (Probability)', 
-                np.linspace(0.0, 1.0, 1001), 0.9, 
+                np.linspace(0.0, 1.0, 201), 0.9, 
                 format_func = lambda x: f'{100 * x:0.3g}%',
                 disabled = not useWithdrawalIncreaseToggle, 
                 on_change = saveKey, 
@@ -2639,7 +2642,7 @@ def buildVaccinationNPITab(id):
             loadKey(f'withdrawalIncreaseChild', id, 1.0)
             withdrawalIncreaseChild = st.select_slider(
                 'Child Increased Withdrawal Rate (Probability)', 
-                np.linspace(0.0, 1.0, 1001), 1.0, 
+                np.linspace(0.0, 1.0, 201), 1.0, 
                 format_func = lambda x: f'{100 * x:0.3g}%', 
                 disabled = not useWithdrawalIncreaseToggle, 
                 on_change = saveKey, 

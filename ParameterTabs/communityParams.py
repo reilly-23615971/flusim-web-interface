@@ -91,7 +91,7 @@ def buildCommunityTab(id):
         loadKey(f'caseRatio', id, 0.5)
         st.select_slider(
             'Diagnosed Case Rate (Probability)', 
-            np.linspace(0.0, 1.0, 1001), 0.5, key = f'_caseRatio{id}', 
+            np.linspace(0.0, 1.0, 201), 0.5, key = f'_caseRatio{id}', 
             on_change = saveKey, args = [f'caseRatio', id], # type: ignore
             format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                 The probability that an infected, symptomatic 
@@ -99,10 +99,10 @@ def buildCommunityTab(id):
                 confirmed case of the disease.
             '''
         )
-        loadKey(f'gpRatio', id, 0.333)
+        loadKey(f'gpRatio', id, 0.35)
         st.select_slider(
             'GP Visit Rate (Probability)', 
-            np.linspace(0.0, 1.0, 1001), 0.333, key = f'_gpRatio{id}', 
+            np.linspace(0.0, 1.0, 201), 0.35, key = f'_gpRatio{id}', 
             on_change = saveKey, args = [f'gpRatio', id], # type: ignore
             format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                 The probability that an infected, symptomatic 
@@ -113,7 +113,7 @@ def buildCommunityTab(id):
         loadKey(f'hospitalRatio', id, 0.25)
         st.select_slider(
             'Hospitalisation Rate (Probability)', 
-            np.linspace(0.0, 1.0, 1001), 0.25, key = f'_hospitalRatio{id}',
+            np.linspace(0.0, 1.0, 201), 0.25, key = f'_hospitalRatio{id}',
             on_change = saveKey, args = [f'hospitalRatio', id], # type: ignore
             format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                 The probability that an infected, symptomatic 
@@ -124,7 +124,7 @@ def buildCommunityTab(id):
         loadKey(f'icuRatio', id, 0.1)
         st.select_slider(
             'ICU Visit Rate (Probability)', 
-            np.linspace(0.0, 1.0, 1001), 0.1, key = f'_icuRatio{id}', 
+            np.linspace(0.0, 1.0, 201), 0.1, key = f'_icuRatio{id}', 
             on_change = saveKey, args = [f'icuRatio', id], # type: ignore
             format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                 The probability that an infected, symptomatic 
@@ -136,7 +136,7 @@ def buildCommunityTab(id):
         loadKey(f'deathRatio', id, 0.05)
         deathRate = st.select_slider(
             'Mortality Rate (Probability)', 
-            np.linspace(0.0, 1.0, 1001), 0.05, key = f'_deathRatio{id}', 
+            np.linspace(0.0, 1.0, 201), 0.05, key = f'_deathRatio{id}', 
             on_change = saveKey, args = [f'deathRatio', id], # type: ignore
             format_func = lambda x: f'{100 * x:0.3g}%', help = '''
                 The base probability that an infected, symptomatic 
@@ -162,7 +162,9 @@ def buildCommunityTab(id):
         for i in range(deathRowCount): 
             (
                 deathGroupColumn, deathRateColumn, deathRemoveColumn
-            ) = deathAgeContainer.columns((0.25, 0.55, 0.2))
+            ) = deathAgeContainer.columns(
+                (0.25, 0.55, 0.2), vertical_alignment = 'center'
+            )
             deathCurrentGroup = st.session_state.get(
                 f'deathAgeGroup{id}-{i}'
             )
@@ -206,7 +208,7 @@ def buildCommunityTab(id):
             loadKey(f'deathRatio', id, 0.05, f'-{i}')
             with deathRateColumn: st.select_slider(
                 'Mortality Rate (Probability)', 
-                np.linspace(0.0, 1.0, 1001), 0.05, 
+                np.linspace(0.0, 1.0, 201), 0.05, 
                 key = f'_deathRatio{id}-{i}', 
                 on_change = saveKey, args = [f'deathRatio', id, f'-{i}'], # type: ignore
                 format_func = lambda x: f'{100 * x:0.3g}%', help = '''
@@ -275,7 +277,7 @@ def buildCommunityTab(id):
         loadKey(f'withdrawalWork', id, 0.5)
         st.select_slider(
             'Work Withdrawal Rate (Probability)', 
-            np.linspace(0.0, 1.0, 1001), 0.5, 
+            np.linspace(0.0, 1.0, 201), 0.5, 
             format_func = lambda x: f'{100 * x:0.3g}%',
             on_change = saveKey, args = [f'withdrawalWork', id], # type: ignore
             key = f'_withdrawalWork{id}', help = '''
@@ -287,7 +289,7 @@ def buildCommunityTab(id):
         loadKey(f'withdrawalSchool', id, 0.9)
         st.select_slider(
             'School Withdrawal Rate (Probability)', 
-            np.linspace(0.0, 1.0, 1001), 0.9, 
+            np.linspace(0.0, 1.0, 201), 0.9, 
             format_func = lambda x: f'{100 * x:0.3g}%', 
             on_change = saveKey, args = [f'withdrawalSchool', id], # type: ignore
             key = f'_withdrawalSchool{id}', help = '''
@@ -340,7 +342,7 @@ def buildCommunityTab(id):
         loadKey(f'childSupervision', id, 1.0)
         st.select_slider(
             'Child Supervision Rate (Probability)',
-            np.linspace(0.0, 1.0, 1001), 1.0, 
+            np.linspace(0.0, 1.0, 201), 1.0, 
             key = f'_childSupervision{id}', 
             on_change = saveKey, args = [f'childSupervision', id], # type: ignore
             format_func = lambda x: f'{100 * x:0.3g}%', help = '''

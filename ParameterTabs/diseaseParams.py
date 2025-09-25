@@ -100,7 +100,7 @@ def buildDiseaseTab(id):
         loadKey(f'seedRate', id, 0.25)
         st.select_slider(
             'Infection Seeding Rate (Average Individuals per Day)', 
-            np.linspace(0.005, 5.0, 1000), 0.25, key = f'_seedRate{id}', 
+            np.linspace(0.025, 5.0, 200), 0.25, key = f'_seedRate{id}', 
             on_change = saveKey, args = [f'seedRate', id], # type: ignore
             format_func = lambda x: f'{x:0.4g}', help = '''
                 The average number of individuals that will be 
@@ -265,7 +265,7 @@ def buildDiseaseTab(id):
         loadKey(f'beta', id, 0.11)
         st.select_slider(
             'Basic Transmission Parameter (β)', 
-            np.linspace(0.001, 1.0, 1000), 0.11, 
+            np.linspace(0.005, 1.0, 200), 0.11, 
             format_func = lambda x: f'{x:0.3g}', key = f'_beta{id}', 
             on_change = saveKey, args = [f'beta', id], # type: ignore
             help = '''
@@ -282,7 +282,7 @@ def buildDiseaseTab(id):
         loadKey(f'betaAsymptomatic', id, 0.55)
         st.select_slider(
             'Asymptomatic Transmission Multiplier', 
-            np.linspace(0.0, 1.0, 1001), 0.55, 
+            np.linspace(0.0, 1.0, 201), 0.55, 
             format_func = lambda x: f'{x:0.3g}', 
             on_change = saveKey, args = [f'betaAsymptomatic', id], # type: ignore
             key = f'_betaAsymptomatic{id}', help = '''
@@ -302,7 +302,7 @@ def buildDiseaseTab(id):
         loadKey(f'betaPostSymptomatic', id, 0.55)
         st.select_slider(
             'Post-Symptomatic Transmission Multiplier', 
-            np.linspace(0.0, 1.0, 1001), 0.55, 
+            np.linspace(0.0, 1.0, 201), 0.55, 
             format_func = lambda x: f'{x:0.3g}', 
             on_change = saveKey, args = [f'betaPostSymptomatic', id], # type: ignore
             key = f'_betaPostSymptomatic{id}', help = '''
@@ -319,7 +319,7 @@ def buildDiseaseTab(id):
         loadKey(f'householdKappa', id, 2.2)
         st.select_slider(
             'Household Transmission Multiplier', 
-            np.linspace(0.0, 5.0, 1001), 2.2, key = f'_householdKappa{id}',
+            np.linspace(0.0, 5.0, 201), 2.2, key = f'_householdKappa{id}',
             on_change = saveKey, args = [f'householdKappa', id], # type: ignore
             format_func = lambda x: f'{x:0.4g}', help = '''
                 The value of the transmissibility modifier 
@@ -351,9 +351,11 @@ def buildDiseaseTab(id):
         transAgeContainer = st.container()
         for i in range(transRowCount): 
             (
-                transGroupColumn, transInfectColumn, 
-                transSusceptColumn, transRemoveColumn
-            ) = transAgeContainer.columns((0.25, 0.275, 0.275, 0.2))
+                transGroupColumn, transInfectColumn, #transSusceptColumn, 
+                transRemoveColumn
+            ) = transAgeContainer.columns(
+                (0.25, 0.55, 0.2), vertical_alignment = 'center'
+            )
             transCurrentGroup = st.session_state.get(
                 f'transAgeGroup{id}-{i}'
             )
@@ -397,7 +399,7 @@ def buildDiseaseTab(id):
             # Infectiousness column
             loadKey(f'transInfect', id, 1.0, f'-{i}')
             with transInfectColumn: st.select_slider(
-                'Infectiousness', np.linspace(0.0, 1.0, 1001), 1.0, 
+                'Infectiousness', np.linspace(0.0, 3.0, 301), 1.0, 
                 key = f'_transInfect{id}-{i}', 
                 on_change = saveKey, args = [f'transInfect', id, f'-{i}'], # type: ignore
                 format_func = lambda x: f'{x:0.3g}', help = '''
@@ -412,8 +414,8 @@ def buildDiseaseTab(id):
             )
             # Susceptibility column
             loadKey(f'transSuscept', id, 1.0, f'-{i}')
-            with transSusceptColumn: st.select_slider(
-                'Susceptibility', np.linspace(0.0, 1.0, 1001), 1.0, 
+            with transInfectColumn: st.select_slider(
+                'Susceptibility', np.linspace(0.0, 3.0, 301), 1.0, 
                 key = f'_transSuscept{id}-{i}', 
                 on_change = saveKey, args = [f'transSuscept', id, f'-{i}'], # type: ignore
                 format_func = lambda x: f'{x:0.3g}', help = '''
@@ -490,7 +492,9 @@ def buildDiseaseTab(id):
             (
                 kappaLocationColumn, kappaValueColumn, 
                 kappaRemoveColumn
-            ) = kappaContainer.columns((0.25, 0.55, 0.2))
+            ) = kappaContainer.columns(
+                (0.25, 0.55, 0.2), vertical_alignment = 'center'
+            )
             kappaCurrentLocation = st.session_state.get(
                 f'kappaLocation{id}-{i}'
             )
@@ -543,7 +547,7 @@ def buildDiseaseTab(id):
             # Kappa value column
             loadKey(f'kappaValue', id, 1.0, f'-{i}')
             with kappaValueColumn: st.select_slider(
-                'Transmission Multiplier', np.linspace(0.0, 1.0, 1001), 
+                'Transmission Multiplier', np.linspace(0.0, 1.0, 201), 
                 1.0, key = f'_kappaValue{id}-{i}', 
                 on_change = saveKey, args = [f'kappaValue', id, f'-{i}'], # type: ignore
                 format_func = lambda x: f'{x:0.3g}', help = '''
@@ -609,7 +613,7 @@ def buildDiseaseTab(id):
         loadKey(f'asymptomaticChild', id, 0.35)
         st.select_slider(
             'Probability of Young (0-24) Asymptomatic Case', 
-            np.linspace(0.0, 1.0, 1001), 0.35, 
+            np.linspace(0.0, 1.0, 201), 0.35, 
             format_func = lambda x: f'{100 * x:0.3g}%', 
             on_change = saveKey, args = [f'asymptomaticChild', id], # type: ignore
             key = f'_asymptomaticChild{id}', help = '''
@@ -622,7 +626,7 @@ def buildDiseaseTab(id):
         loadKey(f'asymptomaticAdult', id, 0.35)
         st.select_slider(
             'Probability of Adult (24+) Asymptomatic Case', 
-            np.linspace(0.0, 1.0, 1001), 0.35, 
+            np.linspace(0.0, 1.0, 201), 0.35, 
             format_func = lambda x: f'{100 * x:0.3g}%', 
             on_change = saveKey, args = [f'asymptomaticAdult', id], # type: ignore
             key = f'_asymptomaticAdult{id}', help = '''
@@ -666,7 +670,7 @@ def buildDiseaseTab(id):
         # Alternate period definitions
         loadKey(f'latencyPeriod', id, 10)
         latencyPeriod = st.select_slider(
-            'Latency Period Length (Days)', range(51), 10, 
+            'Latency Period Length (Days)', range(22), 10, 
             on_change = saveKey, args = [f'latencyPeriod', id], # type: ignore
             format_func = dayCount, key = f'_latencyPeriod{id}', help = '''
                 The length in days of the disease's latency period, 
@@ -677,7 +681,7 @@ def buildDiseaseTab(id):
         )
         loadKey(f'preSymptomPeriod', id, 2)
         preSymptomPeriod = st.select_slider(
-            'Pre-Symptomatic Period Length (Days)', range(51), 2, 
+            'Pre-Symptomatic Period Length (Days)', range(22), 2, 
             format_func = dayCount, key = f'_preSymptomPeriod{id}', 
             on_change = saveKey, args = [f'preSymptomPeriod', id], # type: ignore
             help = '''
@@ -690,7 +694,7 @@ def buildDiseaseTab(id):
         )
         loadKey(f'symptomPeriod', id, 7)
         symptomPeriod = st.select_slider(
-            'Symptomatic Period Length (Days)', range(51), 7, 
+            'Symptomatic Period Length (Days)', range(22), 7, 
             on_change = saveKey, args = [f'symptomPeriod', id], # type: ignore
             format_func = dayCount, key = f'_symptomPeriod{id}', help = '''
                 The length in days of the disease's symptomatic 
@@ -701,7 +705,7 @@ def buildDiseaseTab(id):
         )
         loadKey(f'postSymptomPeriod', id, 1)
         postSymptomPeriod = st.select_slider(
-            'Post-Symptomatic Period Length (Days)', range(51), 1, 
+            'Post-Symptomatic Period Length (Days)', range(22), 1, 
             format_func = dayCount, key = f'_postSymptomPeriod{id}', 
             on_change = saveKey, args = [f'postSymptomPeriod', id], # type: ignore
             help = '''
@@ -751,7 +755,7 @@ def buildDiseaseTab(id):
             periods can be defined:
         ''')
         totalCol, incubationCol, infectiousCol = st.columns(
-            (0.33333, 0.33333, 0.33333)
+            (0.33333, 0.33333, 0.33333), vertical_alignment = 'center'
         )
         totalCol.metric(
             'Total Length of Infection', dayCount(
@@ -820,7 +824,7 @@ def buildDiseaseTab(id):
         loadKey(f'naturalWanedEfficacy', id, 0.5)
         st.select_slider(
             'Natural Immunity After Waning (Probability)',
-            np.linspace(0.0, 1.0, 1001), 0.5, 
+            np.linspace(0.0, 1.0, 201), 0.5, 
             key = f'_naturalWanedEfficacy{id}', 
             on_change = saveKey, args = [f'naturalWanedEfficacy', id], # type: ignore
             format_func = lambda x: f'{100 * x:0.3g}%', help = '''

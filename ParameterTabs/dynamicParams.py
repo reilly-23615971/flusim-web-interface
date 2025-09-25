@@ -99,15 +99,17 @@ def buildDynamicTab(id):
     for i in range(seedRowCount): 
         (
             seedCycleColumn, seedNewColumn, seedRemoveColumn
-        ) = seedContainer.columns((0.4, 0.4, 0.2))
+        ) = seedContainer.columns(
+            (0.4, 0.4, 0.2), vertical_alignment = 'center'
+        )
         # Cycle column
         loadKey(f'seedCycle', id, 15, f'-{i}')
         with seedCycleColumn: 
-            seedUpdatePoint = st.select_slider(
-                'Day to Update Parameter', range(720), 
+            seedUpdatePoint = st.number_input(
+                'Day to Update Parameter', 1, 720, 
                 15, key = f'_seedCycle{id}-{i}', 
                 on_change = saveKey, args = [f'seedCycle', id, f'-{i}'], # type: ignore
-                format_func = lambda x: f'Day {x + 1}', help = '''
+                placeholder = 'Enter the day number', help = '''
                     The day of the simulation upon which the new 
                     value for infection seeding rate will come into 
                     effect.
@@ -241,7 +243,7 @@ def buildDynamicTab(id):
         loadKey(f'seedNewRate', id, 0.25, f'-{i}')
         with seedNewColumn: st.select_slider(
             'New Value (Average Individuals per Day)', 
-            np.linspace(0.005, 5.0, 1000), 0.25, 
+            np.linspace(0.025, 5.0, 200), 0.25, 
             key = f'_seedNewRate{id}-{i}', 
             on_change = saveKey, args = [f'seedNewRate', id, f'-{i}'], # type: ignore
             format_func = lambda x: f'{x:0.4g}', help = '''
@@ -319,12 +321,14 @@ def buildDynamicTab(id):
     for i in range(closeRowCount): 
         (
             closeCycleColumn, closeNewColumn, closeRemoveColumn
-        ) = closeContainer.columns((0.4, 0.4, 0.2))
+        ) = closeContainer.columns(
+            (0.4, 0.4, 0.2), vertical_alignment = 'center'
+        )
         # Cycle column
         loadKey(f'closeCycle', id, 15, f'-{i}')
         with closeCycleColumn: 
-            closeUpdatePoint = st.select_slider(
-                'Day to Update Parameter', range(720), 15, 
+            closeUpdatePoint = st.number_input(
+                'Day to Update Parameter', 0, 720, 15, 
                 key = f'_closeCycle{id}-{i}', disabled = not closeActive, 
                 on_change = saveKey, args = [f'closeCycle', id, f'-{i}'], # type: ignore
                 format_func = lambda x: f'Day {x + 1}', help = '''
@@ -476,7 +480,7 @@ def buildDynamicTab(id):
         loadKey(f'closeNewRate', id, 0.9, f'-{i}')
         with closeNewColumn: st.select_slider(
             'New Value (Probability)', 
-            np.linspace(0.0, 1.0, 1001), 0.9, 
+            np.linspace(0.0, 1.0, 201), 0.9, 
             key = f'_closeNewRate{id}-{i}', disabled = not closeActive, 
             on_change = saveKey, args = [f'closeNewRate', id, f'-{i}'], # type: ignore
             format_func = lambda x: f'{100 * x:0.3g}%', help = '''
@@ -557,12 +561,14 @@ def buildDynamicTab(id):
     for i in range(bccRowCount): 
         (
             bccCycleColumn, bccNewColumn, bccRemoveColumn
-        ) = bccContainer.columns((0.4, 0.4, 0.2))
+        ) = bccContainer.columns(
+            (0.4, 0.4, 0.2), vertical_alignment = 'center'
+        )
         # Cycle column
         loadKey(f'bccCycle', id, 15, f'-{i}')
         with bccCycleColumn: 
-            bccUpdatePoint = st.select_slider(
-                'Day to Update Parameter', range(720), 
+            bccUpdatePoint = st.number_input(
+                'Day to Update Parameter', 0, 720, 
                 15, key = f'_bccCycle{id}-{i}', disabled = not bccActive, 
                 on_change = saveKey, args = [f'bccCycle', id, f'-{i}'], # type: ignore
                 format_func = lambda x: f'Day {x + 1}', help = '''

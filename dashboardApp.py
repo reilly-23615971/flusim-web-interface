@@ -25,9 +25,9 @@ st.set_page_config(
 # Note that watchdog will kick logfiles into the gigabyte range if it's 
 # set to Debug due to treating the log itself as a file to track
 logging.basicConfig(
-    filename = './interfaceAppLogs.txt', filemode = 'a', 
+    filename = '../interfaceAppLogs.txt', filemode = 'a', 
     format = '%(asctime)s,%(msecs)03d %(name)s %(levelname)s %(message)s', 
-    datefmt = '%Y-%m-%d %H:%M:%S', level = logging.INFO
+    datefmt = '%Y-%m-%d %H:%M:%S', level = logging.DEBUG
 )
 
 appLog = logging.getLogger(__name__)
@@ -151,8 +151,9 @@ def updateData():
                 icon = ":material/check_circle:"
             )
             elif successes > 0: stn.toast(f'''
-                Simulation complete :yellow-background[(though some 
-                analyses had errors)]. Total duration: {totalTime}
+                Simulation complete 
+                :yellow-background[(though some analyses had errors)]:. 
+                Total duration: {totalTime}
             ''', icon = ":material/flaky:")
             appLog.info(f'''
                 [updateData] Data processing is complete, 
