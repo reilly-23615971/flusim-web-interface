@@ -479,7 +479,7 @@ def communitySchema(schema, id = 0):
             'maxChurchGroupSize', id, 10
         )
         # Procedural Scenario Parameters (age specific)
-        for i in range(st.session_state[f'deathRowCount{id}']): setattr(
+        for i in range(st.session_state.get(f'deathRowCount{id}', 0)): setattr(
             scenarioParams, f'{ageCategories[
                 st.session_state[f'deathAgeGroup{id}-{i}']
             ]}_mort', idGet('deathRatio', id, deathRate, f'-{i}')

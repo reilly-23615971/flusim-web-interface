@@ -3777,7 +3777,7 @@ def vaccineSchema(schema, id = 0):
                     'vacAgeInitial', id, initialProportion, f'-{i}'
                 ),
                 Target = idGet('vacAgeTarget', id, targetProportion, f'-{i}')
-            ) for i in range(st.session_state[f'vacAgeRowCount{id}'])]
+            ) for i in range(st.session_state.get(f'vacAgeRowCount{id}', 0))]
 
             # Scenario Vaccine Dose
             doseParams = [vaccineDose(
@@ -3809,7 +3809,7 @@ def vaccineSchema(schema, id = 0):
             # Age-Specific Primary Efficacy Values
             primAgeEfficacies = dict.fromkeys(ageNames, primBaseEfficacy)
             for i in range(primDoseCount):
-                for j in range(st.session_state[f'primAgeRowCount{id}-{i}']):
+                for j in range(st.session_state.get(f'primAgeRowCount{id}-{i}', 0)):
                     primAgeEfficacies[
                         st.session_state[f'primAgeGroup{id}-{i}-{j}']
                     ][i] = idGet(
@@ -3820,7 +3820,7 @@ def vaccineSchema(schema, id = 0):
                 Efficacy = primAgeEfficacies[age], 
                 WanedEfficacy = primWanedEfficacy
             ) for age in ageNames]
-            for i in range(st.session_state[f'primWanedRowCount{id}']):
+            for i in range(st.session_state.get(f'primWanedRowCount{id}', 0)):
                 agePrimEfficacyParams[
                     ageNames.index(st.session_state[f'primWanedGroup{id}-{i}'])
                 ].WanedEfficacy = idGet(
@@ -3840,7 +3840,7 @@ def vaccineSchema(schema, id = 0):
                 WanedEfficacy = idGet(
                     'boostAgeWanedEfficacy', id, boostWanedEfficacy, f'-{i}'
                 )
-            ) for i in range(st.session_state[f'boostAgeRowCount{id}'])]
+            ) for i in range(st.session_state.get(f'boostAgeRowCount{id}', 0))]
             # All together
             schema.Scenario_VaccineDoseEfficacy = efficacyParams
             
@@ -3978,7 +3978,7 @@ def vaccineSchema(schema, id = 0):
         # Other NPIs
         if socialDistanceToggle:
             scenarioParams.social_distance_compliance = socialCompliance
-            for i in range(st.session_state[f'socialRowCount{id}']): setattr(
+            for i in range(st.session_state.get(f'socialRowCount{id}', 0)): setattr(
                 scenarioParams, f'{ageCategories[
                     st.session_state[f'socialAgeGroup{id}-{i}']
                 ]}_social_distance', 

@@ -801,7 +801,7 @@ def dynamicSchema(schema, id = 0):
             'close': idGet('schoolClosureCompliance', id, 0.9), 
             'bcc': idGet('bccReducedRate', id, 0.2)
         }.items():
-            for i in range(st.session_state[f'{prefix}RowCount{id}']): 
+            for i in range(st.session_state.get(f'{prefix}RowCount{id}', 0)): 
                 dynamicChanges.append(dynamicIntervention(
                     Name = paramCast(prefix), CycleOffset = idGet(
                         f'{prefix}Cycle', id, 15, f'-{i}'

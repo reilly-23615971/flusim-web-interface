@@ -924,7 +924,7 @@ def diseaseSchema(schema, id = 0):
             'naturalWaningRate', id, 6
         )
         # Procedural Scenario Parameters (age/kappa specific)
-        for i in range(st.session_state[f'transRowCount{id}']):
+        for i in range(st.session_state.get(f'transRowCount{id}', 0)):
             varAgeGroup = ageCategories[
                 st.session_state[f'transAgeGroup{id}-{i}']
             ]
@@ -936,7 +936,7 @@ def diseaseSchema(schema, id = 0):
                 scenarioParams, f'{varAgeGroup}_susc', 
                 idGet('transSuscept', id, 1, f'-{i}')
             )
-        for i in range(st.session_state[f'kappaRowCount{id}']): setattr(
+        for i in range(st.session_state.get(f'kappaRowCount{id}', 0)): setattr(
             scenarioParams, f'kappa_{kappaLocations[
                 st.session_state[f'kappaLocation{id}-{i}']
             ]}', idGet('kappaValue', id, 1, f'-{i}')
