@@ -120,7 +120,7 @@ def updateData():
         # Check if the server returned an error instead of proper data
         if isinstance(processedData, list):
             successes = 0
-            scenarios = session.scenarioCount
+            scenarios = (session.scenarioCount + 1) * 3
             for data, tag in processedData: 
                 # Further error checking
                 if len(data) == 0: stn.toast(
@@ -148,7 +148,7 @@ def updateData():
             totalTime = timedelta(
                 session.simulationEndTime - session.simulationStartTime
             )
-            if successes == scenarios + 1: stn.toast(
+            if successes == 3: stn.toast(
                 f'Simulation complete! Total duration: {totalTime}', 
                 icon = ":material/check_circle:"
             )
@@ -193,7 +193,7 @@ def updateData():
                         check your parameters for errors and try again.
                     ''', icon = ':material/schema:')
                     stn.toast(
-                        f':red-badge[Full Error Message]: {e} (Response Body: {e.response})', 
+                        f':red-badge[Response Body]: {e.response}', 
                         icon = ':material/breaking_news:'
                     )
                 else: stn.toast(f'''

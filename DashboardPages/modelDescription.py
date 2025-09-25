@@ -65,3 +65,6 @@ st.markdown(
     TODO
     '''
 )
+
+st.write('DEBUG')
+st.write(st.session_state)
