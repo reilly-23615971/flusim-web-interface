@@ -226,7 +226,7 @@ simulation.
             }
 
             # Use this version in production
-            else: parameterJSON = createConfig(scenarioCount).model_dump_json(
+            else: parameterJSON = createConfig(scenarioCount + 1).model_dump_json(
                 indent = 4, exclude_unset = True#, exclude_defaults = True
             )
 
