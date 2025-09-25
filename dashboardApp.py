@@ -155,7 +155,7 @@ def updateData():
             elif successes > 0: stn.toast(f'''
                 Simulation complete :yellow-background[(though some 
                 analyses had errors)]. Total duration: {totalTime}
-            ''', icon = ":material/check_circle_unread:")
+            ''', icon = ":material/flaky:")
             appLog.info(f'''
                 [updateData] Data processing is complete, 
                 with {scenarios - successes + 1} errors.
