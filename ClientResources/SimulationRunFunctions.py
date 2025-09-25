@@ -157,7 +157,7 @@ simulation.
         if st.button('Run Simulation'):
             # Set params indicating model is simulating
             st.session_state.simulationInProgress = True
-            st.session_state.simulationStartTime = datetime.now().timestamp()
+            st.session_state.simulationStartTime = datetime.now()
 
             # Get scenario names
             scenarioNames = ['Baseline'] + [

@@ -144,10 +144,8 @@ def updateData():
                     session[f'modelData{tag}'] = data
             
             # Update parameters
-            session.simulationEndTime = datetime.now().timestamp()
-            totalTime = timedelta(
-                session.simulationEndTime - session.simulationStartTime
-            )
+            session.simulationEndTime = datetime.now()
+            totalTime = session.simulationEndTime - session.simulationStartTime
             if successes == 3: stn.toast(
                 f'Simulation complete! Total duration: {totalTime}', 
                 icon = ":material/check_circle:"
