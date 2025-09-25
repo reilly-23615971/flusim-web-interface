@@ -186,6 +186,16 @@ def updateData():
                     make sure your parameters do not possess any errors 
                     and try again.
                 ''', icon = ':material/broken_image:')  
+                elif errorType == 'InvalidSchemaError':
+                    stn.toast(f'''
+                        :red-badge[Error]: The parameters sent to the 
+                        server do not match the required format. Please 
+                        check your parameters for errors and try again.
+                    ''', icon = ':material/schema:')
+                    stn.toast(
+                        f':red-badge[Full Error Message]: {e} (Response Body: {e.response})', 
+                        icon = ':material/breaking_news:'
+                    )
                 else: stn.toast(f'''
                     :red-badge[Error]: The simulation server 
                     encountered an error. Please try again later.

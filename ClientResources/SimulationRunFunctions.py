@@ -28,6 +28,21 @@ from ClientResources.SharedResources import (
 # Logging
 functionLog = logging.getLogger(__name__)
 
+# Error class for getting full responses
+class invalidSchemaError(Exception):
+    def __init__(self, message, response):
+        self.message = message
+        self.response = response
+        super().__init__(self.message)
+
+    def __str__(self):
+        return f"{self.message} (Full Response: {self.response})"
+
+
+
+
+
+
 
 
 """
@@ -265,11 +280,15 @@ async def runModel(scenarioNames, parameterJSON):
             f'[runModel] Initialising session with base url {serverUrl}...'
         )
         async with ClientSession(
-            raise_for_status = True, base_url = serverUrl
+            raise_for_status = False, base_url = serverUrl
         ) as session:
             functionLog.info(f'[runModel] Sending post request...')
             async with session.post('runModel', json = parameterJSON) as response:
                 responseData = await response.read()
+                if response.status == 422:
+                    responseText = await response.text()
+                    raise invalidSchemaError('The parameter schema did not comply with the Pydantic model', responseText)
+                response.raise_for_status()
             functionLog.info(f'[runModel] Response received! Returning data...')
         
         # Convert CSV statistics into DataFrame(s)
@@ -311,6 +330,9 @@ async def runModel(scenarioNames, parameterJSON):
         functionLog.error(f'[runModel] Server returned status {e.status}: {e}')
         if e.status in {500, '500'}: return ('ClientResponseError500', e)
         else: return ('ClientResponseError', e)
+    except invalidSchemaError as e:
+        functionLog.error(f'[runModel] Parameter schema was invalid: {e}')
+        return ('InvalidSchemaError', e)
     except Exception as e:
         functionLog.error(f'[runModel] Encountered {type(e).__name__}: {e}')
         return ('UncaughtError', e)
