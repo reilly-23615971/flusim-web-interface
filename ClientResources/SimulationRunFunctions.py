@@ -183,8 +183,55 @@ simulation.
                 )
             }
 
+            # Create the final model JSON
+            # For testing use this JSON instead of parameters
+            if usePresetParams: parameterJSON = {
+                "name": "Simple Test",
+                "description": "2184",
+                "output_folder": "./results/",
+                "middle_joint": "-usingEpidemic_Emean",
+                "community_used": ["newcastle"],
+                "shared_overrides": {
+                    "parameters": {
+                        "Command_Argument": {"n_runs": 12,"n_cycles": 180},
+                        "Scenario_Strain": [{"StrainId": 0,"Beta": 0.11}],
+                        "Scenario_Parameter": {
+                            "school_closure_trigger": "timed",
+                            "school_closure_compliance": 0.5,
+                            "school_closure_delay": 28,
+                            "withdrawal_increase_trigger": "timed",
+                            "withdrawal_increase_delay": 28,
+                            "work_nonattendance_trigger": "timed",
+                            "prob_work_nonattendance": 0.5,
+                            "work_nonattendance_delay": 28
+                        }
+                    }
+                },
+                "override_templates": [{
+                    "name": "test_1",
+                    "parameters": {
+                        "Scenario_Parameter": {
+                            "seed_rate": 1.5
+                        }
+                    }
+                }],
+                "simulation_sets": [{
+                    "name": "test_set_1",
+                    "version": 2184,
+                    "simulations": [
+                        {"name": "test_sim_1"},
+                        {"name": "test_sim_2", "apply_template": ["test_1"]}
+                    ]
+                }]
+            }
+
+            # Use this version in production
+            else: parameterJSON = createConfig(scenarioCount).model_dump_json(
+                indent = 4, exclude_unset = True#, exclude_defaults = True
+            )
+
             # Make the model call
-            runModelWrapper(scenarioNames, scenarioCount + 1)
+            runModelWrapper(scenarioNames, parameterJSON)
 
             # Generate popup to let the user know it's pending
             stn.toast(
@@ -201,54 +248,8 @@ simulation.
 Function to send JSON model parameters to the server, awaiting a 
 response containing the results of the simulation
 """
-async def runModel(scenarioNames, scenarioCount):
+async def runModel(scenarioNames, parameterJSON):
     try:
-        # For testing use this JSON instead of parameters
-        if usePresetParams: parameterJSON = {
-            "name": "Simple Test",
-            "description": "2184",
-            "output_folder": "./results/",
-            "middle_joint": "-usingEpidemic_Emean",
-            "community_used": ["newcastle"],
-            "shared_overrides": {
-                "parameters": {
-                    "Command_Argument": {"n_runs": 12,"n_cycles": 180},
-                    "Scenario_Strain": [{"StrainId": 0,"Beta": 0.11}],
-                    "Scenario_Parameter": {
-                        "school_closure_trigger": "timed",
-                        "school_closure_compliance": 0.5,
-                        "school_closure_delay": 28,
-                        "withdrawal_increase_trigger": "timed",
-                        "withdrawal_increase_delay": 28,
-                        "work_nonattendance_trigger": "timed",
-                        "prob_work_nonattendance": 0.5,
-                        "work_nonattendance_delay": 28
-                    }
-                }
-            },
-            "override_templates": [{
-                "name": "test_1",
-                "parameters": {
-                    "Scenario_Parameter": {
-                        "seed_rate": 1.5
-                    }
-                }
-            }],
-            "simulation_sets": [{
-                "name": "test_set_1",
-                "version": 2184,
-                "simulations": [
-                    {"name": "test_sim_1"},
-                    {"name": "test_sim_2", "apply_template": ["test_1"]}
-                ]
-            }]
-        }
-
-        # Use this version in production
-        else: parameterJSON = createConfig(scenarioCount).model_dump_json(
-            indent = 4, exclude_unset = True#, exclude_defaults = True
-        )
-
         dataForms = [
             AnalysisFile(
                 tool = 'epidemic', names = scenarioNames, useCumulative = True
@@ -322,12 +323,12 @@ async def runModel(scenarioNames, scenarioCount):
 Async wrapper function for runModel, allowing HTTP requests to be made 
 asynchronously without blocking Streamlit operations
 """
-def runModelWrapper(scenarioNames, scenarioCount):
+def runModelWrapper(scenarioNames, parameterJSON):
     # Inner function to asynchronously call the server and await results
     # Needed to avoid interrupting Streamlit UI functionality
     def runner():
         try:
-            formattedData = asyncio.run(runModel(scenarioNames, scenarioCount))
+            formattedData = asyncio.run(runModel(scenarioNames, parameterJSON))
             if formattedData: resultQueue.put(formattedData)
         except Exception as e:
             functionLog.info(f'[runner] Encountered {type(e).__name__}: {e}')
