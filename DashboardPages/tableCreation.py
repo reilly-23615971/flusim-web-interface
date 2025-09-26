@@ -68,8 +68,8 @@ def generateTable():
     )
     tableLog.info(f'''
         [generateTable] Formatting Asir data using the scenarios 
-        {scenariosUsed}, the age groups {agesUsed} and the following 
-        columns: {columnDetails}'
+        {scenariosUsed} (of {scenarioNames}), the age groups {agesUsed} 
+        and the following columns: {columnDetails}'
     ''')
 
     # Debug code for loading data in testing
