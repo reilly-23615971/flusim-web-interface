@@ -66,5 +66,5 @@ st.markdown(
     '''
 )
 
-st.write('DEBUG')
-st.write(st.session_state)
+#st.write('DEBUG')
+#st.write(st.session_state)
