@@ -141,6 +141,14 @@ def updateData():
                 elif tag in {'EpidemicCumulative', 'EpidemicDaily'} and len(
                     data['Scenario'].value_counts()
                 ) <= scenarios: 
+                    appLog.info(f''' Error with scenario count?
+                        Dataset :
+{data}
+                        Scenarios: {scenarios}
+                        Number of scenars: {data['Scenario'].value_counts()}
+                        Technical number of scenars: {len(data['Scenario'].value_counts())}
+
+                    ''')
                     stn.toast(f'''
                         :red-badge[Error]: One or more scenarios 
                         were not run correctly by the simulation 
@@ -154,14 +162,15 @@ def updateData():
             # Update parameters
             session.simulationEndTime = datetime.now()
             totalTime = session.simulationEndTime - session.simulationStartTime
+            timeString = f'{totalTime.minutes}:{totalTime.seconds}'
             if successes == 3: stn.toast(
-                f'Simulation complete! Total duration: {totalTime}', 
+                f'Simulation complete! Total duration: {timeString}', 
                 icon = ":material/check_circle:"
             )
             elif successes > 0: stn.toast(f'''
-                Simulation complete 
-                :yellow-background[(though some analyses had errors)]:. 
-                Total duration: {totalTime}
+                Simulation complete,  
+                though some analyses had errors. 
+                Total duration: {timeString}
             ''', icon = ":material/flaky:")
             appLog.info(f'''
                 [updateData] Data processing is complete, 
