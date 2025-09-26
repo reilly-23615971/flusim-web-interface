@@ -361,10 +361,8 @@ other age groups list the age range they cover as part of their name.
             # Baseline values
             baselineDeath = st.session_state.DataMortalityRates['Baseline']
             columnBaselines = baselineValues * (
-                framedData.columns.map(baselineDeath).fillna(
-                    st.session_state[
-                        'DataHealthOutcomeRates'
-                    ]['Deaths']['Baseline']
+                meltedData['Age Group'].map(baselineDeath).fillna(
+                    st.session_state['DataHealthOutcomeRates']['Deaths']['Baseline']
                 )
             )
 

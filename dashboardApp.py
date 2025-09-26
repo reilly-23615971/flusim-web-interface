@@ -25,7 +25,7 @@ st.set_page_config(
 # Note that watchdog will kick logfiles into the gigabyte range if it's 
 # set to Debug due to treating the log itself as a file to track
 logging.basicConfig(
-    filename = '../interfaceAppLogs.txt', filemode = 'a', 
+    filename = '../Logs/interfaceAppLogs.txt', filemode = 'a', 
     format = '%(asctime)s,%(msecs)03d %(name)s %(levelname)s %(message)s', 
     datefmt = '%Y-%m-%d %H:%M:%S', level = logging.DEBUG
 )
