@@ -25,6 +25,9 @@ from ClientResources.SharedResources import (
     outcomeRateDefaults, serverUrl, resultQueue, ageCategories
 )
 
+# Set to True to save the JSON form of parameters as a file
+saveJSON = False
+
 # Logging
 functionLog = logging.getLogger(__name__)
 
@@ -208,6 +211,8 @@ simulation.
                 parameterJSON = createConfig(scenarioCount + 1).model_dump_json(
                     indent = 4, exclude_unset = True#, exclude_defaults = True
                 )
+                if saveJSON: 
+                    with open('./savedJSON.json', 'w') as file: file.write(parameterJSON)
                 scenarioNames = ['Baseline'] + [
                     st.session_state[f'scenarioName{i}'] 
                     for i in range(1, scenarioCount + 1)
