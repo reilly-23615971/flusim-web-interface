@@ -205,10 +205,9 @@ if chartData is not None:
         )
         if dataToDownload is not None: 
             st.download_button(
-                'Download Infection Data', dataToDownload.to_csv().encode('utf-8'), 
+                'Download Infection Data', dataToDownload.to_csv(index = False), 
                 f'FlusimInfectionData{chartTypeTag}_{time.strftime('%Y.%m.%d_%I.%M.%S%p')}.csv', 
                 mime = 'text/csv', key = 'infectionDataDownload', 
-                disabled = st.session_state.get('modelDataEpidemicDaily') == None,
                 icon = ':material/download:', help = '''
                     Download the infection data from the most recent 
                     simulation (the data used by the above graph) as a CSV 
@@ -232,10 +231,6 @@ if chartData is not None:
                 'Download Infection Data', epidemicData.to_csv(index = False), 
                 f'FlusimInfectionData{chartTypeTag}_{time.strftime('%Y.%m.%d_%I.%M.%S%p')}.csv', 
                 mime = 'text/csv', key = 'infectionDataDownload', 
-                disabled = (
-                    not usePresetData 
-                    and st.session_state.get('modelDataEpidemicDaily') == None
-                ),
                 icon = ':material/download:', help = '''
                     Download the infection data from the most recent 
                     simulation (the data used by the above graph) as a CSV 
