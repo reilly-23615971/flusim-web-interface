@@ -208,7 +208,7 @@ simulation.
                 "community_used": ["newcastle"],
                 "shared_overrides": {
                     "parameters": {
-                        "Command_Argument": {"n_runs": 12,"n_cycles": 180},
+                        "Command_Argument": {"n_runs": 16,"n_cycles": 180},
                         "Scenario_Strain": [{"StrainId": 0,"Beta": 0.11}],
                         "Scenario_Parameter": {
                             "school_closure_trigger": "timed",

@@ -40,7 +40,7 @@ def buildBasicTab(id):
     # Time Parameters
     loadKey(f'runCount', id, 24)
     st.slider(
-        'Number of Simulation Runs', 1, 48, 24, key = f'_runCount{id}', 
+        'Number of Simulation Runs', 16, 64, 24, key = f'_runCount{id}', 
         on_change = saveKey, args = ['runCount', id], # type: ignore
         help = f'''
             The number of times that {'each' if id == 0 else 'this'} 

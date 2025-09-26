@@ -996,9 +996,10 @@ class scenarioParameters(BaseModel):
 # Key-value arguments passed directly to the simulator
 class commandArgument(BaseModel):
     n_runs: Optional[int] = Field(
-        title = 'Number of Runs', default = 24, ge = 1, description = (
-            'The number of simulation runs to perform.'
-        )
+        title = 'Number of Runs', default = 24, ge = 15, description = ((
+            'The number of simulation runs to perform. Simulations '
+            'will not run correctly if the number of runs is less than 15.'
+        ))
     )
     n_cycles: Optional[int] = Field(
         title = 'Number of Cycles', default = 720, ge = 1, description = ((
