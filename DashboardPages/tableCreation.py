@@ -179,7 +179,7 @@ healthOutcomeRowCount = st.session_state[f'healthOutcomeRowCount']
 healthOutcomeErrorContainer = st.container()
 
 # Check if there is data to tabulate
-currentDataExists = not (st.session_state.get('modelDataAsir') is None)
+currentDataExists = not (st.session_state.get('modelDataRawAsir') is None)
 if not currentDataExists and not usePresetData: 
     healthOutcomeErrorContainer.warning('''
         No simulation data has been generated. Click 

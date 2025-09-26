@@ -300,6 +300,8 @@ async def runModel(scenarioNames, parameterJSON):
         # Unzip data and format each analysis file
         with ZipFile(BytesIO(responseData)) as analyses:
             fileNames = analyses.namelist()
+            for file in fileNames:
+                functionLog.info(f'File Data: {analyses.read(file)}')
             if len(fileNames) == 0:
                 functionLog.error(
                     f'[runModel] Server returned no readable files'
