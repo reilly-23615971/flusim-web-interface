@@ -286,7 +286,7 @@ async def runModel(scenarioNames, parameterJSON):
             f'[runModel] Initialising session with base url {serverUrl}...'
         )
         async with ClientSession(
-            raise_for_status = False, base_url = serverUrl
+            raise_for_status = False, base_url = serverUrl, timeout = 1800
         ) as session:
             functionLog.info(f'[runModel] Sending post request...')
             async with session.post('runModel', json = json.loads(parameterJSON)) as response:
