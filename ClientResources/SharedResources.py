@@ -20,6 +20,9 @@ usePresetParams = False
 # Toggle to use built-in data instead of model output
 usePresetData = False
 
+# Toggle to save the JSON form of parameters as a file
+saveJSON = False
+
 # URLs where client/server is located (change to proxy URL)
 clientUrl = 'http://localhost:8501/'
 serverUrl = 'http://127.0.0.1:8000/'

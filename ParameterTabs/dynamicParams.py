@@ -293,7 +293,7 @@ def buildDynamicTab(id):
     # Save relevant parameters as variables to avoid lookups
     closeRowCount = st.session_state[f'closeRowCount{id}']
     baseCloseValue = idGet('schoolClosureCompliance', id, 0.9)
-    closeActive = idGet('schoolClosureToggle', id, True)
+    closeActive = idGet('schoolClosureToggle', id, False)
     closeTrigger = idGet('schoolClosureTrigger', id, 'Always')
     closeStart, closeEnd = idGet('schoolClosurePeriod', id, (29, 59))
     # Warn if school closure is disabled
@@ -530,7 +530,7 @@ def buildDynamicTab(id):
     # Save relevant parameters as variables to avoid lookups
     bccRowCount = st.session_state[f'bccRowCount{id}']
     baseBCCValue = idGet('bccReducedRate', id, 0.2)
-    bccActive = idGet('bccToggle', id, True)
+    bccActive = idGet('bccToggle', id, False)
     bccTrigger = idGet('bccTrigger', id, 'Always')
     bccStart, bccEnd = idGet('bccPeriod', id, (30, 60))
     # Warn if BCC reduction is disabled

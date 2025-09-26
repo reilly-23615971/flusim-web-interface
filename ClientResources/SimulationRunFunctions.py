@@ -22,11 +22,8 @@ from ClientResources.InterfaceFunctions import idGet, checkErrors
 from ClientResources.VisualisationFunctions import formatData
 from ClientResources.SharedResources import (
     AnalysisFile, usePresetParams, tableOutcomes, outcomeRateVariables, 
-    outcomeRateDefaults, serverUrl, resultQueue, ageCategories
+    outcomeRateDefaults, serverUrl, resultQueue, ageCategories, saveJSON
 )
-
-# Set to True to save the JSON form of parameters as a file
-saveJSON = False
 
 # Logging
 functionLog = logging.getLogger(__name__)

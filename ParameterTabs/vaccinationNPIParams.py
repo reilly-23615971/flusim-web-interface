@@ -136,9 +136,9 @@ def buildVaccinationNPITab(id):
     # Vaccination
     with st.container():
         st.subheader('Vaccination Parameters')
-        loadKey(f'vaccineToggle', id, True)
+        loadKey(f'vaccineToggle', id, False)
         useVaccinesToggle = st.toggle(
-            'Enable Vaccines in Simulation', value = True, 
+            'Enable Vaccines in Simulation', value = False, 
             on_change = saveKey, args = [f'vaccineToggle', id], # type: ignore
             key = f'_vaccineToggle{id}', help = '''
                 Toggle whether or not individuals in the simulation 
@@ -1402,9 +1402,9 @@ def buildVaccinationNPITab(id):
             ''')
 
             # Universal booster parameters
-            loadKey(f'boosterToggle', id, True)
+            loadKey(f'boosterToggle', id, False)
             useBoostersToggle = st.toggle(
-                'Enable Booster Vaccines', value = True, 
+                'Enable Booster Vaccines', value = False, 
                 key = f'_boosterToggle{id}', on_change = saveKey, 
                 args = [f'boosterToggle', id], # type: ignore
                 disabled = not useVaccinesToggle, help = '''
@@ -1839,9 +1839,9 @@ def buildVaccinationNPITab(id):
             ''')
 
             # Social distancing
-            loadKey(f'socialDistancingToggle', id, True)
+            loadKey(f'socialDistancingToggle', id, False)
             useSocialDistancingToggle = st.toggle(
-                'Enable Social Distancing', value = True, 
+                'Enable Social Distancing', value = False, 
                 on_change = saveKey, 
                 args = [f'socialDistancingToggle', id], # type: ignore
                 key = f'_socialDistancingToggle{id}', help = '''
@@ -2040,9 +2040,9 @@ def buildVaccinationNPITab(id):
                 These parameters control if and when schools will 
                 close as a result of the disease.
             ''')
-            loadKey(f'schoolClosureToggle', id, True)
+            loadKey(f'schoolClosureToggle', id, False)
             useSchoolClosureToggle = st.toggle(
-                'Enable School Closures', value = True, 
+                'Enable School Closures', value = False, 
                 on_change = saveKey, 
                 args = [f'schoolClosureToggle', id], # type: ignore
                 key = f'_schoolClosureToggle{id}', help = '''
@@ -2378,9 +2378,9 @@ def buildVaccinationNPITab(id):
                 is not active can be configured in the "Withdrawals 
                 and Diagnosis" section of the "Community" tab.
             ''')
-            loadKey(f'withdrawalIncreaseToggle', id, True)
+            loadKey(f'withdrawalIncreaseToggle', id, False)
             useWithdrawalIncreaseToggle = st.toggle(
-                'Enable Withdrawal Increases', value = True, 
+                'Enable Withdrawal Increases', value = False, 
                 on_change = saveKey, 
                 args = [f'withdrawalIncreaseToggle', id], # type: ignore
                 key = f'_withdrawalIncreaseToggle{id}', help = '''
@@ -2805,9 +2805,9 @@ def buildVaccinationNPITab(id):
                 is not active can be configured in the "Population 
                 Behaviours" section of the "Community" tab.
             ''')
-            loadKey(f'reducedGroupToggle', id, True)
+            loadKey(f'reducedGroupToggle', id, False)
             useReducedGroupToggle = st.toggle(
-                'Enable Group Size Reductions', value = True, 
+                'Enable Group Size Reductions', value = False, 
                 on_change = saveKey, args = [f'reducedGroupToggle', id], # type: ignore
                 key = f'_reducedGroupToggle{id}', help = '''
                     Toggle whether or not group size reduction 
@@ -3131,9 +3131,9 @@ def buildVaccinationNPITab(id):
                 "Population Behaviours" section of the "Community" 
                 tab.
             ''')
-            loadKey(f'bccToggle', id, True)
+            loadKey(f'bccToggle', id, False)
             useBCCToggle = st.toggle(
-                'Enable BCC Reduction', value = True, on_change = saveKey, 
+                'Enable BCC Reduction', value = False, on_change = saveKey, 
                 args = [f'bccToggle', id], # type: ignore
                 key = f'_bccToggle{id}', help = '''
                     Toggle whether or not background contact count 
@@ -3750,9 +3750,9 @@ def vaccineSchema(schema, id = 0):
         )
 
         # Load reused parameters immediately to save time
-        vaccineToggle = idGet('vaccineToggle', id, True)
-        boosterToggle = idGet('boosterToggle', id, True)
-        socialDistanceToggle = idGet('socialDistancingToggle', id, True)
+        vaccineToggle = idGet('vaccineToggle', id, False)
+        boosterToggle = idGet('boosterToggle', id, False)
+        socialDistanceToggle = idGet('socialDistancingToggle', id, False)
 
         ageNames = list(ageCategories.keys())
         primDoseCount = idGet('primaryDoseCount', id, 2)
@@ -3886,7 +3886,7 @@ def vaccineSchema(schema, id = 0):
                     vaccinePeriod[1] - vaccinePeriod[0]
                 )
         # School Closure
-        if idGet('schoolClosureToggle', id, True):
+        if idGet('schoolClosureToggle', id, False):
             scenarioParams.school_closure_compliance = idGet(
                 'schoolClosureCompliance', id, 0.9
             )
@@ -3911,7 +3911,7 @@ def vaccineSchema(schema, id = 0):
                     schoolPeriod[1] - schoolPeriod[0]
                 )
         # Withdrawal Increase
-        if idGet('withdrawalIncreaseToggle', id, True):    
+        if idGet('withdrawalIncreaseToggle', id, False):    
             scenarioParams.increased_withdrawal = idGet(
                 'withdrawalIncreaseAdult', id, 0.9
             )
@@ -3939,7 +3939,7 @@ def vaccineSchema(schema, id = 0):
                     withdrawalPeriod[1] - withdrawalPeriod[0]
                 )
         # Reduced Group Size
-        if idGet('reducedGroupToggle', id, True): 
+        if idGet('reducedGroupToggle', id, False): 
             scenarioParams.reduced_workgroup_size = idGet(
                 'reducedGroupSize', id, 5
             )
@@ -3964,7 +3964,7 @@ def vaccineSchema(schema, id = 0):
                     reducedGroupPeriod[1] - reducedGroupPeriod[0]
                 )
         # BCC Reduction
-        if idGet('bccToggle', id, True):
+        if idGet('bccToggle', id, False):
             scenarioParams.bcc_reduction = idGet('bccReducedRate', id, 0.2)
             bccTrigger = idGet('bccTrigger', id, 'Always')
             scenarioParams.bcc_reduction_trigger = trigCast(bccTrigger)
