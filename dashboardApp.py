@@ -3,8 +3,7 @@
 # Main page of dashboard, defining pages & setting universal parameters
 
 # Imports
-import os
-import logging
+import os, logging
 from datetime import datetime, timedelta
 import pandas as pd
 import streamlit as st
@@ -92,15 +91,25 @@ flusimPages.run()
 # TODO: consider adding progress updates to the sidebar (time remaining,
 # progress bars, server availability etc.)
 runModelButton = st.sidebar.button(
-    'Run Simulation', on_click = runSimulationButton, key = '_runSim',
-    disabled = st.session_state.simulationInProgress, type = 'primary', 
-    icon = ':material/motion_play:', help = '''
+    label = (
+        'Running simulation...' 
+        if session.simulationInProgress 
+        else 'Run Simulation'
+    ), 
+    on_click = runSimulationButton, key = '_runSim',
+    disabled = session.simulationInProgress, type = 'primary', 
+    icon = (
+        ':material/hourglass:' 
+        if session.simulationInProgress 
+        else ':material/motion_play:'
+    ), 
+    help = '''
         Send a request to the *Flusim* model server to run the model 
         with the specified parameters. Once the request has been made, 
         you will be unable to run the model again until it completes, 
         so make sure you have configured your parameters to appropriate 
         values before clicking.
-    ''' if not st.session_state.simulationInProgress else '''
+    ''' if not session.simulationInProgress else '''
         A simulation is already running; please wait for it to conclude 
         before running another one.
     '''

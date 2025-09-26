@@ -3,7 +3,7 @@
 # Functions used to make requests to the server for running the simulation
 
 # Imports
-import asyncio, logging, threading
+import asyncio, logging, threading, time
 from io import BytesIO
 from datetime import datetime
 from zipfile import ZipFile
@@ -350,8 +350,9 @@ asynchronously without blocking Streamlit operations
 def runModelWrapper(scenarioNames, parameterJSON):
     # Inner function to asynchronously call the server and await results
     # Needed to avoid interrupting Streamlit UI functionality
-    def runner():
+    def threadRunner():
         try:
+            #time.sleep(5) # Debug for testing dashboard while running
             formattedData = asyncio.run(runModel(scenarioNames, parameterJSON))
             if formattedData: resultQueue.put(formattedData)
         except Exception as e:
@@ -359,5 +360,5 @@ def runModelWrapper(scenarioNames, parameterJSON):
             functionLog.error(f'[runner] Encountered {type(e).__name__}: {e}')
             raise e
     st.session_state.simulationInProgress = True
-    runModelThread = threading.Thread(target = runner)
+    runModelThread = threading.Thread(target = threadRunner)
     runModelThread.start()

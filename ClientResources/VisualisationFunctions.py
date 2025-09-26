@@ -114,7 +114,7 @@ def formatEpidemic(
         framedData = pd.read_csv(
             BytesIO(rawCSV), header = 0, 
             names = ['Days Since First Infection'] + scenarioNames
-        )
+        ).fillna(0.0)
 
         # Reshape data for better Altair usage
         valueLabel = f'Total {outcome}' if cumulative else f'{outcome} per Day'
