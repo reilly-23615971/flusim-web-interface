@@ -3,6 +3,7 @@
 # Main page of dashboard, defining pages & setting universal parameters
 
 # Imports
+import os
 import logging
 from datetime import datetime, timedelta
 import pandas as pd
@@ -19,11 +20,9 @@ st.set_page_config(
     menu_items = {'About': '[TODO]'}
 )
 
-
-
-# Logging config
-# Note that watchdog will kick logfiles into the gigabyte range if it's 
-# set to Debug due to treating the log itself as a file to track
+# Logging config (create log folder outside of project dir to avoid 
+# watchfiles getting into an endless update loop)
+os.makedirs('../Logs', exist_ok = True)
 logging.basicConfig(
     filename = '../Logs/interfaceAppLogs.txt', filemode = 'a', 
     format = '%(asctime)s,%(msecs)03d %(name)s %(levelname)s %(message)s', 
