@@ -3867,7 +3867,7 @@ def vaccineSchema(schema, id = 0):
         if vaccineToggle:
             scenarioParams.vaccine_doses = idGet(
                 'initialDoseReserve', id, 0
-             ) if idGet('limitDosesToggle', id, False) else 999999
+             ) if idGet('limitDosesToggle', id, False) else 9999
             scenarioParams.vaccination_first_dose_rate = idGet(
                 'firstDoseRate', id, 300
             )
@@ -3876,7 +3876,7 @@ def vaccineSchema(schema, id = 0):
             scenarioParams.vaccination_relaxation = trigCast(vaccineTrigger)
             if vaccineTrigger == 'Always':
                 scenarioParams.vaccination_delay = 0
-                scenarioParams.vaccination_duration = 999999
+                scenarioParams.vaccination_duration = 9999
             elif vaccineTrigger == 'Timed':
                 vaccinePeriod = [
                     i * 2 for i in idGet('vaccinePeriod', id, (29, 59))
@@ -3901,7 +3901,7 @@ def vaccineSchema(schema, id = 0):
             scenarioParams.school_closure_relaxation = trigCast(schoolTrigger)
             if schoolTrigger == 'Always':
                 scenarioParams.school_closure_delay = 0
-                scenarioParams.school_closure_duration = 999999
+                scenarioParams.school_closure_duration = 9999
             elif schoolTrigger == 'Timed':
                 schoolPeriod = [
                     i * 2 for i in idGet('schoolClosurePeriod', id, (29, 59))
@@ -3929,7 +3929,7 @@ def vaccineSchema(schema, id = 0):
             )
             if withdrawalTrigger == 'Always':
                 scenarioParams.withdrawal_increase_delay = 0
-                scenarioParams.withdrawal_increase_duration = 999999
+                scenarioParams.withdrawal_increase_duration = 9999
             elif withdrawalTrigger == 'Timed':
                 withdrawalPeriod = [i * 2 for i in idGet(
                     'withdrawalIncreasePeriod', id, (29, 59)
@@ -3954,7 +3954,7 @@ def vaccineSchema(schema, id = 0):
             )
             if reducedGroupTrigger == 'Always':
                 scenarioParams.reduced_workgroup_delay = 0
-                scenarioParams.reduced_workgroup_duration = 999999
+                scenarioParams.reduced_workgroup_duration = 9999
             elif reducedGroupTrigger == 'Timed':
                 reducedGroupPeriod = [
                     i * 2 for i in idGet('reducedGroupPeriod', id, (29, 59))
@@ -3971,7 +3971,7 @@ def vaccineSchema(schema, id = 0):
             scenarioParams.bcc_reduction_relaxation = trigCast(bccTrigger)
             if bccTrigger == 'Always':
                 scenarioParams.bcc_reduction_delay = 0
-                scenarioParams.bcc_reduction_duration = 999999
+                scenarioParams.bcc_reduction_duration = 9999
             elif bccTrigger == 'Timed':
                 bccPeriod = [i * 2 for i in idGet('bccPeriod', id, (29, 59))]
                 scenarioParams.bcc_reduction_delay = bccPeriod[0]
