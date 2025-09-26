@@ -3,7 +3,7 @@
 # Functions used to make requests to the server for running the simulation
 
 # Imports
-import asyncio, logging, threading, time
+import asyncio, logging, threading, json
 from io import BytesIO
 from datetime import datetime
 from zipfile import ZipFile
@@ -284,7 +284,7 @@ async def runModel(scenarioNames, parameterJSON):
             raise_for_status = False, base_url = serverUrl
         ) as session:
             functionLog.info(f'[runModel] Sending post request...')
-            async with session.post('runModel', json = parameterJSON) as response:
+            async with session.post('runModel', json = json.loads(parameterJSON)) as response:
                 responseData = await response.read()
                 if response.status == 422:
                     responseText = await response.text()
