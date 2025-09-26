@@ -116,14 +116,9 @@ def formatEpidemic(
             names = ['Days Since First Infection'] + scenarioNames
         ).fillna(0.0)
 
-        functionLog.info(f'Data before melting: {framedData.to_string()}')
-
         # Reshape data for better Altair usage
         valueLabel = f'Total {outcome}' if cumulative else f'{outcome} per Day'
-        functionLog.info(f'Data after melting: {framedData.melt(
-            'Days Since First Infection', var_name = 'Scenario', 
-            value_name = valueLabel
-        ).to_string()}')
+        
         return framedData.melt(
             'Days Since First Infection', var_name = 'Scenario', 
             value_name = valueLabel

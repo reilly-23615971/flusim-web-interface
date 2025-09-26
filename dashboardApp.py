@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import streamlit as st
 import streamlit_notify as stn
-from ClientResources.SharedResources import resultQueue
+from ClientResources.SharedResources import resultQueue, usePresetData
 from ClientResources.SimulationRunFunctions import runSimulationButton
 
 # Set this early to minimise the time spent with a different page title
@@ -128,7 +128,7 @@ def updateData():
         # Check if the server returned an error instead of proper data
         if isinstance(processedData, list):
             successes = 0
-            scenarios = (session.scenarioCount + 1) * 3
+            scenarios = 2 if usePresetData else (session.scenarioCount + 1)
             for data, tag in processedData: 
                 # Further error checking
                 if len(data) == 0: stn.toast(
@@ -141,14 +141,6 @@ def updateData():
                 elif tag in {'EpidemicCumulative', 'EpidemicDaily'} and len(
                     data['Scenario'].value_counts()
                 ) <= scenarios: 
-                    appLog.info(f''' Error with scenario count?
-                        Dataset :
-{data}
-                        Scenarios: {scenarios}
-                        Number of scenars: {data['Scenario'].value_counts()}
-                        Technical number of scenars: {len(data['Scenario'].value_counts())}
-
-                    ''')
                     stn.toast(f'''
                         :red-badge[Error]: One or more scenarios 
                         were not run correctly by the simulation 
@@ -162,7 +154,7 @@ def updateData():
             # Update parameters
             session.simulationEndTime = datetime.now()
             totalTime = session.simulationEndTime - session.simulationStartTime
-            timeString = f'{totalTime.minutes}:{totalTime.seconds}'
+            timeString = f'{totalTime.seconds // 60}:{totalTime.seconds % 60}'
             if successes == 3: stn.toast(
                 f'Simulation complete! Total duration: {timeString}', 
                 icon = ":material/check_circle:"
