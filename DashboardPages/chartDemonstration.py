@@ -22,7 +22,9 @@ graphLog = logging.getLogger(__name__)
 # TODO: function to generate graph
 def generateGraph():
     # Throw error if no data is present
-    if not usePresetData and not st.session_state.get('modelDataEpidemicDaily'): 
+    if not usePresetData and not (
+        st.session_state.get('modelDataEpidemicDaily') is not None
+    ): 
         raise FileNotFoundError((
             'No simulation epidemic data was available to plot; please '
             'run a simulation before attempting to generate a table.'
@@ -201,19 +203,20 @@ if chartData is not None:
         dataToDownload = st.session_state.get(
             f'modelDataEpidemic{chartTypeTag}'
         )
-        if dataToDownload: st.download_button(
-            'Download Infection Data', dataToDownload, 
-            f'FlusimInfectionData{chartTypeTag}_{time.strftime('%Y.%m.%d_%I.%M.%S%p')}.csv', 
-            mime = 'text/csv', key = 'infectionDataDownload', 
-            disabled = st.session_state.get('modelDataEpidemicDaily') == None,
-            icon = ':material/download:', help = '''
-                Download the infection data from the most recent 
-                simulation (the data used by the above graph) as a CSV 
-                file. Note that all scenarios are included in the 
-                returned file, even if not all were selected for the 
-                graph.
-            '''
-        )
+        if dataToDownload is not None: 
+            st.download_button(
+                'Download Infection Data', dataToDownload.to_csv().encode('utf-8'), 
+                f'FlusimInfectionData{chartTypeTag}_{time.strftime('%Y.%m.%d_%I.%M.%S%p')}.csv', 
+                mime = 'text/csv', key = 'infectionDataDownload', 
+                disabled = st.session_state.get('modelDataEpidemicDaily') == None,
+                icon = ':material/download:', help = '''
+                    Download the infection data from the most recent 
+                    simulation (the data used by the above graph) as a CSV 
+                    file. Note that all scenarios are included in the 
+                    returned file, even if not all were selected for the 
+                    graph.
+                '''
+            )
         elif usePresetData: 
             presetFilename = (
                 './TestData/epidemicMedianCumulative.csv' 
