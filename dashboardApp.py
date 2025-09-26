@@ -141,6 +141,9 @@ def updateData():
                 elif tag in {'EpidemicCumulative', 'EpidemicDaily'} and len(
                     data['Scenario'].value_counts()
                 ) <= scenarios: 
+                    appLog.info(f'Current scenarios: {scenarios}')
+                    appLog.info(f'Listed scenarios: {data['Scenario'].value_counts()}')
+                    appLog.info(f'Length of scenarios: {len(data['Scenario'].value_counts())}')
                     stn.toast(f'''
                         :red-badge[Error]: One or more scenarios 
                         were not run correctly by the simulation 
