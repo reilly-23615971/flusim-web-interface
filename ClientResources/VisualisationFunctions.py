@@ -197,7 +197,7 @@ def plotEpidemic(
         x = alt.X(xLabel).scale(nice = False, domain = (
             0, ceil(data['Days Since First Infection'].max() / 10) * 10
         )), 
-        y = yLabel, color = colourLabel, opacity = (
+        y = yLabel, color = alt.Color(colourLabel).scale(scheme = 'reds'), opacity = (
             alt.when(legendPicker).then(alt.value(1)).otherwise(alt.value(0.2))
         )
     ).add_params(legendPicker)

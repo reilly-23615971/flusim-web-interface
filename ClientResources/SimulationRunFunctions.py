@@ -7,7 +7,9 @@ import asyncio, logging, threading, json
 from io import BytesIO
 from datetime import datetime
 from zipfile import ZipFile
-from aiohttp import ClientSession, ClientConnectorError, ClientResponseError
+from aiohttp import (
+    ClientSession, ClientConnectorError, ClientResponseError, ClientTimeout
+)
 import streamlit as st
 import streamlit_notify as stn
 from ParameterTabs.basicParams import basicSchema
@@ -283,7 +285,8 @@ async def runModel(scenarioNames, parameterJSON):
             f'[runModel] Initialising session with base url {serverUrl}...'
         )
         async with ClientSession(
-            raise_for_status = False, base_url = serverUrl, timeout = 1800
+            raise_for_status = False, base_url = serverUrl, 
+            timeout = ClientTimeout(total = 1800)
         ) as session:
             functionLog.info(f'[runModel] Sending post request...')
             async with session.post('runModel', json = json.loads(parameterJSON)) as response:
