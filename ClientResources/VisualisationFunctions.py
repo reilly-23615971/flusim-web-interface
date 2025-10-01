@@ -3,7 +3,7 @@
 # Functions used by tables and graphs
 
 # Imports
-from math import ceil, copysign
+from math import ceil
 from io import BytesIO
 import logging
 from typing import Any
@@ -12,8 +12,8 @@ import pandas as pd
 import altair as alt
 import streamlit as st
 from ClientResources.SharedResources import (
-    AnalysisFile, communityPopulation, communityAgePops, ageCategories, 
-    tableOutcomes, outcomeAdjectives, outcomeRateVariables, ageWithTime
+    AnalysisFile, communityAgePops, tableOutcomes, 
+    outcomeAdjectives, ageWithTime
 )
 
 # Logging
@@ -197,7 +197,7 @@ def plotEpidemic(
         x = alt.X(xLabel).scale(nice = False, domain = (
             0, ceil(data['Days Since First Infection'].max() / 10) * 10
         )), 
-        y = yLabel, color = alt.Color(colourLabel).scale(scheme = 'reds'), opacity = (
+        y = yLabel, color = alt.Color(colourLabel).scale(scheme = 'accent'), opacity = ( # type: ignore
             alt.when(legendPicker).then(alt.value(1)).otherwise(alt.value(0.2))
         )
     ).add_params(legendPicker)

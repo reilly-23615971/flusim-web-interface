@@ -66,7 +66,7 @@ def buildVaccinationNPITab(id):
         f'bccPeriodError{id}': 0,
 
         # Others
-        f'classDismissal{id}': True,
+        f'classDismissal{id}': False,
 
     }
     for parameter, default in sessionParameters.items(): 
@@ -1993,9 +1993,9 @@ def buildVaccinationNPITab(id):
             )
 
             # Case Isolation
-            loadKey(f'caseIsolation', id, True)
+            loadKey(f'caseIsolation', id, False)
             st.toggle(
-                'Enable Case Isolation', value = True, 
+                'Enable Case Isolation', value = False, 
                 on_change = saveKey, args = [f'caseIsolation', id], # type: ignore
                 key = f'_caseIsolation{id}', help = '''
                     Toggle whether or not individuals who have been 
@@ -3988,7 +3988,7 @@ def vaccineSchema(schema, id = 0):
                 idGet('socialCompliance', id, socialCompliance, f'-{i}')
             )
         scenarioParams.diagnosed_case_isolation = idGet(
-            'caseIsolation', id, True
+            'caseIsolation', id, False
         )
         scenarioParams.class_dismissal = idGet('classDismissal', id, False)
         # Triggers

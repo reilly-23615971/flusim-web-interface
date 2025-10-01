@@ -744,7 +744,7 @@ def buildDiseaseTab(id):
                 )])
             ), x2 = 'end:Q', y = alt.value(0), color = alt.Color(
                 'Life Stage:N', sort = stageNames, 
-                scale = alt.Scale(scheme = 'reds')
+                scale = alt.Scale(scheme = 'inferno')
             ), tooltip = ['Life Stage', 'Length (Days)']
         ).properties(width = 600, height = 175)
         st.altair_chart(chart)

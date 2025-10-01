@@ -19,7 +19,7 @@ from ClientResources.VisualisationFunctions import (
 # Logging
 graphLog = logging.getLogger(__name__)
 
-# TODO: function to generate graph
+# Function to generate graph
 def generateGraph():
     # Throw error if no data is present
     if not usePresetData and not (

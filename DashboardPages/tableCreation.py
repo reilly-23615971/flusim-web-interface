@@ -11,7 +11,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
-from matplotlib.colors import ListedColormap, TwoSlopeNorm
+from matplotlib.colors import ListedColormap, TwoSlopeNorm, to_hex
 import matplotlib.pyplot as plt
 from io import BytesIO
 
@@ -38,7 +38,26 @@ for parameter, default in sessionParameters.items():
 
 ageGroups = ageWithTime + ['Total']
 
+# Get norms needed for proper background gradients
+def getSlopeNorm(column): 
+    minVal, maxVal = column.min(), column.max()
+    return TwoSlopeNorm(
+        vcenter = 0, vmin = (
+            -1e-9 if minVal >= 0 else minVal - 1e-9 
+            if minVal == maxVal else column.min()
+        ), vmax = (
+            1e-9 if maxVal <= 0 else maxVal + 1e-9 
+            if maxVal == minVal else column.max()
+        )
+    )
 
+# Function to choose whether dataframe cells should have white or black text
+def selectTextColour(colour):
+    luminosity = (
+        0.299 * int(colour[1:3], 16) # red
+        + 0.587 * int(colour[3:5], 16) # green
+        + 0.114 * int(colour[5:], 16)) # blue
+    return '#000000' if luminosity > 180 else '#ffffff'
 
 # Callback function to generate and format the table
 def generateTable():
@@ -109,12 +128,6 @@ def generateTable():
         unformattedData, scenarioNames, columnDetails, 
         includedScenarios = scenariosUsed, includedAges = agesUsed
     )
-    
-    # Initialise styler and set cell background colour
-    ageStyle = ageData.style
-    ageStyle.set_properties(
-        **{'background-color': '#F7F7F7'}, color = 'black' # type: ignore
-    )
 
     # Format data according to column type
     diffSet = set(differenceColumns)
@@ -129,24 +142,67 @@ def generateTable():
         column: '{:.5n}' for column in set(ageData.columns) - (diffSet | percSet)
     }
 
-    # Get norms needed for proper background gradients
-    def getSlopeNorm(column): 
-        minVal, maxVal = column.min(), column.max()
-        return TwoSlopeNorm(
-            vcenter = 0, vmin = (
-                -1e-9 if minVal >= 0 else minVal - 1e-9 
-                if minVal == maxVal else column.min()
-            ), vmax = (
-                1e-9 if maxVal <= 0 else maxVal + 1e-9 
-                if maxVal == minVal else column.max()
-            )
+    # Create fake index columns
+    if agesUsed:
+        ageData.rename_axis(
+            index = ['Scenario Index', 'Age Group Index'], inplace = True
         )
+        ageData.insert(
+            0, 'Scenario', 
+            ageData.index.get_level_values('Scenario Index').values
+        )
+        ageData.insert(
+            1, 'Age Group', 
+            ageData.index.get_level_values('Age Group Index').values
+        )
+        
+    else: 
+        ageData.rename_axis('Scenario Index', inplace = True)
+        ageData.insert(0, 'Scenario', ageData.index.to_series())
+
+    # Initialise styler and set default cell background colour
+    ageStyle = ageData.style
+    ageStyle.set_properties(
+        **{'background-color': '#F7F7F7'}, color = 'black' # type: ignore
+    )
+    
+    # Colour the index cells
+
+    # Generate and map colour palette
+    scenarioColourMap = plt.get_cmap('Accent').colors[:len(scenarioNames)] # type: ignore
+    scenarioColourDictionary = {
+        scenario: to_hex(scenarioColourMap[index])
+        for index, scenario in enumerate(scenarioNames)
+    }
+
+    # Apply the colours
+    def scenarioColourString(value): 
+        colour = scenarioColourDictionary[value]
+        return f'background-color: {colour}; color: {selectTextColour(colour)}'
+    ageStyle = ageStyle.map(scenarioColourString, subset = ['Scenario'])
+    
+    
+
+    # Colour ages if present
+    if agesUsed:
+        ageColourMap = plt.get_cmap('viridis_r', 10).colors # type: ignore
+        ageColourDictionary = {
+            age: to_hex(ageColourMap[index])
+            for index, age in enumerate(ageWithTime)
+        }
+        ageColourDictionary['Total'] = '#000000'
+        def ageColourString(value): 
+            colour = ageColourDictionary[value]
+            return f'background-color: {colour}; color: {selectTextColour(colour)}'
+        ageStyle = ageStyle.map(ageColourString, subset = ['Age Group'])
+        
+
     
     # Use background gradients on difference from baseline columns
     for column in differenceColumns: 
         colVals = ageData[column]
         ageStyle = ageStyle.background_gradient(
-            'RdBu', vmin = 0, vmax = 1, 
+            'RdBu_r', vmin = 0, vmax = 1, 
             subset = column, gmap = getSlopeNorm(colVals)(colVals)
         )
     
@@ -464,12 +520,12 @@ tableData = st.session_state.get('HealthOutcomeTableData')
 tableConfig = st.session_state.get('HealthOutcomeTableConfig')
 if tableData is not None: 
     st.header('Health Burden Outcome Table')
-    st.dataframe(tableData, column_config = tableConfig)
+    st.dataframe(tableData, column_config = tableConfig, hide_index = True)
 
     # Button to download the CSV data used by the table
     @st.fragment()
     def burdenDataDownload(): st.download_button(
-        'Download Table Data', tableData.data.to_csv(),  # type: ignore
+        'Download Table Data', tableData.data.to_csv(index = False),  # type: ignore
         f'FlusimHealthBurdenData_{time.strftime('%Y.%m.%d_%I.%M.%S%p')}.csv', 
         mime = 'text/csv', key = 'infectionDataDownload', 
         icon = ':material/download:', help = '''
