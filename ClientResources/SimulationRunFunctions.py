@@ -164,46 +164,12 @@ simulation.
             # Create the final model JSON
             # For testing use this JSON instead of parameters
             if usePresetParams: 
-                parameterJSON = {
-                    "name": "Simple Test",
-                    "description": "2184",
-                    "output_folder": "./results/",
-                    "middle_joint": "-usingEpidemic_Emean",
-                    "community_used": ["newcastle"],
-                    "shared_overrides": {
-                        "parameters": {
-                            "Command_Argument": {"n_runs": 16,"n_cycles": 180},
-                            "Scenario_Strain": [{"StrainId": 0,"Beta": 0.11}],
-                            "Scenario_Parameter": {
-                                "school_closure_trigger": "timed",
-                                "school_closure_compliance": 0.5,
-                                "school_closure_delay": 28,
-                                "withdrawal_increase_trigger": "timed",
-                                "withdrawal_increase_delay": 28,
-                                "work_nonattendance_trigger": "timed",
-                                "prob_work_nonattendance": 0.5,
-                                "work_nonattendance_delay": 28
-                            }
-                        }
-                    },
-                    "override_templates": [{
-                        "name": "test_1",
-                        "parameters": {
-                            "Scenario_Parameter": {
-                                "seed_rate": 1.5
-                            }
-                        }
-                    }],
-                    "simulation_sets": [{
-                        "name": "test_set_1",
-                        "version": 2184,
-                        "simulations": [
-                            {"name": "test_sim_1"},
-                            {"name": "test_sim_2", "apply_template": ["test_1"]}
-                        ]
-                    }]
-                }
-                scenarioNames = ['Base Rate', 'Boosted Rate']
+                with open('ClientResources/defaultParams.guide.json', 'r') as f: 
+                    parameterJSON = json.load(f)
+                scenarioNames = [
+                    'Baseline', 'School Closure', 
+                    'Increased Withdrawal Rate', 'Decreased Contact Rate'
+                ]
 
             # Use this version in production
             else: 

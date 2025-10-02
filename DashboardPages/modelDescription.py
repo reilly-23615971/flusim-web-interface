@@ -62,11 +62,16 @@ st.header('Model Details')
 
 st.markdown(
     '''
+
+    ### Individual Mechanics
+
     The *Flusim* simulation model is designed to be a lifelike simulation of respiratory disease mechanics in Australia. As an individual-based model, it simulates each individual in the population as a distinct agent, which moves to different locations over the course of the simulation. Individuals are assigned demographics such as age and pregnancy status; these affect which locations they go to, what interventions apply to them and how susceptible they are to the disease.
 
     When an individual is infected by the disease, the current stage of their infection is tracked alongside them. As the simulation progresses, the individual will go from dormant to infectious and symptomatic before eventually recovering. Individuals who have recovered from the disease gain an immunity to being reinfected.
     
     When an infectious individual is in a given location, there is a chance that non-immune uninfected individuals in the same location will catch the disease. This probability is dependent on the location as well as the demographics of both the infected and healthy individuals in the interaction. In addition to these interactions, each individual will interact with other randomly selected individuals in each step of the simulation. These background contacts account for locations that are not simulated directly in the simulation, such as shopping centres or sporting events.
+
+    The *Flusim* model is stochastic, so it will run multiple simulations for each parameter set. The results of these simulation will be combined to obtain the averaged results for the overall set. In this dashboard, all visualisations use medians for averaging.
     '''
 )
 

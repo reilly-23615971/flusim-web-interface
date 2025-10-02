@@ -24,7 +24,7 @@ st.set_page_config(
                   
         ##### Additional Credits
                   
-        Colour palettes created by Paul Tol
+        Colour palette for scenarios created by Paul Tol
         https://sronpersonalpages.nl/~pault/
     '''}
 )

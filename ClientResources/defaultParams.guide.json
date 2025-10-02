@@ -1,0 +1,115 @@
+{
+  "name": "Flusim Dashboard Simulation",
+  "description": "2006",
+  "output_folder": "./results/",
+  "middle_joint": "-usingEpidemic",
+  "community_used": [
+    "newcastle"
+  ],
+  "shared_overrides": {
+    "parameters": {
+      "Command_Argument": {
+        "n_runs": 40,
+        "n_cycles": 1000
+      },
+      "Scenario_ParameterWithAgePrefix": {
+        "social_distance": 0.0
+      },
+      "Scenario_Parameter": {
+        "seed_rate": 1,
+        "seeding_duration": 728,
+        "seeding_start_cycle": 0,
+        "beta_asymptomatic": 0.5,
+        "beta_post_symptomatic": 0.5,
+        "prob_asymptomatic": 0.32,
+        "prob_asymptomatic_young": 0.2,
+        "transmissibility_delay": 2,
+        "symptom_latency": 4,
+        "generation_time": 12,
+        "infection_duration": 12,
+        "prob_withdrawal": 0.5,
+        "prob_school_withdrawal": 0.9,
+        "background_contact_count": 4.0,
+        "max_class_size": 10,
+        "max_adult_class_size": 10,
+        "max_workgroup_size": 10,
+        "max_neighbourgroup_size": 10,
+        "max_churchgroup_size": 10,
+        "diagnosed_case_isolation": false,
+        "class_dismissal": false,
+        "young_infant_susc": 0.82,
+        "infant_susc": 0.82,
+        "young_child_susc": 0.82,
+        "child_susc": 0.71,
+        "adolescent_susc": 0.88,
+        "young_adult_susc": 0.97,
+        "older_adult_susc": 1.22,
+        "senior_susc": 2.13,
+        "older_senior_susc": 2.13
+      },
+      "Scenario_Strain": [
+        {
+          "StrainId": 0,
+          "Beta": 0.065
+        }
+      ]
+    }
+  },
+  "simulation_sets": [
+    {
+      "name": "Dashboard Simulation Set",
+      "version": 2006,
+      "simulations": [
+        {
+          "name": "Baseline"
+        },
+        {
+          "name": "School Closure",
+          "override_setting": {
+            "parameters": {
+              "Scenario_Parameter": {
+                "close_childcare": true,
+                "close_child_education": true,
+                "close_adult_education": true,
+                "school_closure_compliance": 1.0,
+                "school_closure_trigger": "timed",
+                "school_closure_relaxation": "timed",
+                "school_closure_duration": 9999,
+                "school_closure_delay": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "Increased Withdrawal Rate",
+          "override_setting": {
+            "parameters": {
+              "Scenario_Parameter": {
+                "withdrawal_increase_trigger": "timed",
+                "withdrawal_increase_relaxation": "timed",
+                "withdrawal_increase_delay": 0,
+                "withdrawal_increase_duration": 9999,
+                "increased_withdrawal": 0.9,
+                "increased_withdrawal_child": 1.0
+              }
+            }
+          }
+        },
+        {
+          "name": "Reduced Contact Rate",
+          "override_setting": {
+            "parameters": {
+              "Scenario_Parameter": {
+                "bcc_reduction": 2.0,
+                "bcc_reduction_trigger": "timed",
+                "bcc_reduction_relaxation": "timed",
+                "bcc_reduction_delay": 0,
+                "bcc_reduction_duration": 9999
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
