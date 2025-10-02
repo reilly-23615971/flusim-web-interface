@@ -22,7 +22,7 @@ from ClientResources.InterfaceFunctions import (
 from ClientResources.VisualisationFunctions import formatAsir
 from ClientResources.SharedResources import (
    usePresetData, ageWithTime, outcomeRateVariables, 
-   outcomeRateDefaults, tableOutcomes
+   outcomeRateDefaults, tableOutcomes, brightCodes
 )
 
 # Logging
@@ -169,7 +169,7 @@ def generateTable():
     # Colour the index cells
 
     # Generate and map colour palette
-    scenarioColourMap = plt.get_cmap('Accent').colors[:len(scenarioNames)] # type: ignore
+    scenarioColourMap = brightCodes[:len(scenarioNames)]
     scenarioColourDictionary = {
         scenario: to_hex(scenarioColourMap[index])
         for index, scenario in enumerate(scenarioNames)

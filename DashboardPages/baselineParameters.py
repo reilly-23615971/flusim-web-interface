@@ -54,7 +54,8 @@ st.markdown(f'''
     Hover your mouse over the :material/help: help icon next to a 
     parameter's input field to show an explanation of what that 
     parameter represents. Hover your mouse over any buttons to show an 
-    explanation of what that button does.
+    explanation of what that button does. After moving a slider, use 
+    the left and right arrow keys to fine-tune the parameter's value.
 
     All scenarios in the simulation will use the parameters on this 
     page as a baseline; however, individual scenarios can have 

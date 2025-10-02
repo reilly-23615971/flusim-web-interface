@@ -153,6 +153,12 @@ def backgroundColour(): return (
     '#0F1116' if st.context.theme.type == 'dark' else '#FFFFFF'
 )
 
+# Colour codes for Paul Tol's "bright" colourblind-safe palette
+brightCodes = (
+    '#BBBBBB', '#4477AA', '#EE6677', '#228833', 
+    '#CCBB44', '#66CCEE','#AA3377', '#000000'
+)
+
 
 
 """

@@ -13,7 +13,7 @@ import altair as alt
 import streamlit as st
 from ClientResources.SharedResources import (
     AnalysisFile, communityAgePops, tableOutcomes, 
-    outcomeAdjectives, ageWithTime
+    outcomeAdjectives, ageWithTime, brightCodes
 )
 
 # Logging
@@ -184,6 +184,7 @@ def plotEpidemic(
         fields = [colourLabel[:-2]], bind = 'legend'
     )
     tooltipCondition = alt.when(tooltipPicker)
+    scenarioNames = data['Scenario'].unique()
 
     # Remove any scenarios/age groups not specified in the data
     if includedScenarios != 'all': 
@@ -197,7 +198,10 @@ def plotEpidemic(
         x = alt.X(xLabel).scale(nice = False, domain = (
             0, ceil(data['Days Since First Infection'].max() / 10) * 10
         )), 
-        y = yLabel, color = alt.Color(colourLabel).scale(scheme = 'accent'), opacity = ( # type: ignore
+        y = yLabel, color = alt.Color(colourLabel).scale(
+            domain = list(scenarioNames), range = brightCodes[:len(scenarioNames)]
+        ), 
+        opacity = (
             alt.when(legendPicker).then(alt.value(1)).otherwise(alt.value(0.2))
         )
     ).add_params(legendPicker)
