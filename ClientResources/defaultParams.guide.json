@@ -10,7 +10,7 @@
     "parameters": {
       "Command_Argument": {
         "n_runs": 40,
-        "n_cycles": 1000
+        "n_cycles": 730
       },
       "Scenario_ParameterWithAgePrefix": {
         "social_distance": 0.0
