@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import streamlit as st
 import streamlit_notify as stn
-from ClientResources.SharedResources import resultQueue, usePresetData
+from ClientResources.SharedResources import resultQueue, usePresetData, usePresetParams
 from ClientResources.SimulationRunFunctions import runSimulationButton
 
 # Set this early to minimise the time spent with a different page title
@@ -138,7 +138,7 @@ def updateData():
         # Check if the server returned an error instead of proper data
         if isinstance(processedData, list):
             successes = 0
-            scenarios = 2 if usePresetData else (session.scenarioCount + 1)
+            scenarios = 2 if usePresetData else (4 if usePresetParams else (session.scenarioCount + 1))
             for data, tag in processedData: 
                 # Further error checking
                 if len(data) == 0: stn.toast(
