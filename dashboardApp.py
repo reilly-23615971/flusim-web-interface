@@ -12,11 +12,21 @@ from ClientResources.SharedResources import resultQueue, usePresetData
 from ClientResources.SimulationRunFunctions import runSimulationButton
 
 # Set this early to minimise the time spent with a different page title
-# TODO: Populate About section
+# TODO: Populate About section with credits to SMRG-Flusim and Paul Tol
 st.set_page_config(
     page_title = 'SMRG Flusim Web Dashboard', 
     page_icon = ':material/microbiology:',
-    menu_items = {'About': '[TODO]'}
+    menu_items = {'About': '''
+        ## SMRG Flusim Web Dashboard
+                  
+        This dashboard is designed to work with the *Flusim* model 
+        designed by the UWA Software Modelling Research Group. 
+                  
+        ##### Additional Credits
+                  
+        Colour palettes created by Paul Tol
+        https://sronpersonalpages.nl/~pault/
+    '''}
 )
 
 # Logging config (create log folder outside of project dir to avoid 
