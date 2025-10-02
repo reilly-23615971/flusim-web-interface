@@ -23,8 +23,8 @@ from ClientResources.ModelSchema import (
 from ClientResources.InterfaceFunctions import idGet, checkErrors
 from ClientResources.VisualisationFunctions import formatData
 from ClientResources.SharedResources import (
-    AnalysisFile, usePresetParams, tableOutcomes, outcomeRateVariables, 
-    outcomeRateDefaults, serverUrl, resultQueue, ageCategories, saveJSON
+    AnalysisFile, usePresetParams, outcomeRateVariables, 
+    outcomeRateDefaults, serverUrl, resultQueue, saveJSON
 )
 
 # Logging
@@ -165,7 +165,7 @@ simulation.
             # For testing use this JSON instead of parameters
             if usePresetParams: 
                 with open('ClientResources/defaultParams.guide.json', 'r') as f: 
-                    parameterJSON = json.load(f)
+                    parameterJSON = f.read()
                 scenarioNames = [
                     'Baseline', 'School Closure', 
                     'Increased Withdrawal Rate', 'Decreased Contact Rate'
