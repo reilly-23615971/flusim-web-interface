@@ -31,7 +31,10 @@ def generateGraph():
         ))
     
     scenarioNames = st.session_state.get(
-        'DataScenarioNames', ['Baseline', 'Surged']
+        'DataScenarioNames', [
+            'Baseline', 'School Closure', 
+            'Case Isolation', 'Community Contact Reduction'
+        ]
     )
     scenariosUsed = st.session_state.get('chartScenariosToUse', 'all')
     chartType = st.session_state.get('chartType', 'Cumulative')

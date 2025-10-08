@@ -69,7 +69,10 @@ def generateTable():
         ))
     
     scenarioNames = st.session_state.get(
-        'DataScenarioNames', ['Baseline', 'Surged']
+        'DataScenarioNames', [
+            'Baseline', 'School Closure', 
+            'Case Isolation', 'Community Contact Reduction'
+        ]
     )
 
     outcomeColumnCount = st.session_state.get('healthOutcomeRowCount', 1)
@@ -115,7 +118,7 @@ def generateTable():
                 ) 
                 for rowID in range(idGet('deathRowCount', scenarioID, 0))
             } 
-            for scenarioID in range(2)
+            for scenarioID in range(4)
         }
         # Load test data from file
         with open('./TestData/asirMedianAbsolute.csv', 'rb') as csv:
@@ -396,7 +399,7 @@ in the case of the 'Total' group).
             
         # Difference from baseline column
         # Force set to false if only one scenario is in use
-        if (
+        if not usePresetData and (
             st.session_state.get('DataScenarioCount', -1) == 0 
             or scenariosToUse == ['Baseline']
         ): 
@@ -406,7 +409,7 @@ in the case of the 'Total' group).
             'Difference from Baseline', False, 
             key = f'_useBaselineDifference{i}', on_change = saveKey, 
             args = ['useBaselineDifference', i], # type: ignore
-            disabled = (
+            disabled = not usePresetData and (
                 st.session_state.get('DataScenarioCount', -1) == 0 
                 or scenariosToUse == ['Baseline']
             ),

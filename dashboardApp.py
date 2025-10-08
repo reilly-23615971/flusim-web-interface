@@ -138,7 +138,7 @@ def updateData():
         # Check if the server returned an error instead of proper data
         if isinstance(processedData, list):
             successes = 0
-            scenarios = 2 if usePresetData else (4 if usePresetParams else (session.scenarioCount + 1))
+            scenarios = 4 if usePresetData or usePresetParams else session.scenarioCount + 1
             for data, tag in processedData: 
                 # Further error checking
                 if len(data) == 0: stn.toast(
