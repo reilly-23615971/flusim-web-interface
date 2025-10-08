@@ -271,7 +271,10 @@ with tableSettings:
     # Scenario and age group selection
     st.subheader('Scenario and Age Group Selection')
     scenarioNames = st.session_state.get(
-        'DataScenarioNames', ['Baseline', 'Surged']
+        'DataScenarioNames', [
+            'Baseline', 'School Closure', 
+            'Case Isolation', 'Community Contact Reduction'
+        ]
     )
     if currentDataExists or usePresetData: 
         loadKey(

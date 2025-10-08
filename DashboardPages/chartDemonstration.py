@@ -138,7 +138,10 @@ with graphSettings:
 
     # Scenario selection
     scenarioNames = st.session_state.get(
-        'DataScenarioNames', ['Baseline', 'Surged']
+        'DataScenarioNames', [
+            'Baseline', 'School Closure', 
+            'Case Isolation', 'Community Contact Reduction'
+        ]
     )
     if currentDataExists or usePresetData: 
         loadKey('chartScenariosToUse', '', scenarioNames, noZeroDefault = True)
