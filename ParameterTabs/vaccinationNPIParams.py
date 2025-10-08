@@ -3965,7 +3965,7 @@ def vaccineSchema(schema, id = 0):
                 )
         # BCC Reduction
         if idGet('bccToggle', id, False):
-            scenarioParams.bcc_reduction = idGet('bccReducedRate', id, 0.2)
+            scenarioParams.bcc_reduction = (idGet('bccReducedRate', id, 0.2) / idGet('bccRate', id, 4.0))
             bccTrigger = idGet('bccTrigger', id, 'Always')
             scenarioParams.bcc_reduction_trigger = trigCast(bccTrigger)
             scenarioParams.bcc_reduction_relaxation = trigCast(bccTrigger)

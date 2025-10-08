@@ -100,7 +100,7 @@
           "override_setting": {
             "parameters": {
               "Scenario_Parameter": {
-                "bcc_reduction": 2.0,
+                "bcc_reduction": 0.5,
                 "bcc_reduction_trigger": "timed",
                 "bcc_reduction_relaxation": "timed",
                 "bcc_reduction_delay": 0,
