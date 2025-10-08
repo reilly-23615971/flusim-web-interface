@@ -81,7 +81,7 @@
           }
         },
         {
-          "name": "Increased Withdrawal Rate",
+          "name": "Case Isolation",
           "override_setting": {
             "parameters": {
               "Scenario_Parameter": {
@@ -96,7 +96,7 @@
           }
         },
         {
-          "name": "Reduced Contact Rate",
+          "name": "Community Contact Reduction",
           "override_setting": {
             "parameters": {
               "Scenario_Parameter": {

@@ -168,7 +168,7 @@ simulation.
                     parameterJSON = f.read()
                 scenarioNames = [
                     'Baseline', 'School Closure', 
-                    'Increased Withdrawal Rate', 'Decreased Contact Rate'
+                    'Case Isolation', 'Community Contact Reduction'
                 ]
 
             # Use this version in production
