@@ -85,7 +85,7 @@ communityAgePops = {
 
 # Set containing health outcomes selectable for tables
 tableOutcomes = {
-    'Infections', 'Cases', 'Hospitalisations', 
+    'Infections', 'Diagnosed Cases', 'Hospitalisations', 
     'Deaths', 'ICU Visits', 'GP Visits'
 }
 
@@ -98,20 +98,20 @@ tableTypes = {
 
 # Dictionary getting adjective forms of health outcomes
 outcomeAdjectives = {
-    'Infections': 'Infected', 'Cases': 'Diagnosed', 
+    'Infections': 'Infected', 'Diagnosed Cases': 'Diagnosed', 
     'Hospitalisations': 'Hospitalised', 'Deaths': 'Dead', 
     'ICU Visits': 'Severely Ill', 'GP Visits': 'Visiting'
 }
 
 # Dictionary getting session_state variables for outcome rates
 outcomeRateVariables = {
-    'Cases': 'caseRatio', 'Hospitalisations': 'hospitalRatio', 
+    'Diagnosed Cases': 'caseRatio', 'Hospitalisations': 'hospitalRatio', 
     'Deaths': 'deathRatio', 'ICU Visits': 'icuRatio', 'GP Visits': 'gpRatio'
 }
 
 # Default values for rates
 outcomeRateDefaults = {
-    'Cases': 0.5, 'Hospitalisations': 0.25, 
+    'Diagnosed Cases': 0.5, 'Hospitalisations': 0.25, 
     'Deaths': 0.05, 'ICU Visits': 0.1, 'GP Visits': 0.333
 }
 
@@ -169,7 +169,7 @@ class AnalysisFile:
         self, tool: Literal['epidemic', 'asir'], names: List[str], 
         summaryValue: Literal['mean', 'median'] = 'median', 
         outcome: Literal[
-            'Infections', 'Cases', 'Hospitalisations', 
+            'Infections', 'Diagnosed Cases', 'Hospitalisations', 
             'Deaths', 'ICU Visits', 'GP Visits'
         ] = 'Infections', **kwargs
     ):

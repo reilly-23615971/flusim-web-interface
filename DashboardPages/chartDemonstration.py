@@ -269,24 +269,3 @@ if chartData is not None:
         graph as an image file or access the Vega source data for the 
         graph.
     ''')
-
-
-
-
-
-debugPlots = """#******************************************************************
-# Debug case plot
-scenarios = ['Baseline', 'Surged']
-
-with open('./TestData/epidemicMedianDaily.csv', 'rb') as csv:
-    meanData = formatEpidemic(csv.read(), scenarios, 'Cases')
-
-st.altair_chart(plotEpidemic(meanData, 'Cases'))
-
-
-with open('./TestData/epidemicMedianCumulative.csv', 'rb') as csv:
-    sumData = formatEpidemic(csv.read(), scenarios, 'Cases', True)
-
-st.altair_chart(plotEpidemic(sumData, 'Cases', True))
-
-#******************************************************************"""
