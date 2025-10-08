@@ -381,7 +381,7 @@ in the case of the 'Total' group).
                 ### Options:
                 - Infections: the number of individuals infected with 
                 the disease in the simulation.
-                - Cases: the number of individuals formally diagnosed 
+                - Diagnosed Cases: the number of individuals formally diagnosed 
                 with the disease in the simulation.
                 - Hospitalisations: the number of individuals who go to 
                 the hospital for treatment as a result of the disease 
