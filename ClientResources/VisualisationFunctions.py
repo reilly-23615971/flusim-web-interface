@@ -64,7 +64,7 @@ Parameters:
     non-descriptive placeholders).
 
     outcome: A string indicating the health outcome the epidemic 
-    data represents. Can be either 'Infections', 'Cases', 
+    data represents. Can be either 'Infections', 'Diagnosed Cases', 
     'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
 
     cumulative: A Boolean that is True when the CSV contains cumulative 
@@ -137,7 +137,7 @@ Parameters:
     the formatEpidemic function.
 
     outcome: A string indicating the health outcome the epidemic 
-    data represents. Can be either 'Infections', 'Cases', 
+    data represents. Can be either 'Infections', 'Diagnosed Cases', 
     'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
 
     cumulative: Boolean that is True when the DataFrame contains 
