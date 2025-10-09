@@ -142,7 +142,7 @@ kappaLocations = {
     'Households': 'household', 'K-12 Education': 'child_education', 
     'Tertiary Education': 'adult_education', 'Workplaces': 'workplace', 
     'Childcare': 'child_care', 'Hospitals': 'hospital', 
-    'Background Interactions': 'background'
+    'Background': 'background'
 }
 
 

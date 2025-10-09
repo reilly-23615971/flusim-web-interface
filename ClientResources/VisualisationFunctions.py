@@ -114,7 +114,7 @@ def formatEpidemic(
         framedData = pd.read_csv(
             BytesIO(rawCSV), header = 0, 
             names = ['Days Since First Infection'] + scenarioNames
-        ).fillna(0.0)
+        ).fillna(0.0).round()
 
         # Reshape data for better Altair usage
         valueLabel = f'Total {outcome}' if cumulative else f'{outcome} per Day'
@@ -392,7 +392,7 @@ percentage.
             ''')
             percentCols.append(columnName)
         elif not proportion and baselineDifference:
-            currentColumn -= columnBaselines
+            currentColumn = (currentColumn - columnBaselines).round()
             columnName = f'{outcome} (Difference from Baseline)'
             columnConfig[columnName] = st.column_config.Column(
                 help = f'''
@@ -423,6 +423,7 @@ as a percentage.
             percentCols.append(columnName)
             differenceCols.append(columnName)
         else: 
+            currentColumn = currentColumn.round()
             columnName = outcome
             columnConfig[columnName] = st.column_config.Column(help = f'''
 The number of people (within a given 

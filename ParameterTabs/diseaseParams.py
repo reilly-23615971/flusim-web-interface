@@ -531,7 +531,7 @@ def buildDiseaseTab(id):
                     that supervise preschool children.
                     - Hospitals: Places that care for sick 
                     individuals.
-                    - Background Interactions: Any interactions 
+                    - Background: Any interactions 
                     taking place during the model's background 
                     phase, simulating any contact that occurs 
                     outside of the other locations. Note that the 
@@ -656,7 +656,7 @@ def buildDiseaseTab(id):
             condition has improved enough that they no longer show 
             symptoms of the disease, but they are still infectious.
             5. Recovered: The individual is no longer infectious 
-            and is considered to have recovered from the disease.
+            and has gained an immunity to the disease.
             
             If an infected individual is asymptomatic, their 
             infection will not progress into the symptomatic stage; 
