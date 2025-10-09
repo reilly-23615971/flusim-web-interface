@@ -24,7 +24,7 @@ functionLog = logging.getLogger(__name__)
 # Dictionary getting health outcome descriptions
 outcomeDescriptions = {
     'Infections': 'infected by the disease', 
-    'Cases': 'formally diagnosed as cases of the disease', 
+    'Diagnosed Cases': 'formally diagnosed as cases of the disease', 
     'Hospitalisations': 'sent to a hospital due to the disease', 
     'Deaths': 'killed as a direct result of the disease', 
     'ICU Visits': 'committed to a hospital\'s Intensive Care Unit due to the disease', 
@@ -94,7 +94,7 @@ def formatEpidemic(
             'scenarioNames should not be empty.'
         )
         if outcome not in tableOutcomes: raise ValueError((
-            'outcome should be either "Infections", "Cases", '
+            'outcome should be either "Infections", "Diagnosed Cases", '
             '"Hospitalisations", "ICU Visits", "GP Visits", '
             f'or "Deaths"; was "{outcome}".'
         ))
@@ -158,7 +158,7 @@ def plotEpidemic(
             f'data should be a DataFrame, was {type(data)}'
         )
         if outcome not in tableOutcomes: raise ValueError((
-            'outcome should be either "Infections", "Cases", '
+            'outcome should be either "Infections", "Diagnosed Cases", '
             '"Hospitalisations", "ICU Visits", "GP Visits", '
             f'or "Deaths"; was "{outcome}".'
         ))
