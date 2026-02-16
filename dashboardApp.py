@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 import pandas as pd
 import streamlit as st
-import streamlit_notify as stn
+import streamlit_notify as stn  # type: ignore
 from ClientResources.SharedResources import resultQueue, usePresetData, usePresetParams
 from ClientResources.SimulationRunFunctions import runSimulationButton
 
