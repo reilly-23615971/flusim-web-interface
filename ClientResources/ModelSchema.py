@@ -204,7 +204,8 @@ class scenarioParameters(BaseModel):
             (
                 "The probability of transmission between two individuals located "
                 "in the same adult education facility will be multiplied by "
-                "this value."
+                "this value. Unused due to community data not including any "
+                "adult education facilities."
             )
         ),
     )
@@ -224,7 +225,8 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The probability of transmission between two individuals located "
-                "in the same childcare facility will be multiplied by this value."
+                "in the same childcare facility will be multiplied by this value. "
+                "Unused due to community data not including any childcare facilities."
             )
         ),
     )
@@ -234,7 +236,8 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The probability of transmission between two individuals located "
-                "in the same hospital will be multiplied by this value."
+                "in the same hospital will be multiplied by this value. "
+                "Unused due to community data not including any hospitals."
             )
         ),
     )
@@ -415,7 +418,9 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The maximum number of individuals that can be "
-                "in a single class within an adult education facility."
+                "in a single class within an adult education facility. "
+                "Unused due to community data not including any adult "
+                "education facilities."
             )
         ),
     )
@@ -437,7 +442,8 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The maximum number of individuals that can be "
-                "in a single neighbour group within a neighbourhood."
+                "in a single neighbour group within a neighbourhood. "
+                "Unused due to community data not including any neighbourhoods."
             )
         ),
     )
@@ -448,7 +454,8 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The maximum number of individuals that can "
-                "be in a single church group within a church."
+                "be in a single church group within a church. "
+                "Unused due to community data not including any churches."
             )
         ),
     )
@@ -607,7 +614,9 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "If true, childcare facilities will be included in "
-                "the set of facilities affected by school closure NPIs."
+                "the set of facilities affected by school closure NPIs. "
+                "Unused due to community data not including any "
+                "childcare facilities."
             )
         ),
     )
@@ -627,7 +636,9 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "If true, adult education facilities will be included in "
-                "the set of facilities affected by school closure NPIs."
+                "the set of facilities affected by school closure NPIs. "
+                "Unused due to community data not including any adult "
+                "education facilities."
             )
         ),
     )
@@ -968,7 +979,7 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The trigger condition that will enable "
-                "vaccination in the simulation when fulfilled."
+                "vaccination in the simulation when fulfilled. Unused."
             )
         ),
     )
@@ -978,7 +989,7 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The trigger condition that will disable "
-                "vaccination in the simulation when fulfilled."
+                "vaccination in the simulation when fulfilled. Unused."
             )
         ),
     )
@@ -989,7 +1000,7 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The number of cycles before a vaccination intervention comes "
-                'into effect, when vaccination_trigger is set to "timed".'
+                'into effect, when vaccination_trigger is set to "timed". Unused.'
             )
         ),
     )
@@ -1001,7 +1012,7 @@ class scenarioParameters(BaseModel):
             (
                 "The number of cycles before a vaccination intervention is "
                 "automatically relaxed, when vaccination_relaxation "
-                'is set to "timed".'
+                'is set to "timed". Unused.'
             )
         ),
     )

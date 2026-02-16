@@ -175,7 +175,7 @@ def buildVaccinationNPITab(id):
                 vaccineTrigger = st.selectbox(
                     'Vaccination Trigger Condition',
                     key = f'_vaccineTrigger{id}',
-                    options = triggerNames[:-2],
+                    options = triggerNames[:-1],
                     on_change = saveKey, args = [f'vaccineTrigger', id], # type: ignore
                     disabled = not useVaccinesToggle, help = '''
                         The type of condition that must be
@@ -2220,9 +2220,8 @@ def buildVaccinationNPITab(id):
                 args=[f"classDismissal", id],  # type: ignore
                 key=f"_classDismissal{id}",
                 help="""
-                    Toggle whether or not classes in childcare and
-                    non-tertiary schools should dismiss classes
-                    when the daily case rate is high enough.
+                    Toggle whether or not school classes should be 
+                    dismissed when the daily case rate is high enough.
 
                     Note that the rate that must be reached before
                     class dismissal begins to occur is shared with
@@ -2310,14 +2309,6 @@ def buildVaccinationNPITab(id):
                         diagnosed within them reaches a certain
                         threshold, and will remain closed for the
                         rest of the simulation.
-                        - Cases per K-12 School: Primary and
-                        secondary schools will close individually
-                        when the number of cases diagnosed within
-                        them reaches a certain threshold, and will
-                        remain closed for the rest of the
-                        simulation. Childcare facilities and
-                        tertiary schools/universities will not
-                        close, overriding other parameters.
                     """,
                 )
                 # Show additional parameters based on trigger value
@@ -2509,7 +2500,6 @@ def buildVaccinationNPITab(id):
                 elif schoolClosureTrigger in {
                     "Community Case Total",
                     "Cases per School",
-                    "Cases per K-12 School",
                 }:
                     st.info(
                         """
@@ -2525,6 +2515,7 @@ def buildVaccinationNPITab(id):
                     )
 
             # School types and compliance
+            """
             schoolTypeErrorContainer = st.empty()
             loadKey(f"schoolClosureTypes", id, ["K-12"])
             schoolClosureTypes = st.segmented_control(
@@ -2536,7 +2527,7 @@ def buildVaccinationNPITab(id):
                 on_change=saveKey,
                 args=[f"schoolClosureTypes", id],  # type: ignore
                 key=f"_schoolClosureTypes{id}",
-                help="""
+                help='''
                     The types of schools that will close under the
                     effects of this NPI. Multiple school types may
                     be selected at once, but selecting none is
@@ -2547,8 +2538,9 @@ def buildVaccinationNPITab(id):
                     - K-12: Primary and secondary education
                     facilities.
                     - Tertiary: Adult education facilities.
-                """,
+                ''',
             )
+            """
             loadKey(f"schoolClosureCompliance", id, 0.9)
             st.select_slider(
                 "School Closure Compliance (Probability)",
@@ -2567,9 +2559,10 @@ def buildVaccinationNPITab(id):
             )
 
             # Show error if no schools selected
+            """
             if useSchoolClosureToggle and not schoolClosureTypes:
                 schoolTypeErrorContainer.error(
-                    f"""
+                    f'''
                     Error: The {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
@@ -2583,11 +2576,11 @@ def buildVaccinationNPITab(id):
                     To address this error, please select at least
                     one of the Types of School to Close before
                     running the simulation.
-                """,
+                ''',
                     icon=":material/error:",
                 )
                 globalErrorContainer.error(
-                    f"""
+                    f'''
                     Error: The {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
@@ -2602,12 +2595,13 @@ def buildVaccinationNPITab(id):
                     one of the Types of School to Close in the
                     "School Closure" section of the "Vaccinations
                     and NPIs" tab before running the simulation.
-                """,
+                ''',
                     icon=":material/error:",
                 )
                 st.session_state[f"schoolTypeError{id}"] = 2
             else:
                 st.session_state[f"schoolTypeError{id}"] = 0
+            """
 
         # Withdrawal Increase
         st.html('<span id = "withdrawalIncreaseTriggerCondition"></span>')
@@ -2646,7 +2640,7 @@ def buildVaccinationNPITab(id):
                 withdrawalIncreaseTrigger = st.selectbox(
                     "Withdrawal Increase Trigger Condition",
                     key=f"_withdrawalIncreaseTrigger{id}",
-                    options=triggerNames[:-2],
+                    options=triggerNames[:-1],
                     on_change=saveKey,
                     args=[f"withdrawalIncreaseTrigger", id],  # type: ignore
                     disabled=not useWithdrawalIncreaseToggle,
@@ -3113,7 +3107,7 @@ def buildVaccinationNPITab(id):
                 reducedGroupTrigger = st.selectbox(
                     "Reduced Group Size Trigger Condition",
                     key=f"_reducedGroupTrigger{id}",
-                    options=triggerNames[:-2],
+                    options=triggerNames[:-1],
                     on_change=saveKey,
                     args=[f"reducedGroupTrigger", id],  # type: ignore
                     disabled=not useReducedGroupToggle,
@@ -3476,7 +3470,7 @@ def buildVaccinationNPITab(id):
                 bccTrigger = st.selectbox(
                     "BCC Reduction Trigger Condition",
                     key=f"_bccTrigger{id}",
-                    options=triggerNames[:-2],
+                    options=triggerNames[:-1],
                     on_change=saveKey,
                     args=[f"bccTrigger", id],  # type: ignore
                     disabled=not useBCCToggle,
@@ -4030,14 +4024,12 @@ def buildVaccinationNPITab(id):
                     placeholder="Enter a whole number of cases",
                     help="""
                         Any interventions set to trigger using the
-                        "Community Case Total", "Cases per School",
-                        or "Cases per K-12 School" conditions will
-                        begin taking effect in the simulation once
-                        the total number of diagnosed cases in the
-                        community (for "Community Case Total") or
-                        in each individual school (for "Cases per
-                        School" and "Cases per K-12 School")
-                        exceeds this value.
+                        "Community Case Total" or "Cases per School"
+                        conditions will begin taking effect in the
+                        simulation once the total number of diagnosed
+                        cases in the community (for "Community Case
+                        Total") or in each individual school (for
+                        "Cases per School") exceeds this value.
                     """,
                 )
 
@@ -4329,10 +4321,7 @@ def vaccineSchema(schema, id=0):
             scenarioParams.school_closure_compliance = idGet(
                 "schoolClosureCompliance", id, 0.9
             )
-            closedSchoolTypes = idGet("schoolClosureTypes", id, ["K-12"])
-            scenarioParams.close_childcare = "Childcare" in closedSchoolTypes
-            scenarioParams.close_child_education = "K-12" in closedSchoolTypes
-            scenarioParams.close_adult_education = "Tertiary" in closedSchoolTypes
+            scenarioParams.close_child_education = True
             schoolTrigger = idGet("schoolClosureTrigger", id, "Always")
             scenarioParams.school_closure_trigger = trigCast(schoolTrigger)
             scenarioParams.school_closure_relaxation = trigCast(schoolTrigger)

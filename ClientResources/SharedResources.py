@@ -171,10 +171,11 @@ triggerConditions = {
     "Community Case Rate": "community_rate",
     "Community Case Total": "community_cases",
     "Cases per School": "per_school_cases",
-    "Cases per K-12 School": "per_primary_high_school_cases",
+    # "Cases per K-12 School": "per_primary_high_school_cases",
 }
 
 # Tuple holding the different location types for kappa selection
+"""
 kappaLocations = {
     "Households": "household",
     "K-12 Education": "child_education",
@@ -184,6 +185,7 @@ kappaLocations = {
     "Hospitals": "hospital",
     "Background": "background",
 }
+"""
 
 
 # Simple function to get theme colours

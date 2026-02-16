@@ -20,7 +20,7 @@ from ClientResources.InterfaceFunctions import (
 )
 from ClientResources.SharedResources import (
     ageCategories,
-    kappaLocations,
+    # kappaLocations,
     backgroundColour,
 )
 from ClientResources.ModelSchema import Parameters, scenarioParameters, strainParameters
@@ -44,7 +44,7 @@ def buildDiseaseTab(id):
     # Initialise session variables needed by the disease forms
     sessionParameters = {
         f"transRowCount{id}": 0,
-        f"kappaRowCount{id}": 0,
+        # f"kappaRowCount{id}": 0,
         f"seedPeriodError{id}": 0,
     }
     for parameter, default in sessionParameters.items():
@@ -57,15 +57,13 @@ def buildDiseaseTab(id):
     ageGroupSets = {
         f"transRemainingAgeGroups{id}": (f"transRowCount{id}", f"transAgeGroup{id}-")
     }
-    locationGroupSets = {
-        f"kappaRemainingLocations{id}": (f"kappaRowCount{id}", f"kappaLocation{id}-")
-    }
+    # locationGroupSets = {f"kappaRemainingLocations{id}": (f"kappaRowCount{id}", f"kappaLocation{id}-")}
 
     # Use function to recalculate remaining group parameters
     # Kappa values are sliced to remove household since it's defined
     # separately from the others
     getRemainingGroups(ageGroupSets, ageCategories.keys())
-    getRemainingGroups(locationGroupSets, list(kappaLocations.keys())[1:])
+    # getRemainingGroups(locationGroupSets, list(kappaLocations.keys())[1:])
 
     # Tab Content
     st.header("Disease Parameters")
@@ -366,6 +364,60 @@ def buildDiseaseTab(id):
                 individuals in households.
                 """,
         )
+        loadKey("schoolKappa", id, 1.0)
+        st.select_slider(
+            "School Transmission Multiplier",
+            np.linspace(0.0, 1.0, 201),
+            1.0,
+            key=f"_schoolKappa{id}",
+            on_change=saveKey,
+            args=["schoolKappa", id],  # type: ignore
+            format_func=lambda x: f"{x:0.3g}",
+            help="""
+                The value of the transmissibility modifier
+                $\\kappa$ when an interaction takes place in a
+                school. The higher this value is, the more
+                likely it is for uninfected individuals to contract
+                the disease when interacting with infected
+                individuals in schools.
+                """,
+        )
+        loadKey("workKappa", id, 1.0)
+        st.select_slider(
+            "Workplace Transmission Multiplier",
+            np.linspace(0.0, 1.0, 201),
+            1.0,
+            key=f"_workKappa{id}",
+            on_change=saveKey,
+            args=["workKappa", id],  # type: ignore
+            format_func=lambda x: f"{x:0.3g}",
+            help="""
+                The value of the transmissibility modifier
+                $\\kappa$ when an interaction takes place in a
+                workplace. The higher this value is, the more
+                likely it is for uninfected individuals to contract
+                the disease when interacting with infected
+                individuals in workplaces.
+                """,
+        )
+        loadKey("backgroundKappa", id, 1.0)
+        st.select_slider(
+            "Background Contact Transmission Multiplier",
+            np.linspace(0.0, 1.0, 201),
+            1.0,
+            key=f"_backgroundKappa{id}",
+            on_change=saveKey,
+            args=["backgroundKappa", id],  # type: ignore
+            format_func=lambda x: f"{x:0.3g}",
+            help="""
+                The value of the transmissibility modifier
+                $\\kappa$ when an interaction takes place during the 
+                model's background phase (i.e. outside of simulated 
+                locations). The higher this value is, the more
+                likely it is for uninfected individuals to contract
+                the disease during the background phase.
+                """,
+        )
 
         # Age-based infectiousness and susceptibility parameters
         st.markdown(
@@ -537,8 +589,9 @@ def buildDiseaseTab(id):
         )
 
         # Location-based kappa parameters
+        """
         st.markdown(
-            """
+            '''
             ### Location-Specific Transmission Multipliers
 
             This section allows for unique multipliers for the
@@ -551,7 +604,7 @@ def buildDiseaseTab(id):
             specify a value for a specific location, it will assume
             a default value of 1 (i.e. the likelihood of infection
             remains at the default value in said location).
-        """
+        '''
         )
         # Save relevant params as variables to avoid lookups
         kappaRowCount = st.session_state[f"kappaRowCount{id}"]
@@ -593,7 +646,7 @@ def buildDiseaseTab(id):
                     on_change=saveKey,
                     args=["kappaLocation", id, f"-{i}"],  # type: ignore
                     disabled=not kappaRowCount < 6,
-                    help="""
+                    help='''
                     A location that will have a specific
                     transmissibility modifier defined for it,
                     modifying the base transmission probability for
@@ -620,7 +673,7 @@ def buildDiseaseTab(id):
                     BCC Reduction non-pharmaceutical intervention
                     configured in the "Background Contact Count
                     Reduction" section of the "Vaccinations and NPIs" tab.
-                """,
+                ''',
                 )
             # Kappa value column
             loadKey("kappaValue", id, 1.0, f"-{i}")
@@ -633,14 +686,14 @@ def buildDiseaseTab(id):
                     on_change=saveKey,
                     args=["kappaValue", id, f"-{i}"],  # type: ignore
                     format_func=lambda x: f"{x:0.3g}",
-                    help="""
+                    help='''
                     The value of the transmissibility modifier
                     $\\kappa$ when an interaction takes place in
                     this location. The higher this value is, the
                     more likely it is for uninfected individuals to
                     contract the disease when interacting with
                     infected individuals in this location.
-                """,
+                ''',
                 )
             # Delete button column
             with kappaRemoveColumn:
@@ -654,11 +707,11 @@ def buildDiseaseTab(id):
                         f"kappaRowCount{id}",
                         {f"kappaLocation{id}-", f"kappaValue{id}-"},
                     ),
-                    help="""
+                    help='''
                     Remove this row of the form and remove these
                     location-specific transmissibility parameters
                     from the simulation.
-                """,
+                ''',
                 )
         # Button to add another row for age specific params
         kappaContainer.button(
@@ -676,19 +729,20 @@ def buildDiseaseTab(id):
             ),
             disabled=not kappaRowCount < 6,
             help=(
-                """
+                '''
                 Add another row to this form, where you can select
                 an additional location to have unique
                 transmissibility parameters.
-            """
+            '''
                 if kappaRowCount <= 5
-                else """
+                else '''
                 All locations have been given unique
                 transmissibility parameters, so a new location
                 cannot be added.
-            """
+            '''
             ),
         )
+        """
 
     # Life Cycle Parameters
     with st.expander("Disease Life Cycle"):
@@ -1052,6 +1106,9 @@ def diseaseSchema(schema, id=0):
         scenarioParams.prob_asymptomatic_young = idGet("asymptomaticChild", id, 0.35)
         scenarioParams.prob_asymptomatic = idGet("asymptomaticAdult", id, 0.35)
         scenarioParams.kappa_household = idGet("householdKappa", id, 2.2)
+        scenarioParams.kappa_child_education = idGet("schoolKappa", id, 1.0)
+        scenarioParams.kappa_workplace = idGet("workKappa", id, 1.0)
+        scenarioParams.kappa_background = idGet("backgroundKappa", id, 1.0)
         scenarioParams.transmissibility_delay = latencyPeriod * 2
         scenarioParams.symptom_latency = (latencyPeriod + preSymptomPeriod) * 2
         scenarioParams.generation_time = (
@@ -1082,12 +1139,14 @@ def diseaseSchema(schema, id=0):
                 f"{varAgeGroup}_susc",
                 idGet("transSuscept", id, 1, f"-{i}"),
             )
+        """
         for i in range(st.session_state.get(f"kappaRowCount{id}", 0)):
             setattr(
                 scenarioParams,
                 f"kappa_{kappaLocations[st.session_state[f'kappaLocation{id}-{i}']]}",
                 idGet("kappaValue", id, 1, f"-{i}"),
             )
+        """
         # Save the updated parameters
         schema.Scenario_Parameter = scenarioParams
     except (ValueError, ValidationError) as e:
