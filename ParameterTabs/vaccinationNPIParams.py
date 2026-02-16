@@ -387,6 +387,7 @@ def buildVaccinationNPITab(id):
                 "Enable Limited Number of Vaccine Doses",
                 value=False,
                 key=f"_limitDosesToggle{id}",
+                disabled=not useVaccinesToggle,
                 on_change=saveKey,
                 args=[f"limitDosesToggle", id],  # type: ignore
                 help="""
