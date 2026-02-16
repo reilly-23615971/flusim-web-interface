@@ -17,6 +17,8 @@ from ClientResources.InterfaceFunctions import (
     deleteFormRow,
     dayCount,
     idGet,
+    paramError,
+    dualError,
 )
 from ClientResources.SharedResources import (
     ageCategories,
@@ -57,7 +59,6 @@ def buildDiseaseTab(id):
     ageGroupSets = {
         f"transRemainingAgeGroups{id}": (f"transRowCount{id}", f"transAgeGroup{id}-")
     }
-    # locationGroupSets = {f"kappaRemainingLocations{id}": (f"kappaRowCount{id}", f"kappaLocation{id}-")}
 
     # Use function to recalculate remaining group parameters
     # Kappa values are sliced to remove household since it's defined
@@ -131,6 +132,60 @@ def buildDiseaseTab(id):
 
         # Show error if seeding period is beyond simulation length
         simLength = idGet("cycleCount", id, 360)
+        dualError(
+            "seedingOutOfRange",
+            id,
+            lambda: seedingPeriod[0] >= simLength,
+            lambda: seedingPeriod[1] >= simLength,
+            f"""
+                Error: The {
+                    'baseline scenario' if id == 0
+                    else f'scenario named "{
+                        st.session_state[f'scenarioName{id}']
+                    }"'
+                } is currently set to last {simLength} days, but
+                the infection seeding period for this scenario
+                (defined below) is set to begin on Day
+                {seedingPeriod[0] + 1}. As such, no infections will
+                ever occur in this scenario under these parameters.
+
+                To address this error, please make one of the
+                following changes before running the simulation:
+
+                - Move the start point of the scenario's Infection
+                Seeding Time Period to any point before Day {
+                    simLength
+                }.
+                - Increase the scenario's Length of Simulation in
+                the "Initialisation" tab to be
+                {seedingPeriod[0] + 1} days or more.
+            """,
+            f"""
+                Warning: The {
+                    'baseline scenario' if id == 0
+                    else f'scenario named "{
+                        st.session_state[f'scenarioName{id}']
+                    }"'
+                } is currently set to last {simLength} days, but
+                the infection seeding period for this scenario
+                (defined below) is set to end on Day
+                {seedingPeriod[1] + 1}. As such, infection seeding
+                will still be ongoing when the scenario ends.
+
+                If this is not desired behaviour, please address
+                this error by making one of the following changes
+                before running the simulation:
+
+                - Move the end point of the scenario's Infection
+                Seeding Time Period to any point before Day {
+                    simLength
+                }.
+                - Increase the scenario's Length of Simulation in
+                the "Initialisation" tab to be
+                {seedingPeriod[1] + 1} days or more.
+            """,
+        )
+        '''
         if seedingPeriod[0] >= simLength:
             seedPeriodErrorContainer.error(
                 f"""
@@ -243,6 +298,7 @@ def buildDiseaseTab(id):
             st.session_state[f"seedPeriodError{id}"] = 1
         else:
             st.session_state[f"seedPeriodError{id}"] = 0
+        '''
 
     # Transmission Parameters
     with st.expander("Disease Transmission"):
@@ -411,8 +467,8 @@ def buildDiseaseTab(id):
             format_func=lambda x: f"{x:0.3g}",
             help="""
                 The value of the transmissibility modifier
-                $\\kappa$ when an interaction takes place during the 
-                model's background phase (i.e. outside of simulated 
+                $\\kappa$ when an interaction takes place during the
+                model's background phase (i.e. outside of simulated
                 locations). The higher this value is, the more
                 likely it is for uninfected individuals to contract
                 the disease during the background phase.

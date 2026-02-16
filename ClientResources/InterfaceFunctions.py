@@ -5,38 +5,243 @@
 # Imports
 import logging
 import streamlit as st
+from functools import partial
+from typing import Optional, Callable
+
+# from typing import Optional, Union
 
 # Logging
 functionLog = logging.getLogger(__name__)
+session = st.session_state
+
+# Parameter Classes
+'''
+class Parameter:
+    def __init__(self, key: str, scenarioID: int, paramName: str, defaultValue):
+        self.key = key
+        self.scenarioID = scenarioID
+        self.fullKey = f"{key}_{scenarioID}"
+        self.internalKey = f"_{key}_{scenarioID}"
+        self.paramName = paramName
+        self.defaultValue = defaultValue
+        self._value = defaultValue
+
+    @property
+    def value(self):
+        """Get the current value for this parameter"""
+        return session.get(self.fullKey, self.defaultValue)
+
+    def loadKey(self, noZeroDefault=False):
+        """Update the value for this parameter's widget"""
+        if noZeroDefault:
+            session[self.internalKey] = session.get(self.fullKey, self.defaultValue)
+        else:
+            session[self.internalKey] = idGet(
+                self.key, self.scenarioID, self.defaultValue
+            )
+
+    def saveKey(self):
+        """Save the new value for this parameter set by its widget"""
+        session[self.fullKey] = session.get(self.internalKey)
+        if self.scenarioID != 0:
+            session["scenarioSetParams"][self.scenarioID].append(self.key)
+
+    def populateSchema(self, schema):
+        """Populate a schema with this parameter's value"""
+        setattr(schema, self.paramName, self.value)
+
+    # TODO: Add error functionality
+
+
+"""
+Subclass for parameters that use sliders
+"""
+
+
+class SliderParam(Parameter):
+
+    def __init__(
+        self,
+        key: str,
+        scenarioID: int,
+        paramName: str,
+        defaultValue: Union[int, float],
+        min: Union[int, float],
+        max: Union[int, float],
+        step: Union[int, float],
+        title: str,
+        format: Optional[str],
+        help: Optional[str],
+    ):
+        super().__init__(key, scenarioID, paramName, defaultValue)
+        self.loadKey
+        self.widget = st.slider(
+            title,
+            min_value=min,
+            max_value=max,
+            value=defaultValue,
+            step=step,
+            format=format,
+            key=self.internalKey,
+            help=help,
+            on_change=self.saveKey,
+        )
+
+'''
+
+
+# Tools for error messages
+
+activeErrors = {0: {}}  # type: ignore
+errorFormat = partial(st.error, icon=":material/error:")
+warnFormat = partial(st.warning, icon=":material/warning:")
+
+
+"""
+Function to throw an error if a condition is met
+
+Parameters:
+    id: A string to identify this specific error.
+
+    scenarioID: The integer representing the scenario this error applies to.
+
+    condition: The criteria that must be fulfilled to throw the error, as a function.
+
+    message: The text to display for the error message.
+
+    isSevere: Set to True for red errors that prevent running the simulation.
+"""
+
+
+def paramError(
+    id: str,
+    scenarioID: int,
+    condition: Callable[[], bool],
+    message: str,
+    isSevere=False,
+):
+    if condition():
+        if isSevere:
+            errorFormat(message)
+            activeErrors[scenarioID][id] = (message, True)
+        else:
+            warnFormat(message)
+            activeErrors[scenarioID][id] = (message, False)
+    else:
+        activeErrors[scenarioID].pop(id, None)
+
+
+"""
+Function to throw either an error or a warning depending on certain conditions
+
+Parameters:
+    id: A string to identify this specific error.
+
+    scenarioID: The integer representing the scenario this error applies to.
+
+    errorCon: The criteria for a red, run-blocking error.
+
+    warnCon: The criteria for a yellow, minor error.
+
+    errorMessage: The text to display for the red error message.
+
+    warnMessage: The text to display for the yellow error message.
+"""
+
+
+def dualError(
+    id: str,
+    scenarioID: int,
+    errorCon: Callable[[], bool],
+    warnCon: Callable[[], bool],
+    errorMessage: str,
+    warnMessage: str,
+):
+    if errorCon():
+        errorFormat(errorMessage)
+        activeErrors[scenarioID][id] = (errorMessage, True)
+    elif warnCon():
+        warnFormat(warnMessage)
+        activeErrors[scenarioID][id] = (warnMessage, False)
+    else:
+        activeErrors[scenarioID].pop(id, None)
+
+
+"""
+Fragment to display errors from a specific scenario in a dropdown
+
+Parameters:
+    id: The integer representing the scenario to pull errors from.
+
+    name: The label of the dropdown.
+
+Returns True if at least one error was run-blocking and False otherwise.
+"""
+
+
+@st.fragment(run_every=1)
+def errorChecker(id: int, name: str = "Errors in Current Scenario"):
+    if activeErrors[id]:
+        with st.status(label=name, state="error"):
+            severeErrorsFound = False
+            for message, isSevere in activeErrors[id].values():
+                if isSevere:
+                    errorFormat(message)
+                    severeErrorsFound = True
+                else:
+                    warnFormat(message)
+        return severeErrorsFound
 
 
 """
 Function to save widget values into permanent session state vars
+
+Parameters:
+    key: The string used to identify the widget.
+
+    scenarioID: The integer representing the scenario the widget is part of.
+
+    extra: An additional part of the key used to distinguish variable-length forms.
+
+    notScenario: Set to True if the widget isn't a parameter for scenarios.
 """
 
 
-def saveKey(key, scenarioID, extra=None, notScenario=False):
+def saveKey(key: str, scenarioID: int, extra: Optional[str] = None, notScenario=False):
     keyString = f"{key}{scenarioID}{extra}" if extra else f"{key}{scenarioID}"
-    st.session_state[keyString] = st.session_state.get(f"_{keyString}")
+    session[keyString] = session.get(f"_{keyString}")
     if not notScenario and scenarioID != 0:
         if extra:
-            st.session_state["scenarioSetParamsExtra"][scenarioID].append((key, extra))
+            session["scenarioSetParamsExtra"][scenarioID].append((key, extra))
         else:
-            st.session_state["scenarioSetParams"][scenarioID].append(key)
+            session["scenarioSetParams"][scenarioID].append(key)
 
 
 """
 Function to update widgets with permanent session state vars
+
+Parameters:
+    key: The string used to identify the widget.
+
+    scenarioID: The integer representing the scenario the widget is part of.
+
+    default: the value to use if the widget is not present
+
+    extra: An additional part of the key used to distinguish variable-length forms.
+
+    noZeroDefault: Set to True if the widget shouldn't fall back on baseline values.
 """
 
 
-def loadKey(key, id, default, extra="", noZeroDefault=False):
+def loadKey(
+    key: str, scenarioID: int, default, extra: Optional[str] = "", noZeroDefault=False
+):
     if noZeroDefault:
-        st.session_state[f"_{key}{id}{extra}"] = st.session_state.get(
-            f"{key}{id}{extra}", default
+        session[f"_{key}{scenarioID}{extra}"] = session.get(
+            f"{key}{scenarioID}{extra}", default
         )
     else:
-        st.session_state[f"_{key}{id}{extra}"] = idGet(key, id, default, extra)
+        session[f"_{key}{scenarioID}{extra}"] = idGet(key, scenarioID, default, extra)
 
 
 """
@@ -45,27 +250,24 @@ ID, checking ID 0 if the specified one doesn't exist before falling
 back on a default
 
 Parameters:
-    string: The string component of the session state variable to get.
+    key: The string component of the session state variable to get.
 
-    id: An integer that will be used to differentiate the parameters in
-    different scenarios by adding numbers to session state variables.
+    scenarioID: The integer representing the scenario the value is part of.
 
-    defaultValue: What to return if neither the specified ID nor 0 give
+    defaultValue: What to return if neither the specified key nor 0 give
     a value in session state.
 
-    extra: An additional part of the ID that isn't used for scenario chicanery
+    extra: An additional part of the key used to distinguish variable-length forms.
 """
 
 
-def idGet(string, id, defaultValue, extra=None):
+def idGet(key: str, scenarioID: int, defaultValue, extra: Optional[str] = None):
     if not extra:
-        return st.session_state.get(
-            f"{string}{id}", st.session_state.get(f"{string}0", defaultValue)
-        )
+        return session.get(f"{key}{scenarioID}", session.get(f"{key}0", defaultValue))
     else:
-        return st.session_state.get(
-            f"{string}{id}{extra}",
-            st.session_state.get(f"{string}0{extra}", defaultValue),
+        return session.get(
+            f"{key}{scenarioID}{extra}",
+            session.get(f"{key}0{extra}", defaultValue),
         )
 
 
@@ -74,7 +276,7 @@ Simple function to convert an integer into a string describing a number of days
 """
 
 
-def dayCount(count):
+def dayCount(count: int):
     return "1 Day" if count == 1 else f"{count} Days"
 
 
@@ -101,15 +303,12 @@ def getRemainingGroups(groupSets, possibleValues):
     for set, (rowCount, prefix) in groupSets.items():
         # Calculate age groups that haven't been used yet
         remainingGroups = dict.fromkeys(possibleValues)
-        takenGroups = [
-            st.session_state.get(f"{prefix}{i}")
-            for i in range(st.session_state[rowCount])
-        ]
+        takenGroups = [session.get(f"{prefix}{i}") for i in range(session[rowCount])]
         for group in takenGroups:
             if group:
                 remainingGroups.pop(group, None)
         # Save the new age groups
-        st.session_state[set] = list(remainingGroups.keys())
+        session[set] = list(remainingGroups.keys())
 
 
 """
@@ -126,11 +325,11 @@ Parameters:
 
 
 def addFormRow(rowCounter, forceSetParams=None):
-    st.session_state[rowCounter] += 1
+    session[rowCounter] += 1
     if forceSetParams:
         for var, value in forceSetParams.items():
             if value is not None:
-                st.session_state[var] = value
+                session[var] = value
 
 
 """
@@ -152,7 +351,7 @@ Parameters:
 
 
 def deleteFormRow(deletedRowIndex, rowCounter, inputPrefixes, minRows=0):
-    numberOfRows = st.session_state[rowCounter]
+    numberOfRows = session[rowCounter]
     # functionLog.info(f'Deleting row {deletedRowIndex} from the row
     # moderated by {rowCounter}; there\'s {numberOfRows} here, and
     # we\'re modifying the values ')
@@ -168,12 +367,12 @@ def deleteFormRow(deletedRowIndex, rowCounter, inputPrefixes, minRows=0):
     # Shift any rows below the deleted one up
     for row in range(deletedRowIndex, numberOfRows - 1):
         for input in inputPrefixes:
-            st.session_state[f"{input}{row}"] = st.session_state[f"{input}{row+1}"]
+            session[f"{input}{row}"] = session[f"{input}{row+1}"]
 
     # Erase any lingering data
     for input in inputPrefixes:
-        del st.session_state[f"{input}{numberOfRows - 1}"]
-    st.session_state[rowCounter] -= 1
+        del session[f"{input}{numberOfRows - 1}"]
+    session[rowCounter] -= 1
 
 
 """
@@ -183,7 +382,7 @@ Function to check if any errors are present in the parameters
 
 def checkErrors(id):
     return [
-        st.session_state.get(error, 0)
+        session.get(error, 0)
         for error in (
             f"seedPeriodError{id}",
             f"seedDynamicError{id}",
