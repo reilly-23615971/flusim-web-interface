@@ -7,68 +7,18 @@ import logging
 import streamlit as st
 
 # from streamlit_push_notifications import send_push, send_alert
-from ParameterTabs.basicParams import buildBasicTab
+from ParameterTabs.basicParams import buildBasicTab, rerunTime
 from ParameterTabs.diseaseParams import buildDiseaseTab
 from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
 from ParameterTabs.dynamicParams import buildDynamicTab
-from ClientResources.InterfaceFunctions import (
-    saveKey,
-    loadKey,
-    checkErrors,
-    errorChecker,
-    activeErrors,
-    errorFormat,
-    warnFormat,
-)
+from ClientResources.InterfaceFunctions import saveKey, loadKey, errorChecker
 from ClientResources.SharedResources import communityPopulation
 
 # Logging
 baselineLog = logging.getLogger(__name__)
 
-
-# Function for displaying status of error messages here
-@st.fragment(run_every=1)
-def baseErrorChecker():
-    if activeErrors:
-        with st.status(label="Errors in Current Scenario", state="error"):
-            for message, isSevere in activeErrors.values():
-                if isSevere:
-                    errorFormat(message)
-                else:
-                    warnFormat(message)
-    oldErrorCode = '''
-    baselineErrors = max(checkErrors(0))
-    if baselineErrors == 2:
-        st.error(
-            """
-        Error: The parameters defined for the baseline simulation contain
-        unresolvable errors. These errors must be corrected before the
-        model can be ran. Check the individual tabs for detailed error
-        messages.
-    """,
-            icon=":material/error:",
-        )
-    elif baselineErrors == 1:
-        st.warning(
-            """
-        Warning: The parameters defined for the baseline simulation contain
-        logical issues. The simulation may still be ran, but the results
-        may differ from what was intended. Check the individual tabs for
-        detailed error messages.
-    """,
-            icon=":material/warning:",
-        )
-    else:
-        st.markdown(
-            """
-        Currently, all parameters have been set to valid values; the
-        simulation should run as intended. If any errors are detected with
-        the parameters selected for the baseline scenario, they will be
-        described here.
-    """
-        )
-    '''
+session = st.session_state
 
 
 # Page Content
@@ -98,6 +48,7 @@ st.markdown(
 )
 
 # Community Selection
+# TODO: Fix key errors here (axe loadKey outright?)
 loadKey("community", "", "newcastle")
 community = st.selectbox(
     "Simulated Community",
@@ -123,8 +74,8 @@ community = st.selectbox(
     """,
 )
 
-# Display notice if there are errors
-# baseErrorChecker()
+# Fragments to display errors and rerun on sim length change
+rerunTime()
 errorChecker(0)
 
 

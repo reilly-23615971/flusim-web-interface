@@ -91,6 +91,7 @@ sessionParameters = {
     "sessionID": int(datetime.now().timestamp()),
     "scenarioSetParamsExtra": {1: [], 2: [], 3: [], 4: [], 5: []},
     "scenarioSetParams": {1: [], 2: [], 3: [], 4: [], 5: []},
+    "activeErrors": {0: {}},
 }
 for parameter, default in sessionParameters.items():
     session[parameter] = session.get(parameter, default)
@@ -108,7 +109,7 @@ flusimPages.run()
 # progress bars, server availability etc.)
 runModelButton = st.sidebar.button(
     label=(
-        "Running simulation..." if session.simulationInProgress else "Run Simulation"
+        "Running simulations..." if session.simulationInProgress else "Run Simulations"
     ),
     on_click=runSimulationButton,
     key="_runSim",

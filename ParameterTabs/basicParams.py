@@ -12,6 +12,38 @@ from ClientResources.ModelSchema import Parameters, scenarioParameters, commandA
 # Logging
 basicLog = logging.getLogger(__name__)
 
+session = st.session_state
+
+
+timeParamList = ["seedPeriod"]  # TODO: Add the rest
+
+
+# Function to update the ranges of time-based parameters
+# TODO: Check if making initialisation params not scenario-based messes with this
+def timeScaleChange(scenarioID: int):
+    saveKey("cycleCount", scenarioID)
+    newLength = session[f"cycleCount{scenarioID}"]
+    for id in range(
+        scenarioID, session["scenarioCount"] + 1 if scenarioID == 0 else scenarioID + 1
+    ):
+        for key in timeParamList:
+            fullKey = f"{key}{id}"
+            if session.get(fullKey, None):
+                session[fullKey] = (
+                    session[fullKey][0],
+                    min(session[fullKey][1], newLength),
+                )
+    session["rerunTime"] = True
+
+
+# Function for rerunning the app when simulation length changes
+@st.fragment(run_every=1)
+def rerunTime():
+    if session.get("rerunTime", None):
+        session["rerunTime"] = False
+        st.rerun(scope="app")
+
+
 """
 Function to generate the parameters for the simulation in a specified
 container with scenario differentiation
@@ -45,8 +77,10 @@ def buildBasicTab(id):
         360,
         format_func=dayCount,
         key=f"_cycleCount{id}",
-        on_change=saveKey,
-        args=["cycleCount", id],  # type: ignore
+        on_change=timeScaleChange,
+        args=[id],
+        # on_change=saveKey,
+        # args=["cycleCount", id],  # type: ignore
         help="""
             The length of the time period that will be simulated, measured in days.
         """,

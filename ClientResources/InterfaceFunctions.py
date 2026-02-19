@@ -91,10 +91,11 @@ class SliderParam(Parameter):
 
 
 # Tools for error messages
-
-activeErrors = {0: {}}  # type: ignore
+# Error Colours: Text #BD4043, Background #FFE9E9
 errorFormat = partial(st.error, icon=":material/error:")
+# Warning Colours: Text #926C05, Background #FFFFEC
 warnFormat = partial(st.warning, icon=":material/warning:")
+# Use sRGB in the colour picker for the best display/code match
 
 
 """
@@ -123,12 +124,12 @@ def paramError(
     if condition():
         if isSevere:
             errorFormat(message)
-            activeErrors[scenarioID][id] = (message, True)
+            session["activeErrors"][scenarioID][id] = (message, True)
         else:
             warnFormat(message)
-            activeErrors[scenarioID][id] = (message, False)
+            session["activeErrors"][scenarioID][id] = (message, False)
     else:
-        activeErrors[scenarioID].pop(id, None)
+        session["activeErrors"][scenarioID].pop(id, None)
 
 
 """
@@ -159,12 +160,12 @@ def dualError(
 ):
     if errorCon():
         errorFormat(errorMessage)
-        activeErrors[scenarioID][id] = (errorMessage, True)
+        session["activeErrors"][scenarioID][id] = (errorMessage, True)
     elif warnCon():
         warnFormat(warnMessage)
-        activeErrors[scenarioID][id] = (warnMessage, False)
+        session["activeErrors"][scenarioID][id] = (warnMessage, False)
     else:
-        activeErrors[scenarioID].pop(id, None)
+        session["activeErrors"][scenarioID].pop(id, None)
 
 
 """
@@ -181,10 +182,10 @@ Returns True if at least one error was run-blocking and False otherwise.
 
 @st.fragment(run_every=1)
 def errorChecker(id: int, name: str = "Errors in Current Scenario"):
-    if activeErrors[id]:
+    if session["activeErrors"].get(id, False):
         with st.status(label=name, state="error"):
             severeErrorsFound = False
-            for message, isSevere in activeErrors[id].values():
+            for message, isSevere in session["activeErrors"][id].values():
                 if isSevere:
                     errorFormat(message)
                     severeErrorsFound = True

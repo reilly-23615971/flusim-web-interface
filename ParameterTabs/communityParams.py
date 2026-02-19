@@ -8,12 +8,12 @@ import numpy as np
 import streamlit as st
 from pydantic import ValidationError
 from ClientResources.InterfaceFunctions import (
+    addFormRow,
+    deleteFormRow,
     saveKey,
     loadKey,
     idGet,
     getRemainingGroups,
-    addFormRow,
-    deleteFormRow,
     dayCount,
 )
 from ClientResources.SharedResources import ageCategories
@@ -66,7 +66,6 @@ def buildCommunityTab(id):
         in different locations.
     """
     )
-    # globalErrorContainer = st.container()
 
     # Health Burden Outcome Parameters
     with st.expander("Health Burden Outcomes"):
@@ -91,6 +90,8 @@ def buildCommunityTab(id):
         )
 
         # Health Burden Outcomes
+        # TODO: Move these to Disease tab
+        # TODO: Make default values more realistic
         loadKey("caseRatio", id, 0.5)
         st.select_slider(
             "Diagnosed Case Rate (Probability)",
@@ -416,20 +417,6 @@ def buildCommunityTab(id):
                 one child present and no other adults are at home.
             """,
         )
-        """
-        loadKey(f'maxClassCount', id, 1)
-        st.slider(
-            'Number of School Class Subgroups', 1, 5, 1,
-            on_change = saveKey, args = [f'maxClassCount', id], # type: ignore
-            key = f'_maxClassCount{id}', help = '''
-                The maximum number of subgroups that may exist
-                within a single school class in the simulation.
-                Subgroups are defined as sets of individuals that
-                regularly interact with each other but not with the
-                rest of the class.
-            '''
-        )
-        """
 
         # Group Sizes
         loadKey("maxClassSize", id, 10)
@@ -446,6 +433,24 @@ def buildCommunityTab(id):
                 schools and childcare facilities in the simulation.
             """,
         )
+        # TODO: Triple check if this affects the simulation
+        loadKey("maxClassCount", id, 1)
+        st.slider(
+            "Number of School Class Subgroups",
+            1,
+            5,
+            1,
+            on_change=saveKey,
+            args=["maxClassCount", id],  # type: ignore
+            key=f"_maxClassCount{id}",
+            help="""
+                The maximum number of subgroups that may exist
+                within a single school class in the simulation.
+                Subgroups are defined as sets of individuals that
+                regularly interact with each other but not with the
+                rest of the class.
+            """,
+        )
         loadKey("maxWorkGroupSize", id, 10)
         st.slider(
             "Maximum Work Group Size (Number of People)",
@@ -460,40 +465,6 @@ def buildCommunityTab(id):
                 simulation.
             """,
         )
-        """
-        loadKey(f'maxAdultClassSize', id, 10)
-        st.slider(
-            'Maximum Tertiary Class Size (Number of People)',
-            0, 25, 10, key = f'_maxAdultClassSize{id}',
-            on_change = saveKey, args = [f'maxAdultClassSize', id], # type: ignore
-            help = '''
-                The maximum size of classes within universities and
-                other tertiary education facilities in the
-                simulation.
-            '''
-        )
-
-        loadKey(f'maxNeighborGroupSize', id, 10)
-        st.slider(
-            'Maximum Neighbour Group Size (Number of People)',
-            0, 25, 10, key = f'_maxNeighborGroupSize{id}',
-            on_change = saveKey, args = [f'maxNeighborGroupSize', id], # type: ignore
-            help = '''
-                The maximum size of groups within neighbourhoods in
-                the simulation.
-            '''
-        )
-        loadKey(f'maxChurchGroupSize', id, 10)
-        st.slider(
-            'Maximum Church Group Size (Number of People)',
-            0, 25, 10, key = f'_maxChurchGroupSize{id}',
-            on_change = saveKey, args = [f'maxChurchGroupSize', id], # type: ignore
-            help = '''
-                The maximum size of groups within churches in the
-                simulation.
-            '''
-        )
-        """
 
 
 """

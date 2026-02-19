@@ -30,7 +30,7 @@ from ClientResources.ModelSchema import (
     simulationSet,
     simulation,
 )
-from ClientResources.InterfaceFunctions import idGet, checkErrors
+from ClientResources.InterfaceFunctions import idGet, checkErrors, errorChecker
 from ClientResources.VisualisationFunctions import formatData
 from ClientResources.SharedResources import (
     AnalysisFile,
@@ -104,9 +104,59 @@ Callback function for the Run Simulation button
 """
 
 
-@st.dialog("Run Simulation")
+@st.dialog("Run Simulations")
 def runSimulationButton():
     scenarioCount = st.session_state.get("scenarioCount", 0)
+    # TODO: Make this markdown stuff more readable
+    if scenarioCount == 0:
+        st.markdown(
+            f"""
+With the current parameters, this modelling experiment will use the
+"{st.session_state.get('community', 'newcastle').capitalize()}"
+community data to simulate the baseline scenario.
+    """
+        )
+    else:
+        st.markdown(
+            f"""
+With the current parameters, this modelling experiment will use the
+"{st.session_state.get('community', 'newcastle').capitalize()}"
+community data to simulate each of the following {scenarioCount + 1} scenarios:
+        """
+        )
+        st.markdown(
+            "- Baseline\n"
+            + "\n".join(
+                f"- {st.session_state[f'scenarioName{id}']}"
+                for id in range(1, scenarioCount + 1)
+            )
+        )
+        unused = '''
+- Baseline
+{'\n'.join(f'- {st.session_state[f'scenarioName{id}']}' for id in range(1, scenarioCount + 1))}
+"""}
+    )
+        '''
+
+    # Display any errors
+    # TODO: Hide scenario errors that are copies of baseline errors
+    severeErrorsFound = False
+    for id in range(scenarioCount + 1):
+        severeErrorsFound = severeErrorsFound or errorChecker(
+            id,
+            f"""Errors in {
+                st.session_state[f'scenarioName{id}'] if id > 0 else 'Baseline'
+            }""",
+        )
+    if severeErrorsFound:
+        st.error(
+            """
+                The simulation cannot be ran due to the errors displayed above.
+                Please correct these errors before running the simulation.
+            """,
+            icon=":material/error:",
+        )
+        """
     errors = [checkErrors(id) for id in range(scenarioCount + 1)]
     if max((max(e) for e in errors)) >= 2:
         st.error(
@@ -126,8 +176,9 @@ to valid values before running the simulation.
 ''',
             icon=":material/error:",
         )
+        """
     else:
-        # TODO: More detailed estimated time breakdown
+        unusedErrors = """
         st.markdown(
             f'''
 With the current parameters, this simulation will use the
@@ -162,6 +213,8 @@ simulation design before running the simulation.
 ''',
                 icon=":material/warning:",
             )
+        """
+        # TODO: Display estimated simulation run time
         # TODO: Make warning display for the chart one too
         if st.session_state.get("ChartGenerated"):
             st.warning(
@@ -175,7 +228,7 @@ simulation.
             )
         st.markdown(
             """
-            Are you sure you want to run the simulation with the
+            Are you sure you want to begin running simulations with the
             selected parameters?
         """
         )

@@ -17,7 +17,6 @@ from ClientResources.InterfaceFunctions import (
     deleteFormRow,
     dayCount,
     idGet,
-    paramError,
     dualError,
 )
 from ClientResources.SharedResources import (
@@ -29,6 +28,8 @@ from ClientResources.ModelSchema import Parameters, scenarioParameters, strainPa
 
 # Logging
 diseaseLog = logging.getLogger(__name__)
+
+session = st.session_state
 
 """
 Function to generate the parameters for the disease in a specified
@@ -44,13 +45,9 @@ Parameters:
 @st.fragment
 def buildDiseaseTab(id):
     # Initialise session variables needed by the disease forms
-    sessionParameters = {
-        f"transRowCount{id}": 0,
-        # f"kappaRowCount{id}": 0,
-        f"seedPeriodError{id}": 0,
-    }
+    sessionParameters = {f"transRowCount{id}": 0, f"seedPeriodError{id}": 0}
     for parameter, default in sessionParameters.items():
-        st.session_state[parameter] = st.session_state.get(parameter, default)
+        session[parameter] = session.get(parameter, default)
 
     # Ensure age selections only give possible parameters
     # Dictionary format: 'remaining groups variable': (
@@ -61,10 +58,7 @@ def buildDiseaseTab(id):
     }
 
     # Use function to recalculate remaining group parameters
-    # Kappa values are sliced to remove household since it's defined
-    # separately from the others
     getRemainingGroups(ageGroupSets, ageCategories.keys())
-    # getRemainingGroups(locationGroupSets, list(kappaLocations.keys())[1:])
 
     # Tab Content
     st.header("Disease Parameters")
@@ -82,9 +76,11 @@ def buildDiseaseTab(id):
         other health burden outcomes.
     """
     )
-    globalErrorContainer = st.container()
+
+    # TODO: Move Health Burden Outcomes to this tab
 
     # Seeding Parameters
+    simLength = idGet("cycleCount", id, 360)
     with st.expander("Infection Seeding"):
         # Describe what sort of parameters are here
         st.markdown(
@@ -111,11 +107,11 @@ def buildDiseaseTab(id):
                 infected directly via infection seeding each cycle.
             """,
         )
-        seedPeriodErrorContainer = st.empty()
         loadKey("seedPeriod", id, (0, 29))
+        oldPeriod = '''
         seedingPeriod = st.select_slider(
             "Infection Seeding Time Period (Days)",
-            range(720),
+            range(simLength),
             (0, 29),
             format_func=lambda x: f"Day {x + 1}",
             on_change=saveKey,
@@ -129,9 +125,27 @@ def buildDiseaseTab(id):
                 is the day on which it will stop.
             """,
         )
+        '''
+        seedingPeriod = st.slider(
+            "Infection Seeding Time Period (Days)",
+            min_value=0,
+            max_value=simLength,
+            value=(0, 29),
+            step=1,
+            format="Day %i",
+            on_change=saveKey,
+            args=["seedPeriod", id],  # type: ignore
+            key=f"_seedPeriod{id}",
+            help="""
+                The time period during which infection seeding will
+                occur in the simulation. The first value is the day
+                on which seeding will begin (where Day 1 is the
+                first day of the simulation), and the second value
+                is the day on which it will stop.
+            """,
+        )
 
         # Show error if seeding period is beyond simulation length
-        simLength = idGet("cycleCount", id, 360)
         dualError(
             "seedingOutOfRange",
             id,
@@ -140,165 +154,41 @@ def buildDiseaseTab(id):
             f"""
                 Error: The {
                     'baseline scenario' if id == 0
-                    else f'scenario named "{
-                        st.session_state[f'scenarioName{id}']
-                    }"'
-                } is currently set to last {simLength} days, but
-                the infection seeding period for this scenario
-                (defined below) is set to begin on Day
+                    else f'scenario named "{session[f'scenarioName{id}']}"'
+                } lasts for {simLength} days, but
+                the infection seeding period begins on Day
                 {seedingPeriod[0] + 1}. As such, no infections will
-                ever occur in this scenario under these parameters.
+                ever occur.
 
-                To address this error, please make one of the
-                following changes before running the simulation:
+                Please make one of the following changes:
 
-                - Move the start point of the scenario's Infection
-                Seeding Time Period to any point before Day {
-                    simLength
-                }.
-                - Increase the scenario's Length of Simulation in
-                the "Initialisation" tab to be
-                {seedingPeriod[0] + 1} days or more.
+                - Change Infection Seeding Time Period in
+                :primary-badge[:material/coronavirus: Disease] to begin
+                before Day {simLength}.
+                - Change Length of Simulation in
+                :primary-badge[:material/start: Initialisation] to be
+                more than {seedingPeriod[0] + 1} days.
             """,
             f"""
+
                 Warning: The {
                     'baseline scenario' if id == 0
-                    else f'scenario named "{
-                        st.session_state[f'scenarioName{id}']
-                    }"'
-                } is currently set to last {simLength} days, but
-                the infection seeding period for this scenario
-                (defined below) is set to end on Day
+                    else f'scenario named "{session[f'scenarioName{id}']}"'
+                } lasts for {simLength} days, but
+                the infection seeding period ends on Day
                 {seedingPeriod[1] + 1}. As such, infection seeding
-                will still be ongoing when the scenario ends.
+                will still be ongoing when the simulation ends.
 
-                If this is not desired behaviour, please address
-                this error by making one of the following changes
-                before running the simulation:
+                Please make one of the following changes:
 
-                - Move the end point of the scenario's Infection
-                Seeding Time Period to any point before Day {
-                    simLength
-                }.
-                - Increase the scenario's Length of Simulation in
-                the "Initialisation" tab to be
-                {seedingPeriod[1] + 1} days or more.
+                - Change Infection Seeding Time Period in
+                :primary-badge[:material/coronavirus: Disease] to end
+                before Day {simLength}.
+                - Change Length of Simulation in
+                :primary-badge[:material/start: Initialisation] to be
+                more than {seedingPeriod[1] + 1} days.
             """,
         )
-        '''
-        if seedingPeriod[0] >= simLength:
-            seedPeriodErrorContainer.error(
-                f"""
-                Error: The {
-                    'baseline scenario' if id == 0
-                    else f'scenario named "{
-                        st.session_state[f'scenarioName{id}']
-                    }"'
-                } is currently set to last {simLength} days, but
-                the infection seeding period for this scenario
-                (defined below) is set to begin on Day
-                {seedingPeriod[0] + 1}. As such, no infections will
-                ever occur in this scenario under these parameters.
-
-                To address this error, please make one of the
-                following changes before running the simulation:
-
-                - Move the start point of the scenario's Infection
-                Seeding Time Period to any point before Day {
-                    simLength
-                }.
-                - Increase the scenario's Length of Simulation in
-                the "Initialisation" tab to be
-                {seedingPeriod[0] + 1} days or more.
-            """,
-                icon=":material/error:",
-            )
-            globalErrorContainer.error(
-                f"""
-                Error: The {
-                    'baseline scenario' if id == 0
-                    else f'scenario named "{
-                        st.session_state[f'scenarioName{id}']
-                    }"'
-                } is currently set to last {simLength} days, but
-                the infection seeding period for this scenario is
-                set to begin on Day {seedingPeriod[0] + 1}. As
-                such, no infections will ever occur in this
-                scenario under these parameters.
-
-                To address this error, please make one of the
-                following changes before running the simulation:
-
-                - Move the start point of the scenario's Infection
-                Seeding Time Period in the "Infection Seeding"
-                section of the "Disease" tab to any point before
-                Day {simLength}.
-                - Increase the scenario's Length of Simulation in
-                the "Initialisation" tab to be
-                {seedingPeriod[0] + 1} days or more.
-            """,
-                icon=":material/error:",
-            )
-            st.session_state[f"seedPeriodError{id}"] = 2
-        elif seedingPeriod[1] >= simLength:
-            seedPeriodErrorContainer.warning(
-                f"""
-                Warning: The {
-                    'baseline scenario' if id == 0
-                    else f'scenario named "{
-                        st.session_state[f'scenarioName{id}']
-                    }"'
-                } is currently set to last {simLength} days, but
-                the infection seeding period for this scenario
-                (defined below) is set to end on Day
-                {seedingPeriod[1] + 1}. As such, infection seeding
-                will still be ongoing when the scenario ends.
-
-                If this is not desired behaviour, please address
-                this error by making one of the following changes
-                before running the simulation:
-
-                - Move the end point of the scenario's Infection
-                Seeding Time Period to any point before Day {
-                    simLength
-                }.
-                - Increase the scenario's Length of Simulation in
-                the "Initialisation" tab to be
-                {seedingPeriod[1] + 1} days or more.
-            """,
-                icon=":material/warning:",
-            )
-            globalErrorContainer.warning(
-                f"""
-                Warning: The {
-                    'baseline scenario' if id == 0
-                    else f'scenario named "{
-                        st.session_state[f'scenarioName{id}']
-                    }"'
-                } is currently set to last {simLength} days, but
-                the infection seeding period for this scenario is
-                set to end on Day {seedingPeriod[1] + 1}. As such,
-                infection seeding will still be ongoing when the
-                scenario ends.
-
-                If this is not desired behaviour, please address
-                this error by making one of the following changes
-                before running the simulation:
-
-                - Move the end point of the scenario's Infection
-                Seeding Time Period in the "Infection Seeding"
-                section of the "Disease" tab to any point before
-                Day {simLength}.
-                - Increase the scenario's Length of Simulation in
-                the "Initialisation" tab to be
-                {seedingPeriod[1] + 1} days or more.
-            """,
-                icon=":material/warning:",
-            )
-            st.session_state[f"seedPeriodError{id}"] = 1
-        else:
-            st.session_state[f"seedPeriodError{id}"] = 0
-        '''
 
     # Transmission Parameters
     with st.expander("Disease Transmission"):
@@ -490,8 +380,8 @@ def buildDiseaseTab(id):
         """
         )
         # Save relevant params as variables to avoid lookups
-        transRowCount = st.session_state[f"transRowCount{id}"]
-        transRemainingGroups = st.session_state[f"transRemainingAgeGroups{id}"]
+        transRowCount = session[f"transRowCount{id}"]
+        transRemainingGroups = session[f"transRemainingAgeGroups{id}"]
         transAgeContainer = st.container()
         for i in range(transRowCount):
             (
@@ -501,7 +391,7 @@ def buildDiseaseTab(id):
             ) = transAgeContainer.columns(
                 (0.25, 0.55, 0.2), vertical_alignment="center"
             )
-            transCurrentGroup = st.session_state.get(f"transAgeGroup{id}-{i}")
+            transCurrentGroup = session.get(f"transAgeGroup{id}-{i}")
 
             # Age group column
             loadKey(
@@ -644,162 +534,6 @@ def buildDiseaseTab(id):
             ),
         )
 
-        # Location-based kappa parameters
-        """
-        st.markdown(
-            '''
-            ### Location-Specific Transmission Multipliers
-
-            This section allows for unique multipliers for the
-            transmissibility function (represented in the formula
-            as $\\kappa$) to be defined for each location type used
-            in the simulation (excluding households, whose value is
-            already defined above). These values modify the
-            probability of infection for interactions that take
-            place in the corresponding locations. If you do not
-            specify a value for a specific location, it will assume
-            a default value of 1 (i.e. the likelihood of infection
-            remains at the default value in said location).
-        '''
-        )
-        # Save relevant params as variables to avoid lookups
-        kappaRowCount = st.session_state[f"kappaRowCount{id}"]
-        kappaRemainingLocations = st.session_state[f"kappaRemainingLocations{id}"]
-        kappaContainer = st.container()
-        for i in range(kappaRowCount):
-            (kappaLocationColumn, kappaValueColumn, kappaRemoveColumn) = (
-                kappaContainer.columns((0.25, 0.55, 0.2), vertical_alignment="center")
-            )
-            kappaCurrentLocation = st.session_state.get(f"kappaLocation{id}-{i}")
-
-            # Age group column
-            loadKey(
-                "kappaLocation",
-                id,
-                (
-                    kappaCurrentLocation
-                    if kappaCurrentLocation
-                    else kappaRemainingLocations[0]
-                ),
-                f"-{i}",
-            )
-            with kappaLocationColumn:
-                st.selectbox(
-                    "Location",
-                    key=f"_kappaLocation{id}-{i}",
-                    options=(
-                        # Set location options such that only places
-                        # that haven't been selected yet can be selected
-                        [kappaCurrentLocation]
-                        + [
-                            place
-                            for place in kappaRemainingLocations
-                            if place != kappaCurrentLocation
-                        ]
-                        if kappaCurrentLocation
-                        else kappaRemainingLocations
-                    ),
-                    on_change=saveKey,
-                    args=["kappaLocation", id, f"-{i}"],  # type: ignore
-                    disabled=not kappaRowCount < 6,
-                    help='''
-                    A location that will have a specific
-                    transmissibility modifier defined for it,
-                    modifying the base transmission probability for
-                    interactions occurring in that location.
-
-                    ##### Options:
-                    - K-12 Education: Primary or secondary schools,
-                    and other facilities for educating children.
-                    - Tertiary Education: Universities, and other
-                    facilities for educating adults.
-                    - Workplaces: Locations where adults go to work.
-                    - Childcare: Daycare centres, and other places
-                    that supervise preschool children.
-                    - Hospitals: Places that care for sick
-                    individuals.
-                    - Background: Any interactions
-                    taking place during the model's background
-                    phase, simulating any contact that occurs
-                    outside of the other locations. Note that the
-                    rate at which these interactions occur (the
-                    Background Contact Count) can be set in the
-                    "Population Behaviours" section of the "Community" tab,
-                    and this rate will be affected by the
-                    BCC Reduction non-pharmaceutical intervention
-                    configured in the "Background Contact Count
-                    Reduction" section of the "Vaccinations and NPIs" tab.
-                ''',
-                )
-            # Kappa value column
-            loadKey("kappaValue", id, 1.0, f"-{i}")
-            with kappaValueColumn:
-                st.select_slider(
-                    "Transmission Multiplier",
-                    np.linspace(0.0, 1.0, 201),
-                    1.0,
-                    key=f"_kappaValue{id}-{i}",
-                    on_change=saveKey,
-                    args=["kappaValue", id, f"-{i}"],  # type: ignore
-                    format_func=lambda x: f"{x:0.3g}",
-                    help='''
-                    The value of the transmissibility modifier
-                    $\\kappa$ when an interaction takes place in
-                    this location. The higher this value is, the
-                    more likely it is for uninfected individuals to
-                    contract the disease when interacting with
-                    infected individuals in this location.
-                ''',
-                )
-            # Delete button column
-            with kappaRemoveColumn:
-                st.button(
-                    label="Remove Location",
-                    icon=":material/delete:",
-                    key=f"kappaRemove{id}-{i}",
-                    on_click=deleteFormRow,
-                    args=(
-                        i,
-                        f"kappaRowCount{id}",
-                        {f"kappaLocation{id}-", f"kappaValue{id}-"},
-                    ),
-                    help='''
-                    Remove this row of the form and remove these
-                    location-specific transmissibility parameters
-                    from the simulation.
-                ''',
-                )
-        # Button to add another row for age specific params
-        kappaContainer.button(
-            label="Add Location",
-            icon=":material/add:",
-            on_click=addFormRow,
-            key=f"kappaAdd{id}",
-            args=(
-                f"kappaRowCount{id}",
-                {
-                    f"kappaLocation{id}-{kappaRowCount}": (
-                        kappaRemainingLocations[0] if kappaRemainingLocations else None
-                    )
-                },
-            ),
-            disabled=not kappaRowCount < 6,
-            help=(
-                '''
-                Add another row to this form, where you can select
-                an additional location to have unique
-                transmissibility parameters.
-            '''
-                if kappaRowCount <= 5
-                else '''
-                All locations have been given unique
-                transmissibility parameters, so a new location
-                cannot be added.
-            '''
-            ),
-        )
-        """
-
     # Life Cycle Parameters
     with st.expander("Disease Life Cycle"):
         # Describe what sort of parameters are here
@@ -876,8 +610,8 @@ def buildDiseaseTab(id):
             stage in the disease's life cycle.
         """
         )
+        # TODO: Add errors for diseases with no symptomatic/infectious period
 
-        # Alternate period definitions
         loadKey("latencyPeriod", id, 10)
         latencyPeriod = st.select_slider(
             "Latency Period Length (Days)",
@@ -1183,8 +917,8 @@ def diseaseSchema(schema, id=0):
             "naturalWaningRate", id, 6
         )
         # Procedural Scenario Parameters (age/kappa specific)
-        for i in range(st.session_state.get(f"transRowCount{id}", 0)):
-            varAgeGroup = ageCategories[st.session_state[f"transAgeGroup{id}-{i}"]]
+        for i in range(session.get(f"transRowCount{id}", 0)):
+            varAgeGroup = ageCategories[session[f"transAgeGroup{id}-{i}"]]
             setattr(
                 scenarioParams,
                 f"{varAgeGroup}_trans",
@@ -1195,14 +929,6 @@ def diseaseSchema(schema, id=0):
                 f"{varAgeGroup}_susc",
                 idGet("transSuscept", id, 1, f"-{i}"),
             )
-        """
-        for i in range(st.session_state.get(f"kappaRowCount{id}", 0)):
-            setattr(
-                scenarioParams,
-                f"kappa_{kappaLocations[st.session_state[f'kappaLocation{id}-{i}']]}",
-                idGet("kappaValue", id, 1, f"-{i}"),
-            )
-        """
         # Save the updated parameters
         schema.Scenario_Parameter = scenarioParams
     except (ValueError, ValidationError) as e:
