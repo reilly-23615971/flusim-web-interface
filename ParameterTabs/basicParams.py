@@ -38,21 +38,6 @@ def buildBasicTab(id):
     # globalErrorContainer = st.container()
 
     # Time Parameters
-    loadKey("runCount", id, 24)
-    st.slider(
-        "Number of Simulation Runs",
-        16,
-        64,
-        24,
-        key=f"_runCount{id}",
-        on_change=saveKey,
-        args=["runCount", id],  # type: ignore
-        help=f"""
-            The number of times that {'each' if id == 0 else 'this'}
-            scenario will be ran. Higher values lead to longer
-            simulations but more accurate results due to averaging.
-        """,
-    )
     loadKey("cycleCount", id, 360)
     st.select_slider(
         "Length of Simulation (Days)",
@@ -63,8 +48,23 @@ def buildBasicTab(id):
         on_change=saveKey,
         args=["cycleCount", id],  # type: ignore
         help="""
-            The number of days that will be simulated in each
-            simulation run.
+            The length of the time period that will be simulated, measured in days.
+        """,
+    )
+    loadKey("runCount", id, 24)
+    st.slider(
+        "Number of Simulation Runs",
+        16,
+        64,
+        24,
+        key=f"_runCount{id}",
+        on_change=saveKey,
+        args=["runCount", id],  # type: ignore
+        help=f"""
+            How many times {'each' if id == 0 else 'this'}
+            scenario will be simulated. The results of each individual
+            simulation will be averaged together to get the final results;
+            higher values lead to longer simulations but more accurate results.
         """,
     )
     loadKey("startDay", id, "Monday")
