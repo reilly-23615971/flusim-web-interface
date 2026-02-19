@@ -126,7 +126,7 @@ def buildVaccinationNPITab(id):
     getRemainingGroups(ageGroupSets, ageCategories.keys())
 
     # Parameters for keeping track of errors
-    simLength = idGet("cycleCount", id, 360)
+    simLength = st.session_state.get("cycleCount", 360)
     ageVacPropError, ageBoostEfficacyError = False, False
 
     # Tab Content

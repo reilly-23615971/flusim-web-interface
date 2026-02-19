@@ -88,7 +88,7 @@ def buildDynamicTab(id):
     globalErrorContainer = st.container()
 
     # Get simulation length for error checking
-    simLength = idGet("cycleCount", id, 360)
+    simLength = st.session_state.get("cycleCount", 360)
 
     # Infection Seeding Rate
     st.subheader("Infection Seeding Rate")

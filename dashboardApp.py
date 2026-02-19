@@ -10,7 +10,8 @@ import pandas as pd
 import streamlit as st
 import streamlit_notify as stn  # type: ignore
 from ClientResources.SharedResources import resultQueue, usePresetData, usePresetParams
-from ClientResources.SimulationRunFunctions import runSimulationButton
+
+# from ClientResources.SimulationRunFunctions import runSimulationButton
 
 # Set this early to minimise the time spent with a different page title
 # TODO: Populate About section with credits to SMRG-Flusim and Paul Tol
@@ -65,6 +66,11 @@ scenarioParameters = st.Page(
     title="Scenario Parameters",
     icon=":material/variable_add:",
 )
+runSimulation = st.Page(
+    "DashboardPages/runSimulations.py",
+    title="Run Simulations",
+    icon=":material/motion_play:",
+)
 infectionGraphs = st.Page(
     "DashboardPages/chartDemonstration.py",
     title="Infection Over Time Graphs",
@@ -78,7 +84,7 @@ healthTables = st.Page(
 
 pages = {
     "SMRG Flusim Web Dashboard": [modelDescription],
-    "Parameter Configuration": [baselineParameters, scenarioParameters],
+    "Parameter Configuration": [baselineParameters, scenarioParameters, runSimulation],
     "Results Visualisation": [infectionGraphs, healthTables],
 }
 
@@ -107,12 +113,13 @@ flusimPages.run()
 # TODO: Check if server is available and grey out button if not
 # TODO: consider adding progress updates to the sidebar (time remaining,
 # progress bars, server availability etc.)
+oldButton = '''
 runModelButton = st.sidebar.button(
     label=(
         "Running simulations..." if session.simulationInProgress else "Run Simulations"
     ),
     on_click=runSimulationButton,
-    key="_runSim",
+    key="_runSimSidebar",
     disabled=session.simulationInProgress,
     type="primary",
     icon=(
@@ -135,6 +142,7 @@ runModelButton = st.sidebar.button(
     """
     ),
 )
+'''
 
 
 # Fragment to regularly check if model results have been received yet

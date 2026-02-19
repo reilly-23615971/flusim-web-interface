@@ -7,13 +7,12 @@ import logging
 import streamlit as st
 
 # from streamlit_push_notifications import send_push, send_alert
-from ParameterTabs.basicParams import buildBasicTab, rerunTime
+# from ParameterTabs.basicParams import buildBasicTab
 from ParameterTabs.diseaseParams import buildDiseaseTab
 from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
 from ParameterTabs.dynamicParams import buildDynamicTab
-from ClientResources.InterfaceFunctions import saveKey, loadKey, errorChecker
-from ClientResources.SharedResources import communityPopulation
+from ClientResources.InterfaceFunctions import errorChecker
 
 # Logging
 baselineLog = logging.getLogger(__name__)
@@ -41,41 +40,11 @@ st.markdown(
     page as a baseline; however, individual scenarios can have
     different values defined at the
     :grey-badge[:material/variable_add: Scenario Parameters]
-    page, overwriting these base values. The sole exception to this
-    is the Simulated Community parameter defined below, which applies
-    to all scenarios and cannot be overwritten.
+    page, overwriting these base values.
 """
 )
 
-# Community Selection
-# TODO: Fix key errors here (axe loadKey outright?)
-loadKey("community", "", "newcastle")
-community = st.selectbox(
-    "Simulated Community",
-    communityPopulation.keys(),
-    key="_community",
-    format_func=lambda x: x.capitalize(),
-    on_change=saveKey,
-    args=["community", ""],  # type: ignore
-    help="""
-        The Australian city whose community data will be used as the
-        basis for the population and demographic distribution in the
-        simulation. Note that the data used for these communities comes
-        from 2011.
-
-        ##### Options:
-        - Newcastle: A metropolitan area in New South Wales, Australia.
-        It has a population of 272407, the second-largest in the state,
-        and has a demographic distribution that more closely matches
-        that of Australia as a whole compared to Cairns.
-        - Cairns: A major city in Queensland, Australia. It has a
-        population of 140402 (as of 2011 when this data was collected)
-        and has a higher Indigenous population compared to Newcastle.
-    """,
-)
-
 # Fragments to display errors and rerun on sim length change
-rerunTime()
 errorChecker(0)
 
 
@@ -86,7 +55,7 @@ errorChecker(0)
 # change scale or switch to number input
 
 # Create tabs for each category of parameters
-(basicTab, diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
+oldTabs = """(basicTab, diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
     [
         ":material/start: Initialisation",
         ":material/coronavirus: Disease",
@@ -94,11 +63,18 @@ errorChecker(0)
         ":material/vaccines: Vaccination and NPIs",
         ":material/manage_history: Dynamic",
     ]
+)"""
+(diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
+    [
+        ":material/coronavirus: Disease",
+        ":material/groups: Community",
+        ":material/vaccines: Vaccination and NPIs",
+        ":material/manage_history: Dynamic",
+    ]
 )
-# :material/pattern: for the template tab
+# TODO: :material/pattern: for the template tab
 # Basic parameters
-with basicTab:
-    buildBasicTab(0)
+# with basicTab: buildBasicTab(0)
 
 # Disease parameters
 with diseaseTab:

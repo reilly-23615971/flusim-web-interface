@@ -245,6 +245,43 @@ def loadKey(
         session[f"_{key}{scenarioID}{extra}"] = idGet(key, scenarioID, default, extra)
 
 
+# TODO: Add proper docstrings
+# ID-free save/load key functions for global engine parameters
+def simpleSave(key: str):
+    session[key] = session.get(f"_{key}")
+
+
+def simpleLoad(key: str, default):
+    session[f"_{key}"] = session.get(key, default)
+
+
+timeParamList = ["seedPeriod"]  # TODO: Add the rest
+
+
+# Function to update the ranges of time-based parameters
+# TODO: Check if making initialisation params not scenario-based messes with this
+def timeScaleChange():
+    simpleSave("cycleCount")
+    newLength = session["cycleCount"]
+    for id in range(session["scenarioCount"] + 1):
+        for key in timeParamList:
+            fullKey = f"{key}{id}"
+            if session.get(fullKey, None):
+                session[fullKey] = (
+                    min(session[fullKey][0], newLength),
+                    min(session[fullKey][1], newLength),
+                )
+    session["rerunTime"] = True
+
+
+# Function for rerunning the app when simulation length changes
+@st.fragment(run_every=1)
+def rerunTime():
+    if session.get("rerunTime", None):
+        session["rerunTime"] = False
+        st.rerun(scope="app")
+
+
 """
 Simple function to get a specific session state value with a specific
 ID, checking ID 0 if the specified one doesn't exist before falling

@@ -18,19 +18,23 @@ from aiohttp import (
 )
 import streamlit as st
 import streamlit_notify as stn  # type: ignore
-from ParameterTabs.basicParams import basicSchema
+
+# from ParameterTabs.basicParams import basicSchema
 from ParameterTabs.diseaseParams import diseaseSchema
 from ParameterTabs.communityParams import communitySchema
 from ParameterTabs.vaccinationNPIParams import vaccineSchema
 from ParameterTabs.dynamicParams import dynamicSchema
 from ClientResources.ModelSchema import (
     Parameters,
+    commandArgument,
+    scenarioParameters,
     modelGuideFile,
     overrideParams,
+    communityOverride,
     simulationSet,
     simulation,
 )
-from ClientResources.InterfaceFunctions import idGet, checkErrors, errorChecker
+from ClientResources.InterfaceFunctions import idGet, errorChecker  # , checkErrors
 from ClientResources.VisualisationFunctions import formatData
 from ClientResources.SharedResources import (
     AnalysisFile,
@@ -68,19 +72,41 @@ def createConfig(scenarioCount):
 
     # Populate parameters with session_state values
     for id, scenario in enumerate(scenarioParams):
-        basicSchema(scenario, id)
+        # basicSchema(scenario, id)
         diseaseSchema(scenario, id)
         communitySchema(scenario, id)
         vaccineSchema(scenario, id)
         dynamicSchema(scenario, id)
 
-    # Create config object
+    # Create config object with non-scenario parameters as overrides
     return modelGuideFile(
         name="Flusim Dashboard Simulation",
         description=str(st.session_state.sessionID),
         output_folder="./results/",
         middle_joint="-usingEpidemic",
         community_used=[st.session_state.get("community", "newcastle")],
+        community_overrides=[
+            communityOverride(
+                name=st.session_state.get("community", "newcastle"),
+                parameters=Parameters(
+                    Command_Argument=commandArgument(
+                        n_runs=st.session_state.get("runCount", 24),
+                        n_cycles=st.session_state.get("cycleCount", 360) * 2,
+                    ),
+                    Scenario_Parameter=scenarioParameters(
+                        start_day_of_week=(
+                            "Sunday",
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                        ).index(st.session_state.get("startDay", "Monday"))
+                    ),
+                ),
+            )
+        ],
         shared_overrides=overrideParams(parameters=scenarioParams[0]),
         simulation_sets=[
             simulationSet(
@@ -104,10 +130,9 @@ Callback function for the Run Simulation button
 """
 
 
-@st.dialog("Run Simulations")
+@st.dialog("Run Simulation Experiment")
 def runSimulationButton():
     scenarioCount = st.session_state.get("scenarioCount", 0)
-    # TODO: Make this markdown stuff more readable
     if scenarioCount == 0:
         st.markdown(
             f"""
@@ -131,12 +156,6 @@ community data to simulate each of the following {scenarioCount + 1} scenarios:
                 for id in range(1, scenarioCount + 1)
             )
         )
-        unused = '''
-- Baseline
-{'\n'.join(f'- {st.session_state[f'scenarioName{id}']}' for id in range(1, scenarioCount + 1))}
-"""}
-    )
-        '''
 
     # Display any errors
     # TODO: Hide scenario errors that are copies of baseline errors
@@ -156,7 +175,7 @@ community data to simulate each of the following {scenarioCount + 1} scenarios:
             """,
             icon=":material/error:",
         )
-        """
+        unusedErrors = """
     errors = [checkErrors(id) for id in range(scenarioCount + 1)]
     if max((max(e) for e in errors)) >= 2:
         st.error(
@@ -238,7 +257,7 @@ simulation.
             st.session_state.simulationStartTime = datetime.now()
 
             # Create the final model JSON
-            # For testing use this JSON instead of parameters
+            # Load debug parameters from file
             if usePresetParams:
                 with open("ClientResources/defaultParams.guide.json", "r") as f:
                     parameterJSON = f.read()
@@ -249,7 +268,7 @@ simulation.
                     "Community Contact Reduction",
                 ]
 
-            # Use this version in production
+            # Create JSON for selected parameters
             else:
                 parameterJSON = createConfig(scenarioCount + 1).model_dump_json(
                     indent=4, exclude_unset=True  # , exclude_defaults = True

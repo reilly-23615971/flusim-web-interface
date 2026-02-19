@@ -5,7 +5,8 @@
 # Imports
 import logging
 import streamlit as st
-from ParameterTabs.basicParams import buildBasicTab, rerunTime
+
+# from ParameterTabs.basicParams import buildBasicTab, rerunTime
 from ParameterTabs.diseaseParams import buildDiseaseTab
 from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
@@ -66,9 +67,9 @@ errors = [checkErrors(id) for id in range(scenarioCount + 1)]
 # Parameter lists for transferring scenarios upon deletion
 parameterSet = {
     "scenarioName",
-    "runCount",
-    "cycleCount",
-    "startDay",
+    # "runCount",
+    # "cycleCount",
+    # "startDay",
     "deathRowCount",
     "deathRemainingAgeGroups",
     "caseRatio",
@@ -368,13 +369,20 @@ for id in range(1, scenarioCount + 1):
         st.subheader("Parameters")
 
         # Place to put warnings and errors in the current parameter selection
-        rerunTime()
         errorChecker(id, f"Errors in {scenarioName}")
 
         # Create tabs for each category of parameters
-        (basicTab, diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
+        oldTabs = """(basicTab, diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
             [
                 ":material/start: Initialisation",
+                ":material/coronavirus: Disease",
+                ":material/groups: Community",
+                ":material/vaccines: Vaccination and NPIs",
+                ":material/manage_history: Dynamic",
+            ]
+        )"""
+        (diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
+            [
                 ":material/coronavirus: Disease",
                 ":material/groups: Community",
                 ":material/vaccines: Vaccination and NPIs",
@@ -383,8 +391,7 @@ for id in range(1, scenarioCount + 1):
         )
         # :material/pattern: for the template tab
         # Basic parameters
-        with basicTab:
-            buildBasicTab(id)
+        # with basicTab: buildBasicTab(id)
 
         # Disease parameters
         with diseaseTab:

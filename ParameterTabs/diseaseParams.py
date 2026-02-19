@@ -80,7 +80,7 @@ def buildDiseaseTab(id):
     # TODO: Move Health Burden Outcomes to this tab
 
     # Seeding Parameters
-    simLength = idGet("cycleCount", id, 360)
+    simLength = session.get("cycleCount", 360)
     with st.expander("Infection Seeding"):
         # Describe what sort of parameters are here
         st.markdown(
