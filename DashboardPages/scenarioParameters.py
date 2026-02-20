@@ -372,7 +372,8 @@ for id in range(1, scenarioCount + 1):
         errorChecker(id, f"Errors in {scenarioName}")
 
         # Create tabs for each category of parameters
-        oldTabs = """(basicTab, diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
+        oldTabs = """
+        (basicTab, diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
             [
                 ":material/start: Initialisation",
                 ":material/coronavirus: Disease",

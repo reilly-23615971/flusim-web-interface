@@ -324,6 +324,7 @@ def buildDynamicTab(id):
     baseCloseValue = idGet("schoolClosureCompliance", id, 0.9)
     closeActive = idGet("schoolClosureToggle", id, False)
     closeTrigger = idGet("schoolClosureTrigger", id, "Always")
+    # TODO: Make sure closure period uses new system
     closeStart, closeEnd = idGet("schoolClosurePeriod", id, (29, 59))
     # Warn if school closure is disabled
     if not closeActive:

@@ -255,7 +255,13 @@ def simpleLoad(key: str, default):
     session[f"_{key}"] = session.get(key, default)
 
 
-timeParamList = ["seedPeriod"]  # TODO: Add the rest
+timeParamList = [
+    "seedPeriod",
+    "schoolClosurePeriod",
+    "withdrawalIncreasePeriod",
+    "reducedGroupPeriod",
+    "bccPeriod",
+]  # TODO: Add others
 
 
 # Function to update the ranges of time-based parameters

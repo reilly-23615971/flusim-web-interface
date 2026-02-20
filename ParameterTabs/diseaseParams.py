@@ -107,7 +107,7 @@ def buildDiseaseTab(id):
                 infected directly via infection seeding each cycle.
             """,
         )
-        loadKey("seedPeriod", id, (0, 29))
+        loadKey("seedPeriod", id, (1, 30))
         oldPeriod = '''
         seedingPeriod = st.select_slider(
             "Infection Seeding Time Period (Days)",
@@ -126,12 +126,11 @@ def buildDiseaseTab(id):
             """,
         )
         '''
-        seedingPeriod = st.slider(
+        st.slider(
             "Infection Seeding Time Period (Days)",
-            min_value=0,
+            min_value=1,
             max_value=simLength,
-            value=(0, 29),
-            step=1,
+            value=(1, 30),
             format="Day %i",
             on_change=saveKey,
             args=["seedPeriod", id],  # type: ignore
@@ -142,51 +141,6 @@ def buildDiseaseTab(id):
                 on which seeding will begin (where Day 1 is the
                 first day of the simulation), and the second value
                 is the day on which it will stop.
-            """,
-        )
-
-        # Show error if seeding period is beyond simulation length
-        dualError(
-            "seedingOutOfRange",
-            id,
-            lambda: seedingPeriod[0] >= simLength,
-            lambda: seedingPeriod[1] >= simLength,
-            f"""
-                Error: The {
-                    'baseline scenario' if id == 0
-                    else f'scenario named "{session[f'scenarioName{id}']}"'
-                } lasts for {simLength} days, but
-                the infection seeding period begins on Day
-                {seedingPeriod[0] + 1}. As such, no infections will
-                ever occur.
-
-                Please make one of the following changes:
-
-                - Change Infection Seeding Time Period in
-                :primary-badge[:material/coronavirus: Disease] to begin
-                before Day {simLength}.
-                - Change Length of Simulation in
-                :primary-badge[:material/start: Initialisation] to be
-                more than {seedingPeriod[0] + 1} days.
-            """,
-            f"""
-
-                Warning: The {
-                    'baseline scenario' if id == 0
-                    else f'scenario named "{session[f'scenarioName{id}']}"'
-                } lasts for {simLength} days, but
-                the infection seeding period ends on Day
-                {seedingPeriod[1] + 1}. As such, infection seeding
-                will still be ongoing when the simulation ends.
-
-                Please make one of the following changes:
-
-                - Change Infection Seeding Time Period in
-                :primary-badge[:material/coronavirus: Disease] to end
-                before Day {simLength}.
-                - Change Length of Simulation in
-                :primary-badge[:material/start: Initialisation] to be
-                more than {seedingPeriod[1] + 1} days.
             """,
         )
 
@@ -871,7 +825,7 @@ def diseaseSchema(schema, id=0):
             raise ValueError("schema should be a Parameters object")
 
         # Load reused parameters immediately to save time
-        seedPeriod = idGet("seedPeriod", id, (0, 29))
+        seedPeriod = idGet("seedPeriod", id, (1, 30))
         latencyPeriod = idGet("latencyPeriod", id, 10)
         preSymptomPeriod = idGet("preSymptomPeriod", id, 2)
         symptomPeriod = idGet("symptomPeriod", id, 7)
@@ -889,7 +843,7 @@ def diseaseSchema(schema, id=0):
             else scenarioParameters()
         )
         scenarioParams.seed_rate = idGet("seedRate", id, 0.25)
-        scenarioParams.seeding_start_cycle = seedPeriod[0] * 2
+        scenarioParams.seeding_start_cycle = (seedPeriod[0] - 1) * 2
         scenarioParams.seeding_duration = (seedPeriod[1] - seedPeriod[0]) * 2
         scenarioParams.beta_asymptomatic = idGet("betaAsymptomatic", id, 0.55)
         scenarioParams.beta_post_symptomatic = idGet("betaPostSymptomatic", id, 0.55)

@@ -16,7 +16,6 @@ from ClientResources.InterfaceFunctions import (
     deleteFormRow,
     idGet,
     paramError,
-    dualError,
 )
 from ClientResources.SharedResources import (
     npis,
@@ -227,7 +226,6 @@ def buildVaccinationNPITab(id):
                     assuming there are enough doses available.
                 """,
             )
-            baseVacPropErrorContainer = st.empty()
             loadKey("initialVaccinated", id, 0.0)
             initialVaccinated = st.select_slider(
                 "Initial Vaccinated Proportion of Population",
@@ -244,6 +242,45 @@ def buildVaccinationNPITab(id):
                     the beginning of the simulation.
                 """,
             )
+            noErrorsProportions = '''
+            loadKey("initialVaccinated", id, 0.0)
+            initialVaccinated = st.number_input(
+                "Initial Vaccinated Proportion of Population (%)",
+                min_value=0.0,
+                max_value=idGet("targetVaccinated", id, 80.0),
+                value=0.0,
+                step=0.01,
+                key=f"_initialVaccinated{id}",
+                on_change=saveKey,
+                args=["initialVaccinated", id],  # type: ignore
+                disabled=not useVaccinesToggle,
+                help="""
+                    The percentage of the population that will
+                    already be vaccinated against the disease at
+                    the beginning of the simulation.
+                """,
+            )
+            loadKey("targetVaccinated", id, 80.0)
+            targetVaccinated = st.number_input(
+                "Target Vaccinated Proportion of Population (%)",
+                min_value=idGet("initialVaccinated", id, 0.0),
+                max_value=100.0,
+                value=80.0,
+                step=0.01,
+                key=f"_targetVaccinated{id}",
+                on_change=saveKey,
+                args=["targetVaccinated", id],  # type: ignore
+                disabled=not useVaccinesToggle,
+                help="""
+                    The percentage of the population that will be
+                    targeted by the vaccine schedule in the
+                    simulation. The actual proportion of the
+                    population that is vaccinated may be lower if
+                    there are an insufficient number of doses
+                    available.
+                """,
+            )
+            '''
             loadKey("targetVaccinated", id, 0.8)
             targetVaccinated = st.select_slider(
                 "Target Vaccinated Proportion of Population",
@@ -1262,7 +1299,7 @@ def buildVaccinationNPITab(id):
                 """,
             )
             loadKey("boosterDelay", id, 3)
-            boosterDelay = st.slider(
+            st.slider(
                 "Time Between Booster Doses (Months)",
                 1,
                 36,
@@ -1977,14 +2014,14 @@ def buildVaccinationNPITab(id):
                 # Show additional parameters based on trigger value
                 # Timed triggers
                 if schoolClosureTrigger == "Timed":
-                    schoolClosurePeriodErrorContainer = st.empty()
-                    loadKey("schoolClosurePeriod", id, (29, 59))
-                    schoolClosurePeriod = st.select_slider(
-                        "School Closure Time Period",
-                        range(720),
-                        (29, 59),
+                    loadKey("schoolClosurePeriod", id, (1, 60))
+                    st.slider(
+                        "School Closure Time Period (Days)",
+                        min_value=1,
+                        max_value=simLength,
+                        value=(1, 60),
+                        format="Day %i",
                         key=f"_schoolClosurePeriod{id}",
-                        format_func=lambda x: f"Day {x + 1}",
                         on_change=saveKey,
                         args=["schoolClosurePeriod", id],  # type: ignore
                         disabled=not useSchoolClosureToggle,
@@ -1998,182 +2035,6 @@ def buildVaccinationNPITab(id):
                             schools will reopen.
                         """,
                     )
-
-                    # Show error if time period goes past sim length
-                    todoError = '''
-                    paramError(
-                        "school",
-                        id,
-                        lambda: useVaccinesToggle
-                        and useBoostersToggle
-                        and boosterWanedEfficacy > boosterBaseEfficacy,
-                        f"""
-                            Error: The initial vaccine efficacy for
-                            booster vaccines in the {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is {100 * boosterBaseEfficacy:0.3g}%, but the
-                            efficacy after waning is {100 * boosterWanedEfficacy:0.3g}%.
-                            As such, a vaccinated person's immunity to the
-                            disease will get stronger over time instead of weaker.
-
-                            Please make one of the following changes:
-
-                            - Increase Initial Booster Efficacy in
-                            :primary-badge[:material/vaccines: Vaccination and NPIs]
-                            to be greater than {100 * boosterWanedEfficacy:0.3g}%.
-                            - Decrease Booster Efficacy After Immunity Waning in
-                            :primary-badge[:material/vaccines: Vaccination and NPIs]
-                            to be lower than {100 * boosterBaseEfficacy:0.3g}%.
-                        """,
-                        True,
-                    )
-                    '''
-                    if schoolClosurePeriod[0] >= simLength:
-                        schoolClosurePeriodErrorContainer.error(
-                            f"""
-                            Error: The {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is currently set to last {simLength}
-                            days, but the school closure NPI time
-                            period for this scenario (defined
-                            below) is set to begin on Day
-                            {schoolClosurePeriod[0] + 1}. As such,
-                            schools will never be closed in this
-                            scenario under these parameters.
-
-                            To address this error, please make one
-                            of the following changes before running
-                            the simulation:
-
-                            - Move the start point of the
-                            scenario's School Closure Time Period
-                            to any point before Day {simLength}.
-                            - Change the scenario's School Closure
-                            Trigger Condition to any option other
-                            than "Timed".
-                            - Increase the scenario's Length of
-                            Simulation in the "Initialisation" tab
-                            to be {schoolClosurePeriod[0] + 1} days
-                            or more.
-                        """,
-                            icon=":material/error:",
-                        )
-                        globalErrorContainer.error(
-                            f"""
-                            Error: The {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is currently set to last {simLength}
-                            days, but the school closure NPI time
-                            period for this scenario is set to
-                            begin on Day
-                            {schoolClosurePeriod[0] + 1}. As such,
-                            schools will never be closed in this
-                            scenario under these parameters.
-
-                            To address this error, please make one
-                            of the following changes before running
-                            the simulation:
-
-                            - Move the start point of the
-                            scenario's School Closure Time Period
-                            in the "School Closure" section of the
-                            "Vaccinations and NPIs" tab to any
-                            point before Day {simLength}.
-                            - Change the scenario's School Closure
-                            Trigger Condition in the "School
-                            Closure" section of the "Vaccinations
-                            and NPIs" tab to any option other than
-                            "Timed".
-                            - Increase the scenario's Length of
-                            Simulation in the "Initialisation" tab
-                            to be {schoolClosurePeriod[0] + 1} days
-                            or more.
-                        """,
-                            icon=":material/error:",
-                        )
-                        st.session_state[f"schoolClosurePeriodError{id}"] = 2
-                    elif schoolClosurePeriod[1] >= simLength:
-                        schoolClosurePeriodErrorContainer.warning(
-                            f"""
-                            Warning: The {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is currently set to last {simLength}
-                            days, but the school closure NPI time
-                            period for this scenario (defined
-                            below) is set to end on Day
-                            {schoolClosurePeriod[1] + 1}. As such,
-                            schools will still be closed when the
-                            scenario ends.
-
-                            If this is not desired behaviour,
-                            please address this error by making one
-                            of the following changes before running
-                            the simulation:
-
-                            - Move the end point of the scenario's
-                            School Closure Time Period to any point
-                            before Day {simLength}.
-                            - Change the scenario's School Closure
-                            Trigger Condition to any option other
-                            than "Timed".
-                            - Increase the scenario's Length of
-                            Simulation in the "Initialisation" tab
-                            to be {schoolClosurePeriod[1] + 1} days
-                            or more.
-                        """,
-                            icon=":material/warning:",
-                        )
-                        globalErrorContainer.warning(
-                            f"""
-                            Warning: The {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is currently set to last {simLength}
-                            days, but the school closure NPI time
-                            period for this scenario is set to end
-                            on Day {schoolClosurePeriod[1] + 1}. As
-                            such, schools will still be closed when
-                            the scenario ends.
-
-                            If this is not desired behaviour,
-                            please address this error by making one
-                            of the following changes before running
-                            the simulation:
-
-                            - Move the end point of the scenario's
-                            School Closure Time Period in the
-                            "School Closure" section of the
-                            "Vaccinations and NPIs" tab to any
-                            point before Day {simLength}.
-                            - Change the scenario's School Closure
-                            Trigger Condition in the "School
-                            Closure" section of the "Vaccinations
-                            and NPIs" tab to any option other than
-                            "Timed".
-                            - Increase the scenario's Length of
-                            Simulation in the "Initialisation" tab
-                            to be {schoolClosurePeriod[1] + 1} days
-                            or more.
-                        """,
-                            icon=":material/warning:",
-                        )
-                        st.session_state[f"schoolClosurePeriodError{id}"] = 1
-                    else:
-                        st.session_state[f"schoolClosurePeriodError{id}"] = 0
 
                 # Rate triggers
                 elif schoolClosureTrigger == "Community Case Rate":
@@ -2208,33 +2069,7 @@ def buildVaccinationNPITab(id):
                         icon=":material/info:",
                     )
 
-            # School types and compliance
-            """
-            schoolTypeErrorContainer = st.empty()
-            loadKey(f"schoolClosureTypes", id, ["K-12"])
-            schoolClosureTypes = st.segmented_control(
-                "Types of School to Close",
-                ("Childcare", "K-12", "Tertiary"),
-                selection_mode="multi",
-                default="K-12",
-                disabled=not useSchoolClosureToggle,
-                on_change=saveKey,
-                args=[f"schoolClosureTypes", id],  # type: ignore
-                key=f"_schoolClosureTypes{id}",
-                help='''
-                    The types of schools that will close under the
-                    effects of this NPI. Multiple school types may
-                    be selected at once, but selecting none is
-                    prohibited.
-
-                    ##### Options:
-                    - Childcare: Pre-primary childcare facilities.
-                    - K-12: Primary and secondary education
-                    facilities.
-                    - Tertiary: Adult education facilities.
-                ''',
-            )
-            """
+            # School closure compliance
             loadKey("schoolClosureCompliance", id, 0.9)
             st.select_slider(
                 "School Closure Compliance (Probability)",
@@ -2251,51 +2086,6 @@ def buildVaccinationNPITab(id):
                     the simulation.
                 """,
             )
-
-            # Show error if no schools selected
-            """
-            if useSchoolClosureToggle and not schoolClosureTypes:
-                schoolTypeErrorContainer.error(
-                    f'''
-                    Error: The {
-                        'baseline scenario' if id == 0
-                        else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
-                        }"'
-                    } currently has no school types selected to
-                    close during school closure NPIs. At least one
-                    kind of school must be selected for this NPI in
-                    order for it to have an effect on the scenario.
-
-                    To address this error, please select at least
-                    one of the Types of School to Close before
-                    running the simulation.
-                ''',
-                    icon=":material/error:",
-                )
-                globalErrorContainer.error(
-                    f'''
-                    Error: The {
-                        'baseline scenario' if id == 0
-                        else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
-                        }"'
-                    } currently has no school types selected to
-                    close during school closure NPIs. At least one
-                    kind of school must be selected for this NPI in
-                    order for it to have an effect on the scenario.
-
-                    To address this error, please select at least
-                    one of the Types of School to Close in the
-                    "School Closure" section of the "Vaccinations
-                    and NPIs" tab before running the simulation.
-                ''',
-                    icon=":material/error:",
-                )
-                st.session_state[f"schoolTypeError{id}"] = 2
-            else:
-                st.session_state[f"schoolTypeError{id}"] = 0
-            """
 
         # Withdrawal Increase
         st.html('<span id = "withdrawalIncreaseTriggerCondition"></span>')
@@ -2372,17 +2162,17 @@ def buildVaccinationNPITab(id):
                 # Show additional parameters based on trigger value
                 # Timed triggers
                 if withdrawalIncreaseTrigger == "Timed":
-                    withdrawalIncreasePeriodErrorContainer = st.empty()
-                    loadKey("withdrawalIncreasePeriod", id, (29, 59))
-                    withdrawalIncreasePeriod = st.select_slider(
+                    loadKey("withdrawalIncreasePeriod", id, (1, 60))
+                    st.slider(
                         "Withdrawal Increase Time Period",
-                        range(720),
-                        (29, 59),
+                        min_value=1,
+                        max_value=simLength,
+                        value=(1, 60),
+                        format="Day %i",
                         key=f"_withdrawalIncreasePeriod{id}",
                         disabled=not useWithdrawalIncreaseToggle,
                         on_change=saveKey,
                         args=["withdrawalIncreasePeriod", id],  # type: ignore
-                        format_func=lambda x: f"Day {x + 1}",
                         help="""
                             The time period during which withdrawal
                             rates will be increased in the
@@ -2394,155 +2184,6 @@ def buildVaccinationNPITab(id):
                             rates will return to normal.
                         """,
                     )
-
-                    # Show error if time period goes past sim length
-                    if withdrawalIncreasePeriod[0] >= simLength:
-                        withdrawalIncreasePeriodErrorContainer.error(
-                            f"""
-                            Error: The {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is currently set to last {simLength}
-                            days, but the withdrawal increase NPI
-                            time period for this scenario (defined
-                            below) is set to begin on Day
-                            {withdrawalIncreasePeriod[0] + 1}. As
-                            such, withdrawal rates will never
-                            increase in this scenario under these
-                            parameters.
-
-                            To address this error, please make one
-                            of the following changes before running
-                            the simulation:
-
-                            - Move the start point of the
-                            scenario's Withdrawal Increase Time
-                            Period to any point before Day
-                            {simLength}.
-                            - Change the scenario's Withdrawal
-                            Increase Trigger Condition to any
-                            option other than "Timed".
-                            - Increase the scenario's Length of
-                            Simulation in the "Initialisation" tab
-                            to be {withdrawalIncreasePeriod[0] + 1}
-                            days or more.
-                        """,
-                            icon=":material/error:",
-                        )
-                        globalErrorContainer.error(
-                            f"""
-                            Error: The {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is currently set to last {simLength}
-                            days, but the withdrawal increase NPI
-                            time period for this scenario is set to
-                            begin on Day
-                            {withdrawalIncreasePeriod[0] + 1}. As
-                            such, withdrawal rates will never
-                            increase in this scenario under these
-                            parameters.
-
-                            To address this error, please make one
-                            of the following changes before running
-                            the simulation:
-
-                            - Move the start point of the
-                            scenario's Withdrawal Increase Time
-                            Period in the "Withdrawal Increase"
-                            section of the "Vaccinations and NPIs"
-                            tab to any point before Day {simLength}.
-                            - Change the scenario's Withdrawal
-                            Increase Trigger Condition in the
-                            "Withdrawal Increase" section of the
-                            "Vaccinations and NPIs" tab to any
-                            option other than "Timed".
-                            - Increase the scenario's Length of
-                            Simulation in the "Initialisation" tab
-                            to be {withdrawalIncreasePeriod[0] + 1}
-                            days or more.
-                        """,
-                            icon=":material/error:",
-                        )
-                        st.session_state[f"withdrawalIncreasePeriodError{id}"] = 2
-                    elif withdrawalIncreasePeriod[1] >= simLength:
-                        withdrawalIncreasePeriodErrorContainer.warning(
-                            f"""
-                            Warning: The {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is currently set to last {simLength}
-                            days, but the withdrawal increase NPI
-                            time period for this scenario (defined
-                            below) is set to end on Day
-                            {withdrawalIncreasePeriod[1] + 1}. As
-                            such, withdrawal rates will still be
-                            increased when the scenario ends.
-
-                            If this is not desired behaviour,
-                            please address this error by making one
-                            of the following changes before running
-                            the simulation:
-
-                            - Move the end point of the scenario's
-                            Withdrawal Increase Time Period to any
-                            point before Day {simLength}.
-                            - Change the scenario's Withdrawal
-                            Increase Trigger Condition to any
-                            option other than "Timed".
-                            - Increase the scenario's Length of
-                            Simulation in the "Initialisation" tab
-                            to be {withdrawalIncreasePeriod[1] + 1}
-                            days or more.
-                        """,
-                            icon=":material/warning:",
-                        )
-                        globalErrorContainer.warning(
-                            f"""
-                            Warning: The {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is currently set to last {simLength}
-                            days, but the withdrawal increase NPI
-                            time period for this scenario is set to
-                            end on Day
-                            {withdrawalIncreasePeriod[1] + 1}. As
-                            such, withdrawal rates will still be
-                            increased when the scenario ends.
-
-                            If this is not desired behaviour,
-                            please address this error by making one
-                            of the following changes before running
-                            the simulation:
-
-                            - Move the end point of the scenario's
-                            Withdrawal Increase Time Period in the
-                            "Withdrawal Increase" section of the
-                            "Vaccinations and NPIs" tab to any
-                            point before Day {simLength}.
-                            - Change the scenario's Withdrawal
-                            Increase Trigger Condition in the
-                            "Withdrawal Increase" section of the
-                            "Vaccinations and NPIs" tab to any
-                            option other than "Timed".
-                            - Increase the scenario's Length of
-                            Simulation in the "Initialisation" tab
-                            to be {withdrawalIncreasePeriod[1] + 1}
-                            days or more.
-                        """,
-                            icon=":material/warning:",
-                        )
-                        st.session_state[f"withdrawalIncreasePeriodError{id}"] = 1
-                    else:
-                        st.session_state[f"withdrawalIncreasePeriodError{id}"] = 0
 
                 # Rate triggers
                 elif withdrawalIncreaseTrigger == "Community Case Rate":
@@ -2575,11 +2216,10 @@ def buildVaccinationNPITab(id):
                         icon=":material/info:",
                     )
 
-            # Increased withdrawal
-            adultWithdrawalErrorContainer = st.empty()
+            # Increased Withdrawal
             loadKey("withdrawalIncreaseAdult", id, 0.9)
             withdrawalIncreaseAdult = st.select_slider(
-                "Adult Increased Withdrawal Rate (Probability)",
+                "Increased Work Withdrawal Rate (Probability)",
                 np.linspace(0.0, 1.0, 201),
                 0.9,
                 format_func=lambda x: f"{100 * x:0.3g}%",
@@ -2595,10 +2235,9 @@ def buildVaccinationNPITab(id):
                     normal withdrawal rate.
                 """,
             )
-            childWithdrawalErrorContainer = st.empty()
             loadKey("withdrawalIncreaseChild", id, 1.0)
             withdrawalIncreaseChild = st.select_slider(
-                "Child Increased Withdrawal Rate (Probability)",
+                "Increased School Withdrawal Rate (Probability)",
                 np.linspace(0.0, 1.0, 201),
                 1.0,
                 format_func=lambda x: f"{100 * x:0.3g}%",
@@ -2618,152 +2257,60 @@ def buildVaccinationNPITab(id):
             # Show error if initial proportion is above target
             baseAdultWithdrawal = idGet("withdrawalWork", id, 0.5)
             baseChildWithdrawal = idGet("withdrawalSchool", id, 0.9)
-            if (
-                useWithdrawalIncreaseToggle
-                and baseAdultWithdrawal >= withdrawalIncreaseAdult
-            ):
-                adultWithdrawalErrorContainer.error(
-                    f"""
-                    Error: The work withdrawal probability during
+            paramError(
+                "withdrawalNPIBelowBaseAdult",
+                id,
+                lambda: useWithdrawalIncreaseToggle
+                and baseAdultWithdrawal >= withdrawalIncreaseAdult,
+                f"""
+                    Error: The work withdrawal rate during
                     withdrawal increase NPIs in the {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
                             st.session_state[f'scenarioName{id}']
                         }"'
-                    } is currently set to
-                    {100 * withdrawalIncreaseAdult:0.3g}%, but the
-                    standard work withdrawal probability outside of
-                    this NPI for this scenario is set to
-                    {100 * baseAdultWithdrawal:0.3g}%. As such, the
-                    withdrawal increase NPI {
-                        'has no effect on'
-                        if baseAdultWithdrawal == withdrawalIncreaseAdult
-                        else 'actually decreases'
-                    } work withdrawal rates in this scenario.
+                    } is {100 * withdrawalIncreaseAdult:0.3g}%, but the
+                    standard rate is {100 * baseAdultWithdrawal:0.3g}%.
+                    As such, work withdrawal rates are not increased
+                    while the NPI is in effect.
 
-                    To address this error, please make one of the
-                    following changes before running the simulation:
-
-                    - Increase the scenario's Adult Increased
-                    Withdrawal Rate to any probability
-                    above {100 * baseAdultWithdrawal:0.3g}%.
-                    - Decrease the scenario's Adult Withdrawal Rate
-                    in the "Withdrawals and Diagnosis" section of
-                    the "Community" tab to any probability
-                    below {100 * withdrawalIncreaseAdult:0.3g}%.
+                    Please make one of the following changes:
+                    - Adjust Increased Work Withdrawal Rate in
+                    :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    to be greater than {100 * baseAdultWithdrawal:0.3g}%.
+                    - Decrease Work Withdrawal Rate in
+                    :primary-badge[:material/groups: Community]
+                    to be less than {100 * withdrawalIncreaseAdult:0.3g}%.
                 """,
-                    icon=":material/error:",
-                )
-                globalErrorContainer.error(
-                    f"""
-                    Error: The work withdrawal probability during
+                True,
+            )
+            paramError(
+                "withdrawalNPIBelowBaseChild",
+                id,
+                lambda: useWithdrawalIncreaseToggle
+                and baseChildWithdrawal >= withdrawalIncreaseChild,
+                f"""
+                    Error: The school withdrawal rate during
                     withdrawal increase NPIs in the {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
                             st.session_state[f'scenarioName{id}']
                         }"'
-                    } is currently set to
-                    {100 * withdrawalIncreaseAdult:0.3g}%, but the
-                    standard work withdrawal probability outside of
-                    this NPI for this scenario is set to
-                    {100 * baseAdultWithdrawal:0.3g}%. As such, the
-                    withdrawal increase NPI {
-                        'has no effect on'
-                        if baseAdultWithdrawal == withdrawalIncreaseAdult
-                        else 'actually decreases'
-                    } work withdrawal rates in this scenario.
+                    } is {100 * withdrawalIncreaseChild:0.3g}%, but the
+                    standard rate is {100 * baseChildWithdrawal:0.3g}%.
+                    As such, school withdrawal rates are not increased
+                    while the NPI is in effect.
 
-                    To address this error, please make one of the
-                    following changes before running the simulation:
-
-                    - Increase the scenario's Adult Increased
-                    Withdrawal Rate in the "Withdrawal Increase"
-                    section of the "Vaccinations and NPIs" tab to
-                    any probability
-                    above {100 * baseAdultWithdrawal:0.3g}%.
-                    - Decrease the scenario's Adult Withdrawal Rate
-                    in the "Withdrawals and Diagnosis" section of
-                    the "Community" tab to any probability
-                    below {100 * withdrawalIncreaseAdult:0.3g}%.
+                    Please make one of the following changes:
+                    - Adjust Increased School Withdrawal Rate in
+                    :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    to be greater than {100 * baseChildWithdrawal:0.3g}%.
+                    - Decrease School Withdrawal Rate in
+                    :primary-badge[:material/groups: Community]
+                    to be less than {100 * withdrawalIncreaseChild:0.3g}%.
                 """,
-                    icon=":material/error:",
-                )
-                st.session_state[f"adultWithdrawalError{id}"] = 2
-            else:
-                st.session_state[f"adultWithdrawalError{id}"] = 0
-            if (
-                useWithdrawalIncreaseToggle
-                and baseChildWithdrawal >= withdrawalIncreaseChild
-            ):
-                childWithdrawalErrorContainer.error(
-                    f"""
-                    Error: The school withdrawal probability during
-                    withdrawal increase NPIs in the {
-                        'baseline scenario' if id == 0
-                        else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
-                        }"'
-                    } is currently set to
-                    {100 * withdrawalIncreaseChild:0.3g}%, but the
-                    standard school withdrawal probability outside
-                    of this NPI for this scenario is set to
-                    {100 * baseChildWithdrawal:0.3g}%. As such, the
-                    withdrawal increase NPI {
-                        'has no effect on'
-                        if baseChildWithdrawal == withdrawalIncreaseChild
-                        else 'actually decreases'
-                    } school withdrawal rates in this scenario.
-
-                    To address this error, please make one of the
-                    following changes before running the simulation:
-
-                    - Increase the scenario's Child Increased
-                    Withdrawal Rate to any probability
-                    above {100 * baseChildWithdrawal:0.3g}%.
-                    - Decrease the scenario's Child Withdrawal Rate
-                    in the "Withdrawals and Diagnosis" section of
-                    the "Community" tab to any probability
-                    below {100 * withdrawalIncreaseChild:0.3g}%.
-                """,
-                    icon=":material/error:",
-                )
-                globalErrorContainer.error(
-                    f"""
-                    Error: The school withdrawal probability during
-                    withdrawal increase NPIs in the {
-                        'baseline scenario' if id == 0
-                        else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
-                        }"'
-                    } is currently set to
-                    {100 * withdrawalIncreaseChild:0.3g}%, but the
-                    standard school withdrawal probability outside
-                    of this NPI for this scenario is set to
-                    {100 * baseChildWithdrawal:0.3g}%. As such, the
-                    withdrawal increase NPI {
-                        'has no effect on'
-                        if baseChildWithdrawal == withdrawalIncreaseChild
-                        else 'actually decreases'
-                    } school withdrawal rates in this scenario.
-
-                    To address this error, please make one of the
-                    following changes before running the simulation:
-
-                    - Increase the scenario's Child Increased
-                    Withdrawal Rate in the "Withdrawal Increase"
-                    section of the "Vaccinations and NPIs" tab to
-                    any probability
-                    above {100 * baseChildWithdrawal:0.3g}%.
-                    - Decrease the scenario's Child Withdrawal Rate
-                    in the "Withdrawals and Diagnosis" section of
-                    the "Community" tab to any probability
-                    below {100 * withdrawalIncreaseChild:0.3g}%.
-                """,
-                    icon=":material/error:",
-                )
-                st.session_state[f"childWithdrawalError{id}"] = 2
-            else:
-                st.session_state[f"childWithdrawalError{id}"] = 0
+                True,
+            )
 
         # Reduced Workgroup Size
         st.html('<span id = "reducedGroupTriggerCondition"></span>')
@@ -2838,17 +2385,17 @@ def buildVaccinationNPITab(id):
                 # Show additional parameters based on trigger value
                 # Timed triggers
                 if reducedGroupTrigger == "Timed":
-                    reducedGroupPeriodErrorContainer = st.empty()
-                    loadKey("reducedGroupPeriod", id, (29, 59))
-                    reducedGroupPeriod = st.select_slider(
+                    loadKey("reducedGroupPeriod", id, (1, 60))
+                    st.slider(
                         "Reduced Group Size Time Period",
-                        range(720),
-                        (29, 59),
+                        min_value=1,
+                        max_value=simLength,
+                        value=(1, 60),
+                        format="Day %i",
                         key=f"_reducedGroupPeriod{id}",
                         disabled=not useReducedGroupToggle,
                         on_change=saveKey,
                         args=["reducedGroupPeriod", id],  # type: ignore
-                        format_func=lambda x: f"Day {x + 1}",
                         help="""
                             The time period during which work
                             group sizes will be smaller in the
@@ -2860,152 +2407,6 @@ def buildVaccinationNPITab(id):
                             return to normal.
                         """,
                     )
-
-                    # Show error if time period goes past sim length
-                    if reducedGroupPeriod[0] >= simLength:
-                        reducedGroupPeriodErrorContainer.error(
-                            f"""
-                            Error: The {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is currently set to last {simLength}
-                            days, but the reduced group size NPI
-                            time period for this scenario (defined
-                            below) is set to begin on Day
-                            {reducedGroupPeriod[0] + 1}. As such,
-                            work groups will never decrease in size
-                            in this scenario under these parameters.
-
-                            To address this error, please make one
-                            of the following changes before running
-                            the simulation:
-
-                            - Move the start point of the
-                            scenario's Reduced Group Size Time
-                            Period to any point before Day
-                            {simLength}.
-                            - Change the scenario's Reduced Group
-                            Size Trigger Condition to any
-                            option other than "Timed".
-                            - Increase the scenario's Length of
-                            Simulation in the "Initialisation" tab
-                            to be {reducedGroupPeriod[0] + 1}
-                            days or more.
-                        """,
-                            icon=":material/error:",
-                        )
-                        globalErrorContainer.error(
-                            f"""
-                            Error: The {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is currently set to last {simLength}
-                            days, but the reduced group size NPI
-                            time period for this scenario is set to
-                            begin on Day
-                            {reducedGroupPeriod[0] + 1}. As such,
-                            work groups will never decrease in size
-                            in this scenario under these parameters.
-
-                            To address this error, please make one
-                            of the following changes before running
-                            the simulation:
-
-                            - Move the start point of the
-                            scenario's Reduced Group Size Time
-                            Period in the "Reduced Work Group Size"
-                            section of the "Vaccinations and NPIs"
-                            tab to any point before Day {simLength}.
-                            - Change the scenario's Reduced Group
-                            Size Trigger Condition in the "Reduced
-                            Work Group Size" section of the
-                            "Vaccinations and NPIs" tab to any
-                            option other than "Timed".
-                            - Increase the scenario's Length of
-                            Simulation in the "Initialisation" tab
-                            to be {reducedGroupPeriod[0] + 1}
-                            days or more.
-                        """,
-                            icon=":material/error:",
-                        )
-                        st.session_state[f"reducedGroupPeriodError{id}"] = 2
-                    elif reducedGroupPeriod[1] >= simLength:
-                        reducedGroupPeriodErrorContainer.warning(
-                            f"""
-                            Warning: The {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is currently set to last {simLength}
-                            days, but the reduced group size NPI
-                            time period for this scenario (defined
-                            below) is set to end on Day
-                            {reducedGroupPeriod[1] + 1}. As such,
-                            work groups will still be reduced in
-                            size when the scenario ends.
-
-                            If this is not desired behaviour,
-                            please address this error by making one
-                            of the following changes before running
-                            the simulation:
-
-                            - Move the end point of the scenario's
-                            Reduced Group Size Time Period to any
-                            point before Day {simLength}.
-                            - Change the scenario's Reduced Group
-                            Size Trigger Condition to any
-                            option other than "Timed".
-                            - Increase the scenario's Length of
-                            Simulation in the "Initialisation" tab
-                            to be {reducedGroupPeriod[1] + 1}
-                            days or more.
-                        """,
-                            icon=":material/warning:",
-                        )
-                        globalErrorContainer.warning(
-                            f"""
-                            Warning: The {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is currently set to last {simLength}
-                            days, but the reduced group size NPI
-                            time period for this scenario is set to
-                            end on Day {reducedGroupPeriod[1] + 1}.
-                            As such, work groups will still be
-                            reduced in size when the scenario ends.
-
-                            If this is not desired behaviour,
-                            please address this error by making one
-                            of the following changes before running
-                            the simulation:
-
-                            - Move the end point of the scenario's
-                            Reduced Group Size Time Period in the
-                            "Reduced Work Group Size" section of
-                            the "Vaccinations and NPIs" tab to any
-                            point before Day {simLength}.
-                            - Change the scenario's Reduced Group
-                            Size Trigger Condition in the "Reduced
-                            Work Group Size" section of the
-                            "Vaccinations and NPIs" tab to any
-                            option other than "Timed".
-                            - Increase the scenario's Length of
-                            Simulation in the "Initialisation" tab
-                            to be {reducedGroupPeriod[1] + 1}
-                            days or more.
-                        """,
-                            icon=":material/warning:",
-                        )
-                        st.session_state[f"reducedGroupPeriodError{id}"] = 1
-                    else:
-                        st.session_state[f"reducedGroupPeriodError{id}"] = 0
 
                 # Rate triggers
                 elif reducedGroupTrigger == "Community Case Rate":
@@ -3039,7 +2440,6 @@ def buildVaccinationNPITab(id):
                     )
 
             # Reduced group size
-            reducedGroupErrorContainer = st.empty()
             loadKey("reducedGroupSize", id, 5)
             reducedGroupSize = st.slider(
                 "Reduced Work Group Size (Number of People)",
@@ -3057,74 +2457,34 @@ def buildVaccinationNPITab(id):
                 """,
             )
 
-            # Show error if initial proportion is above target
+            # Show error if reduced size is more than base
             baseGroupSize = idGet("maxWorkGroupSize", id, 10)
-            if useReducedGroupToggle and reducedGroupSize >= baseGroupSize:
-                reducedGroupErrorContainer.error(
-                    f"""
-                    Error: The reduced work group size during
+            paramError(
+                "groupNPIAboveBase",
+                id,
+                lambda: useReducedGroupToggle and reducedGroupSize >= baseGroupSize,
+                f"""
+                    Error: The maximum work group size during
                     reduced group size NPIs in the {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
                             st.session_state[f'scenarioName{id}']
                         }"'
-                    } is currently set to {reducedGroupSize}
-                    people, but the standard work group size
-                    outside of this NPI for this scenario is set to
-                    {baseGroupSize} people. As such, the reduced
-                    group size NPI {
-                        'has no effect on'
-                        if baseGroupSize == reducedGroupSize
-                        else 'actually increases'
-                    } work group sizes in this scenario.
+                    } is {reducedGroupSize}, but the
+                    standard maximum size is {baseGroupSize}.
+                    As such, work group sizes are not decreased
+                    while the NPI is in effect.
 
-                    To address this error, please make one of the
-                    following changes before running the simulation:
-
-                    - Decrease the scenario's Reduced Work Group
-                    Size to any value below {baseGroupSize} people.
-                    - Increase the scenario's Maximum Work Group
-                    Size in the "Population Behaviours" section of
-                    the "Community" tab to any value above
-                    {reducedGroupSize} people.
+                    Please make one of the following changes:
+                    - Adjust Reduced Work Group Size in
+                    :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    to be less than {baseGroupSize}.
+                    - Increase Maximum Work Group Size in
+                    :primary-badge[:material/groups: Community]
+                    to be more than {reducedGroupSize}.
                 """,
-                    icon=":material/error:",
-                )
-                globalErrorContainer.error(
-                    f"""
-                    Error: The reduced work group size during
-                    reduced group size NPIs in the {
-                        'baseline scenario' if id == 0
-                        else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
-                        }"'
-                    } is currently set to {reducedGroupSize}
-                    people, but the standard work group size
-                    outside of this NPI for this scenario is set to
-                    {baseGroupSize} people. As such, the reduced
-                    group size NPI {
-                        'has no effect on'
-                        if baseGroupSize == reducedGroupSize
-                        else 'actually increases'
-                    } work group sizes in this scenario.
-
-                    To address this error, please make one of the
-                    following changes before running the simulation:
-
-                    - Decrease the scenario's Reduced Work Group
-                    Size in the "Reduced Work Group Size" section
-                    of the "Vaccinations and NPIs" tab to any value
-                    below {baseGroupSize} people.
-                    - Increase the scenario's Maximum Work Group
-                    Size in the "Population Behaviours" section of
-                    the "Community" tab to any value above
-                    {reducedGroupSize} people.
-                """,
-                    icon=":material/error:",
-                )
-                st.session_state[f"reducedGroupError{id}"] = 2
-            else:
-                st.session_state[f"reducedGroupError{id}"] = 0
+                True,
+            )
 
         # BCC Reduction
         st.html('<span id = "bccTriggerCondition"></span>')
@@ -3202,17 +2562,17 @@ def buildVaccinationNPITab(id):
                 # Show additional parameters based on trigger value
                 # Timed triggers
                 if bccTrigger == "Timed":
-                    bccPeriodErrorContainer = st.empty()
-                    loadKey("bccPeriod", id, (29, 59))
-                    bccPeriod = st.select_slider(
+                    loadKey("bccPeriod", id, (1, 60))
+                    st.slider(
                         "BCC Reduction Time Period",
-                        range(720),
-                        (29, 59),
+                        min_value=1,
+                        max_value=simLength,
+                        value=(1, 60),
+                        format="Day %i",
                         key=f"_bccPeriod{id}",
                         disabled=not useBCCToggle,
                         on_change=saveKey,
                         args=["bccPeriod", id],  # type: ignore
-                        format_func=lambda x: f"Day {x + 1}",
                         help="""
                             The time period during which background
                             contact count (BCC) will be reduced in
@@ -3224,151 +2584,6 @@ def buildVaccinationNPITab(id):
                             normal.
                         """,
                     )
-
-                    # Show error if time period goes past sim length
-                    if bccPeriod[0] >= simLength:
-                        bccPeriodErrorContainer.error(
-                            f"""
-                            Error: The {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is currently set to last {simLength}
-                            days, but the background contact count
-                            (BCC) reduction NPI time period for
-                            this scenario (defined below) is set to
-                            begin on Day {bccPeriod[0] + 1}. As
-                            such, BCC rates will never be reduced
-                            in this scenario under these parameters.
-
-                            To address this error, please make one
-                            of the following changes before running
-                            the simulation:
-
-                            - Move the start point of the
-                            scenario's BCC Reduction Time Period to
-                            any point before Day {simLength}.
-                            - Change the scenario's BCC Reduction
-                            Trigger Condition to any option other
-                            than "Timed".
-                            - Increase the scenario's Length of
-                            Simulation in the "Initialisation" tab
-                            to be {bccPeriod[0] + 1}
-                            days or more.
-                        """,
-                            icon=":material/error:",
-                        )
-                        globalErrorContainer.error(
-                            f"""
-                            Error: The {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is currently set to last {simLength}
-                            days, but the background contact count
-                            (BCC) reduction NPI time period for
-                            this scenario is set to begin on Day
-                            {bccPeriod[0] + 1}. As such, BCC rates
-                            will never be reduced in this scenario
-                            under these parameters.
-
-                            To address this error, please make one
-                            of the following changes before running
-                            the simulation:
-
-                            - Move the start point of the
-                            scenario's BCC Reduction Time Period in
-                            the "Background Contact Count
-                            Reduction" section of the "Vaccinations
-                            and NPIs" tab to any point before Day
-                            {simLength}.
-                            - Change the scenario's BCC Reduction
-                            Trigger Condition in the "Background
-                            Contact Count Reduction" section of the
-                            "Vaccinations and NPIs" tab to any
-                            option other than "Timed".
-                            - Increase the scenario's Length of
-                            Simulation in the "Initialisation" tab
-                            to be {bccPeriod[0] + 1}
-                            days or more.
-                        """,
-                            icon=":material/error:",
-                        )
-                        st.session_state[f"bccPeriodError{id}"] = 2
-                    elif bccPeriod[1] >= simLength:
-                        bccPeriodErrorContainer.warning(
-                            f"""
-                            Warning: The {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is currently set to last {simLength}
-                            days, but the background contact count
-                            (BCC) reduction NPI time period for
-                            this scenario (defined below) is set to
-                            end on Day {bccPeriod[1] + 1}. As such,
-                            BCC rates will still be reduced when
-                            the scenario ends.
-
-                            If this is not desired behaviour,
-                            please address this error by making one
-                            of the following changes before running
-                            the simulation:
-
-                            - Move the end point of the scenario's
-                            BCC Reduction Time Period to any point
-                            before Day {simLength}.
-                            - Change the scenario's BCC Reduction
-                            Trigger Condition to any option other
-                            than "Timed".
-                            - Increase the scenario's Length of
-                            Simulation in the "Initialisation" tab
-                            to be {bccPeriod[1] + 1} days or more.
-                        """,
-                            icon=":material/warning:",
-                        )
-                        globalErrorContainer.warning(
-                            f"""
-                            Warning: The {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is currently set to last {simLength}
-                            days, but the background contact count
-                            (BCC) reduction NPI time period for
-                            this scenario is set to end on Day
-                            {bccPeriod[1] + 1}. As such, BCC rates
-                            will still be reduced when the scenario
-                            ends.
-
-                            If this is not desired behaviour,
-                            please address this error by making one
-                            of the following changes before running
-                            the simulation:
-
-                            - Move the end point of the scenario's
-                            BCC Reduction Time Period in the
-                            "Background Contact Count Reduction"
-                            section of the "Vaccinations and NPIs"
-                            tab to any point before Day {simLength}.
-                            - Change the scenario's BCC Reduction
-                            Trigger Condition in the "Background
-                            Contact Count Reduction" section of the
-                            "Vaccinations and NPIs" tab to any
-                            option other than "Timed".
-                            - Increase the scenario's Length of
-                            Simulation in the "Initialisation" tab
-                            to be {bccPeriod[1] + 1} days or more.
-                        """,
-                            icon=":material/warning:",
-                        )
-                        st.session_state[f"bccPeriodError{id}"] = 1
-                    else:
-                        st.session_state[f"bccPeriodError{id}"] = 0
 
                 # Rate triggers
                 elif bccTrigger == "Community Case Rate":
@@ -3400,7 +2615,6 @@ def buildVaccinationNPITab(id):
                     )
 
             # Reduced BCC rate
-            bccErrorContainer = st.empty()
             loadKey("bccReducedRate", id, 0.2)
             bccReducedRate = st.slider(
                 (
@@ -3428,76 +2642,31 @@ def buildVaccinationNPITab(id):
 
             # Show error if initial proportion is above target
             baseBCC = idGet("bccRate", id, 4.0)
-            if useBCCToggle and bccReducedRate >= baseBCC:
-                bccErrorContainer.error(
-                    f"""
-                    Error: The reduced background contact count
-                    (BCC) value during BCC reduction NPIs in the {
+            paramError(
+                "bccNPIAboveBase",
+                id,
+                lambda: useBCCToggle and bccReducedRate >= baseBCC,
+                f"""
+                    Error: The background contact count (BCC) during
+                    BCC reduction NPIs in the {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
                             st.session_state[f'scenarioName{id}']
                         }"'
-                    } is currently set to {bccReducedRate}
-                    interactions per day, but the standard BCC
-                    outside of this NPI for this scenario is set to
-                    {baseBCC} interactions per day. As such, the
-                    BCC reduction NPI {
-                        'has no effect on'
-                        if baseBCC == bccReducedRate
-                        else 'actually increases'
-                    } BCC in this scenario.
+                    } is {bccReducedRate} interactions per day, but the
+                    standard rate is {baseBCC} interactions per day.
+                    As such, BCC is not decreased while the NPI is in effect.
 
-                    To address this error, please make one of the
-                    following changes before running the simulation:
-
-                    - Decrease the scenario's Reduced Background
-                    Contact Count to any value below {baseBCC}
-                    interactions per person per day.
-                    - Increase the scenario's Background Contact
-                    Count in the "Population Behaviours" section of
-                    the "Community" tab to any value above
-                    {bccReducedRate} interactions per person per
-                    day.
+                    Please make one of the following changes:
+                    - Adjust Reduced Background Contact Count in
+                    :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    to be less than {baseBCC}.
+                    - Increase Background Contact Count in
+                    :primary-badge[:material/groups: Community]
+                    to be more than {bccReducedRate}.
                 """,
-                    icon=":material/error:",
-                )
-                globalErrorContainer.error(
-                    f"""
-                    Error: The reduced background contact count
-                    (BCC) value during BCC reduction NPIs in the {
-                        'baseline scenario' if id == 0
-                        else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
-                        }"'
-                    } is currently set to {bccReducedRate}
-                    interactions per day, but the standard BCC
-                    outside of this NPI for this scenario is set to
-                    {baseBCC} interactions per day. As such, the
-                    BCC reduction NPI {
-                        'has no effect on'
-                        if baseBCC == bccReducedRate
-                        else 'actually increases'
-                    } BCC in this scenario.
-
-                    To address this error, please make one of the
-                    following changes before running the simulation:
-
-                    - Decrease the scenario's Reduced Background
-                    Contact Count in the "Background Contact Count
-                    Reduction" section of the "Vaccinations and
-                    NPIs" tab to any value below {baseBCC}
-                    interactions per person per day.
-                    - Increase the scenario's Background Contact
-                    Count in the "Population Behaviours" section of
-                    the "Community" tab to any value above
-                    {bccReducedRate} interactions per person per
-                    day.
-                """,
-                    icon=":material/error:",
-                )
-                st.session_state[f"bccError{id}"] = 2
-            else:
-                st.session_state[f"bccError{id}"] = 0
+                True,
+            )
 
     # Trigger Thresholds
     st.html('<span id = "thresholdTriggerCondition"></span>')
@@ -3580,7 +2749,6 @@ def buildVaccinationNPITab(id):
                 )
 
                 # Set rate thresholds
-                triggerRateErrorContainer = st.container()
                 loadKey("rateStartThreshold", id, 10)
                 rateStartThreshold = st.slider(
                     "Start Trigger Threshold Rate (Cases per Day)",
@@ -3617,74 +2785,36 @@ def buildVaccinationNPITab(id):
                 )
 
                 # Show error if relax threshold is above trigger
-                if rateRelaxThreshold >= rateStartThreshold:
-                    triggerRateErrorContainer.error(
-                        f"""
-                        Error: The start trigger threshold case
-                        rate for medical interventions in the {
+                # Note that this theoretically can be done error-free with
+                # dynamic parameter maximums and/or a 2-element slider,
+                # but those would be less intuitive to the user
+                # TODO: Confirm if relax>trigger should be an allowed feature
+                paramError(
+                    "relaxAboveTrigger",
+                    id,
+                    lambda: rateRelaxThreshold > rateStartThreshold,
+                    f"""
+                        Warning: The threshold rate that triggers the
+                        beginning of NPIs in the {
                             'baseline scenario' if id == 0
                             else f'scenario named "{
                                 st.session_state[f'scenarioName{id}']
                             }"'
-                        } is currently set to {rateStartThreshold}
-                        cases per day, but the relaxation trigger
-                        threshold case rate for this scenario is
-                        set to {rateRelaxThreshold} people. As
-                        such, any interventions set to use case
-                        rates as a trigger condition will stop
-                        immediately after starting, as they will
-                        already be below the relaxation rate.
+                        } is {rateStartThreshold} cases per day, but the
+                        rate that triggers their end is {rateRelaxThreshold}
+                        cases per day. As such, NPIs will stop immediately
+                        after starting if the case rate is between these values.
 
-                        To address this error, please make one of
-                        the following changes before running the
-                        simulation:
-
-                        - Increase the scenario's Start Trigger
-                        Threshold Rate to any value above
-                        {rateRelaxThreshold} cases per day.
-                        - Decrease the scenario's Relaxation
-                        Trigger Threshold Rate to any value below
-                        {rateStartThreshold} cases per day.
+                        Please make one of the following changes:
+                        - Increase Start Trigger Threshold Rate in
+                        :primary-badge[:material/vaccines: Vaccination and NPIs]
+                        to be more than {rateRelaxThreshold}.
+                        - Decrease Relaxation Trigger Threshold Rate in
+                        :primary-badge[:material/vaccines: Vaccination and NPIs]
+                        to be less than {rateStartThreshold}.
                     """,
-                        icon=":material/error:",
-                    )
-                    globalErrorContainer.error(
-                        f"""
-                        Error: The start trigger threshold case
-                        rate for medical interventions in the {
-                            'baseline scenario' if id == 0
-                            else f'scenario named "{
-                                st.session_state[f'scenarioName{id}']
-                            }"'
-                        } is currently set to {rateStartThreshold}
-                        cases per day, but the relaxation trigger
-                        threshold case rate for this scenario is
-                        set to {rateRelaxThreshold} people. As
-                        such, any interventions set to use case
-                        rates as a trigger condition will stop
-                        immediately after starting, as they will
-                        already be below the relaxation rate.
-
-                        To address this error, please make one of
-                        the following changes before running the
-                        simulation:
-
-                        - Increase the scenario's Start Trigger
-                        Threshold Rate in the "Intervention Trigger
-                        Thresholds" section of the "Vaccinations
-                        and NPIs" tab to any value above
-                        {rateRelaxThreshold} cases per day.
-                        - Decrease the scenario's Relaxation
-                        Trigger Threshold Rate in the "Intervention
-                        Trigger Thresholds" section of the
-                        "Vaccinations and NPIs" tab to any value
-                        below {rateStartThreshold} cases per day.
-                    """,
-                        icon=":material/error:",
-                    )
-                    st.session_state[f"triggerRateError{id}"] = 2
-                else:
-                    st.session_state[f"triggerRateError{id}"] = 0
+                    False,
+                )
 
             # Case totals
             if totalConditions:
@@ -3705,7 +2835,6 @@ def buildVaccinationNPITab(id):
                 )
 
                 # Set total threshold
-                triggerTotalErrorContainer = st.container()
                 loadKey("caseTotalThreshold", id, 1000)
                 caseTotalThreshold = st.number_input(
                     "Start Trigger Case Threshold (Total Community Cases)",
@@ -3728,69 +2857,36 @@ def buildVaccinationNPITab(id):
                 )
 
                 # Show error if relax threshold is above trigger
+                # TODO: See if this can be replaced with a max value too
                 population = communityPopulation[
                     st.session_state.get("community", "newcastle")
                 ]
-                if caseTotalThreshold >= population:
-                    triggerTotalErrorContainer.error(
-                        f"""
-                        Error: The trigger threshold case total for
-                        medical interventions in the {
+                paramError(
+                    "triggerAbovePopulation",
+                    id,
+                    lambda: caseTotalThreshold >= population,
+                    f"""
+                        Error: The case threshold that triggers the
+                        beginning of NPIs in the {
                             'baseline scenario' if id == 0
                             else f'scenario named "{
                                 st.session_state[f'scenarioName{id}']
                             }"'
-                        } is currently set to {caseTotalThreshold}
-                        cases, but the population of {
-                            st.session_state.get(
-                                'community', 'newcastle'
-                            ).capitalize()
-                        } (the community used for this simulation)
-                        is equal to {population} people. As such,
-                        any interventions set to use case totals as
-                        a trigger condition will not activate
-                        unless the entire population is infected,
-                        and will thus have no practical effect in
-                        the simulation.
+                        } is {caseTotalThreshold} cases, but the
+                        total number of people in the simulated community
+                        is {population}. As such, the entire simulation
+                        will be infected before NPIs are enabled.
 
-                        To address this error, please increase the
-                        scenario's Start Trigger Case Threshold to
-                        any value above {population} cases.
+                        Please make one of the following changes:
+                        - Decrease Start Trigger Case Threshold in
+                        :primary-badge[:material/vaccines: Vaccination and NPIs]
+                        to be less than {population}.
+                        - Change the simulated community on the
+                        :grey-badge[:material/motion_play: Run Simulations] page to
+                        a community with a population larger than {caseTotalThreshold}.
                     """,
-                        icon=":material/error:",
-                    )
-                    globalErrorContainer.error(
-                        f"""
-                        Error: The trigger threshold case total for
-                        medical interventions in the {
-                            'baseline scenario' if id == 0
-                            else f'scenario named "{
-                                st.session_state[f'scenarioName{id}']
-                            }"'
-                        } is currently set to {caseTotalThreshold}
-                        cases, but the population of {
-                            st.session_state.get(
-                                'community', 'newcastle'
-                            ).capitalize()
-                        } (the community used for this simulation)
-                        is equal to {population} people. As such,
-                        any interventions set to use case totals as
-                        a trigger condition will not activate
-                        unless the entire population is infected,
-                        and will thus have no practical effect in
-                        the simulation.
-
-                        To address this error, please increase the
-                        scenario's Start Trigger Case Threshold in
-                        the "Intervention Trigger Thresholds"
-                        section of the "Vaccinations and NPIs" tab
-                        to any value above {population} cases.
-                    """,
-                        icon=":material/error:",
-                    )
-                    st.session_state[f"triggerRateError{id}"] = 2
-                else:
-                    st.session_state[f"triggerRateError{id}"] = 0
+                    True,
+                )
 
 
 """
@@ -3994,22 +3090,6 @@ def vaccineSchema(schema, id=0):
                 else 99999999
             )
             scenarioParams.vaccination_first_dose_rate = idGet("firstDoseRate", id, 300)
-            """
-            vaccineTrigger = idGet('vaccineTrigger', id, 'Always')
-            scenarioParams.vaccination_trigger = trigCast(vaccineTrigger)
-            scenarioParams.vaccination_relaxation = trigCast(vaccineTrigger)
-            if vaccineTrigger == 'Always':
-                scenarioParams.vaccination_delay = 0
-                scenarioParams.vaccination_duration = 9999
-            elif vaccineTrigger == 'Timed':
-                vaccinePeriod = [
-                    i * 2 for i in idGet('vaccinePeriod', id, (29, 59))
-                ]
-                scenarioParams.vaccination_delay = vaccinePeriod[0]
-                scenarioParams.vaccination_duration = (
-                    vaccinePeriod[1] - vaccinePeriod[0]
-                )
-            """
         # School Closure
         if idGet("schoolClosureToggle", id, False):
             scenarioParams.school_closure_compliance = idGet(
@@ -4024,9 +3104,9 @@ def vaccineSchema(schema, id=0):
                 scenarioParams.school_closure_duration = 9999
             elif schoolTrigger == "Timed":
                 schoolPeriod = [
-                    i * 2 for i in idGet("schoolClosurePeriod", id, (29, 59))
+                    i * 2 for i in idGet("schoolClosurePeriod", id, (1, 60))
                 ]
-                scenarioParams.school_closure_delay = schoolPeriod[0]
+                scenarioParams.school_closure_delay = schoolPeriod[0] - 1
                 scenarioParams.school_closure_duration = (
                     schoolPeriod[1] - schoolPeriod[0]
                 )
@@ -4046,9 +3126,9 @@ def vaccineSchema(schema, id=0):
                 scenarioParams.withdrawal_increase_duration = 9999
             elif withdrawalTrigger == "Timed":
                 withdrawalPeriod = [
-                    i * 2 for i in idGet("withdrawalIncreasePeriod", id, (29, 59))
+                    i * 2 for i in idGet("withdrawalIncreasePeriod", id, (1, 60))
                 ]
-                scenarioParams.withdrawal_increase_delay = withdrawalPeriod[0]
+                scenarioParams.withdrawal_increase_delay = withdrawalPeriod[0] - 1
                 scenarioParams.withdrawal_increase_duration = (
                     withdrawalPeriod[1] - withdrawalPeriod[0]
                 )
@@ -4063,9 +3143,9 @@ def vaccineSchema(schema, id=0):
                 scenarioParams.reduced_workgroup_duration = 9999
             elif reducedGroupTrigger == "Timed":
                 reducedGroupPeriod = [
-                    i * 2 for i in idGet("reducedGroupPeriod", id, (29, 59))
+                    i * 2 for i in idGet("reducedGroupPeriod", id, (1, 60))
                 ]
-                scenarioParams.reduced_workgroup_delay = reducedGroupPeriod[0]
+                scenarioParams.reduced_workgroup_delay = reducedGroupPeriod[0] - 1
                 scenarioParams.reduced_workgroup_duration = (
                     reducedGroupPeriod[1] - reducedGroupPeriod[0]
                 )
@@ -4081,8 +3161,8 @@ def vaccineSchema(schema, id=0):
                 scenarioParams.bcc_reduction_delay = 0
                 scenarioParams.bcc_reduction_duration = 9999
             elif bccTrigger == "Timed":
-                bccPeriod = [i * 2 for i in idGet("bccPeriod", id, (29, 59))]
-                scenarioParams.bcc_reduction_delay = bccPeriod[0]
+                bccPeriod = [i * 2 for i in idGet("bccPeriod", id, (1, 60))]
+                scenarioParams.bcc_reduction_delay = bccPeriod[0] - 1
                 scenarioParams.bcc_reduction_duration = bccPeriod[1] - bccPeriod[0]
         # Other NPIs
         if socialDistanceToggle:

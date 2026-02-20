@@ -1,6 +1,7 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
 # Functionised tab where basic simulation parameters can be modified
+# !!!CURRENTLY UNUSED!!!
 
 # Imports
 import logging
