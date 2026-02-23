@@ -4,46 +4,42 @@
 
 # Imports
 import logging
+
+import altair as alt
 import numpy as np
 import pandas as pd
-import altair as alt
 import streamlit as st
 from pydantic import ValidationError
+
 from ClientResources.InterfaceFunctions import (
-    saveKey,
-    loadKey,
-    getRemainingGroups,
-    addFormRow,
-    deleteFormRow,
     dayCount,
+    getRemainingGroups,
+    hasDuplicates,
     idGet,
-    dualError,
-)
-from ClientResources.SharedResources import (
-    ageCategories,
-    # kappaLocations,
-    backgroundColour,
+    loadKey,
+    paramError,
+    saveKey,
 )
 from ClientResources.ModelSchema import Parameters, scenarioParameters, strainParameters
+from ClientResources.SharedResources import ageCategories, ageTimeDict, backgroundColour
 
 # Logging
 diseaseLog = logging.getLogger(__name__)
 
 session = st.session_state
 
-"""
-Function to generate the parameters for the disease in a specified
-container with scenario differentiation
-
-Parameters:
-    id: An integer that will be used to differentiate the parameters in
-    different instances of the tab by adding a number to the Streamlit
-    session state variables.
-"""
-
 
 @st.fragment
-def buildDiseaseTab(id):
+def buildDiseaseTab(id: int):
+    """
+    Function to generate the parameters for the disease in a specified
+    container with scenario differentiation
+
+    Parameters:
+        id (int): An integer that will be used to differentiate the parameters in
+            different instances of the tab by adding a number to the Streamlit
+            session state variables.
+    """
     # Initialise session variables needed by the disease forms
     sessionParameters = {f"transRowCount{id}": 0, f"seedPeriodError{id}": 0}
     for parameter, default in sessionParameters.items():
@@ -108,24 +104,6 @@ def buildDiseaseTab(id):
             """,
         )
         loadKey("seedPeriod", id, (1, 30))
-        oldPeriod = '''
-        seedingPeriod = st.select_slider(
-            "Infection Seeding Time Period (Days)",
-            range(simLength),
-            (0, 29),
-            format_func=lambda x: f"Day {x + 1}",
-            on_change=saveKey,
-            args=["seedPeriod", id],  # type: ignore
-            key=f"_seedPeriod{id}",
-            help="""
-                The time period during which infection seeding will
-                occur in the simulation. The first value is the day
-                on which seeding will begin (where Day 1 is the
-                first day of the simulation), and the second value
-                is the day on which it will stop.
-            """,
-        )
-        '''
         st.slider(
             "Infection Seeding Time Period (Days)",
             min_value=1,
@@ -319,7 +297,7 @@ def buildDiseaseTab(id):
                 """,
         )
 
-        # Age-based infectiousness and susceptibility parameters
+        # Testing ground for new age-based parameter forms
         st.markdown(
             """
             ### Age-Specific Infectiousness/Susceptibility
@@ -333,7 +311,92 @@ def buildDiseaseTab(id):
             age group.
         """
         )
-        # Save relevant params as variables to avoid lookups
+
+        # Dataframe for age-based transmissibility modifiers
+        defaultTransAge = pd.DataFrame(
+            {
+                "Age Group": [None],
+                "Infectiousness": [1.0],
+                "Susceptibility": [1.0],
+            },
+        )
+        loadKey("transAgeForm", id, defaultTransAge, dataframe=True)
+        transAgeForm = st.data_editor(
+            session[f"transAgeForm{id}"],
+            num_rows="dynamic",
+            key=f"_transAgeForm{id}",
+            on_change=saveKey,
+            args=["transAgeForm", id],
+            kwargs={"dataframe": True},
+            placeholder="Enter a value",
+            column_config={
+                "Age Group": st.column_config.SelectboxColumn(
+                    "Age Group",
+                    required=True,
+                    options=ageTimeDict.keys(),
+                    format_func=lambda x: ageTimeDict[x],  # type: ignore
+                    help="""
+An age group that will have specific
+infectiousness and susceptibility parameters
+defined for it, modifying the base transmission
+probability for interactions involving
+individuals in that age group.
+                    """,
+                ),
+                "Infectiousness": st.column_config.NumberColumn(
+                    "Infectiousness",
+                    required=True,
+                    default=1.0,
+                    min_value=0.0,
+                    help="""
+The value of the infectiousness parameter
+$inf(I_i)$ when the infected individual in an
+interaction ($I_i$) is a member of this age
+group. The lower this value is, the less likely
+it is for uninfected individuals to contract
+the disease when interacting with infected
+individuals in this age group.
+                    """,
+                ),
+                "Susceptibility": st.column_config.NumberColumn(
+                    "Susceptibility",
+                    required=True,
+                    default=1.0,
+                    min_value=0.0,
+                    help="""
+The value of the susceptibility parameter
+$susc(I_s)$ when the uninfected individual in
+an interaction ($I_s$) is a member of this age
+group. The lower this value is, the less likely
+it is for uninfected individuals in this age
+group to contract the disease when interacting
+with infected individuals.
+                    """,
+                ),
+            },
+        )
+        paramError(
+            "transmissionAgeFormDuplicates",
+            id,
+            lambda: hasDuplicates(transAgeForm),
+            f"""
+                Error: The age-specific infectiousness/susceptibility
+                form used by the {
+                    'baseline scenario' if id == 0
+                    else f'scenario named "{session[f'scenarioName{id}']}"'
+                } contains duplicate age group rows. Each age group
+                should only be used in a single row of the form.
+
+                Please remove or change any rows of the Age-Specific
+                Infectiousness/Susceptibility form in
+                :primary-badge[:material/coronavirus: Disease]
+                that use the same age group as another row.
+            """,
+            True,
+        )
+
+        # Old variable-length form
+        oldVarLengthForm = '''# Save relevant params as variables to avoid lookups
         transRowCount = session[f"transRowCount{id}"]
         transRemainingGroups = session[f"transRemainingAgeGroups{id}"]
         transAgeContainer = st.container()
@@ -486,7 +549,7 @@ def buildDiseaseTab(id):
                 parameters, so a new age group cannot be added.
             """
             ),
-        )
+        )'''
 
     # Life Cycle Parameters
     with st.expander("Disease Life Cycle"):
@@ -803,22 +866,20 @@ def buildDiseaseTab(id):
         )
 
 
-"""
-Function to populate the Pydantic model schema with the parameters in
-this tab with scenario differentiation
+def diseaseSchema(schema: Parameters, id: int = 0):
+    """
+    Function to populate the Pydantic model schema with the parameters in
+    this tab with scenario differentiation
 
-Parameters:
-    schema: The Pydantic model (specifically an object in the
-    Parameters class) that the parameters will be populated into.
+    Parameters:
+        schema (Parameters): The Pydantic model (specifically an object in the
+            Parameters class) that the parameters will be populated into.
 
-    id: An integer that will be used to differentiate the parameters in
-    different instances of the tab by adding a number to the Streamlit
-    session state variables. A value of 0 means that this is the
-    baseline scenario and will be treated accordingly.
-"""
-
-
-def diseaseSchema(schema, id=0):
+        id (int): An integer that will be used to differentiate the parameters in
+            different instances of the tab by adding a number to the Streamlit
+            session state variables. A value of 0 means that this is the
+            baseline scenario and will be treated accordingly.
+    """
     try:
         # Validate parameters
         if not isinstance(schema, Parameters):
@@ -870,8 +931,18 @@ def diseaseSchema(schema, id=0):
         scenarioParams.infection_waning_rate_per_cycle = idGet(
             "naturalWaningRate", id, 6
         )
+        # Age-Specific Transmission Parameters
+        transAgeForm = idGet("transAgeForm", id, None)
+        for age, trans, susc in zip(
+            transAgeForm["Age Group"],
+            transAgeForm["Infectiousness"],
+            transAgeForm["Susceptibility"],
+        ):
+            if age:
+                setattr(scenarioParams, f"{age}_trans", trans)
+                setattr(scenarioParams, f"{age}_susc", susc)
         # Procedural Scenario Parameters (age/kappa specific)
-        for i in range(session.get(f"transRowCount{id}", 0)):
+        oldVarLengthForm = """for i in range(session.get(f"transRowCount{id}", 0)):
             varAgeGroup = ageCategories[session[f"transAgeGroup{id}-{i}"]]
             setattr(
                 scenarioParams,
@@ -882,7 +953,7 @@ def diseaseSchema(schema, id=0):
                 scenarioParams,
                 f"{varAgeGroup}_susc",
                 idGet("transSuscept", id, 1, f"-{i}"),
-            )
+            )"""
         # Save the updated parameters
         schema.Scenario_Parameter = scenarioParams
     except (ValueError, ValidationError) as e:

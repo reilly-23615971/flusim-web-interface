@@ -4,13 +4,14 @@
 
 # Imports
 import logging
+
 import streamlit as st
 
 # from streamlit_push_notifications import send_push, send_alert
 from ClientResources.InterfaceFunctions import (
     dayCount,
-    simpleLoad,
-    simpleSave,
+    loadKey,
+    saveKey,
     timeScaleChange,
 )
 from ClientResources.SharedResources import communityPopulation
@@ -37,13 +38,13 @@ st.markdown(
 st.header("Simulation Engine Settings")
 
 # Community Selection
-simpleLoad("community", "newcastle")
+loadKey("community", default="newcastle")
 community = st.selectbox(
     "Simulated Community",
     communityPopulation.keys(),
     key="_community",
     format_func=lambda x: x.capitalize(),
-    on_change=simpleSave,
+    on_change=saveKey,
     args=["community"],
     help="""
         The Australian city whose community data will be used as the
@@ -62,7 +63,7 @@ community = st.selectbox(
     """,
 )
 
-simpleLoad("cycleCount", 360)
+loadKey("cycleCount", default=360)
 st.select_slider(
     "Length of Simulation (Days)",
     range(30, 721),
@@ -80,14 +81,14 @@ st.select_slider(
     """,
 )
 
-simpleLoad("runCount", 24)
+loadKey("runCount", default=24)
 st.slider(
     "Number of Simulation Runs",
     min_value=16,
     max_value=64,
     value=24,
     key="_runCount",
-    on_change=simpleSave,
+    on_change=saveKey,
     args=["runCount"],
     help="""
         How many times each scenario will be simulated. The results
@@ -96,13 +97,14 @@ st.slider(
         simulations but more accurate results.
     """,
 )
-simpleLoad("startDay", "Monday")
+
+loadKey("startDay", default="Monday")
 st.select_slider(
     "Simulation Starting Day of the Week",
     ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"),
     "Monday",
     key="_startDay",
-    on_change=simpleSave,
+    on_change=saveKey,
     args=["startDay"],
     help="""
         The day of the week that the first day of the
@@ -142,3 +144,150 @@ st.button(
     """
     ),
 )
+
+gridTests = '''
+# Testing for AgGrids and stuff
+import pandas as pd
+from ClientResources.SharedResources import ageWithTime
+from st_aggrid import AgGrid, GridOptionsBuilder, JsCode, GridUpdateMode
+
+# TODO: New variable-length form structure
+startTestData = pd.DataFrame(
+    {
+        "Age Group": [],
+        "Infectiousness": [],
+        "Susceptibility": [],
+    },
+    # columns=["Age Group", "Infectiousness", "Susceptibility"],
+)
+
+if session.get("testData", None) is None:
+    session.testData = startTestData
+
+
+if st.button("Add Age Group"):
+    session.testData.loc[len(session.testData)] = ["Select an age group...", 1.0, 1.0]
+    st.empty()
+
+
+ageParamDisplay = JsCode(
+    """
+function(params) {
+    const allOptions = params.context.allOptions;
+    const usedValues = [];
+
+    params.api.forEachNode((node) => {
+      if (node.data['Age Group']) {
+        usedValues.push(node.data['Age Group']);
+      }
+    });
+
+    const availableOptions = allOptions.filter(option =>
+      !usedValues.includes(option) || option === params.value
+    );
+
+    return {
+      values: availableOptions
+    };
+  }
+"""
+)
+
+
+uniqueParamDisplayNew = JsCode(
+    """
+function(params) {
+
+    const allOptions = params.context.allOptions;
+
+    const used = new Set();
+    params.api.forEachNode(node => {
+        if (node.data && node.data['Unique Column']) {
+            used.add(node.data['Unique Column']);
+        }
+    });
+
+    const available = allOptions.filter(option =>
+        !used.has(option) || option === params.value
+    );
+
+    return { values: available };
+}
+"""
+)
+
+
+deleteRow = JsCode(
+    """
+class DeleteButton {
+    init(params) {
+        this.params = params;
+
+        this.eGui = document.createElement('button');
+        this.eGui.innerHTML = 'Delete';
+        this.eGui.style.backgroundColor = '#ff4b4b';
+        this.eGui.style.color = 'white';
+        this.eGui.style.border = 'none';
+        this.eGui.style.padding = '4px 8px';
+        this.eGui.style.cursor = 'pointer';
+
+        this.eGui.addEventListener('click', () => {
+            params.api.applyTransaction({
+                remove: [params.node.data]
+            });
+            params.api.dispatchEvent({
+                type: 'cellValueChanged'
+            });
+        });
+    }
+
+    getGui() {
+        return this.eGui;
+    }
+}
+"""
+)
+
+optsBuilder = GridOptionsBuilder.from_dataframe(session.testData)
+optsBuilder.configure_default_column(editable=True)
+optsBuilder.configure_column(
+    "Age Group",
+    editable=True,
+    cellEditor="agSelectCellEditor",
+    # cellEditorParams={"values": ageWithTime},
+    cellEditorParams=ageParamDisplay,
+    # valueSetter=ageUniqueValidation,
+)
+optsBuilder.configure_column(
+    "Delete Row",
+    header_name="Delete Row",
+    cellRenderer=deleteRow,
+    editable=False,
+    width=100,
+)
+optsBuilder.configure_grid_options(context={"allOptions": ageWithTime})
+opts = optsBuilder.build()
+
+returnedGrid = AgGrid(
+    session.testData,
+    editable=True,
+    gridOptions=opts,
+    allow_unsafe_jscode=True,
+    update_on=[
+        "cellValueChanged",
+        "selectionChanged",
+        "filterChanged",
+        "sortChanged",
+        # "modelUpdated",
+    ],
+    key="_testData",
+)
+
+session.testData = returnedGrid["data"]
+
+'''
+
+
+# TODO: Debug
+# st.header("DEBUG ZONE")
+# st.write(st.session_state)

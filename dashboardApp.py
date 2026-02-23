@@ -2,13 +2,16 @@
 # Developed by Reilly Evans
 # Main page of dashboard, defining pages & setting universal parameters
 
+
 # Imports
-import os
 import logging
+import os
 from datetime import datetime
+
 import pandas as pd
 import streamlit as st
 import streamlit_notify as stn  # type: ignore
+
 from ClientResources.SharedResources import resultQueue, usePresetData, usePresetParams
 
 # from ClientResources.SimulationRunFunctions import runSimulationButton
@@ -72,12 +75,12 @@ runSimulation = st.Page(
     icon=":material/motion_play:",
 )
 infectionGraphs = st.Page(
-    "DashboardPages/chartDemonstration.py",
+    "DashboardPages/infectionOverTimeGraphs.py",
     title="Infection Over Time Graphs",
     icon=":material/chart_data:",
 )
 healthTables = st.Page(
-    "DashboardPages/tableCreation.py",
+    "DashboardPages/healthBurdenTables.py",
     title="Health Burden Tables",
     icon=":material/table_chart_view:",
 )

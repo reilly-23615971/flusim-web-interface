@@ -4,15 +4,16 @@
 
 # Imports
 import logging
+
 import streamlit as st
 
-# from streamlit_push_notifications import send_push, send_alert
-# from ParameterTabs.basicParams import buildBasicTab
-from ParameterTabs.diseaseParams import buildDiseaseTab
-from ParameterTabs.communityParams import buildCommunityTab
-from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
-from ParameterTabs.dynamicParams import buildDynamicTab
 from ClientResources.InterfaceFunctions import errorChecker
+from ParameterTabs.communityParams import buildCommunityTab
+
+# from streamlit_push_notifications import send_push, send_alert
+from ParameterTabs.diseaseParams import buildDiseaseTab
+from ParameterTabs.dynamicParams import buildDynamicTab
+from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
 
 # Logging
 baselineLog = logging.getLogger(__name__)
@@ -55,15 +56,6 @@ errorChecker(0)
 # change scale or switch to number input
 
 # Create tabs for each category of parameters
-oldTabs = """(basicTab, diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
-    [
-        ":material/start: Initialisation",
-        ":material/coronavirus: Disease",
-        ":material/groups: Community",
-        ":material/vaccines: Vaccination and NPIs",
-        ":material/manage_history: Dynamic",
-    ]
-)"""
 (diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
     [
         ":material/coronavirus: Disease",
@@ -73,8 +65,6 @@ oldTabs = """(basicTab, diseaseTab, communityTab, interventionTab, dynamicTab) =
     ]
 )
 # TODO: :material/pattern: for the template tab
-# Basic parameters
-# with basicTab: buildBasicTab(0)
 
 # Disease parameters
 with diseaseTab:
@@ -91,7 +81,3 @@ with interventionTab:
 # Dynamic parameters
 with dynamicTab:
     buildDynamicTab(0)
-
-# TODO: Debug
-st.header("DEBUG ZONE")
-st.write(st.session_state)

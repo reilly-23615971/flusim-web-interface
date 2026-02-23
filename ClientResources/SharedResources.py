@@ -6,6 +6,7 @@
 import logging
 from queue import Queue
 from typing import List, Literal
+
 import streamlit as st
 
 # Logging
@@ -75,6 +76,19 @@ ageWithTime = [
     "Senior (65-79 Years)",
     "Older Senior (80+ Years)",
 ]
+# Dictionary to allow converting ages with time into schema-compatible names
+ageTimeDict = {
+    "young_infant": "Young Infant (0-6 Months)",
+    "infant": "Infant (7-24 Months)",
+    "young_child": "Young Child (3-5 Years)",
+    "child": "Child (6-12 Years)",
+    "adolescent": "Adolescent (13-17 Years)",
+    "young_adult": "Young Adult (18-24 Years)",
+    "adult": "Adult (25-44 Years)",
+    "older_adult": "Older Adult (45-64 Years)",
+    "senior": "Senior (65-79 Years)",
+    "older_senior": "Older Senior (80+ Years)",
+}
 # Nested dictionary holding number of individuals in each age bracket
 communityAgePops = {
     "newcastle": {
@@ -191,6 +205,9 @@ kappaLocations = {
 # Simple function to get theme colours
 # Change these values if background colour changes
 def backgroundColour():
+    """
+    Simple function to get the background colour of the current theme
+    """
     return "#0F1116" if st.context.theme.type == "dark" else "#FFFFFF"
 
 
