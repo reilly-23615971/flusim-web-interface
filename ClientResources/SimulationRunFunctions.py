@@ -38,6 +38,7 @@ from ClientResources.InterfaceFunctions import idGet, errorChecker  # , checkErr
 from ClientResources.VisualisationFunctions import formatData
 from ClientResources.SharedResources import (
     AnalysisFile,
+    ageTimeDict,
     usePresetParams,
     outcomeRateVariables,
     outcomeRateDefaults,
@@ -299,7 +300,7 @@ simulation.
                 }
                 for outcome in outcomeRateDefaults.keys()
             }
-            st.session_state.PendingDataMortalityRates = {
+            oldMort = """st.session_state.PendingDataMortalityRates = {
                 scenarioNames[scenarioID]: {
                     idGet("deathAgeGroup", scenarioID, None, f"-{rowID}"): idGet(
                         "deathRatio",
@@ -309,6 +310,17 @@ simulation.
                     )
                     for rowID in range(idGet("deathRowCount", scenarioID, 0))
                 }
+                for scenarioID in range(st.session_state.PendingDataScenarioCount + 1)
+            }"""
+            st.session_state.PendingDataMortalityRates = {
+                scenarioNames[scenarioID]: {
+                    age: idGet("deathRatio", scenarioID, 0.1)
+                    for age in ageTimeDict.keys()
+                }.update(
+                    idGet("mortAgeForm", scenarioID, None)
+                    .set_index("Age Group")["Mortality Rate"]
+                    .to_dict()
+                )
                 for scenarioID in range(st.session_state.PendingDataScenarioCount + 1)
             }
 

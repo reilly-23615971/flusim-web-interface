@@ -70,6 +70,8 @@ parameterSet = {
     # "runCount",
     # "cycleCount",
     # "startDay",
+    "transAgeForm",
+    "mortAgeForm",
     "deathRowCount",
     "deathRemainingAgeGroups",
     "caseRatio",

@@ -393,6 +393,7 @@ other age groups list the age range they cover as part of their name.
             )
         elif outcome == "Deaths":
             # Account for age-specific mortality
+            # TODO: Make sure this works with new mortality input
             # Convert death rates to DataFrame for efficiency
             deathRates = pd.DataFrame(st.session_state.DataMortalityRates).T.stack()
             dataIndexValues = pd.MultiIndex.from_frame(
