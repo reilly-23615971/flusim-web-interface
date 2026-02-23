@@ -21,6 +21,7 @@ from ClientResources.SharedResources import resultQueue, usePresetData, usePrese
 st.set_page_config(
     page_title="SMRG Flusim Web Dashboard",
     page_icon=":material/microbiology:",
+    layout="wide",
     menu_items={
         "About": """
         ## SMRG Flusim Web Dashboard
