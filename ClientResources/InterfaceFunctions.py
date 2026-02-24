@@ -225,7 +225,29 @@ timeParamList = [
     "bccPeriod",
 ]
 
-dynamicParamList = {"seedPeriod": "seedTimeForm"}
+# List of parameters that modify dynamic parameter forms when changed
+dynamicParamList = {
+    "seedPeriod": "seedTimeForm",
+    "schoolClosurePeriod": "closeTimeForm",
+    "bccPeriod": "bccTimeForm",
+}
+
+
+def saveWithRerun(
+    key: str,
+    scenarioID: int,
+):
+    """
+    Simple function to trigger a page rerun after saving widget values
+
+    Parameters:
+        key (str): The string used to identify the widget.
+
+        scenarioID (int): The integer representing the scenario the widget
+            is part of.
+    """
+    saveKey(key, scenarioID)
+    session["rerunTime"] = True
 
 
 # TODO: Notify users if parameters are changed when cycle count is adjusted

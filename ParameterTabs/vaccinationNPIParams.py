@@ -5,33 +5,37 @@
 # Imports
 import logging
 from typing import Literal, cast
+
 import numpy as np
 import streamlit as st
 from pydantic import ValidationError
+
 from ClientResources.InterfaceFunctions import (
-    saveKey,
-    loadKey,
-    getRemainingGroups,
     addFormRow,
     deleteFormRow,
+    dynamicScaleChange,
+    getRemainingGroups,
     idGet,
+    loadKey,
     paramError,
-)
-from ClientResources.SharedResources import (
-    npis,
-    npiCamel,
-    ordinals,
-    triggerConditions,
-    ageCategories,
-    communityPopulation,
+    saveKey,
+    saveWithRerun,
 )
 from ClientResources.ModelSchema import (
     Parameters,
-    scenarioParameters,
     ageScenarioParameters,
+    scenarioParameters,
     vaccineCoverage,
     vaccineDose,
     vaccineEfficacy,
+)
+from ClientResources.SharedResources import (
+    ageCategories,
+    communityPopulation,
+    npiCamel,
+    npis,
+    ordinals,
+    triggerConditions,
 )
 
 # Logging
@@ -1956,7 +1960,7 @@ def buildVaccinationNPITab(id):
             useSchoolClosureToggle = st.toggle(
                 "Enable School Closures",
                 value=False,
-                on_change=saveKey,
+                on_change=saveWithRerun,
                 args=["schoolClosureToggle", id],  # type: ignore
                 key=f"_schoolClosureToggle{id}",
                 help="""
@@ -2022,8 +2026,8 @@ def buildVaccinationNPITab(id):
                         value=(1, 60),
                         format="Day %i",
                         key=f"_schoolClosurePeriod{id}",
-                        on_change=saveKey,
-                        args=["schoolClosurePeriod", id],  # type: ignore
+                        on_change=dynamicScaleChange,
+                        args=["schoolClosurePeriod", "closeTimeForm", id],
                         disabled=not useSchoolClosureToggle,
                         help="""
                             The time period during which schools
@@ -2033,6 +2037,14 @@ def buildVaccinationNPITab(id):
                             the first day of the simulation), and
                             the second value is the day on which
                             schools will reopen.
+
+                            Note that if you modify this value, the update
+                            points for school closure compliance defined in
+                            :primary-badge[:material/manage_history: Dynamic]
+                            may have their values altered. For instance, if
+                            you go from school closures ending on Day 60 to
+                            Day 30, an update point set to affect the value
+                            on Day 45 will be changed to affect it on Day 30 instead.
                         """,
                     )
 
@@ -2077,7 +2089,7 @@ def buildVaccinationNPITab(id):
                 0.9,
                 format_func=lambda x: f"{100 * x:0.3g}%",
                 disabled=not useSchoolClosureToggle,
-                on_change=saveKey,
+                on_change=saveWithRerun,
                 args=["schoolClosureCompliance", id],  # type: ignore
                 key=f"_schoolClosureCompliance{id}",
                 help="""
@@ -2507,7 +2519,7 @@ def buildVaccinationNPITab(id):
             useBCCToggle = st.toggle(
                 "Enable BCC Reduction",
                 value=False,
-                on_change=saveKey,
+                on_change=saveWithRerun,
                 args=["bccToggle", id],  # type: ignore
                 key=f"_bccToggle{id}",
                 help="""
@@ -2571,8 +2583,8 @@ def buildVaccinationNPITab(id):
                         format="Day %i",
                         key=f"_bccPeriod{id}",
                         disabled=not useBCCToggle,
-                        on_change=saveKey,
-                        args=["bccPeriod", id],  # type: ignore
+                        on_change=dynamicScaleChange,
+                        args=["bccPeriod", "bccTimeForm", id],  # type: ignore
                         help="""
                             The time period during which background
                             contact count (BCC) will be reduced in
@@ -2627,7 +2639,7 @@ def buildVaccinationNPITab(id):
                 8.0,
                 0.2,
                 disabled=not useBCCToggle,
-                on_change=saveKey,
+                on_change=saveWithRerun,
                 args=["bccReducedRate", id],  # type: ignore
                 key=f"_bccReducedRate{id}",
                 help="""

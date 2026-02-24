@@ -13,18 +13,19 @@ from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import (
     dayCount,
+    dynamicScaleChange,
     hasDuplicates,
     idGet,
     loadKey,
     paramError,
     saveKey,
-    dynamicScaleChange,
+    saveWithRerun,
 )
 from ClientResources.ModelSchema import (
     Parameters,
+    ageScenarioParameters,
     scenarioParameters,
     strainParameters,
-    ageScenarioParameters,
 )
 from ClientResources.SharedResources import ageTimeDict, backgroundColour
 
@@ -99,12 +100,13 @@ def buildDiseaseTab(id: int):
             np.linspace(0.025, 5.0, 200),
             0.25,
             key=f"_seedRate{id}",
-            on_change=saveKey,
+            on_change=saveWithRerun,
             args=["seedRate", id],  # type: ignore
             format_func=lambda x: f"{x:0.4g}",
             help="""
                 The average number of individuals that will be
                 infected directly via infection seeding each cycle.
+                Note that each day of the simulation is 2 cycles.
             """,
         )
         # TODO: Notify users if dynamic parameters are changed
@@ -311,17 +313,14 @@ def buildDiseaseTab(id: int):
 
         # Dataframe for age-based transmissibility modifiers
         st.markdown(
-            """
-            ### Age-Specific Infectiousness/Susceptibility
-
-            This section allows for unique values of $inf(I_i)$ and
-            $susc(I_s)$ to be defined for each age group, modifying
-            the probability of infection for interactions involving
-            individuals in said age groups. These parameters will
-            assume a default value of 1 (i.e. no change in
-            probability) if they are not specified for a specific
-            age group.
-        """
+            "### Age-Specific Infectiousness/Susceptibility",
+            help="""
+This table allows for unique values of $inf(I_i)$ and $susc(I_s)$ to be
+defined for each age group, modifying the probability of infection for
+interactions involving individuals in said age groups. These parameters
+will assume a default value of 1 (i.e. no change in probability) if they
+are not specified for a specific age group.
+            """,
         )
         loadKey(
             "transAgeForm",
@@ -896,13 +895,11 @@ group to contract the disease when interacting with infected individuals.
         # Dataframe for age-based mortality
         # TODO: Ensure health burden tables work with the new input format
         st.markdown(
-            """
-            ### Age-Specific Mortality Rate
-
-            This section allows for unique likelihoods of death to
-            be defined for each age group, overriding the global
-            rate defined above.
-        """
+            "### Age-Specific Mortality Rate",
+            help="""
+This table allows for unique likelihoods of death to be defined for
+each age group, overriding the global rate defined above.
+            """,
         )
         loadKey(
             "mortAgeForm",

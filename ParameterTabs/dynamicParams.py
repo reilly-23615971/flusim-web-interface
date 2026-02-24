@@ -3,18 +3,14 @@
 # Functionised tab where parameters can change mid-simulation
 
 # Imports
-import os
 import logging
 from typing import Literal, cast
 
-import numpy as np
 import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import (
-    addFormRow,
-    deleteFormRow,
     hasDuplicates,
     idGet,
     loadKey,
@@ -55,7 +51,7 @@ def buildDynamicTab(id: int):
 
     # Avoid flooding the container with errors when many dynamic
     # changes are defined for each parameter
-    firstSeedError, firstCloseError, firstBCCError = True, True, True
+    # firstSeedError, firstCloseError, firstBCCError = True, True, True
 
     # Tab Content
     # TODO: Sort rows from earliest to latest
@@ -93,7 +89,7 @@ def buildDynamicTab(id: int):
         the corresponding NPI is active at that time.
     """
     )
-    globalErrorContainer = st.container()
+    # globalErrorContainer = st.container()
 
     # Get simulation length for error checking
     simLength = st.session_state.get("cycleCount", 360)
@@ -141,7 +137,8 @@ seeding rate will come into effect.
                 min_value=0.0,
                 help="""
 The average number of individuals that will be infected directly via infection
-seeding each cycle after the specified point in the simulation.
+seeding each cycle after the specified point in the simulation. Note that
+each day of the simulation is 2 cycles.
                 """,
             ),
         },
@@ -391,7 +388,95 @@ seeding each cycle after the specified point in the simulation.
 
     # School Closure Compliance
     st.subheader("School Closure Compliance")
-    # Save relevant parameters as variables to avoid lookups
+    closeActive = idGet("schoolClosureToggle", id, False)
+    baseCloseValue = idGet("schoolClosureCompliance", id, 0.9)
+    closeStart, closeEnd = (
+        idGet("schoolClosurePeriod", id, (1, 60))
+        if idGet("schoolClosureTrigger", id, "Always") == "Timed"
+        else (1, simLength)
+    )
+    if not closeActive:
+        st.info(
+            f"""
+                Note: School closures are currently disabled in
+                {'the baseline' if id == 0 else 'this'} scenario. As
+                such, dynamic updates to school closure compliance
+                cannot be edited and will not take effect unless you enable the
+                NPI in the "School Closure" section of the
+                "Vaccinations and NPIs" tab prior to running the
+                simulation.
+            """,
+            icon=":material/info:",
+        )
+    loadKey(
+        "closeTimeForm",
+        id,
+        pd.DataFrame(
+            {
+                "Day to Update Parameter": [None],
+                "New School Closure Compliance": [baseCloseValue],
+            },
+        ),
+        dataframe=True,
+    )
+    closeTimeForm = st.data_editor(
+        session[f"closeTimeForm{id}"],
+        num_rows="dynamic",
+        key=f"_closeTimeForm{id}",
+        on_change=saveKey,
+        args=["closeTimeForm", id],
+        kwargs={"dataframe": True},
+        placeholder=(
+            "Enter a value"
+            if closeActive
+            else "Enable school closures to add new update points"
+        ),
+        disabled=not closeActive,
+        column_config={
+            "Day to Update Parameter": st.column_config.NumberColumn(
+                "Day to Update Parameter",
+                required=True,
+                min_value=closeStart,
+                max_value=closeEnd,
+                format="Day %d",
+                help="""
+The day of the simulation upon which the new value for
+school closure compliance will come into effect.
+                """,
+            ),
+            "New School Closure Compliance": st.column_config.NumberColumn(
+                "New School Closure Compliance (Probability)",
+                required=True,
+                default=baseCloseValue,
+                min_value=0.0,
+                max_value=1.0,
+                format="percent",
+                help="""
+The probability that an individual will withdraw from schools when
+they are closed after the specified point in the simulation.
+                """,
+            ),
+        },
+    )
+    paramError(
+        "schoolClosureTimeFormDuplicates",
+        id,
+        lambda: closeActive and hasDuplicates(closeTimeForm, "Day to Update Parameter"),
+        f"""
+            Error: The dynamic school closure compliance form used by the {
+                'baseline scenario' if id == 0
+                else f'scenario named "{session[f'scenarioName{id}']}"'
+            } contains duplicate update points. Each row of the form
+            should specify a different day of the simulation.
+
+            Please remove or change any rows of the School Closure Compliance
+            form in :primary-badge[:material/manage_history: Dynamic]
+            that use the same day as another row.
+        """,
+        True,
+    )
+
+    oldVarLengthForm = '''# Save relevant parameters as variables to avoid lookups
     closeRowCount = st.session_state[f"closeRowCount{id}"]
     baseCloseValue = idGet("schoolClosureCompliance", id, 0.9)
     closeActive = idGet("schoolClosureToggle", id, False)
@@ -667,11 +752,102 @@ seeding each cycle after the specified point in the simulation.
             in a single simulation.
         """
         ),
-    )
+    )'''
 
     # Reduced Background Contact Count
     st.subheader("Reduced Background Contact Count")
-    # Save relevant parameters as variables to avoid lookups
+    bccActive = idGet("bccToggle", id, False)
+    baseBCCValue = idGet("bccReducedRate", id, 0.2)
+    bccStart, bccEnd = (
+        idGet("bccPeriod", id, (1, 60))
+        if idGet("bccTrigger", id, "Always") == "Timed"
+        else (1, simLength)
+    )
+    if not bccActive:
+        st.info(
+            f"""
+                Note: Background contact count reduction is currently disabled in
+                {'the baseline' if id == 0 else 'this'} scenario. As
+                such, dynamic updates to the reduced BCC cannot be edited
+                and will not take effect unless you enable the
+                NPI in the "Background Contact Count Reduction" section of the
+                "Vaccinations and NPIs" tab prior to running the
+                simulation.
+            """,
+            icon=":material/info:",
+        )
+    loadKey(
+        "bccTimeForm",
+        id,
+        pd.DataFrame(
+            {
+                "Day to Update Parameter": [None],
+                "New Reduced Background Contact Count": [baseBCCValue],
+            },
+        ),
+        dataframe=True,
+    )
+    bccTimeForm = st.data_editor(
+        session[f"bccTimeForm{id}"],
+        num_rows="dynamic",
+        key=f"_bccTimeForm{id}",
+        on_change=saveKey,
+        args=["bccTimeForm", id],
+        kwargs={"dataframe": True},
+        placeholder=(
+            "Enter a value"
+            if bccActive
+            else "Enable BCC reduction to add new update points"
+        ),
+        disabled=not bccActive,
+        column_config={
+            "Day to Update Parameter": st.column_config.NumberColumn(
+                "Day to Update Parameter",
+                required=True,
+                min_value=bccStart,
+                max_value=bccEnd,
+                format="Day %d",
+                help="""
+The day of the simulation upon which the new value for
+reduced background contact count will come into effect.
+                """,
+            ),
+            "New Reduced Background Contact Count": st.column_config.NumberColumn(
+                (
+                    "Reduced Background Contact Count (Average "
+                    "Number of Interactions per Person per Day)"
+                ),
+                required=True,
+                default=baseBCCValue,
+                min_value=0.0,
+                help="""
+The average number of other people each individual will interact with in
+the background phase of each day in the simulation (emulating interactions
+outside of simulated locations) while a BCC reduction intervention is in
+effect, overwriting the normal BCC rate.
+                """,
+            ),
+        },
+    )
+    paramError(
+        "bccReductionTimeFormDuplicates",
+        id,
+        lambda: bccActive and hasDuplicates(bccTimeForm, "Day to Update Parameter"),
+        f"""
+            Error: The dynamic background contact count reduction form used by the {
+                'baseline scenario' if id == 0
+                else f'scenario named "{session[f'scenarioName{id}']}"'
+            } contains duplicate update points. Each row of the form
+            should specify a different day of the simulation.
+
+            Please remove or change any rows of the Reduced Background Contact
+            Count form in :primary-badge[:material/manage_history: Dynamic]
+            that use the same day as another row.
+        """,
+        True,
+    )
+
+    oldVarLengthForm = '''# Save relevant parameters as variables to avoid lookups
     bccRowCount = st.session_state[f"bccRowCount{id}"]
     baseBCCValue = idGet("bccReducedRate", id, 0.2)
     bccActive = idGet("bccToggle", id, False)
@@ -946,7 +1122,7 @@ seeding each cycle after the specified point in the simulation.
             in a single simulation.
         """
         ),
-    )
+    )'''
 
 
 def paramCast(x: str):
@@ -956,6 +1132,7 @@ def paramCast(x: str):
     Parameters:
         x (str): shorthand for the key to cast
     """
+    # TODO: Add any new dynamic parameters
     return cast(
         Literal[
             "work_nonattendance",
@@ -995,17 +1172,31 @@ def dynamicSchema(schema: Parameters, id: int = 0):
         # Scenario Dynamic Intervention
         dynamicChanges = []
 
-        for prefix in ["seed"]:
-            timeForm = idGet(
-                f"{prefix}TimeForm",
-                id,
-                pd.DataFrame(
-                    {
-                        "Day to Update Parameter": [None],
-                        "New Infection Seeding Rate": [idGet("seedRate", id, 0.25)],
-                    },
-                ),
-            )
+        for prefix, default in {
+            "seed": pd.DataFrame(
+                {
+                    "Day to Update Parameter": [None],
+                    "New Infection Seeding Rate": [idGet("seedRate", id, 0.25)],
+                },
+            ),
+            "close": pd.DataFrame(
+                {
+                    "Day to Update Parameter": [None],
+                    "New School Closure Compliance": [
+                        idGet("schoolClosureCompliance", id, 0.9)
+                    ],
+                },
+            ),
+            "bcc": pd.DataFrame(
+                {
+                    "Day to Update Parameter": [None],
+                    "New Reduced Background Contact Count": [
+                        idGet("bccReducedRate", id, 0.2)
+                    ],
+                },
+            ),
+        }.items():
+            timeForm = idGet(f"{prefix}TimeForm", id, default)
             for time, newValue in zip(timeForm.iloc[:, 0], timeForm.iloc[:, 1]):
                 if time:
                     dynamicChanges.append(
@@ -1016,8 +1207,8 @@ def dynamicSchema(schema: Parameters, id: int = 0):
                         )
                     )
 
-        for prefix, default in {
-            # "seed": idGet("seedRate", id, 0.25),
+        oldVarLengthForm = """for prefix, default in {
+            "seed": idGet("seedRate", id, 0.25),
             "close": idGet("schoolClosureCompliance", id, 0.9),
             "bcc": idGet("bccReducedRate", id, 0.2),
         }.items():
@@ -1028,9 +1219,8 @@ def dynamicSchema(schema: Parameters, id: int = 0):
                         CycleOffset=idGet(f"{prefix}Cycle", id, 15, f"-{i}") * 2,
                         NewValue=idGet(f"{prefix}NewRate", id, default, f"-{i}"),
                     )
-                )
+                )"""
         # Save the updated parameters
-        os.write(1, f"{dynamicChanges}\n".encode())
         if dynamicChanges:
             schema.Scenario_DynamicIntervention = dynamicChanges
     except (ValueError, ValidationError) as e:
