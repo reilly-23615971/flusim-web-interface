@@ -3101,15 +3101,15 @@ def vaccineSchema(schema, id=0):
             scenarioParams.school_closure_relaxation = trigCast(schoolTrigger)
             if schoolTrigger == "Always":
                 scenarioParams.school_closure_delay = 0
-                scenarioParams.school_closure_duration = 9999
+                scenarioParams.school_closure_duration = 99999
             elif schoolTrigger == "Timed":
                 schoolPeriod = [
-                    i * 2 for i in idGet("schoolClosurePeriod", id, (1, 60))
+                    i - 1 for i in idGet("schoolClosurePeriod", id, (1, 60))
                 ]
-                scenarioParams.school_closure_delay = schoolPeriod[0] - 1
+                scenarioParams.school_closure_delay = schoolPeriod[0] * 2
                 scenarioParams.school_closure_duration = (
-                    schoolPeriod[1] - schoolPeriod[0]
-                )
+                    schoolPeriod[1] - schoolPeriod[0] + 1
+                ) * 2
         # Withdrawal Increase
         if idGet("withdrawalIncreaseToggle", id, False):
             scenarioParams.increased_withdrawal = idGet(
@@ -3123,15 +3123,15 @@ def vaccineSchema(schema, id=0):
             scenarioParams.withdrawal_increase_relaxation = trigCast(withdrawalTrigger)
             if withdrawalTrigger == "Always":
                 scenarioParams.withdrawal_increase_delay = 0
-                scenarioParams.withdrawal_increase_duration = 9999
+                scenarioParams.withdrawal_increase_duration = 99999
             elif withdrawalTrigger == "Timed":
                 withdrawalPeriod = [
-                    i * 2 for i in idGet("withdrawalIncreasePeriod", id, (1, 60))
+                    i - 1 for i in idGet("withdrawalIncreasePeriod", id, (1, 60))
                 ]
-                scenarioParams.withdrawal_increase_delay = withdrawalPeriod[0] - 1
+                scenarioParams.withdrawal_increase_delay = withdrawalPeriod[0] * 2
                 scenarioParams.withdrawal_increase_duration = (
-                    withdrawalPeriod[1] - withdrawalPeriod[0]
-                )
+                    withdrawalPeriod[1] - withdrawalPeriod[0] + 1
+                ) * 2
         # Reduced Group Size
         if idGet("reducedGroupToggle", id, False):
             scenarioParams.reduced_workgroup_size = idGet("reducedGroupSize", id, 5)
@@ -3140,15 +3140,15 @@ def vaccineSchema(schema, id=0):
             scenarioParams.reduced_workgroup_relaxation = trigCast(reducedGroupTrigger)
             if reducedGroupTrigger == "Always":
                 scenarioParams.reduced_workgroup_delay = 0
-                scenarioParams.reduced_workgroup_duration = 9999
+                scenarioParams.reduced_workgroup_duration = 99999
             elif reducedGroupTrigger == "Timed":
                 reducedGroupPeriod = [
-                    i * 2 for i in idGet("reducedGroupPeriod", id, (1, 60))
+                    i - 1 for i in idGet("reducedGroupPeriod", id, (1, 60))
                 ]
-                scenarioParams.reduced_workgroup_delay = reducedGroupPeriod[0] - 1
+                scenarioParams.reduced_workgroup_delay = reducedGroupPeriod[0] * 2
                 scenarioParams.reduced_workgroup_duration = (
-                    reducedGroupPeriod[1] - reducedGroupPeriod[0]
-                )
+                    reducedGroupPeriod[1] - reducedGroupPeriod[0] + 1
+                ) * 2
         # BCC Reduction
         if idGet("bccToggle", id, False):
             scenarioParams.bcc_reduction = idGet("bccReducedRate", id, 0.2) / idGet(
@@ -3159,11 +3159,13 @@ def vaccineSchema(schema, id=0):
             scenarioParams.bcc_reduction_relaxation = trigCast(bccTrigger)
             if bccTrigger == "Always":
                 scenarioParams.bcc_reduction_delay = 0
-                scenarioParams.bcc_reduction_duration = 9999
+                scenarioParams.bcc_reduction_duration = 99999
             elif bccTrigger == "Timed":
-                bccPeriod = [i * 2 for i in idGet("bccPeriod", id, (1, 60))]
-                scenarioParams.bcc_reduction_delay = bccPeriod[0] - 1
-                scenarioParams.bcc_reduction_duration = bccPeriod[1] - bccPeriod[0]
+                bccPeriod = [i - 1 for i in idGet("bccPeriod", id, (1, 60))]
+                scenarioParams.bcc_reduction_delay = bccPeriod[0] * 2
+                scenarioParams.bcc_reduction_duration = (
+                    bccPeriod[1] - bccPeriod[0] + 1
+                ) * 2
         # Other NPIs
         if socialDistanceToggle:
             scenarioParams.social_distance_compliance = socialCompliance
