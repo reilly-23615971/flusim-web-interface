@@ -22,6 +22,7 @@ from ClientResources.InterfaceFunctions import (
 # Logging
 scenarioLog = logging.getLogger(__name__)
 
+# Store st.session_state as variable for efficiency
 session = st.session_state
 
 
@@ -235,7 +236,7 @@ def addScenario():
 
 
 # Function to delete a scenario from the page
-@st.dialog("Delete Scenario")
+@st.dialog("Delete Scenario", width="large", icon=":material/delete:")
 def deleteScenario(scenarioID):
     st.markdown(
         f"""

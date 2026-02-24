@@ -12,6 +12,8 @@ import streamlit as st
 
 # Logging
 functionLog = logging.getLogger(__name__)
+
+# Store st.session_state as variable for efficiency
 session = st.session_state
 
 # Tools for error messages

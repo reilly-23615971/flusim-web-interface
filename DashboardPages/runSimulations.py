@@ -20,6 +20,7 @@ from ClientResources.SimulationRunFunctions import runSimulationButton
 # Logging
 runSimLog = logging.getLogger(__name__)
 
+# Store st.session_state as variable for efficiency
 session = st.session_state
 
 
@@ -119,17 +120,15 @@ st.select_slider(
 # progress bars, server availability etc.)
 st.button(
     label=(
-        "Running simulations..." if session.simulationInProgress else "Run Simulations"
+        "Running simulations..."
+        if session.simulationInProgress
+        else "Run Simulation Experiment"
     ),
     on_click=runSimulationButton,
     key="_runSim",
     disabled=session.simulationInProgress,
     type="primary",
-    icon=(
-        ":material/hourglass:"
-        if session.simulationInProgress
-        else ":material/motion_play:"
-    ),
+    icon=("spinner" if session.simulationInProgress else ":material/motion_play:"),
     help=(
         """
         Send a request to the *Flusim* model server to run the model

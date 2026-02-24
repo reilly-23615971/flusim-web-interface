@@ -18,6 +18,7 @@ from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
 # Logging
 baselineLog = logging.getLogger(__name__)
 
+# Store st.session_state as variable for efficiency
 session = st.session_state
 
 

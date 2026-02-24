@@ -4,48 +4,51 @@
 
 # Imports
 import asyncio
+import json
 import logging
 import threading
-import json
-from io import BytesIO
 from datetime import datetime
+from io import BytesIO
 from zipfile import ZipFile
-from aiohttp import (
-    ClientSession,
-    ClientConnectorError,
-    ClientResponseError,
-    ClientTimeout,
-)
+
+import pandas as pd
 import streamlit as st
 import streamlit_notify as stn  # type: ignore
+from aiohttp import (
+    ClientConnectorError,
+    ClientResponseError,
+    ClientSession,
+    ClientTimeout,
+)
 
-# from ParameterTabs.basicParams import basicSchema
-from ParameterTabs.diseaseParams import diseaseSchema
-from ParameterTabs.communityParams import communitySchema
-from ParameterTabs.vaccinationNPIParams import vaccineSchema
-from ParameterTabs.dynamicParams import dynamicSchema
+from ClientResources.InterfaceFunctions import errorChecker, idGet  # , checkErrors
 from ClientResources.ModelSchema import (
     Parameters,
     commandArgument,
-    scenarioParameters,
+    communityOverride,
     modelGuideFile,
     overrideParams,
-    communityOverride,
-    simulationSet,
+    scenarioParameters,
     simulation,
+    simulationSet,
 )
-from ClientResources.InterfaceFunctions import idGet, errorChecker  # , checkErrors
-from ClientResources.VisualisationFunctions import formatData
 from ClientResources.SharedResources import (
     AnalysisFile,
     ageTimeDict,
-    usePresetParams,
-    outcomeRateVariables,
     outcomeRateDefaults,
-    serverUrl,
+    outcomeRateVariables,
     resultQueue,
     saveJSON,
+    serverUrl,
+    usePresetParams,
 )
+from ClientResources.VisualisationFunctions import formatData
+from ParameterTabs.communityParams import communitySchema
+
+# from ParameterTabs.basicParams import basicSchema
+from ParameterTabs.diseaseParams import diseaseSchema
+from ParameterTabs.dynamicParams import dynamicSchema
+from ParameterTabs.vaccinationNPIParams import vaccineSchema
 
 # Logging
 functionLog = logging.getLogger(__name__)
@@ -126,13 +129,11 @@ def createConfig(scenarioCount):
     )
 
 
-"""
-Callback function for the Run Simulation button
-"""
-
-
-@st.dialog("Run Simulation Experiment")
+@st.dialog("Run Simulation Experiment", width="large", icon=":material/motion_play:")
 def runSimulationButton():
+    """
+    Callback function for the Run Simulation button
+    """
     scenarioCount = st.session_state.get("scenarioCount", 0)
     if scenarioCount == 0:
         st.markdown(
@@ -288,9 +289,7 @@ simulation.
                 "community", "newcastle"
             )
             st.session_state.PendingDataScenarioNames = scenarioNames
-            st.session_state.PendingDataScenarioCount = st.session_state[
-                "scenarioCount"
-            ]
+            st.session_state.PendingDataScenarioCount = scenarioCount
             st.session_state.PendingDataHealthOutcomeRates = {
                 outcome: {
                     scenario: idGet(
@@ -310,18 +309,30 @@ simulation.
                     )
                     for rowID in range(idGet("deathRowCount", scenarioID, 0))
                 }
-                for scenarioID in range(st.session_state.PendingDataScenarioCount + 1)
+                for scenarioID in range(scenarioCount + 1)
             }"""
+            pendingDeaths = {
+                scenarioID: idGet("deathRatio", scenarioID, 0.1)
+                for scenarioID in range(scenarioCount + 1)
+            }
             st.session_state.PendingDataMortalityRates = {
                 scenarioNames[scenarioID]: {
-                    age: idGet("deathRatio", scenarioID, 0.1)
-                    for age in ageTimeDict.keys()
+                    age: pendingDeaths[scenarioID] for age in ageTimeDict.keys()
                 }.update(
-                    idGet("mortAgeForm", scenarioID, None)
+                    idGet(
+                        "mortAgeForm",
+                        scenarioID,
+                        pd.DataFrame(
+                            {
+                                "Age Group": [None],
+                                "Mortality Rate": [pendingDeaths[scenarioID]],
+                            },
+                        ),
+                    )
                     .set_index("Age Group")["Mortality Rate"]
                     .to_dict()
                 )
-                for scenarioID in range(st.session_state.PendingDataScenarioCount + 1)
+                for scenarioID in range(scenarioCount + 1)
             }
 
             # Make the model call
@@ -431,7 +442,7 @@ def runModelWrapper(scenarioNames, parameterJSON):
     # Needed to avoid interrupting Streamlit UI functionality
     def threadRunner():
         try:
-            # time.sleep(5) # Debug for testing dashboard while running
+            # time.sleep(5)  # Debug for testing dashboard while running
             formattedData = asyncio.run(runModel(scenarioNames, parameterJSON))
             if formattedData:
                 resultQueue.put(formattedData)

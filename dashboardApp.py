@@ -47,11 +47,13 @@ logging.basicConfig(
 
 appLog = logging.getLogger(__name__)
 
-# Load session state as variable for easy access
+# Store st.session_state as variable for efficiency
 session = st.session_state
 
 # Set environment variables for config
 # os.environ['STREAMLIT_GLOBAL_DISABLE_WIDGET_STATE_DUPLICATION_WARNING'] = '1'
+
+st.logo(":material/microbiology:")
 
 
 # Define application pages
