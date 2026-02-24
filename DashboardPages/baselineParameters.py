@@ -7,7 +7,7 @@ import logging
 
 import streamlit as st
 
-from ClientResources.InterfaceFunctions import errorChecker
+from ClientResources.InterfaceFunctions import errorChecker, rerunTime
 from ParameterTabs.communityParams import buildCommunityTab
 
 # from streamlit_push_notifications import send_push, send_alert
@@ -47,6 +47,7 @@ st.markdown(
 
 # Fragments to display errors and rerun on sim length change
 errorChecker(0)
+rerunTime()
 
 
 # TODO: Consider having a tab for templates that load parameters for

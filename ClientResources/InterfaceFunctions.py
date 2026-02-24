@@ -223,7 +223,10 @@ timeParamList = [
     "bccPeriod",
 ]
 
+dynamicParamList = {"seedPeriod": "seedTimeForm"}
 
+
+# TODO: Notify users if parameters are changed when cycle count is adjusted
 def timeScaleChange():
     """
     Function to update the ranges of time-based parameters
@@ -238,7 +241,63 @@ def timeScaleChange():
                     min(session[fullKey][0], newLength),
                     min(session[fullKey][1], newLength),
                 )
-    session["rerunTime"] = True
+    for param, form in dynamicParamList.items():
+        dynamicScaleChange(param, form, 0, noSave=True)
+    # session["rerunTime"] = True
+
+
+def dynamicScaleChange(
+    key: str,
+    formKey: str,
+    scenarioID: int,
+    condition: Optional[Callable[[], bool]] = None,
+    noSave=False,
+):
+    """
+    Function to update the ranges of dynamic parameters
+
+    Parameters:
+        key (str): The identifier used to distinguish the dynamic parameter
+            being modified.
+
+        formKey (str): The identifier used to distinguish the form
+        whose ranges must be updated.
+
+        scenarioID (int): The integer representing the scenario the widget
+            is part of.
+
+        condition (callable, returns bool, optional): A criteria that skips
+            the range update if fulfilled, formatted as a function that
+            returns True when the criteria is met.
+
+        noSave (bool): Set to True if running this function from a different
+            page where saving the widget value would instead set it to None.
+    """
+    if not noSave:
+        saveKey(key, scenarioID)
+    if condition is None or condition():
+        newMin, newMax = idGet(key, scenarioID, None)
+        if scenarioID == 0:
+            # Check all scenarios if the baseline was modified
+            for id in range(session["scenarioCount"] + 1):
+                fullKey = f"{formKey}{id}"
+                scenarioMin, scenarioMax = idGet(key, id, (newMin, newMax))
+                if session.get(fullKey, None) is not None:
+                    form = session[fullKey]
+                    form["Day to Update Parameter"] = form[
+                        "Day to Update Parameter"
+                    ].clip(lower=scenarioMin, upper=scenarioMax)
+                    session[fullKey] = form
+        else:
+            # Only update the relevant scenario
+            fullKey = f"{formKey}{scenarioID}"
+            if session.get(fullKey, None):
+                form = session[fullKey]
+                form["Day to Update Parameter"] = form["Day to Update Parameter"].clip(
+                    lower=newMin, upper=newMax
+                )
+                session[fullKey] = form
+        session["rerunTime"] = True
 
 
 @st.fragment(run_every=1)

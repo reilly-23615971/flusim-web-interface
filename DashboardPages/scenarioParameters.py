@@ -16,6 +16,7 @@ from ClientResources.InterfaceFunctions import (
     loadKey,
     checkErrors,
     errorChecker,
+    rerunTime,
 )
 
 # Logging
@@ -298,6 +299,8 @@ st.markdown(
 """
     )
 )
+
+rerunTime()
 
 # List current scenarios
 st.header("Current Scenarios")

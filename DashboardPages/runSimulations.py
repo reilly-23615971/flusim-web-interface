@@ -63,6 +63,7 @@ community = st.selectbox(
     """,
 )
 
+# TODO: Notify users if parameters are changed when cycle count is adjusted
 loadKey("cycleCount", default=360)
 st.select_slider(
     "Length of Simulation (Days)",
@@ -289,5 +290,5 @@ session.testData = returnedGrid["data"]
 
 
 # TODO: Debug
-# st.header("DEBUG ZONE")
-# st.write(st.session_state)
+st.header("DEBUG ZONE")
+st.write(st.session_state)

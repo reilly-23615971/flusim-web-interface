@@ -22,19 +22,18 @@ from ClientResources.SharedResources import ageCategories
 # Logging
 communityLog = logging.getLogger(__name__)
 
-"""
-Function to generate the parameters for the simulation environment in a
-specified container with scenario differentiation
-
-Parameters:
-    id: An integer that will be used to differentiate the parameters in
-    different instances of the tab by adding a number to the Streamlit
-    session state variables.
-"""
-
 
 @st.fragment
-def buildCommunityTab(id):
+def buildCommunityTab(id: int):
+    """
+    Function to generate the parameters for the simulation environment in a
+    specified container with scenario differentiation
+
+    Parameters:
+        id (int): An integer that will be used to differentiate the parameters in
+            different instances of the tab by adding a number to the Streamlit
+            session state variables.
+    """
     # Initialise session variables needed by the disease forms
     sessionParameters = {f"deathRowCount{id}": 0}
     for parameter, default in sessionParameters.items():
@@ -230,22 +229,20 @@ def buildCommunityTab(id):
         )
 
 
-"""
-Function to populate the Pydantic model schema with the parameters in
-this tab with scenario differentiation
+def communitySchema(schema: Parameters, id: int = 0):
+    """
+    Function to populate the Pydantic model schema with the parameters in
+    this tab with scenario differentiation
 
-Parameters:
-    schema: The Pydantic model (specifically an object in the
-    Parameters class) that the parameters will be populated into.
+    Parameters:
+        schema (Parameters): The Pydantic model (specifically an object in the
+            Parameters class) that the parameters will be populated into.
 
-    id: An integer that will be used to differentiate the parameters in
-    different instances of the tab by adding a number to the Streamlit
-    session state variables. A value of 0 means that this is the
-    baseline scenario and will be treated accordingly.
-"""
-
-
-def communitySchema(schema, id=0):
+        id (int): An integer that will be used to differentiate the parameters in
+            different instances of the tab by adding a number to the Streamlit
+            session state variables. A value of 0 means that this is the
+            baseline scenario and will be treated accordingly.
+    """
     try:
         # Validate parameters
         if not isinstance(schema, Parameters):

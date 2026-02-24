@@ -18,6 +18,7 @@ from ClientResources.InterfaceFunctions import (
     loadKey,
     paramError,
     saveKey,
+    dynamicScaleChange,
 )
 from ClientResources.ModelSchema import (
     Parameters,
@@ -30,6 +31,7 @@ from ClientResources.SharedResources import ageTimeDict, backgroundColour
 # Logging
 diseaseLog = logging.getLogger(__name__)
 
+# Store st.session_state as variable for efficiency
 session = st.session_state
 
 
@@ -105,6 +107,7 @@ def buildDiseaseTab(id: int):
                 infected directly via infection seeding each cycle.
             """,
         )
+        # TODO: Notify users if dynamic parameters are changed
         loadKey("seedPeriod", id, (1, 30))
         st.slider(
             "Infection Seeding Time Period (Days)",
@@ -112,8 +115,8 @@ def buildDiseaseTab(id: int):
             max_value=simLength,
             value=(1, 30),
             format="Day %i",
-            on_change=saveKey,
-            args=["seedPeriod", id],  # type: ignore
+            on_change=dynamicScaleChange,
+            args=["seedPeriod", "seedTimeForm", id],
             key=f"_seedPeriod{id}",
             help="""
                 The time period during which infection seeding will
@@ -121,6 +124,13 @@ def buildDiseaseTab(id: int):
                 on which seeding will begin (where Day 1 is the
                 first day of the simulation), and the second value
                 is the day on which it will stop.
+
+                Note that if you modify this value, the update
+                points for infection seeding defined in
+                :primary-badge[:material/manage_history: Dynamic] may have
+                their values altered. For instance, if you go from seeding
+                ending on Day 60 to Day 30, an update point set to affect
+                the value on Day 45 will be changed to affect it on Day 30 instead.
             """,
         )
 
@@ -313,14 +323,18 @@ def buildDiseaseTab(id: int):
             age group.
         """
         )
-        defaultTransAge = pd.DataFrame(
-            {
-                "Age Group": [None],
-                "Infectiousness": [1.0],
-                "Susceptibility": [1.0],
-            },
+        loadKey(
+            "transAgeForm",
+            id,
+            pd.DataFrame(
+                {
+                    "Age Group": [None],
+                    "Infectiousness": [1.0],
+                    "Susceptibility": [1.0],
+                },
+            ),
+            dataframe=True,
         )
-        loadKey("transAgeForm", id, defaultTransAge, dataframe=True)
         transAgeForm = st.data_editor(
             session[f"transAgeForm{id}"],
             num_rows="dynamic",
@@ -890,13 +904,17 @@ group to contract the disease when interacting with infected individuals.
             rate defined above.
         """
         )
-        defaultMortAge = pd.DataFrame(
-            {
-                "Age Group": [None],
-                "Mortality Rate": [deathRate],
-            },
+        loadKey(
+            "mortAgeForm",
+            id,
+            pd.DataFrame(
+                {
+                    "Age Group": [None],
+                    "Mortality Rate": [deathRate],
+                },
+            ),
+            dataframe=True,
         )
-        loadKey("mortAgeForm", id, defaultMortAge, dataframe=True)
         mortAgeForm = st.data_editor(
             session[f"mortAgeForm{id}"],
             num_rows="dynamic",
@@ -1201,7 +1219,7 @@ def diseaseSchema(schema: Parameters, id: int = 0):
         # Infection Seeding
         scenarioParams.seed_rate = idGet("seedRate", id, 0.25)
         scenarioParams.seeding_start_cycle = (seedPeriod[0] - 1) * 2
-        scenarioParams.seeding_duration = (seedPeriod[1] - seedPeriod[0]) * 2
+        scenarioParams.seeding_duration = (seedPeriod[1] - seedPeriod[0] + 1) * 2
         # Transmission
         scenarioParams.beta_asymptomatic = idGet("betaAsymptomatic", id, 0.55)
         scenarioParams.beta_post_symptomatic = idGet("betaPostSymptomatic", id, 0.55)
@@ -1236,7 +1254,17 @@ def diseaseSchema(schema: Parameters, id: int = 0):
             "naturalWaningRate", id, 6
         )
         # Age-Specific Parameters
-        transAgeForm = idGet("transAgeForm", id, None)
+        transAgeForm = idGet(
+            "transAgeForm",
+            id,
+            pd.DataFrame(
+                {
+                    "Age Group": [None],
+                    "Infectiousness": [1.0],
+                    "Susceptibility": [1.0],
+                },
+            ),
+        )
         for age, trans, susc in zip(
             transAgeForm["Age Group"],
             transAgeForm["Infectiousness"],
@@ -1245,7 +1273,16 @@ def diseaseSchema(schema: Parameters, id: int = 0):
             if age:
                 setattr(scenarioParams, f"{age}_trans", trans)
                 setattr(scenarioParams, f"{age}_susc", susc)
-        mortAgeForm = idGet("mortAgeForm", id, None)
+        mortAgeForm = idGet(
+            "mortAgeForm",
+            id,
+            pd.DataFrame(
+                {
+                    "Age Group": [None],
+                    "Mortality Rate": [deathRate],
+                },
+            ),
+        )
         for age, mort in zip(
             mortAgeForm["Age Group"],
             mortAgeForm["Mortality Rate"],

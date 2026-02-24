@@ -3,36 +3,44 @@
 # Functionised tab where parameters can change mid-simulation
 
 # Imports
+import os
 import logging
 from typing import Literal, cast
+
 import numpy as np
+import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
+
 from ClientResources.InterfaceFunctions import (
-    saveKey,
-    loadKey,
     addFormRow,
     deleteFormRow,
+    hasDuplicates,
     idGet,
+    loadKey,
+    paramError,
+    saveKey,
 )
 from ClientResources.ModelSchema import Parameters, dynamicIntervention
 
 # Logging
 dynamicLog = logging.getLogger(__name__)
 
-"""
-Function to generate the dynamic parameters in a specified container
-with scenario differentiation
-
-Parameters:
-    id: An integer that will be used to differentiate the parameters in
-    different instances of the tab by adding a number to the Streamlit
-    session state variables.
-"""
+# Store st.session_state as variable for efficiency
+session = st.session_state
 
 
 @st.fragment
-def buildDynamicTab(id):
+def buildDynamicTab(id: int):
+    """
+    Function to generate the dynamic parameters in a specified container
+    with scenario differentiation
+
+    Parameters:
+        id (int): An integer that will be used to differentiate the parameters in
+            different instances of the tab by adding a number to the Streamlit
+            session state variables.
+    """
     # Initialise session variables needed by the disease forms
     sessionParameters = {
         f"seedRowCount{id}": 0,
@@ -92,7 +100,71 @@ def buildDynamicTab(id):
 
     # Infection Seeding Rate
     st.subheader("Infection Seeding Rate")
-    # Save relevant parameters as variables to avoid lookups
+
+    baseSeedValue = idGet("seedRate", id, 0.25)
+    seedStart, seedEnd = idGet("seedPeriod", id, (1, 30))
+    loadKey(
+        "seedTimeForm",
+        id,
+        pd.DataFrame(
+            {
+                "Day to Update Parameter": [None],
+                "New Infection Seeding Rate": [baseSeedValue],
+            },
+        ),
+        dataframe=True,
+    )
+    seedTimeForm = st.data_editor(
+        session[f"seedTimeForm{id}"],
+        num_rows="dynamic",
+        key=f"_seedTimeForm{id}",
+        on_change=saveKey,
+        args=["seedTimeForm", id],
+        kwargs={"dataframe": True},
+        placeholder="Enter a value",
+        column_config={
+            "Day to Update Parameter": st.column_config.NumberColumn(
+                "Day to Update Parameter",
+                required=True,
+                min_value=seedStart,
+                max_value=seedEnd,
+                format="Day %d",
+                help="""
+The day of the simulation upon which the new value for infection
+seeding rate will come into effect.
+                """,
+            ),
+            "New Infection Seeding Rate": st.column_config.NumberColumn(
+                "New Infection Seeding Rate (Average Individuals per Day)",
+                required=True,
+                default=baseSeedValue,
+                min_value=0.0,
+                help="""
+The average number of individuals that will be infected directly via infection
+seeding each cycle after the specified point in the simulation.
+                """,
+            ),
+        },
+    )
+    paramError(
+        "seedingTimeFormDuplicates",
+        id,
+        lambda: hasDuplicates(seedTimeForm, "Day to Update Parameter"),
+        f"""
+            Error: The dynamic infection seeding form used by the {
+                'baseline scenario' if id == 0
+                else f'scenario named "{session[f'scenarioName{id}']}"'
+            } contains duplicate update points. Each row of the form
+            should specify a different day of the simulation.
+
+            Please remove or change any rows of the Infection Seeding
+            Rate form in :primary-badge[:material/manage_history: Dynamic]
+            that use the same day as another row.
+        """,
+        True,
+    )
+
+    oldVarLengthForm = '''# Save relevant parameters as variables to avoid lookups
     seedRowCount = st.session_state[f"seedRowCount{id}"]
     baseSeedValue = idGet("seedRate", id, 0.25)
     seedStart, seedEnd = idGet("seedPeriod", id, (0, 29))
@@ -315,7 +387,7 @@ def buildDynamicTab(id):
             in a single simulation.
         """
         ),
-    )
+    )'''
 
     # School Closure Compliance
     st.subheader("School Closure Compliance")
@@ -877,17 +949,13 @@ def buildDynamicTab(id):
     )
 
 
-"""
-Simple functions to cast strings for validation's sake
-"""
-dynamicMapping = {
-    "seed": "seed_rate",
-    "close": "school_closure",
-    "bcc": "bcc_reduction",
-}
+def paramCast(x: str):
+    """
+    Simple function to convert strings into literals for the purpose of type validation
 
-
-def paramCast(x):
+    Parameters:
+        x (str): shorthand for the key to cast
+    """
     return cast(
         Literal[
             "work_nonattendance",
@@ -897,26 +965,28 @@ def paramCast(x):
             "school_closure_delay",
             "school_closure_duration",
         ],
-        dynamicMapping[x],
+        {
+            "seed": "seed_rate",
+            "close": "school_closure",
+            "bcc": "bcc_reduction",
+        }[x],
     )
 
 
-"""
-Function to populate the Pydantic model schema with the parameters in
-this tab with scenario differentiation
+def dynamicSchema(schema: Parameters, id: int = 0):
+    """
+    Function to populate the Pydantic model schema with the parameters in
+    this tab with scenario differentiation
 
-Parameters:
-    schema: The Pydantic model (specifically an object in the
-    Parameters class) that the parameters will be populated into.
+    Parameters:
+        schema (Parameters): The Pydantic model (specifically an object in the
+            Parameters class) that the parameters will be populated into.
 
-    id: An integer that will be used to differentiate the parameters in
-    different instances of the tab by adding a number to the Streamlit
-    session state variables. A value of 0 means that this is the
-    baseline scenario and will be treated accordingly.
-"""
-
-
-def dynamicSchema(schema, id=0):
+        id (int): An integer that will be used to differentiate the parameters in
+            different instances of the tab by adding a number to the Streamlit
+            session state variables. A value of 0 means that this is the
+            baseline scenario and will be treated accordingly.
+    """
     try:
         # Validate parameters
         if not isinstance(schema, Parameters):
@@ -924,8 +994,30 @@ def dynamicSchema(schema, id=0):
 
         # Scenario Dynamic Intervention
         dynamicChanges = []
+
+        for prefix in ["seed"]:
+            timeForm = idGet(
+                f"{prefix}TimeForm",
+                id,
+                pd.DataFrame(
+                    {
+                        "Day to Update Parameter": [None],
+                        "New Infection Seeding Rate": [idGet("seedRate", id, 0.25)],
+                    },
+                ),
+            )
+            for time, newValue in zip(timeForm.iloc[:, 0], timeForm.iloc[:, 1]):
+                if time:
+                    dynamicChanges.append(
+                        dynamicIntervention(
+                            Name=paramCast(prefix),
+                            CycleOffset=(time - 1) * 2,
+                            NewValue=newValue,
+                        )
+                    )
+
         for prefix, default in {
-            "seed": idGet("seedRate", id, 0.25),
+            # "seed": idGet("seedRate", id, 0.25),
             "close": idGet("schoolClosureCompliance", id, 0.9),
             "bcc": idGet("bccReducedRate", id, 0.2),
         }.items():
@@ -938,6 +1030,7 @@ def dynamicSchema(schema, id=0):
                     )
                 )
         # Save the updated parameters
+        os.write(1, f"{dynamicChanges}\n".encode())
         if dynamicChanges:
             schema.Scenario_DynamicIntervention = dynamicChanges
     except (ValueError, ValidationError) as e:
