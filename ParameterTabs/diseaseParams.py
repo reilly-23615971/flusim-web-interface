@@ -48,16 +48,21 @@ def buildDiseaseTab(id: int):
             session state variables.
     """
     # Initialise session variables needed by the disease forms
-    sessionParameters = {f"transRowCount{id}": 0, f"seedPeriodError{id}": 0}
-    for parameter, default in sessionParameters.items():
-        session[parameter] = session.get(parameter, default)
+    # sessionParameters = {
+    #   f"transRowCount{id}": 0,
+    #   f"seedPeriodError{id}": 0,
+    #   f"deathRowCount{id}": 0}
+    # }
+    # for parameter, default in sessionParameters.items():
+    # session[parameter] = session.get(parameter, default)
 
     # Ensure age selections only give possible parameters
     # Dictionary format: 'remaining groups variable': (
     #   'number of rows variable', 'group row variable prefix'
     # )
     # ageGroupSets = {
-    #    f"transRemainingAgeGroups{id}": (f"transRowCount{id}", f"transAgeGroup{id}-")
+    #    f"transRemainingAgeGroups{id}": (f"transRowCount{id}", f"transAgeGroup{id}-"),
+    #    f"deathRemainingAgeGroups{id}": (f"deathRowCount{id}", f"deathAgeGroup{id}-")
     # }
 
     # Use function to recalculate remaining group parameters
@@ -966,8 +971,8 @@ will die as a direct result of the disease.
 
         oldVarLengthForm = '''
         # Save relevant params as variables to avoid lookups
-        deathRowCount = st.session_state[f"deathRowCount{id}"]
-        deathRemainingGroups = st.session_state[f"deathRemainingAgeGroups{id}"]
+        deathRowCount = session[f"deathRowCount{id}"]
+        deathRemainingGroups = session[f"deathRemainingAgeGroups{id}"]
         deathAgeContainer = st.container()
         for i in range(deathRowCount):
             (deathGroupColumn, deathRateColumn, deathRemoveColumn) = (
@@ -975,7 +980,7 @@ will die as a direct result of the disease.
                     (0.25, 0.55, 0.2), vertical_alignment="center"
                 )
             )
-            deathCurrentGroup = st.session_state.get(f"deathAgeGroup{id}-{i}")
+            deathCurrentGroup = session.get(f"deathAgeGroup{id}-{i}")
 
             # Age group column
             loadKey(
@@ -1299,10 +1304,10 @@ def diseaseSchema(schema: Parameters, id: int = 0):
                 f"{varAgeGroup}_susc",
                 idGet("transSuscept", id, 1, f"-{i}"),
             )
-        for i in range(st.session_state.get(f"deathRowCount{id}", 0)):
+        for i in range(session.get(f"deathRowCount{id}", 0)):
             setattr(
                 scenarioParams,
-                f"{ageCategories[st.session_state[f'deathAgeGroup{id}-{i}']]}_mort",
+                f"{ageCategories[session[f'deathAgeGroup{id}-{i}']]}_mort",
                 idGet("deathRatio", id, deathRate, f"-{i}"),
             )"""
         # Save the updated parameters

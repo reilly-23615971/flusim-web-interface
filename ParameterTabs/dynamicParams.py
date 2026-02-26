@@ -38,16 +38,16 @@ def buildDynamicTab(id: int):
             session state variables.
     """
     # Initialise session variables needed by the disease forms
-    sessionParameters = {
-        f"seedRowCount{id}": 0,
-        f"closeRowCount{id}": 0,
-        f"bccRowCount{id}": 0,
-        f"seedDynamicError{id}": 0,
-        f"closeDynamicError{id}": 0,
-        f"bccDynamicError{id}": 0,
-    }
-    for parameter, default in sessionParameters.items():
-        st.session_state[parameter] = st.session_state.get(parameter, default)
+    # sessionParameters = {
+    # f"seedRowCount{id}": 0,
+    # f"closeRowCount{id}": 0,
+    # f"bccRowCount{id}": 0,
+    # f"seedDynamicError{id}": 0,
+    # f"closeDynamicError{id}": 0,
+    # f"bccDynamicError{id}": 0,
+    # }
+    # for parameter, default in sessionParameters.items():
+    # session[parameter] = session.get(parameter, default)
 
     # Avoid flooding the container with errors when many dynamic
     # changes are defined for each parameter
@@ -92,7 +92,7 @@ def buildDynamicTab(id: int):
     # globalErrorContainer = st.container()
 
     # Get simulation length for error checking
-    simLength = st.session_state.get("cycleCount", 360)
+    simLength = session.get("cycleCount", 360)
 
     # Infection Seeding Rate
     st.subheader("Infection Seeding Rate")
@@ -162,7 +162,7 @@ each day of the simulation is 2 cycles.
     )
 
     oldVarLengthForm = '''# Save relevant parameters as variables to avoid lookups
-    seedRowCount = st.session_state[f"seedRowCount{id}"]
+    seedRowCount = session[f"seedRowCount{id}"]
     baseSeedValue = idGet("seedRate", id, 0.25)
     seedStart, seedEnd = idGet("seedPeriod", id, (0, 29))
     seedErrorContainer = st.container()
@@ -197,7 +197,7 @@ each day of the simulation is 2 cycles.
                     Error: The {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is currently set to last {simLength} days,
                     but the infection seeding rate for this
@@ -225,7 +225,7 @@ each day of the simulation is 2 cycles.
                     Error: The {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is currently set to last {simLength} days,
                     but the infection seeding rate for this
@@ -249,7 +249,7 @@ each day of the simulation is 2 cycles.
                 """,
                     icon=":material/error:",
                 )
-                st.session_state[f"seedDynamicError{id}"] = 2
+                session[f"seedDynamicError{id}"] = 2
                 firstSeedError = False
             elif firstSeedError and (
                 seedUpdatePoint < seedStart or seedUpdatePoint > seedEnd
@@ -259,7 +259,7 @@ each day of the simulation is 2 cycles.
                     Error: The infection seeding period for the {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is currently set to begin on Day {seedStart + 1}
                     and end on Day {seedEnd + 1}, but the infection
@@ -294,7 +294,7 @@ each day of the simulation is 2 cycles.
                     Error: The infection seeding period for the {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is currently set to begin on Day {seedStart + 1}
                     and end on Day {seedEnd + 1}, but the infection
@@ -323,10 +323,10 @@ each day of the simulation is 2 cycles.
                 """,
                     icon=":material/error:",
                 )
-                st.session_state[f"seedDynamicError{id}"] = 2
+                session[f"seedDynamicError{id}"] = 2
                 firstSeedError = False
             else:
-                st.session_state[f"seedDynamicError{id}"] = 0
+                session[f"seedDynamicError{id}"] = 0
         # New value column
         loadKey("seedNewRate", id, 0.25, f"-{i}")
         with seedNewColumn:
@@ -477,7 +477,7 @@ they are closed after the specified point in the simulation.
     )
 
     oldVarLengthForm = '''# Save relevant parameters as variables to avoid lookups
-    closeRowCount = st.session_state[f"closeRowCount{id}"]
+    closeRowCount = session[f"closeRowCount{id}"]
     baseCloseValue = idGet("schoolClosureCompliance", id, 0.9)
     closeActive = idGet("schoolClosureToggle", id, False)
     closeTrigger = idGet("schoolClosureTrigger", id, "Always")
@@ -543,7 +543,7 @@ they are closed after the specified point in the simulation.
                     Error: The {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is currently set to last {simLength} days,
                     but the school closure compliance probability
@@ -574,7 +574,7 @@ they are closed after the specified point in the simulation.
                     Error: The {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is currently set to last {simLength} days,
                     but the school closure compliance probability
@@ -599,7 +599,7 @@ they are closed after the specified point in the simulation.
                 """,
                     icon=":material/error:",
                 )
-                st.session_state[f"closeDynamicError{id}"] = 2
+                session[f"closeDynamicError{id}"] = 2
                 firstCloseError = False
             elif (
                 firstCloseError
@@ -611,7 +611,7 @@ they are closed after the specified point in the simulation.
                     Error: The school closure NPI for the {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is currently set to begin on Day {closeStart + 1}
                     and end on Day {closeEnd + 1}, but the school
@@ -650,7 +650,7 @@ they are closed after the specified point in the simulation.
                     Error: The school closure NPI for the {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is currently set to begin on Day {closeStart + 1}
                     and end on Day {closeEnd + 1}, but the school
@@ -685,10 +685,10 @@ they are closed after the specified point in the simulation.
                 """,
                     icon=":material/error:",
                 )
-                st.session_state[f"closeDynamicError{id}"] = 2
+                session[f"closeDynamicError{id}"] = 2
                 firstCloseError = False
             else:
-                st.session_state[f"closeDynamicError{id}"] = 0
+                session[f"closeDynamicError{id}"] = 0
         # New value column
         loadKey("closeNewRate", id, 0.9, f"-{i}")
         with closeNewColumn:
@@ -848,7 +848,7 @@ effect, overwriting the normal BCC rate.
     )
 
     oldVarLengthForm = '''# Save relevant parameters as variables to avoid lookups
-    bccRowCount = st.session_state[f"bccRowCount{id}"]
+    bccRowCount = session[f"bccRowCount{id}"]
     baseBCCValue = idGet("bccReducedRate", id, 0.2)
     bccActive = idGet("bccToggle", id, False)
     bccTrigger = idGet("bccTrigger", id, "Always")
@@ -915,7 +915,7 @@ effect, overwriting the normal BCC rate.
                     Error: The {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is currently set to last {simLength} days,
                     but the reduced background contact count value
@@ -945,7 +945,7 @@ effect, overwriting the normal BCC rate.
                     Error: The {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is currently set to last {simLength} days,
                     but the reduced background contact count value
@@ -971,7 +971,7 @@ effect, overwriting the normal BCC rate.
                 """,
                     icon=":material/error:",
                 )
-                st.session_state[f"bccDynamicError{id}"] = 2
+                session[f"bccDynamicError{id}"] = 2
                 firstBCCError = False
             elif (
                 firstBCCError
@@ -984,7 +984,7 @@ effect, overwriting the normal BCC rate.
                     for the {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is currently set to begin on Day {bccStart + 1}
                     and end on Day {bccEnd + 1}, but the reduced
@@ -1021,7 +1021,7 @@ effect, overwriting the normal BCC rate.
                     for the {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is currently set to begin on Day {bccStart + 1}
                     and end on Day {bccEnd + 1}, but the reduced
@@ -1054,10 +1054,10 @@ effect, overwriting the normal BCC rate.
                 """,
                     icon=":material/error:",
                 )
-                st.session_state[f"bccDynamicError{id}"] = 2
+                session[f"bccDynamicError{id}"] = 2
                 firstBCCError = False
             else:
-                st.session_state[f"bccDynamicError{id}"] = 0
+                session[f"bccDynamicError{id}"] = 0
 
         # New value column
         loadKey("bccNewRate", id, 0.2, f"-{i}")
@@ -1212,7 +1212,7 @@ def dynamicSchema(schema: Parameters, id: int = 0):
             "close": idGet("schoolClosureCompliance", id, 0.9),
             "bcc": idGet("bccReducedRate", id, 0.2),
         }.items():
-            for i in range(st.session_state.get(f"{prefix}RowCount{id}", 0)):
+            for i in range(session.get(f"{prefix}RowCount{id}", 0)):
                 dynamicChanges.append(
                     dynamicIntervention(
                         Name=paramCast(prefix),

@@ -7,6 +7,7 @@ import logging
 from functools import partial
 from typing import Callable, Literal, Optional, Union
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -27,7 +28,7 @@ warnFormat = partial(st.warning, icon=":material/warning:")
 def paramError(
     label: str,
     scenarioID: int,
-    condition: Callable[[], bool],
+    condition: Callable[[], Union[bool, np.bool]],
     message: str,
     isSevere=False,
 ):

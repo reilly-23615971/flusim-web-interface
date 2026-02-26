@@ -11,13 +11,11 @@ from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import (
     dayCount,
-    getRemainingGroups,
     idGet,
     loadKey,
     saveKey,
 )
 from ClientResources.ModelSchema import Parameters, scenarioParameters
-from ClientResources.SharedResources import ageCategories
 
 # Logging
 communityLog = logging.getLogger(__name__)
@@ -35,20 +33,20 @@ def buildCommunityTab(id: int):
             session state variables.
     """
     # Initialise session variables needed by the disease forms
-    sessionParameters = {f"deathRowCount{id}": 0}
-    for parameter, default in sessionParameters.items():
-        st.session_state[parameter] = st.session_state.get(parameter, default)
+    # sessionParameters = {f"deathRowCount{id}": 0}
+    # for parameter, default in sessionParameters.items():
+    # st.session_state[parameter] = st.session_state.get(parameter, default)
 
     # Ensure age selections only give possible parameters
     # Dictionary format: 'remaining groups variable': (
     #   'number of rows variable', 'group row variable prefix'
     # )
-    ageGroupSets = {
-        f"deathRemainingAgeGroups{id}": (f"deathRowCount{id}", f"deathAgeGroup{id}-")
-    }
+    # ageGroupSets = {
+    # f"deathRemainingAgeGroups{id}": (f"deathRowCount{id}", f"deathAgeGroup{id}-")
+    # }
 
     # Use function to recalculate remaining group parameters
-    getRemainingGroups(ageGroupSets, ageCategories.keys())
+    # getRemainingGroups(ageGroupSets, ageCategories.keys())
 
     # Tab Content
     st.header("Community Parameters")

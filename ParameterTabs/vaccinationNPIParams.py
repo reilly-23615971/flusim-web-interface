@@ -7,14 +7,13 @@ import logging
 from typing import Literal, cast
 
 import numpy as np
+import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import (
-    addFormRow,
-    deleteFormRow,
     dynamicScaleChange,
-    getRemainingGroups,
+    hasDuplicates,
     idGet,
     loadKey,
     paramError,
@@ -30,7 +29,7 @@ from ClientResources.ModelSchema import (
     vaccineEfficacy,
 )
 from ClientResources.SharedResources import (
-    ageCategories,
+    ageTimeDict,
     communityPopulation,
     npiCamel,
     npis,
@@ -41,19 +40,23 @@ from ClientResources.SharedResources import (
 # Logging
 vaccineLog = logging.getLogger(__name__)
 
-"""
-Function to generate the parameters for vaccination and NPIs in a
-specified container with scenario differentiation
-
-Parameters:
-    id: An integer that will be used to differentiate the parameters in
-    different instances of the tab by adding a number to the Streamlit
-    session state variables.
-"""
+# Store st.session_state as variable for efficiency
+session = st.session_state
 
 
 @st.fragment
-def buildVaccinationNPITab(id):
+def buildVaccinationNPITab(id: int):
+    """
+    Function to generate the parameters for vaccination and NPIs in a
+    specified container with scenario differentiation
+
+    Parameters:
+        id (int): An integer that will be used to differentiate the parameters in
+            different instances of the tab by adding a number to the Streamlit
+            session state variables.
+    """
+
+    oldVarLengthForm = """
     # Initialise session variables needed by the vaccination/NPI forms
     sessionParameters = {
         # Row counts
@@ -62,35 +65,15 @@ def buildVaccinationNPITab(id):
         f"primWanedRowCount{id}": 0,
         f"boostAgeRowCount{id}": 0,
         f"socialRowCount{id}": 0,
-        # Error trackers
-        f"baseVacPropError{id}": 0,
-        f"ageVacPropError{id}": 0,
-        f"basePrimEfficacyError{id}": 0,
-        f"agePrimEfficacyError{id}": 0,
-        f"baseBoostEfficacyError{id}": 0,
-        f"ageBoostEfficacyError{id}": 0,
-        f"schoolTypeError{id}": 0,
-        f"adultWithdrawalError{id}": 0,
-        f"childWithdrawalError{id}": 0,
-        f"reducedGroupError{id}": 0,
-        f"bccError{id}": 0,
-        f"triggerRateError{id}": 0,
-        f"triggerTotalError{id}": 0,
-        f"vaccinePeriodError{id}": 0,
-        f"schoolClosurePeriodError{id}": 0,
-        f"withdrawalIncreasePeriodError{id}": 0,
-        f"reducedGroupPeriodError{id}": 0,
-        f"bccPeriodError{id}": 0,
         # Others
         f"classDismissal{id}": False,
     }
     for parameter, default in sessionParameters.items():
-        st.session_state[parameter] = st.session_state.get(parameter, default)
+        session[parameter] = session.get(parameter, default)
 
-    # Save primary row count as variable to avoid lookups (this one's
-    # defined early since it's used for finalising remaining groups)
-    primaryRowCount = st.session_state[f"primaryDoseCount{id}"]
-    triggerNames = list(triggerConditions.keys())
+    # Save primary row count as variable to avoid lookups (this
+    # one's defined early since it's used for finalising remaining groups)
+    primaryRowCount = session[f"primaryDoseCount{id}"]
 
     # Ensure age selections only give possible parameters
     # Dictionary format: 'remaining groups variable': (
@@ -114,7 +97,7 @@ def buildVaccinationNPITab(id):
 
     # Calculate primary dose nested age group row counts
     for i in range(primaryRowCount):
-        st.session_state[f"primAgeRowCount{id}-{i}"] = st.session_state.setdefault(
+        session[f"primAgeRowCount{id}-{i}"] = session.setdefault(
             f"primAgeRowCount{id}-{i}", 0
         )
         ageGroupSets[f"primaryRemainingAgeGroups{id}-{i}"] = (
@@ -122,15 +105,16 @@ def buildVaccinationNPITab(id):
             f"primAgeGroup{id}-{i}-",
         )
     primaryAgeRowCounts = [
-        st.session_state[f"primAgeRowCount{id}-{i}"] for i in range(primaryRowCount)
+        session[f"primAgeRowCount{id}-{i}"] for i in range(primaryRowCount)
     ]
 
     # Use function to recalculate remaining group parameters
     getRemainingGroups(ageGroupSets, ageCategories.keys())
 
     # Parameters for keeping track of errors
-    simLength = st.session_state.get("cycleCount", 360)
-    ageVacPropError, ageBoostEfficacyError = False, False
+    ageVacPropError, ageBoostEfficacyError = False, False"""
+    simLength = session.get("cycleCount", 360)
+    triggerNames = list(triggerConditions.keys())
 
     # Tab Content
     st.header("Vaccination and NPI Parameters")
@@ -141,7 +125,7 @@ def buildVaccinationNPITab(id):
         integrated into the simulation.
     """
     )
-    globalErrorContainer = st.container()
+    # globalErrorContainer = st.container()
 
     # Vaccination
     with st.container():
@@ -315,7 +299,7 @@ def buildVaccinationNPITab(id):
                     population in the {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is
                     {100 * targetVaccinated:0.3g}% of the
@@ -337,22 +321,135 @@ def buildVaccinationNPITab(id):
             )
 
             # Store age-based proportion values for error checking
-            vacAgeInitials, vacAgeTargets = {}, {}
+            # vacAgeInitials, vacAgeTargets = {}, {}
 
             # Modifiable-length field for age-specific vaccination
             st.markdown(
-                """
-                ### Age-Specific Vaccinated Proportion Parameters
-
-                This section allows for unique vaccinated
-                proportion parameters to be defined for individual
-                age groups in the simulation, overriding the global
-                parameters defined above.
-            """
+                "### Age-Specific Vaccinated Proportions",
+                help="""
+This table allows for unique vaccinated proportion parameters to be defined
+for individual age groups in the simulation, overriding the global parameters
+defined above.
+                """,
             )
-            # Save relevant params as variables to avoid lookups
-            vaccineRowCount = st.session_state[f"vacAgeRowCount{id}"]
-            vacAgeRemainingGroups = st.session_state[f"vaccineRemainingAgeGroups{id}"]
+            loadKey(
+                "vacPropAgeForm",
+                id,
+                pd.DataFrame(
+                    {
+                        "Age Group": [None],
+                        "Initial Vaccinated Proportion": [initialVaccinated],
+                        "Target Vaccinated Proportion": [targetVaccinated],
+                    },
+                ),
+                dataframe=True,
+            )
+            vacPropAgeForm = st.data_editor(
+                session[f"vacPropAgeForm{id}"],
+                num_rows="dynamic",
+                key=f"_vacPropAgeForm{id}",
+                on_change=saveKey,
+                args=["vacPropAgeForm", id],
+                kwargs={"dataframe": True},
+                disabled=not useVaccinesToggle,
+                placeholder=(
+                    "Enter a value"
+                    if useVaccinesToggle
+                    else "Enable vaccines to edit this parameter"
+                ),
+                column_config={
+                    "Age Group": st.column_config.SelectboxColumn(
+                        "Age Group",
+                        required=True,
+                        options=ageTimeDict.keys(),
+                        format_func=lambda x: ageTimeDict[x],  # type: ignore
+                        help="""
+An age group that will have specific vaccine proportions defined for it,
+overriding the base proportions.
+                        """,
+                    ),
+                    "Initial Vaccinated Proportion": st.column_config.NumberColumn(
+                        "Initial Vaccinated Proportion of Population",
+                        required=True,
+                        default=initialVaccinated,
+                        min_value=0.0,
+                        max_value=1.0,
+                        format="percent",
+                        help="""
+The percentage of individuals in this age group that will already be
+vaccinated against the disease at the beginning of the simulation.
+                        """,
+                    ),
+                    "Target Vaccinated Proportion": st.column_config.NumberColumn(
+                        "Target Vaccinated Proportion of Population",
+                        required=True,
+                        default=targetVaccinated,
+                        min_value=0.0,
+                        max_value=1.0,
+                        format="percent",
+                        help="""
+The percentage of individuals in this age group that will be targeted by the
+vaccine schedule in the simulation. The actual proportion of individuals that
+are vaccinated may be lower if there are an insufficient number of doses available.
+                        """,
+                    ),
+                },
+            )
+            paramError(
+                "vacPropAgeFormDuplicates",
+                id,
+                lambda: hasDuplicates(vacPropAgeForm),
+                f"""
+                    Error: The age-specific vaccinated proportions form used by the {
+                        'baseline scenario' if id == 0
+                        else f'scenario named "{session[f'scenarioName{id}']}"'
+                    } contains duplicate age group rows. Each age group
+                    should only be used in a single row of the form.
+
+                    Please remove or change any rows of the Age-Specific
+                    Vaccinated Proportion Parameters form in
+                    :primary-badge[:material/vaccines: Vaccinations and NPIs]
+                    that use the same age group as another row.
+                """,
+                True,
+            )
+            # TODO: make data_editor error messages name the rows
+            paramError(
+                "vacPropAgeFormTargetAlreadyFulfilled",
+                id,
+                lambda: np.any(
+                    vacPropAgeForm["Initial Vaccinated Proportion"]
+                    > vacPropAgeForm["Target Vaccinated Proportion"]
+                ),  # type: ignore
+                f"""
+                    Error: The age-specific vaccinated proportions form used by the {
+                        'baseline scenario' if id == 0
+                        else f'scenario named "{session[f'scenarioName{id}']}"'
+                    } contains rows where the initial vaccinated proportion is
+                    greater than the target vaccinated proportion. As such,
+                    the target proportion will already be met, and no new
+                    vaccinations will occur for the age groups specified
+                    by these rows.
+
+                    Please make one of the following changes:
+
+                    - Remove all rows of the Age-Specific
+                    Vaccinated Proportion Parameters form in
+                    :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    that have the initial proportion higher than the target proportion.
+                    - Decrease the Initial Vaccinated Proportion of Population
+                    column in :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    to always be lower than the target proportion.
+                    - Increase the Target Vaccinated Proportion of Population
+                    column in :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    to always be higher than the initial proportion.
+                """,
+                True,
+            )
+
+            oldVarLengthForm = '''# Save relevant params as variables to avoid lookups
+            vaccineRowCount = session[f"vacAgeRowCount{id}"]
+            vacAgeRemainingGroups = session[f"vaccineRemainingAgeGroups{id}"]
             vacAgeErrorContainer = st.container()
             vacAgeProportionContainer = st.container()
             for i in range(vaccineRowCount):
@@ -361,7 +458,7 @@ def buildVaccinationNPITab(id):
                         (0.25, 0.55, 0.2), vertical_alignment="center"
                     )
                 )
-                vacAgeCurrentGroup = st.session_state.get(f"vacAgeGroup{id}-{i}")
+                vacAgeCurrentGroup = session.get(f"vacAgeGroup{id}-{i}")
 
                 # Age group column
                 loadKey(
@@ -520,7 +617,7 @@ def buildVaccinationNPITab(id):
                         in the {
                             'baseline scenario' if id == 0
                             else f'scenario named "{
-                                st.session_state[f'scenarioName{id}']
+                                session[f'scenarioName{id}']
                             }"'
                         } for the "{age}" age group is currently
                         set to {100 * currentTarget:0.3g}% of the
@@ -558,7 +655,7 @@ def buildVaccinationNPITab(id):
                         in the {
                             'baseline scenario' if id == 0
                             else f'scenario named "{
-                                st.session_state[f'scenarioName{id}']
+                                session[f'scenarioName{id}']
                             }"'
                         } for the "{age}" age group is currently
                         set to {100 * currentTarget:0.3g}% of the
@@ -595,11 +692,11 @@ def buildVaccinationNPITab(id):
                     """,
                         icon=":material/warning:",
                     )
-                    st.session_state[f"ageVacPropError{id}"] = 1
+                    session[f"ageVacPropError{id}"] = 1
                     ageVacPropError = True
             # Reset error parameter if none of the age levels error
             if not ageVacPropError:
-                st.session_state[f"ageVacPropError{id}"] = 0
+                session[f"ageVacPropError{id}"] = 0'''
 
         # Primary Vaccine Parameters
         with st.expander("Vaccine Properties"):
@@ -670,25 +767,6 @@ def buildVaccinationNPITab(id):
                     where a month is 30 days.
                 """,
             )
-            loadKey("primaryWanedEfficacy", id, 0.0)
-            primaryWanedEfficacy = st.select_slider(
-                "Dose Efficacy After Immunity Waning (Probability)",
-                np.linspace(0.0, 1.0, 201),
-                0.0,
-                format_func=lambda x: f"{100 * x:0.3g}%",
-                disabled=not useVaccinesToggle,
-                on_change=saveKey,
-                args=["primaryWanedEfficacy", id],  # type: ignore
-                key=f"_primaryWanedEfficacy{id}",
-                help="""
-                    The final efficacy value that the vaccine
-                    schedule will approach as the immunity it
-                    provides begins to diminish, represented as the
-                    probability that an individual with completely
-                    waned immunity will remain healthy when exposed
-                    to the disease.
-                """,
-            )
             loadKey("primaryWaningRate", id, 12)
             st.slider(
                 "Vaccine Waning Duration (Months)",
@@ -715,23 +793,626 @@ def buildVaccinationNPITab(id):
                 """,
             )
 
+            # Store age-based efficacy values for error checking
+            # primaryInitialEfficacy = 0.5
+            # primAgeInitials = {}
+
+            # Modifiable-length field for each primary dose
+            st.markdown(
+                """
+                ### Individual Dose Efficacies
+
+                Here you can set the initial efficacy of each
+                vaccine dose in the schedule separately. Note that
+                changing the "Number of Vaccine Doses" parameter
+                will affect how many sections are present here.
+            """
+            )
+            for i in range(primaryDoseCount):
+                with st.container(border=True):
+                    st.markdown(f"#### {ordinals[i+1]} Vaccine Dose")
+                    loadKey("primaryBaseEfficacy", id, 0.5, f"-{i}")
+                    baseDoseEfficacy = st.select_slider(
+                        "Initial Dose Efficacy (Probability)",
+                        np.linspace(0.0, 1.0, 201),
+                        0.5,
+                        format_func=lambda x: f"{100 * x:0.3g}%",
+                        disabled=not useVaccinesToggle,
+                        on_change=saveKey,
+                        args=["primaryBaseEfficacy", id, f"-{i}"],  # type: ignore
+                        key=f"_primaryBaseEfficacy{id}-{i}",
+                        help="""
+                            The initial efficacy of this vaccine dose,
+                            represented as the probability that an
+                            individual that has recently received the
+                            dose will remain healthy when exposed
+                            to the disease.
+                        """,
+                    )
+
+                    # Age-Specific Primary Efficacy Field
+                    st.markdown(
+                        "##### Age-Specific Initial Efficacy",
+                        help="""
+This section allows unique initial efficacy values for this dose to be defined
+for individual age groups in the simulation, overriding the global initial
+efficacy value for this dose defined above.
+                        """,
+                    )
+                    loadKey(
+                        "vacInitialEfficacyAgeForm",
+                        id,
+                        pd.DataFrame(
+                            {
+                                "Age Group": [None],
+                                "Initial Dose Efficacy": [baseDoseEfficacy],
+                            },
+                        ),
+                        f"-{i}",
+                        dataframe=True,
+                    )
+                    vacInitialEfficacyAgeForm = st.data_editor(
+                        session[f"vacInitialEfficacyAgeForm{id}-{i}"],
+                        num_rows="dynamic",
+                        key=f"_vacInitialEfficacyAgeForm{id}-{i}",
+                        on_change=saveKey,
+                        args=["vacInitialEfficacyAgeForm", id, f"-{i}"],
+                        kwargs={"dataframe": True},
+                        disabled=not useVaccinesToggle,
+                        placeholder=(
+                            "Enter a value"
+                            if useVaccinesToggle
+                            else "Enable vaccines to edit this parameter"
+                        ),
+                        column_config={
+                            "Age Group": st.column_config.SelectboxColumn(
+                                "Age Group",
+                                required=True,
+                                options=ageTimeDict.keys(),
+                                format_func=lambda x: ageTimeDict[x],  # type: ignore
+                                help="""
+An age group that will have a specific initial efficacy value defined
+for this vaccine dose, overriding the base value.
+                                """,
+                            ),
+                            "Initial Dose Efficacy": st.column_config.NumberColumn(
+                                "Initial Dose Efficacy (Probability)",
+                                required=True,
+                                default=baseDoseEfficacy,
+                                min_value=0.0,
+                                max_value=1.0,
+                                format="percent",
+                                help="""
+The initial efficacy of this vaccine dose for this age group, represented as
+the probability that a recently vaccinated individual in this age group will
+remain healthy when exposed to the disease.
+                                """,
+                            ),
+                        },
+                    )
+                    paramError(
+                        f"vacInitialEfficacyAgeForm{i}Duplicates",
+                        id,
+                        lambda: hasDuplicates(vacInitialEfficacyAgeForm),
+                        f"""
+                            Error: The age-specific initial efficacy form used
+                            for the {ordinals[i+1].lower()} vaccine dose by the {
+                                'baseline scenario' if id == 0
+                                else f'scenario named "{session[f'scenarioName{id}']}"'
+                            } contains duplicate age group rows. Each age group
+                            should only be used in a single row of the form.
+
+                            Please remove or change any rows of the Age-Specific Initial
+                            Efficacy form in the {ordinals[i+1]} Vaccine Dose section of
+                            :primary-badge[:material/vaccines: Vaccinations and NPIs]
+                            that use the same age group as another row.
+                        """,
+                        True,
+                    )
+
+                    oldVarLengthForm = '''
+                    # Save remaining ages to variable to avoid lookups
+                    primAgeRemainingGroups = session[
+                        f"primaryRemainingAgeGroups{id}-{i}"
+                    ]
+                    (primEfficacyErrorContainer) = doseEfficacyContainer.container()
+                    primEfficacyContainer = doseEfficacyContainer.container()
+                    for j in range(primaryAgeRowCounts[i]):
+                        (
+                            primAgeGroupColumn,
+                            primAgeEfficacyColumn,
+                            primAgeRemoveColumn
+                        ) = (
+                            primEfficacyContainer.columns(
+                                (0.25, 0.55, 0.2), vertical_alignment="center"
+                            )
+                        )
+                        primAgeCurrentGroup = session.get(
+                            f"primAgeGroup{id}-{i}-{j}"
+                        )
+                        # Age group column
+                        loadKey(
+                            "primAgeGroup",
+                            id,
+                            (
+                                primAgeCurrentGroup
+                                if primAgeCurrentGroup
+                                else primAgeRemainingGroups[0]
+                            ),
+                            f"-{i}-{j}",
+                        )
+                        with primAgeGroupColumn:
+                            primAgeGroup = st.selectbox(
+                                "Age Group",
+                                key=f"_primAgeGroup{id}-{i}-{j}",
+                                # Set age group options such that only ages
+                                # that haven't been selected yet can be
+                                # selected
+                                options=(
+                                    [primAgeCurrentGroup]
+                                    + [
+                                        group
+                                        for group in primAgeRemainingGroups
+                                        if group != primAgeCurrentGroup
+                                    ]
+                                    if primAgeCurrentGroup
+                                    else primAgeRemainingGroups
+                                ),
+                                disabled=(
+                                    not useVaccinesToggle
+                                    or not primaryAgeRowCounts[i] < 10
+                                ),
+                                on_change=saveKey,
+                                args=["primAgeGroup", id, f"-{i}-{j}"],  # type: ignore
+                                help="""
+                                An age group that will have specific
+                                initial vaccine efficacy values defined
+                                for it, overriding the base efficacy
+                                value for this vaccine dose.
+
+                                ##### Options:
+                                - Young Infant: 0-6 months old.
+                                - Infant: 7-24 months old.
+                                - Young Child: 3-5 years old.
+                                - Child: 6-12 years old.
+                                - Adolescent: 13-17 years old.
+                                - Young Adult: 18-24 years old.
+                                - Adult: 25-44 years old.
+                                - Older Adult: 45-64 years old.
+                                - Senior: 65-79 years old.
+                                - Older Senior: 80+ years old.
+                            """,
+                            )
+                        # Initial efficacy column
+                        loadKey("primAgeEfficacy", id, 0.5, f"-{i}-{j}")
+                        with primAgeEfficacyColumn:
+                            ageInitialEfficacy = st.select_slider(
+                                "Initial Dose Efficacy (Probability)",
+                                np.linspace(0.0, 1.0, 201),
+                                0.5,
+                                format_func=lambda x: f"{100 * x:0.3g}%",
+                                disabled=not useVaccinesToggle,
+                                key=f"_primAgeEfficacy{id}-{i}-{j}",
+                                on_change=saveKey,
+                                args=["primAgeEfficacy", id, f"-{i}-{j}"],
+                                help="""
+                                    The initial efficacy of this
+                                    vaccine dose for this age group,
+                                    represented as the probability that
+                                    a recently vaccinated individual in
+                                    this age group will remain healthy
+                                    when exposed to the disease.
+                                """,
+                            )
+
+                            # Last efficacy value is all that's cared
+                            # about for error checking purposes
+                            if i == primaryDoseCount - 1:
+                                primAgeInitials[primAgeGroup] = ageInitialEfficacy
+
+                        # Delete button column
+                        with primAgeRemoveColumn:
+                            st.button(
+                                label="Remove Age Group",
+                                icon=":material/delete:",
+                                key=f"primAgeRemove{id}-{i}-{j}",
+                                on_click=deleteFormRow,
+                                args=(
+                                    i,
+                                    f"primAgeRowCount{id}-{i}",
+                                    {f"primAgeGroup{id}-{i}-",
+                                    f"primAgeEfficacy{id}-{i}-"},
+                                ),
+                                disabled=not useVaccinesToggle,
+                                help="""
+                                Remove this row of the form and remove
+                                these age-specific initial vaccine
+                                efficacy values from the simulation.
+                            """,
+                            )
+                    # Button to add another row for age-specific params
+                    primEfficacyContainer.button(
+                        label="Add Age Group",
+                        icon=":material/add:",
+                        on_click=addFormRow,
+                        key=f"primAgeAdd{id}-{i}",
+                        args=(
+                            f"primAgeRowCount{id}-{i}",
+                            {
+                                f"primAgeGroup{id}-{i}-{primaryAgeRowCounts[i]}": (
+                                    primAgeRemainingGroups[0]
+                                    if primAgeRemainingGroups
+                                    else None
+                                ),
+                                (
+                                    (
+                                        f"primAgeEfficacy{id}-{i}"
+                                        f"-{primaryAgeRowCounts[i]}"
+                                    )
+                                ): baseDoseEfficacy,
+                            },
+                        ),
+                        disabled=(
+                            not useVaccinesToggle
+                            or not primaryAgeRowCounts[i] < 10
+                        ),
+                        help=(
+                            """
+                            Add another row to this form, where you can
+                            select an additional age group to have
+                            unique initial vaccine efficacy values.
+                        """
+                            if primaryAgeRowCounts[i] <= 9
+                            else """
+                            All age groups have been given unique
+                            initial efficacy values for this vaccine
+                            dose, so a new age group cannot be added.
+                        """
+                        ),
+                    )
+
+                    # Check errors in age-based primary efficacy
+                    if i == primaryDoseCount - 1 and useVaccinesToggle:
+                        initialAges = primAgeInitials.keys()
+                        wanedAges = primAgeWaneds.keys()
+                        for age in list(initialAges) + list(
+                            set(wanedAges) - set(initialAges)
+                        ):
+                            initialAgeEfficacy = primAgeInitials.get(
+                                age, primaryInitialEfficacy
+                            )
+                            wanedAgeEfficacy = primAgeWaneds.get(
+                                age, primaryWanedEfficacy
+                            )
+                            ageIsInitial = age in initialAges
+                            ageIsWaned = age in wanedAges
+                            if initialAgeEfficacy > wanedAgeEfficacy:
+                                primEfficacyErrorContainer.error(
+                                    f"""
+                                    Error: The initial vaccine efficacy
+                                    in the {
+                                        'baseline scenario' if id == 0
+                                        else f'scenario named "{
+                                            session[
+                                                f'scenarioName{id}'
+                                            ]
+                                        }"'
+                                    } for the final dose in the "{age}"
+                                    age group is currently set to {
+                                        '' if ageIsInitial
+                                        else 'the scenario base value of'
+                                    } {100 * initialAgeEfficacy:0.3g}%
+                                    effectiveness, but the final
+                                    vaccine efficacy after immunity
+                                    waning for said age group in this
+                                    scenario is set to {
+                                        '' if ageIsWaned
+                                        else 'the scenario base value of'
+                                    } {100 * wanedAgeEfficacy:0.3g}%.
+                                    As such, the immunity to the
+                                    disease conferred by the vaccine
+                                    will get stronger over time instead
+                                    of weaker for individuals in the
+                                    "{age}" age group.
+
+                                    To address this error, please make
+                                    one of the following changes before
+                                    running the simulation:
+
+                                    - Remove the scenario's
+                                    age-specific {
+                                        'initial (final dose)'
+                                        if ageIsInitial else ''
+                                    }{
+                                        'and ' if ageIsInitial and ageIsWaned
+                                        else ''
+                                    }{
+                                        'waned ' if ageIsInitial else ''
+                                    }dose efficacy rate{
+                                        's' if ageIsInitial and ageIsWaned
+                                        else ''
+                                    } for the "{age}" age group.
+                                    - Increase the scenario's {
+                                        'age-specific' if ageIsInitial
+                                        else 'base'
+                                    } Initial Dose Efficacy for the
+                                    final vaccine dose in the program
+                                    to be greater than
+                                    {100 * wanedAgeEfficacy:0.3g}%.
+                                    - Decrease the scenario's {
+                                        'age-specific' if ageIsInitial
+                                        else 'base'
+                                    } Dose Efficacy After Immunity
+                                    Waning to be lower than
+                                    {100 * initialAgeEfficacy:0.3g}%.
+                                """,
+                                    icon=":material/error:",
+                                )
+                                globalErrorContainer.error(
+                                    f"""
+                                    Error: The initial vaccine efficacy
+                                    in the {
+                                        'baseline scenario' if id == 0
+                                        else f'scenario named "{
+                                            session[
+                                                f'scenarioName{id}'
+                                            ]
+                                        }"'
+                                    } for the final dose in the "{age}"
+                                    age group is currently set to {
+                                        '' if age in initialAges
+                                        else 'the scenario base value of'
+                                    } {100 * initialAgeEfficacy:0.3g}%
+                                    effectiveness, but the final
+                                    vaccine efficacy after immunity
+                                    waning for said age group in this
+                                    scenario is set to {
+                                        '' if age in wanedAges
+                                        else 'the scenario base value of'
+                                    } {100 * wanedAgeEfficacy:0.3g}%.
+                                    As such, the immunity to the
+                                    disease conferred by the vaccine
+                                    will get stronger over time instead
+                                    of weaker for individuals in the
+                                    "{age}" age group.
+
+                                    To address this error, please make
+                                    one of the following changes before
+                                    running the simulation:
+
+                                    - Remove the scenario's
+                                    age-specific {
+                                        'initial (final dose)'
+                                        if ageIsInitial else ''
+                                    }{
+                                        'and ' if ageIsInitial and ageIsWaned
+                                        else ''
+                                    }{
+                                        'waned ' if ageIsInitial else ''
+                                    }dose efficacy rate{
+                                        's' if ageIsInitial and ageIsWaned
+                                        else ''
+                                    } for the "{age}" age group in the
+                                    "Vaccination Properties" section of
+                                    the "Vaccinations and NPIs" tab.
+                                    - Increase the scenario's {
+                                        'age-specific' if ageIsInitial
+                                        else 'base'
+                                    } Initial Dose Efficacy for the
+                                    final vaccine dose in the program
+                                    in the "Vaccination Properties"
+                                    section of the "Vaccinations and
+                                    NPIs" tab to be greater than
+                                    {100 * wanedAgeEfficacy:0.3g}%.
+                                    - Decrease the scenario's {
+                                        'age-specific' if ageIsInitial
+                                        else 'base'
+                                    } Dose Efficacy After Immunity
+                                    Waning in the "Vaccination
+                                    Properties" section of the
+                                    "Vaccinations and NPIs" tab to be
+                                    lower than
+                                    {100 * initialAgeEfficacy:0.3g}%.
+                                """,
+                                    icon=":material/error:",
+                                )
+                                session[f"agePrimEfficacyError{id}"] = 2
+                                ageBoostEfficacyError = True
+                        # Reset error parameter if no errors
+                        if not ageBoostEfficacyError:
+                            session[f"agePrimEfficacyError{id}"] = 0'''
+
+            # Efficacy After Waning
+            loadKey("primaryWanedEfficacy", id, 0.0)
+            primaryWanedEfficacy = st.select_slider(
+                "Dose Efficacy After Immunity Waning (Probability)",
+                np.linspace(0.0, 1.0, 201),
+                0.0,
+                format_func=lambda x: f"{100 * x:0.3g}%",
+                disabled=not useVaccinesToggle,
+                on_change=saveKey,
+                args=["primaryWanedEfficacy", id],  # type: ignore
+                key=f"_primaryWanedEfficacy{id}",
+                help="""
+                    The final efficacy value that the vaccine
+                    schedule will approach as the immunity it
+                    provides begins to diminish, represented as the
+                    probability that an individual with completely
+                    waned immunity will remain healthy when exposed
+                    to the disease.
+                """,
+            )
+            # Last efficacy value is all that's cared about
+            # for error checking purposes
+            finalDose = primaryDoseCount - 1
+            finalInitialEfficacy = idGet(
+                "primaryBaseEfficacy", id, 0.5, f"-{finalDose}"
+            )
+            paramError(
+                "wanedEfficacyAboveInitial",
+                id,
+                lambda: useVaccinesToggle
+                and primaryWanedEfficacy > finalInitialEfficacy,
+                f"""
+                    Error: The initial vaccine efficacy for
+                    the final vaccine dose in the {
+                        'baseline scenario' if id == 0
+                        else f'scenario named "{
+                            session[f'scenarioName{id}']
+                        }"'
+                    } is {100 * finalInitialEfficacy:0.3g}%, but the
+                    efficacy after waning is {100 * primaryWanedEfficacy:0.3g}%.
+                    As such, a vaccinated person's immunity to the
+                    disease will get stronger over time instead of weaker.
+
+                    Please make one of the following changes:
+
+                    - Increase Initial Dose Efficacy for the final dose in
+                    :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    to be greater than {100 * primaryWanedEfficacy:0.3g}%.
+                    - Decrease Dose Efficacy After Immunity Waning in
+                    :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    to be lower than {100 * finalInitialEfficacy:0.3g}%.
+                """,
+                True,
+            )
+
             # Store age-based waned efficacy values for error checks
-            primAgeWaneds = {}
+            # primAgeWaneds = {}
 
             # Age-Specific Waned Efficacy Field
             st.markdown(
-                """
-                #### Age-Specific Efficacy After Immunity Waning
-
-                This section allows for unique final efficacy
-                values after immunity waning to be defined for
-                individual age groups in the simulation, overriding
-                the global waned efficacy defined above.
-            """
+                "#### Age-Specific Efficacy After Immunity Waning",
+                help="""
+This table allows for unique final efficacy values after immunity waning
+to be defined for individual age groups in the simulation, overriding
+the global waned efficacy defined above.
+                """,
             )
-            # Save relevant params as variables to avoid lookups
-            primaryWanedRowCount = st.session_state[f"primWanedRowCount{id}"]
-            primWanedRemainingGroups = st.session_state[
+            loadKey(
+                "vacWaneAgeForm",
+                id,
+                pd.DataFrame(
+                    {
+                        "Age Group": [None],
+                        "Dose Efficacy After Waning": [primaryWanedEfficacy],
+                    },
+                ),
+                dataframe=True,
+            )
+            vacWaneAgeForm = st.data_editor(
+                session[f"vacWaneAgeForm{id}"],
+                num_rows="dynamic",
+                key=f"_vacWaneAgeForm{id}",
+                on_change=saveKey,
+                args=["vacWaneAgeForm", id],
+                kwargs={"dataframe": True},
+                disabled=not useVaccinesToggle,
+                placeholder=(
+                    "Enter a value"
+                    if useVaccinesToggle
+                    else "Enable vaccines to edit this parameter"
+                ),
+                column_config={
+                    "Age Group": st.column_config.SelectboxColumn(
+                        "Age Group",
+                        required=True,
+                        options=ageTimeDict.keys(),
+                        format_func=lambda x: ageTimeDict[x],  # type: ignore
+                        help="""
+An age group that will have a specific final efficacy value after
+immunity waning defined for it, overriding the base value.
+                        """,
+                    ),
+                    "Dose Efficacy After Waning": st.column_config.NumberColumn(
+                        "Dose Efficacy After Immunity Waning (Probability)",
+                        required=True,
+                        default=primaryWanedEfficacy,
+                        min_value=0.0,
+                        max_value=1.0,
+                        format="percent",
+                        help="""
+The final efficacy value that the vaccine schedule will approach for this
+age group as the immunity it provides begins to diminish, represented as
+the probability that an individual in this age group with completely waned
+immunity will not remain healthy when exposed to the disease.
+                        """,
+                    ),
+                },
+            )
+            paramError(
+                "vacWaneAgeFormDuplicates",
+                id,
+                lambda: hasDuplicates(vacWaneAgeForm),
+                f"""
+                    Error: The age-specific efficacy after
+                    immunity waning form used by the {
+                        'baseline scenario' if id == 0
+                        else f'scenario named "{session[f'scenarioName{id}']}"'
+                    } contains duplicate age group rows. Each age group
+                    should only be used in a single row of the form.
+
+                    Please remove or change any rows of the Age-Specific
+                    Efficacy After Immunity Waning form in the Vaccine Properties
+                    section of :primary-badge[:material/vaccines: Vaccinations and NPIs]
+                    that use the same age group as another row.
+                """,
+                True,
+            )
+            # TODO: Error if initial is above waned
+            # TODO: Have these errors highlight specific ages
+            finalInitialEfficacyAgeForm = idGet(
+                "vacInitialEfficacyAgeForm",
+                id,
+                pd.DataFrame(
+                    {
+                        "Age Group": [None],
+                        "Initial Dose Efficacy": [
+                            idGet("primaryBaseEfficacy", id, 0.5, f"-{finalDose}")
+                        ],
+                    },
+                ),
+                f"-{finalDose}",
+            )
+            combinedEfficacy = pd.merge(
+                finalInitialEfficacyAgeForm,
+                vacWaneAgeForm,
+                how="inner",
+                on="Age Group",
+            )
+            # TODO: make data_editor error messages name the row
+            # (and not break on dupes)
+            paramError(
+                "ageWanedEfficiencyAboveInitial",
+                id,
+                lambda: np.any(
+                    combinedEfficacy["Initial Dose Efficacy"]
+                    < combinedEfficacy["Dose Efficacy After Waning"]
+                ),  # type: ignore
+                f"""
+                    Error: The vaccine age-specific
+                    efficacy forms used for the final vaccine dose by the {
+                        'baseline scenario' if id == 0
+                        else f'scenario named "{session[f'scenarioName{id}']}"'
+                    } contains rows where the initial vaccine efficacy is
+                    greater than the efficacy after immunity waning. As such, the
+                    immunity to the disease conferred by the vaccine will get
+                    stronger over time instead of weaker for the age groups
+                    specified by these rows.
+
+                    Please modify the Age-Specific Initial Efficacy form
+                    for the final vaccine dose alongside the Age-Specific
+                    Efficacy After Immunity Waning form
+                    in :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    such that no age group has its initial efficacy lower
+                    than its waned efficacy.
+                """,
+                True,
+            )
+
+            oldVarLengthForm = '''# Save relevant params as variables to avoid lookups
+            primaryWanedRowCount = session[f"primWanedRowCount{id}"]
+            primWanedRemainingGroups = session[
                 f"primaryRemainingWanedGroups{id}"
             ]
             primWanedContainer = st.container()
@@ -741,7 +1422,7 @@ def buildVaccinationNPITab(id):
                         (0.25, 0.55, 0.2), vertical_alignment="center"
                     )
                 )
-                primWanedCurrentGroup = st.session_state.get(f"primWanedGroup{id}-{i}")
+                primWanedCurrentGroup = session.get(f"primWanedGroup{id}-{i}")
 
                 # Age group column
                 loadKey(
@@ -798,7 +1479,7 @@ def buildVaccinationNPITab(id):
                 loadKey("primAgeWanedEfficacy", id, 0.0, f"-{i}")
                 with primWanedEffColumn:
                     primAgeWaneds[primWanedGroup] = st.select_slider(
-                        (("Dose Efficacy After Immunity " "Waning (Probability)")),
+                        (("Dose Efficacy After Immunity Waning (Probability)")),
                         np.linspace(0.0, 1.0, 201),
                         0.0,
                         format_func=lambda x: f"{100 * x:0.3g}%",
@@ -850,7 +1531,8 @@ def buildVaccinationNPITab(id):
                             if primWanedRemainingGroups
                             else None
                         ),
-                        f"primAgeWanedEfficacy{id}-{primaryWanedRowCount}": primaryWanedEfficacy,
+                        f"primAgeWanedEfficacy{id}-{primaryWanedRowCount}":
+                        primaryWanedEfficacy,
                     },
                 ),
                 disabled=(not useVaccinesToggle or not primaryWanedRowCount < 10),
@@ -867,391 +1549,7 @@ def buildVaccinationNPITab(id):
                     added.
                 """
                 ),
-            )
-
-            # Store age-based efficacy values for error checking
-            primaryInitialEfficacy = 0.5
-            primAgeInitials = {}
-
-            # Modifiable-length field for each primary dose
-            st.markdown(
-                """
-                ### Individual Dose Efficacies
-
-                Here you can set the initial efficacy of each
-                vaccine dose in the schedule separately. Note that
-                changing the "Number of Vaccine Doses" parameter
-                will affect how many sections are present here.
-            """
-            )
-            for i in range(primaryDoseCount):
-                doseEfficacyContainer = st.container(border=True)
-                doseEfficacyContainer.markdown(f"#### {ordinals[i+1]} Vaccine Dose")
-                loadKey("primaryBaseEfficacy", id, 0.5, f"-{i}")
-                baseDoseEfficacy = doseEfficacyContainer.select_slider(
-                    "Initial Dose Efficacy (Probability)",
-                    np.linspace(0.0, 1.0, 201),
-                    0.5,
-                    format_func=lambda x: f"{100 * x:0.3g}%",
-                    disabled=not useVaccinesToggle,
-                    on_change=saveKey,
-                    args=["primaryBaseEfficacy", id, f"-{i}"],  # type: ignore
-                    key=f"_primaryBaseEfficacy{id}-{i}",
-                    help="""
-                        The initial efficacy of this vaccine dose,
-                        represented as the probability that an
-                        individual that has recently received the
-                        dose will remain healthy when exposed
-                        to the disease.
-                    """,
-                )
-
-                # Last efficacy value is all that's cared about
-                # for error checking purposes
-                if i == primaryDoseCount - 1:
-                    primaryInitialEfficacy = baseDoseEfficacy
-                    # Show error if waned efficacy is above initial
-                    paramError(
-                        "wanedEfficiencyAboveInitial",
-                        id,
-                        lambda: useVaccinesToggle
-                        and primaryWanedEfficacy > primaryInitialEfficacy,
-                        f"""
-                            Error: The initial vaccine efficacy for
-                            the final vaccine dose in the {
-                                'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    st.session_state[f'scenarioName{id}']
-                                }"'
-                            } is {100 * primaryInitialEfficacy:0.3g}%, but the
-                            efficacy after waning is {100 * primaryWanedEfficacy:0.3g}%.
-                            As such, a vaccinated person's immunity to the
-                            disease will get stronger over time instead of weaker.
-
-                            Please make one of the following changes:
-
-                            - Increase Initial Dose Efficacy for the final dose in
-                            :primary-badge[:material/vaccines: Vaccination and NPIs]
-                            to be greater than {100 * primaryWanedEfficacy:0.3g}%.
-                            - Decrease Dose Efficacy After Immunity Waning in
-                            :primary-badge[:material/vaccines: Vaccination and NPIs]
-                            to be lower than {100 * primaryInitialEfficacy:0.3g}%.
-                        """,
-                        True,
-                    )
-
-                # Age-Specific Primary Efficacy Field
-                doseEfficacyContainer.markdown(
-                    """
-                    ##### Age-Specific Efficacy Rates
-
-                    This section allows unique initial efficacy
-                    values for this dose to be defined for
-                    individual age groups in the simulation,
-                    overriding the global initial efficacy value
-                    for this dose defined above.
-                """
-                )
-                # Save remaining ages to variable to avoid lookups
-                primAgeRemainingGroups = st.session_state[
-                    f"primaryRemainingAgeGroups{id}-{i}"
-                ]
-                (primEfficacyErrorContainer) = doseEfficacyContainer.container()
-                primEfficacyContainer = doseEfficacyContainer.container()
-                for j in range(primaryAgeRowCounts[i]):
-                    (primAgeGroupColumn, primAgeEfficacyColumn, primAgeRemoveColumn) = (
-                        primEfficacyContainer.columns(
-                            (0.25, 0.55, 0.2), vertical_alignment="center"
-                        )
-                    )
-                    primAgeCurrentGroup = st.session_state.get(
-                        f"primAgeGroup{id}-{i}-{j}"
-                    )
-                    # Age group column
-                    loadKey(
-                        "primAgeGroup",
-                        id,
-                        (
-                            primAgeCurrentGroup
-                            if primAgeCurrentGroup
-                            else primAgeRemainingGroups[0]
-                        ),
-                        f"-{i}-{j}",
-                    )
-                    with primAgeGroupColumn:
-                        primAgeGroup = st.selectbox(
-                            "Age Group",
-                            key=f"_primAgeGroup{id}-{i}-{j}",
-                            # Set age group options such that only ages
-                            # that haven't been selected yet can be
-                            # selected
-                            options=(
-                                [primAgeCurrentGroup]
-                                + [
-                                    group
-                                    for group in primAgeRemainingGroups
-                                    if group != primAgeCurrentGroup
-                                ]
-                                if primAgeCurrentGroup
-                                else primAgeRemainingGroups
-                            ),
-                            disabled=(
-                                not useVaccinesToggle or not primaryAgeRowCounts[i] < 10
-                            ),
-                            on_change=saveKey,
-                            args=["primAgeGroup", id, f"-{i}-{j}"],  # type: ignore
-                            help="""
-                            An age group that will have specific
-                            initial vaccine efficacy values defined
-                            for it, overriding the base efficacy
-                            value for this vaccine dose.
-
-                            ##### Options:
-                            - Young Infant: 0-6 months old.
-                            - Infant: 7-24 months old.
-                            - Young Child: 3-5 years old.
-                            - Child: 6-12 years old.
-                            - Adolescent: 13-17 years old.
-                            - Young Adult: 18-24 years old.
-                            - Adult: 25-44 years old.
-                            - Older Adult: 45-64 years old.
-                            - Senior: 65-79 years old.
-                            - Older Senior: 80+ years old.
-                        """,
-                        )
-                    # Initial efficacy column
-                    loadKey("primAgeEfficacy", id, 0.5, f"-{i}-{j}")
-                    with primAgeEfficacyColumn:
-                        ageInitialEfficacy = st.select_slider(
-                            "Initial Dose Efficacy (Probability)",
-                            np.linspace(0.0, 1.0, 201),
-                            0.5,
-                            format_func=lambda x: f"{100 * x:0.3g}%",
-                            disabled=not useVaccinesToggle,
-                            key=f"_primAgeEfficacy{id}-{i}-{j}",
-                            on_change=saveKey,
-                            args=["primAgeEfficacy", id, f"-{i}-{j}"],  # type: ignore
-                            help="""
-                                The initial efficacy of this
-                                vaccine dose for this age group,
-                                represented as the probability that
-                                a recently vaccinated individual in
-                                this age group will remain healthy
-                                when exposed to the disease.
-                            """,
-                        )
-
-                        # Last efficacy value is all that's cared
-                        # about for error checking purposes
-                        if i == primaryDoseCount - 1:
-                            primAgeInitials[primAgeGroup] = ageInitialEfficacy
-
-                    # Delete button column
-                    with primAgeRemoveColumn:
-                        st.button(
-                            label="Remove Age Group",
-                            icon=":material/delete:",
-                            key=f"primAgeRemove{id}-{i}-{j}",
-                            on_click=deleteFormRow,
-                            args=(
-                                i,
-                                f"primAgeRowCount{id}-{i}",
-                                {f"primAgeGroup{id}-{i}-", f"primAgeEfficacy{id}-{i}-"},
-                            ),
-                            disabled=not useVaccinesToggle,
-                            help="""
-                            Remove this row of the form and remove
-                            these age-specific initial vaccine
-                            efficacy values from the simulation.
-                        """,
-                        )
-                # Button to add another row for age-specific params
-                primEfficacyContainer.button(
-                    label="Add Age Group",
-                    icon=":material/add:",
-                    on_click=addFormRow,
-                    key=f"primAgeAdd{id}-{i}",
-                    args=(
-                        f"primAgeRowCount{id}-{i}",
-                        {
-                            f"primAgeGroup{id}-{i}-{primaryAgeRowCounts[i]}": (
-                                primAgeRemainingGroups[0]
-                                if primAgeRemainingGroups
-                                else None
-                            ),
-                            (
-                                (
-                                    f"primAgeEfficacy{id}-{i}"
-                                    f"-{primaryAgeRowCounts[i]}"
-                                )
-                            ): baseDoseEfficacy,
-                        },
-                    ),
-                    disabled=(not useVaccinesToggle or not primaryAgeRowCounts[i] < 10),
-                    help=(
-                        """
-                        Add another row to this form, where you can
-                        select an additional age group to have
-                        unique initial vaccine efficacy values.
-                    """
-                        if primaryAgeRowCounts[i] <= 9
-                        else """
-                        All age groups have been given unique
-                        initial efficacy values for this vaccine
-                        dose, so a new age group cannot be added.
-                    """
-                    ),
-                )
-
-                # Check errors in age-based primary efficacy
-                # TODO: Update errors after variable-length form is replaced
-                if i == primaryDoseCount - 1 and useVaccinesToggle:
-                    initialAges = primAgeInitials.keys()
-                    wanedAges = primAgeWaneds.keys()
-                    for age in list(initialAges) + list(
-                        set(wanedAges) - set(initialAges)
-                    ):
-                        initialAgeEfficacy = primAgeInitials.get(
-                            age, primaryInitialEfficacy
-                        )
-                        wanedAgeEfficacy = primAgeWaneds.get(age, primaryWanedEfficacy)
-                        ageIsInitial = age in initialAges
-                        ageIsWaned = age in wanedAges
-                        if initialAgeEfficacy > wanedAgeEfficacy:
-                            primEfficacyErrorContainer.error(
-                                f"""
-                                Error: The initial vaccine efficacy
-                                in the {
-                                    'baseline scenario' if id == 0
-                                    else f'scenario named "{
-                                        st.session_state[
-                                            f'scenarioName{id}'
-                                        ]
-                                    }"'
-                                } for the final dose in the "{age}"
-                                age group is currently set to {
-                                    '' if ageIsInitial
-                                    else 'the scenario base value of'
-                                } {100 * initialAgeEfficacy:0.3g}%
-                                effectiveness, but the final
-                                vaccine efficacy after immunity
-                                waning for said age group in this
-                                scenario is set to {
-                                    '' if ageIsWaned
-                                    else 'the scenario base value of'
-                                } {100 * wanedAgeEfficacy:0.3g}%.
-                                As such, the immunity to the
-                                disease conferred by the vaccine
-                                will get stronger over time instead
-                                of weaker for individuals in the
-                                "{age}" age group.
-
-                                To address this error, please make
-                                one of the following changes before
-                                running the simulation:
-
-                                - Remove the scenario's
-                                age-specific {
-                                    'initial (final dose)'
-                                    if ageIsInitial else ''
-                                }{
-                                    'and ' if ageIsInitial and ageIsWaned
-                                    else ''
-                                }{
-                                    'waned ' if ageIsInitial else ''
-                                }dose efficacy rate{
-                                    's' if ageIsInitial and ageIsWaned
-                                    else ''
-                                } for the "{age}" age group.
-                                - Increase the scenario's {
-                                    'age-specific' if ageIsInitial
-                                    else 'base'
-                                } Initial Dose Efficacy for the
-                                final vaccine dose in the program
-                                to be greater than
-                                {100 * wanedAgeEfficacy:0.3g}%.
-                                - Decrease the scenario's {
-                                    'age-specific' if ageIsInitial
-                                    else 'base'
-                                } Dose Efficacy After Immunity
-                                Waning to be lower than
-                                {100 * initialAgeEfficacy:0.3g}%.
-                            """,
-                                icon=":material/error:",
-                            )
-                            globalErrorContainer.error(
-                                f"""
-                                Error: The initial vaccine efficacy
-                                in the {
-                                    'baseline scenario' if id == 0
-                                    else f'scenario named "{
-                                        st.session_state[
-                                            f'scenarioName{id}'
-                                        ]
-                                    }"'
-                                } for the final dose in the "{age}"
-                                age group is currently set to {
-                                    '' if age in initialAges
-                                    else 'the scenario base value of'
-                                } {100 * initialAgeEfficacy:0.3g}%
-                                effectiveness, but the final
-                                vaccine efficacy after immunity
-                                waning for said age group in this
-                                scenario is set to {
-                                    '' if age in wanedAges
-                                    else 'the scenario base value of'
-                                } {100 * wanedAgeEfficacy:0.3g}%.
-                                As such, the immunity to the
-                                disease conferred by the vaccine
-                                will get stronger over time instead
-                                of weaker for individuals in the
-                                "{age}" age group.
-
-                                To address this error, please make
-                                one of the following changes before
-                                running the simulation:
-
-                                - Remove the scenario's
-                                age-specific {
-                                    'initial (final dose)'
-                                    if ageIsInitial else ''
-                                }{
-                                    'and ' if ageIsInitial and ageIsWaned
-                                    else ''
-                                }{
-                                    'waned ' if ageIsInitial else ''
-                                }dose efficacy rate{
-                                    's' if ageIsInitial and ageIsWaned
-                                    else ''
-                                } for the "{age}" age group in the
-                                "Vaccination Properties" section of
-                                the "Vaccinations and NPIs" tab.
-                                - Increase the scenario's {
-                                    'age-specific' if ageIsInitial
-                                    else 'base'
-                                } Initial Dose Efficacy for the
-                                final vaccine dose in the program
-                                in the "Vaccination Properties"
-                                section of the "Vaccinations and
-                                NPIs" tab to be greater than
-                                {100 * wanedAgeEfficacy:0.3g}%.
-                                - Decrease the scenario's {
-                                    'age-specific' if ageIsInitial
-                                    else 'base'
-                                } Dose Efficacy After Immunity
-                                Waning in the "Vaccination
-                                Properties" section of the
-                                "Vaccinations and NPIs" tab to be
-                                lower than
-                                {100 * initialAgeEfficacy:0.3g}%.
-                            """,
-                                icon=":material/error:",
-                            )
-                            st.session_state[f"agePrimEfficacyError{id}"] = 2
-                            ageBoostEfficacyError = True
-                    # Reset error parameter if no errors
-                    if not ageBoostEfficacyError:
-                        st.session_state[f"agePrimEfficacyError{id}"] = 0
+            )'''
 
         # Booster Parameters
         with st.expander("Booster Vaccines"):
@@ -1385,7 +1683,7 @@ def buildVaccinationNPITab(id):
                     booster vaccines in the {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is {100 * boosterBaseEfficacy:0.3g}%, but the
                     efficacy after waning is {100 * boosterWanedEfficacy:0.3g}%.
@@ -1431,22 +1729,140 @@ def buildVaccinationNPITab(id):
             )
 
             # Store age-based booster efficacy values for error checking
-            boostAgeInitials, boostAgeWaneds = {}, {}
+            # boostAgeInitials, boostAgeWaneds = {}, {}
 
             # Modifiable-length field for age-specific efficacy
             st.markdown(
-                """
-                ### Age-Specific Booster Efficacies
-
-                This section allows for unique booster efficacy
-                values (both initial and final) to be defined for
-                individual age groups in the simulation, overriding
-                the global booster efficacy values defined above.
-            """
+                "### Age-Specific Booster Efficacies",
+                help="""
+This table allows for unique booster efficacy values (both initial and final)
+to be defined for individual age groups in the simulation, overriding the
+global booster efficacy values defined above.
+                """,
             )
-            # Save relevant params as variables to avoid lookups
-            boosterRowCount = st.session_state[f"boostAgeRowCount{id}"]
-            boostAgeRemainingGroups = st.session_state[f"boosterRemainingAgeGroups{id}"]
+
+            loadKey(
+                "boostEfficacyAgeForm",
+                id,
+                pd.DataFrame(
+                    {
+                        "Age Group": [None],
+                        "Initial Booster Efficacy": [boosterBaseEfficacy],
+                        "Booster Efficacy After Waning": [boosterWanedEfficacy],
+                    },
+                ),
+                dataframe=True,
+            )
+            boostEfficacyAgeForm = st.data_editor(
+                session[f"boostEfficacyAgeForm{id}"],
+                num_rows="dynamic",
+                key=f"_boostEfficacyAgeForm{id}",
+                on_change=saveKey,
+                args=["boostEfficacyAgeForm", id],
+                kwargs={"dataframe": True},
+                disabled=not useVaccinesToggle or not useBoostersToggle,
+                placeholder=(
+                    "Enter a value"
+                    if useVaccinesToggle and useBoostersToggle
+                    else "Enable booster vaccines to edit this parameter"
+                ),
+                column_config={
+                    "Age Group": st.column_config.SelectboxColumn(
+                        "Age Group",
+                        required=True,
+                        options=ageTimeDict.keys(),
+                        format_func=lambda x: ageTimeDict[x],  # type: ignore
+                        help="""
+An age group that will have specific booster vaccine efficacy values defined
+for it, overriding the base efficacy value for booster vaccines.
+                        """,
+                    ),
+                    "Initial Booster Efficacy": st.column_config.NumberColumn(
+                        "Initial Booster Efficacy (Probability)",
+                        required=True,
+                        default=boosterBaseEfficacy,
+                        min_value=0.0,
+                        max_value=1.0,
+                        format="percent",
+                        help="""
+The initial efficacy of each booster vaccine for this age group, represented
+as the probability that a recently vaccinated individual in this age group
+will remain healthy when exposed to the disease.
+                        """,
+                    ),
+                    "Booster Efficacy After Waning": st.column_config.NumberColumn(
+                        "Booster Efficacy After Immunity Waning (Probability)",
+                        required=True,
+                        default=boosterWanedEfficacy,
+                        min_value=0.0,
+                        max_value=1.0,
+                        format="percent",
+                        help="""
+The final efficacy value that the booster vaccine will approach for this age
+group as the immunity it provides begins to diminish, represented as the
+probability that an individual in this age group with completely waned
+immunity will remain healthy when exposed to the disease.
+                        """,
+                    ),
+                },
+            )
+            paramError(
+                "boostEfficacyAgeFormDuplicates",
+                id,
+                lambda: hasDuplicates(boostEfficacyAgeForm),
+                f"""
+                    Error: The booster vaccine age-specific
+                    efficacy form used by the {
+                        'baseline scenario' if id == 0
+                        else f'scenario named "{session[f'scenarioName{id}']}"'
+                    } contains duplicate age group rows. Each age group
+                    should only be used in a single row of the form.
+
+                    Please remove or change any rows of the
+                    Age-Specific Booster Efficacies form in
+                    :primary-badge[:material/vaccines: Vaccinations and NPIs]
+                    that use the same age group as another row.
+                """,
+                True,
+            )
+            # TODO: make data_editor error messages name the row
+            paramError(
+                "boostEfficacyAgeFormWanedAboveInitial",
+                id,
+                lambda: np.any(
+                    boostEfficacyAgeForm["Initial Booster Efficacy"]
+                    < boostEfficacyAgeForm["Booster Efficacy After Waning"]
+                ),  # type: ignore
+                f"""
+                    Error: The booster vaccine age-specific
+                    efficacy form used by the {
+                        'baseline scenario' if id == 0
+                        else f'scenario named "{session[f'scenarioName{id}']}"'
+                    } contains rows where the initial vaccine efficacy is
+                    greater than the efficacy after immunity waning. As such, the
+                    immunity to the disease conferred by the booster will get
+                    stronger over time instead of weaker for the age groups
+                    specified by these rows.
+
+                    Please make one of the following changes:
+
+                    - Remove all rows of the Age-Specific Booster Efficacies form
+                    in :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    that have the initial efficacy higher than the efficacy
+                    after waning.
+                    - Increase the Initial Booster Efficacy column in
+                    :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    to always be higher than the efficacy after waning.
+                    - Decrease the Booster Efficacy After Immunity Waning column
+                    in :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    to always be lower than the initial efficacy.
+                """,
+                True,
+            )
+
+            oldVarLengthForm = '''# Save relevant params as variables to avoid lookups
+            boosterRowCount = session[f"boostAgeRowCount{id}"]
+            boostAgeRemainingGroups = session[f"boosterRemainingAgeGroups{id}"]
             boostAgeErrorContainer = st.container()
             boostAgeEfficacyContainer = st.container()
             for i in range(boosterRowCount):
@@ -1455,7 +1871,7 @@ def buildVaccinationNPITab(id):
                         (0.25, 0.55, 0.2), vertical_alignment="center"
                     )
                 )
-                boostAgeCurrentGroup = st.session_state.get(f"boostAgeGroup{id}-{i}")
+                boostAgeCurrentGroup = session.get(f"boostAgeGroup{id}-{i}")
                 # Age group column
                 loadKey(
                     "boostAgeGroup",
@@ -1534,7 +1950,7 @@ def buildVaccinationNPITab(id):
                 loadKey("boostAgeWanedEfficacy", id, 0.6, f"-{i}")
                 with boostAgeEfficacyColumn:
                     boostAgeWaneds[boostAgeGroup] = st.select_slider(
-                        (("Booster Efficacy After " "Immunity Waning (Probability)")),
+                        (("Booster Efficacy After Immunity Waning (Probability)")),
                         np.linspace(0.0, 1.0, 201),
                         0.6,
                         disabled=(not useVaccinesToggle or not useBoostersToggle),
@@ -1591,7 +2007,8 @@ def buildVaccinationNPITab(id):
                             else None
                         ),
                         f"boostAgeEfficacy{id}-{boosterRowCount}": boosterBaseEfficacy,
-                        f"boostAgeWanedEfficacy{id}-{boosterRowCount}": boosterWanedEfficacy,
+                        f"boostAgeWanedEfficacy{id}-{boosterRowCount}":
+                        boosterWanedEfficacy,
                     },
                 ),
                 disabled=(
@@ -1629,7 +2046,7 @@ def buildVaccinationNPITab(id):
                         in the {
                             'baseline scenario' if id == 0
                             else f'scenario named "{
-                                st.session_state[
+                                session[
                                     f'scenarioName{id}'
                                     ]
                             }"'
@@ -1667,7 +2084,7 @@ def buildVaccinationNPITab(id):
                         in the {
                             'baseline scenario' if id == 0
                             else f'scenario named "{
-                                st.session_state[
+                                session[
                                     f'scenarioName{id}'
                                 ]
                             }"'
@@ -1703,11 +2120,11 @@ def buildVaccinationNPITab(id):
                     """,
                         icon=":material/error:",
                     )
-                    st.session_state[f"ageBoostEfficacyError{id}"] = 2
+                    session[f"ageBoostEfficacyError{id}"] = 2
                     ageBoostEfficacyError = True
             # Reset error parameter if none of the age levels error
             if not ageBoostEfficacyError:
-                st.session_state[f"ageBoostEfficacyError{id}"] = 0
+                session[f"ageBoostEfficacyError{id}"] = 0'''
 
     # NPIs
     with st.container():
@@ -1759,18 +2176,86 @@ def buildVaccinationNPITab(id):
             )
             # Age-specific social distancing compliance
             st.markdown(
-                """
-                ### Age-Specific Social Distancing Compliance
-
-                This section allows for unique social distancing
-                compliance values to be defined for individual age
-                groups in the simulation, overriding the global
-                probability defined above.
-            """
+                "### Age-Specific Social Distancing Compliance",
+                help="""
+This table allows for unique social distancing compliance values to be defined
+for individual age groups in the simulation, overriding the global probability
+defined above.
+                """,
             )
-            # Save relevant params as variables to avoid lookups
-            socialRowCount = st.session_state[f"socialRowCount{id}"]
-            socialRemainingGroups = st.session_state[f"socialRemainingAgeGroups{id}"]
+
+            loadKey(
+                "distanceAgeForm",
+                id,
+                pd.DataFrame(
+                    {
+                        "Age Group": [None],
+                        "Social Distancing Compliance": [socialDistancingCompliance],
+                    },
+                ),
+                dataframe=True,
+            )
+            distanceAgeForm = st.data_editor(
+                session[f"distanceAgeForm{id}"],
+                num_rows="dynamic",
+                key=f"_distanceAgeForm{id}",
+                on_change=saveKey,
+                args=["distanceAgeForm", id],
+                kwargs={"dataframe": True},
+                disabled=not useSocialDistancingToggle,
+                placeholder=(
+                    "Enter a value"
+                    if useSocialDistancingToggle
+                    else "Enable social distancing to edit this parameter"
+                ),
+                column_config={
+                    "Age Group": st.column_config.SelectboxColumn(
+                        "Age Group",
+                        required=True,
+                        options=ageTimeDict.keys(),
+                        format_func=lambda x: ageTimeDict[x],  # type: ignore
+                        help="""
+An age group that will have a specific social distancing compliance
+probability defined for it, overriding the base probability.
+                        """,
+                    ),
+                    "Social Distancing Compliance": st.column_config.NumberColumn(
+                        "Social Distancing Compliance (Probability)",
+                        required=True,
+                        default=socialDistancingCompliance,
+                        min_value=0.0,
+                        max_value=1.0,
+                        format="percent",
+                        help="""
+The probability that an individual in this age group will comply with
+social distancing interventions in the simulation.
+                        """,
+                    ),
+                },
+            )
+            paramError(
+                "distanceAgeFormDuplicates",
+                id,
+                lambda: hasDuplicates(distanceAgeForm),
+                f"""
+                    Error: The age-specific social distancing
+                    compliance form used by the {
+                        'baseline scenario' if id == 0
+                        else f'scenario named "{session[f'scenarioName{id}']}"'
+                    } contains duplicate age group rows. Each age group
+                    should only be used in a single row of the form.
+
+                    Please remove or change any rows of the
+                    Age-Specific Social Distancing Compliance form in
+                    :primary-badge[:material/vaccines: Vaccinations and NPIs]
+                    that use the same age group as another row.
+                """,
+                True,
+            )
+
+            oldVarLengthForm = '''# Save relevant params as variables to avoid lookups
+            socialRowCount = session[f"socialRowCount{id}"]
+            socialRemainingGroups = session[f"socialRemainingAgeGroups{id}"]
             socialAgeContainer = st.container()
             for i in range(socialRowCount):
                 (socialGroupColumn, socialComplianceColumn, socialRemoveColumn) = (
@@ -1778,7 +2263,7 @@ def buildVaccinationNPITab(id):
                         (0.25, 0.55, 0.2), vertical_alignment="center"
                     )
                 )
-                socialCurrentGroup = st.session_state.get(f"socialAgeGroup{id}-{i}")
+                socialCurrentGroup = session.get(f"socialAgeGroup{id}-{i}")
 
                 # Age group column
                 loadKey(
@@ -1881,7 +2366,8 @@ def buildVaccinationNPITab(id):
                         f"socialAgeGroup{id}-{socialRowCount}": (
                             socialRemainingGroups[0] if socialRemainingGroups else None
                         ),
-                        f"socialCompliance{id}-{socialRowCount}": socialDistancingCompliance,
+                        f"socialCompliance{id}-{socialRowCount}":
+                        socialDistancingCompliance,
                     },
                 ),
                 disabled=(not useSocialDistancingToggle or not socialRowCount < 10),
@@ -1898,7 +2384,7 @@ def buildVaccinationNPITab(id):
                     group cannot be added.
                 """
                 ),
-            )
+            )'''
 
             # Case Isolation
             loadKey("caseIsolation", id, False)
@@ -2279,7 +2765,7 @@ def buildVaccinationNPITab(id):
                     withdrawal increase NPIs in the {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is {100 * withdrawalIncreaseAdult:0.3g}%, but the
                     standard rate is {100 * baseAdultWithdrawal:0.3g}%.
@@ -2306,7 +2792,7 @@ def buildVaccinationNPITab(id):
                     withdrawal increase NPIs in the {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is {100 * withdrawalIncreaseChild:0.3g}%, but the
                     standard rate is {100 * baseChildWithdrawal:0.3g}%.
@@ -2480,7 +2966,7 @@ def buildVaccinationNPITab(id):
                     reduced group size NPIs in the {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is {reducedGroupSize}, but the
                     standard maximum size is {baseGroupSize}.
@@ -2663,7 +3149,7 @@ def buildVaccinationNPITab(id):
                     BCC reduction NPIs in the {
                         'baseline scenario' if id == 0
                         else f'scenario named "{
-                            st.session_state[f'scenarioName{id}']
+                            session[f'scenarioName{id}']
                         }"'
                     } is {bccReducedRate} interactions per day, but the
                     standard rate is {baseBCC} interactions per day.
@@ -2810,7 +3296,7 @@ def buildVaccinationNPITab(id):
                         beginning of NPIs in the {
                             'baseline scenario' if id == 0
                             else f'scenario named "{
-                                st.session_state[f'scenarioName{id}']
+                                session[f'scenarioName{id}']
                             }"'
                         } is {rateStartThreshold} cases per day, but the
                         rate that triggers their end is {rateRelaxThreshold}
@@ -2870,9 +3356,7 @@ def buildVaccinationNPITab(id):
 
                 # Show error if relax threshold is above trigger
                 # TODO: See if this can be replaced with a max value too
-                population = communityPopulation[
-                    st.session_state.get("community", "newcastle")
-                ]
+                population = communityPopulation[session.get("community", "newcastle")]
                 paramError(
                     "triggerAbovePopulation",
                     id,
@@ -2882,7 +3366,7 @@ def buildVaccinationNPITab(id):
                         beginning of NPIs in the {
                             'baseline scenario' if id == 0
                             else f'scenario named "{
-                                st.session_state[f'scenarioName{id}']
+                                session[f'scenarioName{id}']
                             }"'
                         } is {caseTotalThreshold} cases, but the
                         total number of people in the simulated community
@@ -2920,7 +3404,7 @@ def ageCast(x):
             "senior",
             "older_senior",
         ],
-        ageCategories[x],
+        x,
     )
 
 
@@ -2938,22 +3422,20 @@ def trigCast(x):
     )
 
 
-"""
-Function to populate the Pydantic model schema with the parameters in
-this tab with scenario differentiation
+def vaccineSchema(schema: Parameters, id: int = 0):
+    """
+    Function to populate the Pydantic model schema with the parameters in
+    this tab with scenario differentiation
 
-Parameters:
-    schema: The Pydantic model (specifically an object in the
-    Parameters class) that the parameters will be populated into.
+    Parameters:
+        schema (Parameters): The Pydantic model (specifically an object in the
+            Parameters class) that the parameters will be populated into.
 
-    id: An integer that will be used to differentiate the parameters in
-    different instances of the tab by adding a number to the Streamlit
-    session state variables. A value of 0 means that this is the
-    baseline scenario and will be treated accordingly.
-"""
-
-
-def vaccineSchema(schema, id=0):
+        id (int): An integer that will be used to differentiate the parameters in
+            different instances of the tab by adding a number to the Streamlit
+            session state variables. A value of 0 means that this is the
+            baseline scenario and will be treated accordingly.
+    """
     try:
         # Validate parameters
         if not isinstance(schema, Parameters):
@@ -2964,7 +3446,7 @@ def vaccineSchema(schema, id=0):
         boosterToggle = idGet("boosterToggle", id, False)
         socialDistanceToggle = idGet("socialDistancingToggle", id, False)
 
-        ageNames = list(ageCategories.keys())
+        ageNames = list(ageTimeDict.keys())
         primDoseCount = idGet("primaryDoseCount", id, 2)
         primBaseEfficacy = [
             idGet("primaryBaseEfficacy", id, 0.5, f"-{i}") for i in range(primDoseCount)
@@ -2979,19 +3461,39 @@ def vaccineSchema(schema, id=0):
         # Vaccine-Related Parameters
         if vaccineToggle:
             # Scenario Vaccine Coverage
+            vacPropAgeForm = idGet(
+                "vacPropAgeForm",
+                id,
+                pd.DataFrame(
+                    {
+                        "Age Group": [None],
+                        "Initial Vaccinated Proportion": [initialProportion],
+                        "Target Vaccinated Proportion": [targetProportion],
+                    },
+                ),
+            )
             schema.Scenario_VaccineCoverage = [
                 vaccineCoverage(
                     Age=None, Initial=initialProportion, Target=targetProportion
                 )
             ] + [
+                vaccineCoverage(Age=age, Initial=initial, Target=target)
+                for age, initial, target in zip(
+                    vacPropAgeForm["Age Group"],
+                    vacPropAgeForm["Initial Vaccinated Proportion"],
+                    vacPropAgeForm["Target Vaccinated Proportion"],
+                )
+                if age
+            ]
+
+            oldVarLengthForm = """[
                 vaccineCoverage(
-                    Age=ageCast(st.session_state[f"vacAgeGroup{id}-{i}"]),
+                    Age=ageCast(session[f"vacAgeGroup{id}-{i}"]),
                     Initial=idGet("vacAgeInitial", id, initialProportion, f"-{i}"),
                     Target=idGet("vacAgeTarget", id, targetProportion, f"-{i}"),
                 )
-                for i in range(st.session_state.get(f"vacAgeRowCount{id}", 0))
-            ]
-
+                for i in range(session.get(f"vacAgeRowCount{id}", 0))
+            ]"""
             # Scenario Vaccine Dose
             doseParams = [
                 vaccineDose(
@@ -3028,10 +3530,64 @@ def vaccineSchema(schema, id=0):
                 )
             ]
             # Age-Specific Primary Efficacy Values
+            # TODO: Integrate new initial and waned efficacy values
+            vacInitialEfficacyAgeForms = [
+                idGet(
+                    "vacInitialEfficacyAgeForm",
+                    id,
+                    pd.DataFrame(
+                        {
+                            "Age Group": [None],
+                            "Initial Dose Efficacy": [primBaseEfficacy[i]],
+                        },
+                    ),
+                    f"-{i}",
+                )
+                for i in range(primDoseCount)
+            ]
+            ageInitialDict = {
+                age: [
+                    next(
+                        iter(df.loc[df["Age Group"] == age, "Initial Dose Efficacy"]),
+                        default,
+                    )
+                    for df, default in zip(vacInitialEfficacyAgeForms, primBaseEfficacy)
+                ]
+                for age in ageNames
+            }
+
+            ageWaneDict = {age: primWanedEfficacy for age in ageNames}
+            vacWaneAgeForm = idGet(
+                "vacWaneAgeForm",
+                id,
+                pd.DataFrame(
+                    {
+                        "Age Group": [None],
+                        "Dose Efficacy After Waning": [primWanedEfficacy],
+                    },
+                ),
+            )
+            ageWaneDict.update(
+                vacWaneAgeForm.set_index("Age Group")[
+                    "Dose Efficacy After Waning"
+                ].to_dict()
+            )
+
+            efficacyParams += [
+                vaccineEfficacy(
+                    DoseType="primary",
+                    Age=ageCast(age),
+                    Efficacy=ageInitialDict[age],
+                    WanedEfficacy=ageWaneDict[age],
+                )
+                for age in ageNames
+            ]
+
+            oldVarLengthForm = """
             primAgeEfficacies = dict.fromkeys(ageNames, primBaseEfficacy)
             for i in range(primDoseCount):
-                for j in range(st.session_state.get(f"primAgeRowCount{id}-{i}", 0)):
-                    primAgeEfficacies[st.session_state[f"primAgeGroup{id}-{i}-{j}"]][
+                for j in range(session.get(f"primAgeRowCount{id}-{i}", 0)):
+                    primAgeEfficacies[session[f"primAgeGroup{id}-{i}-{j}"]][
                         i
                     ] = idGet("primAgeEfficacy", id, primBaseEfficacy[i], f"-{i}-{j}")
             agePrimEfficacyParams = [
@@ -3043,15 +3599,27 @@ def vaccineSchema(schema, id=0):
                 )
                 for age in ageNames
             ]
-            for i in range(st.session_state.get(f"primWanedRowCount{id}", 0)):
+            for i in range(session.get(f"primWanedRowCount{id}", 0)):
                 agePrimEfficacyParams[
-                    ageNames.index(st.session_state[f"primWanedGroup{id}-{i}"])
+                    ageNames.index(session[f"primWanedGroup{id}-{i}"])
                 ].WanedEfficacy = idGet(
                     "primAgeWanedEfficacy", id, primWanedEfficacy, f"-{i}"
                 )
-            efficacyParams += agePrimEfficacyParams
+            efficacyParams += agePrimEfficacyParams"""
+
             # Booster Efficacy Values
             if boosterToggle:
+                boostEfficacyAgeForm = idGet(
+                    "boostEfficacyAgeForm",
+                    id,
+                    pd.DataFrame(
+                        {
+                            "Age Group": [None],
+                            "Initial Booster Efficacy": [boostBaseEfficacy],
+                            "Booster Efficacy After Waning": [boostWanedEfficacy],
+                        },
+                    ),
+                )
                 efficacyParams += [
                     vaccineEfficacy(
                         DoseType="booster",
@@ -3062,7 +3630,21 @@ def vaccineSchema(schema, id=0):
                 ] + [
                     vaccineEfficacy(
                         DoseType="booster",
-                        Age=ageCast(st.session_state[f"boostAgeGroup{id}-{i}"]),
+                        Age=age,
+                        Efficacy=initial,
+                        WanedEfficacy=waned,
+                    )
+                    for age, initial, waned in zip(
+                        boostEfficacyAgeForm["Age Group"],
+                        boostEfficacyAgeForm["Initial Booster Efficacy"],
+                        boostEfficacyAgeForm["Booster Efficacy After Waning"],
+                    )
+                    if age
+                ]
+                oldVarLengthForm = """[
+                    vaccineEfficacy(
+                        DoseType="booster",
+                        Age=ageCast(session[f"boostAgeGroup{id}-{i}"]),
                         Efficacy=idGet(
                             "boostAgeEfficacy", id, boostBaseEfficacy, f"-{i}"
                         ),
@@ -3070,8 +3652,8 @@ def vaccineSchema(schema, id=0):
                             "boostAgeWanedEfficacy", id, boostWanedEfficacy, f"-{i}"
                         ),
                     )
-                    for i in range(st.session_state.get(f"boostAgeRowCount{id}", 0))
-                ]
+                    for i in range(session.get(f"boostAgeRowCount{id}", 0))
+                ]"""
             # All together
             schema.Scenario_VaccineDoseEfficacy = efficacyParams
 
@@ -3181,12 +3763,31 @@ def vaccineSchema(schema, id=0):
         # Other NPIs
         if socialDistanceToggle:
             scenarioParams.social_distance_compliance = socialCompliance
-            for i in range(st.session_state.get(f"socialRowCount{id}", 0)):
+            distanceAgeForm = idGet(
+                "distanceAgeForm",
+                id,
+                pd.DataFrame(
+                    {
+                        "Age Group": [None],
+                        "Social Distancing Compliance": [socialCompliance],
+                    },
+                ),
+            )
+            for age, comp in zip(
+                distanceAgeForm["Age Group"],
+                distanceAgeForm["Social Distancing Compliance"],
+            ):
+                if age:
+                    setattr(scenarioParams, f"{age}_social_distance", comp)
+            oldVarLengthForm = """
+            for i in range(session.get(f"socialRowCount{id}", 0)):
                 setattr(
                     scenarioParams,
-                    f"{ageCategories[st.session_state[f'socialAgeGroup{id}-{i}']]}_social_distance",
+                    f"{ageCategories[session[
+                    f'socialAgeGroup{id}-{i}']
+                    ]}_social_distance",
                     idGet("socialCompliance", id, socialCompliance, f"-{i}"),
-                )
+                )"""
         scenarioParams.diagnosed_case_isolation = idGet("caseIsolation", id, False)
         scenarioParams.class_dismissal = idGet("classDismissal", id, False)
         # Triggers

@@ -26,7 +26,7 @@ saveJSON = False
 
 # Other Constants
 
-# URLs where client/server is located (change to proxy URL)
+# URLs where client/server is located (change to hosted URLs)
 clientUrl = "http://localhost:8501/"
 serverUrl = "http://127.0.0.1:8000/"
 # Queue used to store CSV data from completed server requests
@@ -50,19 +50,6 @@ ordinals = {
 # Dictionary getting the population of each community the simulator uses
 communityPopulation = {"newcastle": 272407, "cairns": 140402}
 
-# Dictionary holding the possible age categories used by the simulator
-ageCategories = {
-    "Young Infant": "young_infant",  # 0-6 months
-    "Infant": "infant",  # 7-24 months (0.5-2 years)
-    "Young Child": "young_child",  # 3-5 years
-    "Child": "child",  # 6-12 years
-    "Adolescent": "adolescent",  # 13-17 years
-    "Young Adult": "young_adult",  # 18-24 years
-    "Adult": "adult",  # 25-44 years
-    "Older Adult": "older_adult",  # 45-64 years
-    "Senior": "senior",  # 65-79 years
-    "Older Senior": "older_senior",  # 80+ years
-}
 # List of age categories with times included, for tabling
 ageWithTime = [
     "Young Infant (0-6 Months)",
