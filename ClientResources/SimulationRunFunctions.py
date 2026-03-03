@@ -21,7 +21,7 @@ from aiohttp import (
 )
 from streamlit_notify import toast  # type: ignore
 
-from ClientResources.InterfaceFunctions import errorChecker, idGet  # , checkErrors
+from ClientResources.InterfaceFunctions import errorChecker, idGet
 from ClientResources.ModelSchema import (
     Parameters,
     commandArgument,

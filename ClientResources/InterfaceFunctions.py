@@ -288,7 +288,7 @@ def dynamicScaleChange(
             being modified.
 
         formKey (str): The identifier used to distinguish the form
-        whose ranges must be updated.
+            whose ranges must be updated.
 
         scenarioID (int): The integer representing the scenario the widget
             is part of.
@@ -303,7 +303,7 @@ def dynamicScaleChange(
     if not noSave:
         saveKey(key, scenarioID)
     if condition is None or condition():
-        newMin, newMax = idGet(key, scenarioID, None)
+        newMin, newMax = idGet(key, scenarioID, (1, 720))
         if scenarioID == 0:
             # Check all scenarios if the baseline was modified
             for id in range(session["scenarioCount"] + 1):
@@ -475,40 +475,7 @@ def deleteFormRow(deletedRowIndex, rowCounter, inputPrefixes, minRows=0):
     session[rowCounter] -= 1
 
 
-def checkErrors(id):
-    """
-    Deprecated function to check if any errors are present in the parameters
-    """
-    return [
-        session.get(error, 0)
-        for error in (
-            f"seedPeriodError{id}",
-            f"seedDynamicError{id}",
-            f"closeDynamicError{id}",
-            f"bccDynamicError{id}",
-            f"baseVacPropError{id}",
-            f"ageVacPropError{id}",
-            f"basePrimEfficacyError{id}",
-            f"agePrimEfficacyError{id}",
-            f"baseBoostEfficacyError{id}",
-            f"ageBoostEfficacyError{id}",
-            f"schoolTypeError{id}",
-            f"adultWithdrawalError{id}",
-            f"childWithdrawalError{id}",
-            f"reducedGroupError{id}",
-            f"bccError{id}",
-            f"triggerRateError{id}",
-            f"triggerTotalError{id}",
-            f"vaccinePeriodError{id}",
-            f"schoolClosurePeriodError{id}",
-            f"withdrawalIncreasePeriodError{id}",
-            f"reducedGroupPeriodError{id}",
-            f"bccPeriodError{id}",
-        )
-    ]
-
-
-# Parameter Classes
+# Parameter Classes (unfinished)
 '''
 class Parameter:
     def __init__(self, key: str, scenarioID: int, paramName: str, defaultValue):

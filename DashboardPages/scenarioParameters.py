@@ -14,7 +14,6 @@ from ParameterTabs.dynamicParams import buildDynamicTab
 from ClientResources.InterfaceFunctions import (
     saveKey,
     loadKey,
-    checkErrors,
     errorChecker,
     rerunTime,
 )
@@ -25,53 +24,13 @@ scenarioLog = logging.getLogger(__name__)
 # Store st.session_state as variable for efficiency
 session = st.session_state
 
-
-# Function for displaying status of error messages here
-# TODO: Update for new errors
-@st.fragment(run_every=1)
-def scenarioErrorChecker(id):
-    scenarioErrors = max(checkErrors(id))
-    if scenarioErrors == 2:
-        st.error(
-            """
-        Error: The parameters defined for this scenario contain
-        unresolvable errors. These errors must be corrected before the
-        model can be ran. Check the individual tabs for detailed error
-        messages.
-    """,
-            icon=":material/error:",
-        )
-    elif scenarioErrors == 1:
-        st.warning(
-            """
-        Warning: The parameters defined for this scenario contain
-        logical issues. The simulation may still be ran, but the results
-        may differ from what was intended. Check the individual tabs for
-        detailed error messages.
-    """,
-            icon=":material/warning:",
-        )
-    else:
-        st.markdown(
-            """
-        Currently, all parameters have been set to valid values; the
-        simulation should run as intended. If any errors are detected with
-        the parameters selected for this scenario, they will be
-        described here.
-    """
-        )
-
-
 # Load necessary parameter values
 scenarioCount = session.get("scenarioCount", 0)
-errors = [checkErrors(id) for id in range(scenarioCount + 1)]
 
 # Parameter lists for transferring scenarios upon deletion
+# TODO: Refine these to account for changes and reduce hardcoding
 parameterSet = {
     "scenarioName",
-    # "runCount",
-    # "cycleCount",
-    # "startDay",
     "transAgeForm",
     "mortAgeForm",
     "deathRowCount",
