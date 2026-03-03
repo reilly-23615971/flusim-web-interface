@@ -327,6 +327,7 @@ will assume a default value of 1 (i.e. no change in probability) if they
 are not specified for a specific age group.
             """,
         )
+        st.markdown("Double-click a cell in this table to edit its value.")
         loadKey(
             "transAgeForm",
             id,
@@ -906,6 +907,7 @@ This table allows for unique likelihoods of death to be defined for
 each age group, overriding the global rate defined above.
             """,
         )
+        st.markdown("Double-click a cell in this table to edit its value.")
         loadKey(
             "mortAgeForm",
             id,

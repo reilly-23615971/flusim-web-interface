@@ -332,6 +332,8 @@ for individual age groups in the simulation, overriding the global parameters
 defined above.
                 """,
             )
+            if useVaccinesToggle:
+                st.markdown("Double-click a cell in this table to edit its value.")
             loadKey(
                 "vacPropAgeForm",
                 id,
@@ -839,6 +841,10 @@ for individual age groups in the simulation, overriding the global initial
 efficacy value for this dose defined above.
                         """,
                     )
+                    if useVaccinesToggle:
+                        st.markdown(
+                            "Double-click a cell in this table to edit its value."
+                        )
                     loadKey(
                         "vacInitialEfficacyAgeForm",
                         id,
@@ -1289,6 +1295,8 @@ to be defined for individual age groups in the simulation, overriding
 the global waned efficacy defined above.
                 """,
             )
+            if useVaccinesToggle:
+                st.markdown("Double-click a cell in this table to edit its value.")
             loadKey(
                 "vacWaneAgeForm",
                 id,
@@ -1740,7 +1748,8 @@ to be defined for individual age groups in the simulation, overriding the
 global booster efficacy values defined above.
                 """,
             )
-
+            if useVaccinesToggle and useBoostersToggle:
+                st.markdown("Double-click a cell in this table to edit its value.")
             loadKey(
                 "boostEfficacyAgeForm",
                 id,
@@ -2183,7 +2192,8 @@ for individual age groups in the simulation, overriding the global probability
 defined above.
                 """,
             )
-
+            if useSocialDistancingToggle:
+                st.markdown("Double-click a cell in this table to edit its value.")
             loadKey(
                 "distanceAgeForm",
                 id,

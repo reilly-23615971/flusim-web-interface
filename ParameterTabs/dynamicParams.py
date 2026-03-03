@@ -96,6 +96,7 @@ def buildDynamicTab(id: int):
 
     # Infection Seeding Rate
     st.subheader("Infection Seeding Rate")
+    st.markdown("Double-click a cell in this table to edit its value.")
 
     baseSeedValue = idGet("seedRate", id, 0.25)
     seedStart, seedEnd = idGet("seedPeriod", id, (1, 30))
@@ -408,6 +409,8 @@ each day of the simulation is 2 cycles.
             """,
             icon=":material/info:",
         )
+    else:
+        st.markdown("Double-click a cell in this table to edit its value.")
     loadKey(
         "closeTimeForm",
         id,
@@ -776,6 +779,8 @@ they are closed after the specified point in the simulation.
             """,
             icon=":material/info:",
         )
+    else:
+        st.markdown("Double-click a cell in this table to edit its value.")
     loadKey(
         "bccTimeForm",
         id,
