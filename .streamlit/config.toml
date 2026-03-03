@@ -5,3 +5,7 @@ disableWidgetStateDuplicationWarning = true
 [browser]
 
 gatherUsageStats = false
+
+[theme]
+
+baseFontSize = 18

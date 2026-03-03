@@ -5,7 +5,7 @@
 # Imports
 import logging
 from functools import partial
-from typing import Callable, Literal, Optional, Union
+from typing import Callable, Literal, Optional
 
 import numpy as np
 import pandas as pd
@@ -28,7 +28,7 @@ warnFormat = partial(st.warning, icon=":material/warning:")
 def paramError(
     label: str,
     scenarioID: int,
-    condition: Callable[[], Union[bool, np.bool]],
+    condition: Callable[[], bool | np.bool],
     message: str,
     isSevere=False,
 ):
@@ -125,7 +125,7 @@ def errorChecker(scenarioID: int, name: str = "Errors in Current Scenario"):
 # Widget Functions
 def saveKey(
     key: str,
-    scenarioID: Union[int, Literal[""]] = "",
+    scenarioID: int | Literal[""] = "",
     extra: Optional[str] = "",
     notScenario=False,
     dataframe=False,
@@ -164,10 +164,12 @@ def saveKey(
             currentData.loc[currentData.shape[0]] = newRow
 
         # Row removals
-        currentData = currentData.drop(modifiedData["deleted_rows"])
+        currentData = currentData.drop(modifiedData["deleted_rows"]).reset_index(
+            drop=True
+        )
 
         # Save the widget and note scenario differences
-        session[keyString] = currentData.reset_index(drop=True)
+        session[keyString] = currentData
     else:
         session[keyString] = session.get(f"_{keyString}")
 
@@ -181,7 +183,7 @@ def saveKey(
 
 def loadKey(
     key: str,
-    scenarioID: Union[int, Literal[""]] = "",
+    scenarioID: int | Literal[""] = "",
     default=None,
     extra: Optional[str] = "",
     noZeroDefault=False,
@@ -557,10 +559,10 @@ class SliderParam(Parameter):
         key: str,
         scenarioID: int,
         paramName: str,
-        defaultValue: Union[int, float],
-        min: Union[int, float],
-        max: Union[int, float],
-        step: Union[int, float],
+        defaultValue: int | float,
+        min: int | float,
+        max: int | float,
+        step: int | float,
         title: str,
         format: Optional[str],
         help: Optional[str],
