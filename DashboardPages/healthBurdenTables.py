@@ -3,45 +3,37 @@
 # Page where users can generate tables with infection data
 
 # Imports
-import time
-import inspect
 import logging
-import altair as alt
-import streamlit as st
-import numpy as np
-import pandas as pd
-import matplotlib as mpl
-from matplotlib.colors import ListedColormap, TwoSlopeNorm, to_hex
-import matplotlib.pyplot as plt
-from io import BytesIO
+import time
+from typing import Optional
 
-from ClientResources.InterfaceFunctions import (
-    saveKey,
-    loadKey,
-    getRemainingGroups,
-    addFormRow,
-    deleteFormRow,
-    dayCount,
-    idGet,
+import matplotlib.pyplot as plt
+import pandas as pd
+import streamlit as st
+from matplotlib.colors import TwoSlopeNorm, to_hex
+
+from ClientResources.InterfaceFunctions import idGet, loadKey, saveKey
+from ClientResources.SharedResources import (
+    ageTimeDict,
+    ageWithTime,
+    brightCodes,
+    outcomeRateDefaults,
+    outcomeRateVariables,
+    tableOutcomes,
+    usePresetData,
 )
 from ClientResources.VisualisationFunctions import formatAsir
-from ClientResources.SharedResources import (
-    usePresetData,
-    ageWithTime,
-    ageTimeDict,
-    outcomeRateVariables,
-    outcomeRateDefaults,
-    tableOutcomes,
-    brightCodes,
-)
 
 # Logging
 tableLog = logging.getLogger(__name__)
 
+# Store st.session_state as variable for efficiency
+session = st.session_state
+
 # Initialise session variables needed by the table
 sessionParameters = {"healthOutcomeRowCount": 1, "DataCommunity": "newcastle"}
 for parameter, default in sessionParameters.items():
-    st.session_state[parameter] = st.session_state.get(parameter, default)
+    session[parameter] = session.get(parameter, default)
 
 ageGroups = ageWithTime + ["Total"]
 
@@ -73,9 +65,10 @@ def selectTextColour(colour):
 
 
 # Callback function to generate and format the table
+# TODO: Fix multiselect options becoming lists
 def generateTable():
     # Throw error if no data is present
-    if not usePresetData and not st.session_state.get("modelDataRawAsir"):
+    if not usePresetData and not session.get("modelDataRawAsir"):
         raise FileNotFoundError(
             (
                 "No simulation ASIR data was available to plot; please "
@@ -83,25 +76,52 @@ def generateTable():
             )
         )
 
-    scenarioNames = st.session_state.get(
+    scenarioNames = session.get(
         "DataScenarioNames",
         ["Baseline", "School Closure", "Case Isolation", "Community Contact Reduction"],
     )
 
-    outcomeColumnCount = st.session_state.get("healthOutcomeRowCount", 1)
+    healthColumnForm = session.get(
+        "healthColumnForm",
+        pd.DataFrame(
+            {
+                "Health Burden Outcome": [None],
+                "Options": [None],
+            },
+        ),
+    )
+
     columnDetails = [
         (
-            st.session_state.get(f"healthOutcome{colNumber}", "Infections"),
-            st.session_state.get(f"useBaselineDifference{colNumber}", False),
-            st.session_state.get(f"useProportion{colNumber}", False),
+            outcome,
+            "Percentage" in options if isinstance(options, list) else False,
+            (
+                "Difference from Baseline" in options
+                if isinstance(options, list)
+                else False
+            ),
+        )
+        for outcome, options in zip(
+            healthColumnForm["Health Burden Outcome"],
+            healthColumnForm["Options"],
+        )
+        if outcome
+    ]
+
+    oldVarLengthForm = """outcomeColumnCount = session.get("healthOutcomeRowCount", 1)
+    columnDetails = [
+        (
+            session.get(f"healthOutcome{colNumber}", "Infections"),
+            session.get(f"useBaselineDifference{colNumber}", False),
+            session.get(f"useProportion{colNumber}", False),
         )
         for colNumber in range(0, outcomeColumnCount)
-    ]
-    scenariosUsed = st.session_state.get("healthOutcomeScenariosToUse", "all")
+    ]"""
+    scenariosUsed = session.get("healthOutcomeScenariosToUse", "all")
     agesUsed = (
         False
-        if not st.session_state.get("healthOutcomeAgeGroupToggle")
-        else st.session_state.get("healthOutcomeAgesToUse", "all")
+        if not session.get("healthOutcomeAgeGroupToggle")
+        else session.get("healthOutcomeAgesToUse", "all")
     )
     tableLog.info(
         f"""
@@ -114,8 +134,8 @@ def generateTable():
     # Debug code for loading data in testing
     if usePresetData:
         # Set default session_state params
-        st.session_state.DataCommunity = "newcastle"
-        st.session_state.DataHealthOutcomeRates = {
+        session.DataCommunity = "newcastle"
+        session.DataHealthOutcomeRates = {
             outcome: {
                 scenario: idGet(
                     outcomeRateVariables[outcome], i, outcomeRateDefaults[outcome]
@@ -125,7 +145,7 @@ def generateTable():
             for outcome in outcomeRateDefaults.keys()
         }
 
-        oldMort = """st.session_state.DataMortalityRates = {
+        oldMort = """session.DataMortalityRates = {
             scenarioNames[scenarioID]: {
                 idGet("deathAgeGroup", scenarioID, None, f"-{rowID}"): idGet(
                     "deathRatio", scenarioID, outcomeRateDefaults["Deaths"], f"-{rowID}"
@@ -134,11 +154,17 @@ def generateTable():
             }
             for scenarioID in range(4)
         }"""
-        st.session_state.DataMortalityRates = {
+        session.DataMortalityRates = {
             scenarioNames[scenarioID]: {
-                age: idGet("deathRatio", scenarioID, 0.1) for age in ageTimeDict.keys()
-            }.update(
-                idGet("mortAgeForm", scenarioID, None)
+                age: idGet("deathRatio", scenarioID, 0.1) for age in ageWithTime
+            }
+            | (
+                idGet(
+                    "mortAgeForm",
+                    scenarioID,
+                    pd.DataFrame(columns=["Age Group", "Mortality Rate"]),
+                )
+                .replace({"Age Group": ageTimeDict})
                 .set_index("Age Group")["Mortality Rate"]
                 .to_dict()
             )
@@ -150,10 +176,10 @@ def generateTable():
 
     # Load data from session_state
     else:
-        unformattedData = st.session_state.get("modelDataRawAsir")
+        unformattedData = session.get("modelDataRawAsir")
 
     ageData, columnConfig, percentColumns, differenceColumns = formatAsir(
-        unformattedData,
+        unformattedData,  # type: ignore
         scenarioNames,
         columnDetails,
         includedScenarios=scenariosUsed,
@@ -224,13 +250,17 @@ def generateTable():
     for column in differenceColumns:
         colVals = ageData[column]
         ageStyle = ageStyle.background_gradient(
-            "RdBu_r", vmin=0, vmax=1, subset=column, gmap=getSlopeNorm(colVals)(colVals)
+            "RdBu_r",
+            vmin=0,
+            vmax=1,
+            subset=[column],
+            gmap=getSlopeNorm(colVals)(colVals),  # type: ignore
         )
 
     # Save the generated table
-    st.session_state.HealthOutcomeTableData = ageStyle.format(formatValues)  # type: ignore
-    st.session_state.HealthOutcomeTableConfig = columnConfig
-    st.session_state.ChartGenerated = True
+    session.HealthOutcomeTableData = ageStyle.format(formatValues)  # type: ignore
+    session.HealthOutcomeTableConfig = columnConfig
+    session.ChartGenerated = True
 
 
 st.title("Health Burden Tables")
@@ -253,11 +283,11 @@ st.html(
 )
 
 # Save relevant params as variables to avoid lookups
-healthOutcomeRowCount = st.session_state[f"healthOutcomeRowCount"]
+healthOutcomeRowCount = session["healthOutcomeRowCount"]
 healthOutcomeErrorContainer = st.container()
 
 # Check if there is data to tabulate
-currentDataExists = not (st.session_state.get("modelDataRawAsir") is None)
+currentDataExists = not (session.get("modelDataRawAsir") is None)
 if not currentDataExists and not usePresetData:
     healthOutcomeErrorContainer.warning(
         """
@@ -268,7 +298,7 @@ if not currentDataExists and not usePresetData:
     """,
         icon=":material/science_off:",
     )
-if currentDataExists and st.session_state.simulationInProgress:
+if currentDataExists and session.simulationInProgress:
     healthOutcomeErrorContainer.warning(
         """
         Warning: A new simulation is currently in progress. Since the
@@ -297,19 +327,19 @@ with tableSettings:
 
     # Scenario and age group selection
     st.subheader("Scenario and Age Group Selection")
-    scenarioNames = st.session_state.get(
+    scenarioNames = session.get(
         "DataScenarioNames",
         ["Baseline", "School Closure", "Case Isolation", "Community Contact Reduction"],
     )
     if currentDataExists or usePresetData:
         loadKey("healthOutcomeScenariosToUse", "", scenarioNames, noZeroDefault=True)
-        scenariosToUse = st.multiselect(
+        scenariosToUse: Optional[list[str]] = st.multiselect(
             "Scenarios to Include in Table",
             scenarioNames,
             default=scenarioNames,
             key="_healthOutcomeScenariosToUse",
             on_change=saveKey,
-            args=[f"healthOutcomeScenariosToUse", ""],  # type: ignore
+            args=["healthOutcomeScenariosToUse", ""],  # type: ignore
             placeholder="Please select at least 1 scenario",
             kwargs={"notScenario": True},
             help="""
@@ -343,14 +373,14 @@ specified health burden outcomes in that scenario.
         )
         scenariosToUse = None
 
-    loadKey(f"healthOutcomeAgeGroupToggle", "", False, noZeroDefault=True)
+    loadKey("healthOutcomeAgeGroupToggle", "", False, noZeroDefault=True)
     useAgeGroupsToggle = st.toggle(
         "Separate Results by Age Group",
         value=False,
         on_change=saveKey,
-        args=[f"healthOutcomeAgeGroupToggle", ""],  # type: ignore
+        args=["healthOutcomeAgeGroupToggle", ""],  # type: ignore
         kwargs={"notScenario": True},
-        key=f"_healthOutcomeAgeGroupToggle",
+        key="_healthOutcomeAgeGroupToggle",
         help="""
             Toggle whether or not the table should include separate
             rows for each age group in the simulation population.
@@ -358,13 +388,13 @@ specified health burden outcomes in that scenario.
     )
 
     loadKey("healthOutcomeAgesToUse", "", ageGroups, noZeroDefault=True)
-    agesToUse = st.multiselect(
+    agesToUse: list = st.multiselect(
         "Age Groups to Include in Table",
-        ageGroups,
+        options=ageGroups,
         default=ageGroups,
         key="_healthOutcomeAgesToUse",
         on_change=saveKey,
-        args=[f"healthOutcomeAgesToUse", ""],  # type: ignore
+        args=["healthOutcomeAgesToUse", ""],  # type: ignore
         placeholder="Please select at least 1 age group",
         kwargs={"notScenario": True},
         disabled=not useAgeGroupsToggle,
@@ -389,25 +419,74 @@ in the case of the 'Total' group).
         )
 
     # Variable-length form for choosing columns
-    st.subheader("Select Health Burden Columns")
-    st.markdown(
-        """
-        Here you may specify health burden outcomes to include as
-        columns in the table and how to format them. Each outcome
-        selected here will be listed for each age group in each
-        scenario from the simulation. Note that if multiple columns are
-        defined with identical parameters, only the first instance of
-        them will be included in the table.
-    """
+    # TODO: Axe the duplicate column rule
+    st.subheader(
+        "Select Health Burden Columns",
+        help="""
+Here you may specify health burden outcomes to include as columns in the table
+and how to format them. Each outcome selected here will be listed for each age
+group in each scenario from the simulation. Note that if multiple columns are
+defined with identical parameters, only the first instance of them will be
+included in the table.
+        """,
     )
-    for i in range(healthOutcomeRowCount):
+    st.markdown("Double-click a cell in this table to edit its value.")
+
+    loadKey(
+        "healthColumnForm",
+        "",
+        pd.DataFrame(
+            {
+                "Health Burden Outcome": [None],
+                "Options": [[]],
+            },
+        ),
+        dataframe=True,
+    )
+    healthColumnForm = st.data_editor(
+        session["healthColumnForm"],
+        num_rows="dynamic",
+        key="_healthColumnForm",
+        on_change=saveKey,
+        args=["healthColumnForm"],
+        kwargs={"dataframe": True},
+        placeholder="Select a health burden outcome",
+        column_config={
+            "Health Burden Outcome": st.column_config.SelectboxColumn(
+                "Health Burden Outcome",
+                required=True,
+                options=tableOutcomes,
+                help="""
+Select the health burden outcome you would like to be included as a column on the table.
+                """,
+            ),
+            "Options": st.column_config.MultiselectColumn(
+                "Options",
+                default=[],
+                options=["Percentage", "Difference from Baseline"],
+                color="auto",
+                help="""
+Select any number of options here to modify how the column will be displayed.
+### Options:
+- Percentage: The health burden outcome will be displayed as a percentage
+of the total population.
+- Difference from Baseline: The column will display the difference in the
+selected health burden outcome between the baseline scenario and each other
+scenario. If "Percentage" is also selected, this difference will be displayed
+as the percentage increase/decrease from the baseline value.
+                """,
+            ),
+        },
+    )
+
+    oldVarLengthForm = '''for i in range(healthOutcomeRowCount):
         (
             healthOutcomeColumn,
             healthDifferenceColumn,
             outcomeTypeColumn,
             healthRemoveColumn,
         ) = st.columns((0.25, 0.275, 0.275, 0.2))
-        currentOutcome = st.session_state.get(f"healthOutcome{i}", "Infections")
+        currentOutcome = session.get(f"healthOutcome{i}", "Infections")
 
         # Health burden outcome column
         loadKey(f"healthOutcome", i, currentOutcome, noZeroDefault=True)
@@ -454,10 +533,10 @@ in the case of the 'Total' group).
         # Difference from baseline column
         # Force set to false if only one scenario is in use
         if not usePresetData and (
-            st.session_state.get("DataScenarioCount", -1) == 0
+            session.get("DataScenarioCount", -1) == 0
             or scenariosToUse == ["Baseline"]
         ):
-            st.session_state[f"useBaselineDifference{i}"] = False
+            session[f"useBaselineDifference{i}"] = False
         loadKey("useBaselineDifference", i, False, noZeroDefault=True)
         with healthDifferenceColumn:
             st.toggle(
@@ -468,7 +547,7 @@ in the case of the 'Total' group).
                 args=["useBaselineDifference", i],  # type: ignore
                 disabled=not usePresetData
                 and (
-                    st.session_state.get("DataScenarioCount", -1) == 0
+                    session.get("DataScenarioCount", -1) == 0
                     or scenariosToUse == ["Baseline"]
                 ),
                 kwargs={"notScenario": True},
@@ -487,7 +566,7 @@ in the case of the 'Total' group).
                 only one scenario is included in the table.
             """
                     if (
-                        st.session_state.get("DataScenarioCount", -1) != 0
+                        session.get("DataScenarioCount", -1) != 0
                         and scenariosToUse != ["Baseline"]
                     )
                     else """
@@ -583,8 +662,7 @@ in the case of the 'Total' group).
             The maximum number of columns has been added to this table.
         """
         ),
-    )
-
+    )'''
 
 # Button to generate the table itself
 st.button(
@@ -593,25 +671,33 @@ st.button(
     key="generateTable",
     type="primary",
     on_click=generateTable,
-    disabled=((not usePresetData and not currentDataExists) or not scenariosToUse),
+    disabled=bool(
+        (not usePresetData and not currentDataExists)
+        or not scenariosToUse
+        or healthColumnForm["Health Burden Outcome"].count() < 1
+    ),
     help=(
         """
-        Use the data from the last simulation to generate a table
-        displaying different health outcomes on the scenarios in the
-        simulation, with the specific columns displayed depending on
-        the parameters selected above.
-    """
-        if st.session_state.get("modelDataRawAsir")
-        else """
-        No simulations have completed yet, so there is no data to
-        tabulate.
-    """
+No columns have been configured in the Table Settings menu. Please
+add at least one column before running the simulation.
+        """
+        if healthColumnForm["Health Burden Outcome"].count() < 1
+        else (
+            """
+Use the data from the last simulation to generate a table displaying different
+health outcomes on the scenarios in the simulation, with the specific columns
+displayed depending on the parameters selected above.
+            """
+            if session.get("modelDataRawAsir")
+            else """
+No simulation experiments have been completed yet, so there is no data to tabulate.
+            """
+        )
     ),
 )
-
 # Display the table itself
-tableData = st.session_state.get("HealthOutcomeTableData")
-tableConfig = st.session_state.get("HealthOutcomeTableConfig")
+tableData = session.get("HealthOutcomeTableData")
+tableConfig = session.get("HealthOutcomeTableConfig")
 if tableData is not None:
     st.header("Health Burden Outcome Table")
     st.dataframe(tableData, column_config=tableConfig, hide_index=True)
@@ -666,4 +752,4 @@ if tableData is not None:
 
 
 # st.header('DEBUG ZONE')
-# st.session_state
+# session

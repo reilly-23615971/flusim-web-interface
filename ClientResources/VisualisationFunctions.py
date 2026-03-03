@@ -3,25 +3,31 @@
 # Functions used by tables and graphs
 
 # Imports
-from math import ceil
-from io import BytesIO
 import logging
-from typing import Any
+from io import BytesIO
+from math import ceil
+from typing import Literal
+
+import altair as alt
 import numpy as np
 import pandas as pd
-import altair as alt
 import streamlit as st
+from streamlit.elements.lib.column_types import ColumnConfig
+
 from ClientResources.SharedResources import (
     AnalysisFile,
-    communityAgePops,
-    tableOutcomes,
-    outcomeAdjectives,
     ageWithTime,
     brightCodes,
+    communityAgePops,
+    outcomeAdjectives,
+    tableOutcomes,
 )
 
 # Logging
 functionLog = logging.getLogger(__name__)
+
+# Store st.session_state as variable for efficiency
+session = st.session_state
 
 
 # Dictionary getting health outcome descriptions
@@ -31,20 +37,25 @@ outcomeDescriptions = {
     "Hospitalisations": "sent to a hospital due to the disease",
     "Deaths": "killed as a direct result of the disease",
     "ICU Visits": "committed to a hospital's Intensive Care Unit due to the disease",
-    "GP Visits": "prompted to visit their general practitioner after noticing the symptoms of the disease",
+    "GP Visits": (
+        "prompted to visit their general practitioner "
+        "after noticing the symptoms of the disease"
+    ),
 }
 
 
-"""
-Wrapper function to perform the correct formatting process on csv data
+def formatData(data: bytes, settings: AnalysisFile) -> tuple[pd.DataFrame | bytes, str]:
+    """
+    Wrapper function to perform the correct formatting process on csv data
 
-Parameters:
-    data: The CSV data to process.
-    settings: The AnalysisFile containing the settings to use.
-"""
+    Parameters:
+        data (bytes): The CSV data to process.
 
+        settings (AnalysisFile): The AnalysisFile containing the settings to use.
 
-def formatData(data, settings: AnalysisFile):
+    Returns:
+
+    """
     if settings.tool == "epidemic":
         typeTag = "Cumulative" if settings.useCumulative else "Daily"
         return (
@@ -60,39 +71,49 @@ def formatData(data, settings: AnalysisFile):
     # Leave asir alone since it gets formatted when generating the table
     elif settings.tool == "asir":
         return data, "RawAsir"
-
-
-"""
-Function to convert raw data from the 'epidemic' Flusim analysis tool
-into the desired DataFrame format for graphs
-
-Parameters:
-    rawCSV: The CSV output of the 'epidemic' analysis function, obtained
-    from the server after running the simulation.
-
-    scenarioNames: A list of strings containing the names of the
-    different scenarios that were simulated (since the CSV just uses
-    non-descriptive placeholders).
-
-    outcome: A string indicating the health outcome the epidemic
-    data represents. Can be either 'Infections', 'Diagnosed Cases',
-    'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
-
-    cumulative: A Boolean that is True when the CSV contains cumulative
-    data instead of individual data.
-
-    splitByAge: A Boolean that is True when the CSV data has separate
-    columns for each age group.
-
-Output:
-    formattedData: A pandas DataFrame containing the data, reshaped into
-    a format more easily used by Altair's charts.
-"""
+    else:
+        raise ValueError(
+            "Analysis tool was unrecognised; should be 'epidemic' or 'asir'"
+        )
 
 
 def formatEpidemic(
-    rawCSV, scenarioNames, outcome="Infections", cumulative=False, splitByAge=False
-):
+    rawCSV: bytes,
+    scenarioNames: list[str],
+    outcome: str = "Infections",
+    cumulative=False,
+    splitByAge=False,
+) -> pd.DataFrame:
+    """
+    Function to convert raw data from the 'epidemic' Flusim analysis tool
+    into the desired DataFrame format for graphs
+
+    Parameters:
+        rawCSV (bytes): The CSV output of the 'epidemic' analysis function, obtained
+            from the server after running the simulation.
+
+        scenarioNames (list of str): A list of strings containing the names of the
+            different scenarios that were simulated (since the CSV just uses
+            non-descriptive placeholders).
+
+        outcome (str): A string indicating the health outcome the epidemic
+            data represents. Can be either 'Infections', 'Diagnosed Cases',
+            'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
+
+        cumulative (bool): Set to True when the CSV contains cumulative
+            data instead of individual data.
+
+        splitByAge: Set to True when the CSV data has separate
+            columns for each age group.
+
+    Returns:
+        formattedData (DataFrame): A pandas DataFrame containing the data, reshaped into
+            a format more easily used by Altair's charts.
+
+    Raises:
+        ValueError: If scenarioNames is not a list of strings or outcome
+            is not one of the recognised health burden outcomes.
+    """
     # Validate parameters
     try:
         if not isinstance(scenarioNames, list) or not all(
@@ -147,31 +168,41 @@ def formatEpidemic(
         )
 
 
-"""
-Function to create an Altair line graph of time-series data obtained
-from the 'epidemic' Flusim analysis tool
-
-Parameters:
-    data: A DataFrame containing the epidemic data, processed with
-    the formatEpidemic function.
-
-    outcome: A string indicating the health outcome the epidemic
-    data represents. Can be either 'Infections', 'Diagnosed Cases',
-    'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
-
-    cumulative: Boolean that is True when the DataFrame contains
-    cumulative data instead of individual data.
-
-Output:
-    finalPlot: An Altair plot layering a line graph of the infection
-    data with a point chart that allows tooltips to appear on the line
-    without needing to hover over the line exactly.
-"""
-
-
 def plotEpidemic(
-    data, outcome="Infections", cumulative=False, includedScenarios: Any = "all"
-):
+    data: pd.DataFrame,
+    outcome: str = "Infections",
+    cumulative=False,
+    includedScenarios: list[str] | Literal["all"] = "all",
+) -> alt.LayerChart:
+    """
+    Function to create an Altair line graph of time-series data obtained
+    from the 'epidemic' Flusim analysis tool
+
+    Parameters:
+        data (DataFrame): A DataFrame containing the epidemic data, processed with
+            the formatEpidemic function.
+
+        outcome (str): A string indicating the health outcome the epidemic
+            data represents. Can be either 'Infections', 'Diagnosed Cases',
+            'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
+
+        cumulative (bool): Boolean that is True when the DataFrame contains
+            cumulative data instead of individual data.
+
+        includedScenarios ('all' or list of str): A list of strings containing
+            the names of scenarios that will be included in the table. Can
+            also be the string 'all' to indicate that all scenarios should
+            be included.
+
+    Returns:
+        finalPlot (LayerChart): An Altair plot layering a line graph of the infection
+            data with a point chart that allows tooltips to appear on the line
+            without needing to hover over the line exactly.
+
+    Raises:
+        ValueError: If data is not a dataframe or outcome is not one of
+            the recognised health burden outcomes.
+    """
     # Validate parameters
     try:
         if not isinstance(data, pd.DataFrame):
@@ -262,47 +293,63 @@ def plotEpidemic(
     return alt.layer(epidemicPlot, epidemicPoints, epidemicRule)
 
 
-"""
-Function to convert raw data from the age-specific infection rate
-('asir') Flusim analysis tool into the desired DataFrame format for
-tables and other visualisations
-
-Parameters:
-    rawCSV: The CSV output of the 'asir' analysis function, obtained
-    from the server after running the simulation.
-
-    scenarioNames: A list of strings containing the names of the
-    different scenarios that were simulated (since the CSV just uses
-    non-descriptive placeholders). This list should contain the names
-    of all scenarios in the simulation, even if not all of them will be
-    included in the final table.
-
-    columns: A list of tuples representing the health burden outcome
-    and formatting of each column the dataframe should have.
-
-    includedScenarios: A list of strings containing the names of
-    scenarios that will be included in the table. Can also be the
-    string 'all' to indicate that all scenarios should be included.
-
-    includedAges: A list of strings containing the names of
-    age groups that will be included in the table. Can also be the
-    string 'all' to indicate that all age groups should be included.
-    If this is False, the age group column will be omitted entirely.
-
-Output:
-    formattedData: A pandas DataFrame containing the data, reshaped into
-    a format more easily used for table construction.
-"""
-
-
-# TODO: more options if time permits
+# TODO: more options
+# TODO: fix new mort
+# TODO: refactor to allow identical columns
 def formatAsir(
-    rawCSV,
-    scenarioNames,
-    columns=[("Infections", False, False)],
-    includedScenarios: Any = "all",
-    includedAges: Any = "all",
-):
+    rawCSV: bytes,
+    scenarioNames: list[str],
+    columns: list[tuple[str, bool, bool]] = [("Infections", False, False)],
+    includedScenarios: list[str] | Literal["all"] = "all",
+    includedAges: list[str] | Literal["all", False] = "all",
+) -> tuple[pd.DataFrame, dict[str, ColumnConfig], list[str], list[str]]:
+    """
+    Function to convert raw data from the age-specific infection rate
+    ('asir') Flusim analysis tool into the desired DataFrame format for
+    tables and other visualisations
+
+    Parameters:
+        rawCSV (bytes): The CSV output of the 'asir' analysis function, obtained
+            from the server after running the simulation.
+
+        scenarioNames (list of str): A list of strings containing the names of the
+            different scenarios that were simulated (since the CSV just uses
+            non-descriptive placeholders). This list should contain the names
+            of all scenarios in the simulation, even if not all of them will be
+            included in the final table.
+
+        columns (list of tuples (str, bool, bool)): A list of tuples representing
+            the health burden outcome and formatting of each column the
+            dataframe should have.
+
+        includedScenarios ('all' or list of str): A list of strings
+            containing the names of scenarios that will be included in
+            the table. Can also be the string 'all' to indicate that all
+            scenarios should be included.
+
+        includedAges ('all', False or list of str): A list of strings
+            containing the names of age groups that will be included in the
+            table. Can also be the string 'all' to indicate that all age
+            groups should be included. If this is False, the age group column
+            will be omitted entirely.
+
+    Returns:
+        formattedData (DataFrame): A pandas DataFrame containing the data,
+            reshaped into a format more easily used for table construction.
+
+        columnConfig (dict of str and ColumnConfig): A dictionary storing the
+            configuration settings for each column in the table.
+
+        percentCols (list of str): A list of strings holding the names of
+            each column that uses percentage formatting.
+
+        differenceCols (list of str): A list of strings holding the names of
+            each column that uses difference from baseline formatting.
+
+    Raises:
+        ValueError: If scenarioNames is not a list of strings or columns
+            are not formatted correctly.
+    """
     # Validate parameters
     try:
         if not scenarioNames:
@@ -341,7 +388,7 @@ def formatAsir(
     functionLog.info(
         f"Scenario names are {scenarioNames}; current index is {framedData.index}"
     )
-    framedData.columns = ["Total"] + ageWithTime
+    framedData.columns = pd.Index(["Total"] + ageWithTime)
     framedData.index = pd.Index(scenarioNames)
     framedData.reset_index(names="Scenario", inplace=True)
 
@@ -358,7 +405,7 @@ def formatAsir(
         .set_index("Age Group")
     )
     baselineValues = meltedData["Age Group"].map(baselineRows["Base Values"])
-    community = st.session_state.DataCommunity
+    community = session.DataCommunity
 
     # Generate config data for Streamlit display
     percentCols = []
@@ -382,39 +429,34 @@ other age groups list the age range they cover as part of their name.
     )
 
     # Generate columns
-    for outcome, baselineDifference, proportion in columns:
+    for outcome, proportion, baselineDifference in columns:
         # Multiply base infection rate with corresponding outcome rate
         if outcome not in {"Infections", "Deaths"}:
             currentColumn = meltedData["Base Values"] * meltedData["Scenario"].map(
-                st.session_state["DataHealthOutcomeRates"][outcome]
+                session["DataHealthOutcomeRates"][outcome]
             )
             columnBaselines = baselineValues * (
-                st.session_state["DataHealthOutcomeRates"][outcome]["Baseline"]
+                session["DataHealthOutcomeRates"][outcome]["Baseline"]
             )
         elif outcome == "Deaths":
             # Account for age-specific mortality
-            # TODO: Make sure this works with new mortality input
             # Convert death rates to DataFrame for efficiency
-            deathRates = pd.DataFrame(st.session_state.DataMortalityRates).T.stack()
+            deathRates = pd.DataFrame(session.DataMortalityRates).T.stack()
             dataIndexValues = pd.MultiIndex.from_frame(
                 meltedData[["Scenario", "Age Group"]]
             )
             currentColumn = meltedData["Base Values"] * pd.Series(
                 dataIndexValues.map(deathRates), index=meltedData.index
             ).fillna(
-                meltedData["Scenario"].map(
-                    st.session_state["DataHealthOutcomeRates"]["Deaths"]
-                )
+                meltedData["Scenario"].map(session["DataHealthOutcomeRates"]["Deaths"])
             )
 
             # Baseline values
-            baselineDeath = st.session_state.DataMortalityRates["Baseline"]
+            baselineDeath = session.DataMortalityRates["Baseline"]
             columnBaselines = baselineValues * (
                 meltedData["Age Group"]
                 .map(baselineDeath)
-                .fillna(
-                    st.session_state["DataHealthOutcomeRates"]["Deaths"]["Baseline"]
-                )
+                .fillna(session["DataHealthOutcomeRates"]["Deaths"]["Baseline"])
             )
 
         else:

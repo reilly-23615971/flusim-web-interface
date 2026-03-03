@@ -13,13 +13,13 @@ from zipfile import ZipFile
 
 import pandas as pd
 import streamlit as st
-import streamlit_notify as stn  # type: ignore
 from aiohttp import (
     ClientConnectorError,
     ClientResponseError,
     ClientSession,
     ClientTimeout,
 )
+from streamlit_notify import toast  # type: ignore
 
 from ClientResources.InterfaceFunctions import errorChecker, idGet  # , checkErrors
 from ClientResources.ModelSchema import (
@@ -35,6 +35,7 @@ from ClientResources.ModelSchema import (
 from ClientResources.SharedResources import (
     AnalysisFile,
     ageTimeDict,
+    ageWithTime,
     outcomeRateDefaults,
     outcomeRateVariables,
     resultQueue,
@@ -53,6 +54,9 @@ from ParameterTabs.vaccinationNPIParams import vaccineSchema
 # Logging
 functionLog = logging.getLogger(__name__)
 
+# Store st.session_state as variable for efficiency
+session = st.session_state
+
 
 # Error class for getting full responses
 class invalidSchemaError(Exception):
@@ -65,12 +69,13 @@ class invalidSchemaError(Exception):
         return f"{self.message} (Full Response: {self.response})"
 
 
-"""
-Function to generate a JSON config file using the selected parameters
-"""
+def createConfig(scenarioCount: int):
+    """
+    Function to generate a JSON config file using the selected parameters
 
-
-def createConfig(scenarioCount):
+    Parameters:
+        scenarioCount (int): The number of scenarios to define in the config.
+    """
     # Set up schema objects
     scenarioParams = [Parameters() for _ in range(scenarioCount)]
 
@@ -85,17 +90,17 @@ def createConfig(scenarioCount):
     # Create config object with non-scenario parameters as overrides
     return modelGuideFile(
         name="Flusim Dashboard Simulation",
-        description=str(st.session_state.sessionID),
+        description=str(session.sessionID),
         output_folder="./results/",
         middle_joint="-usingEpidemic",
-        community_used=[st.session_state.get("community", "newcastle")],
+        community_used=[session.get("community", "newcastle")],
         community_overrides=[
             communityOverride(
-                name=st.session_state.get("community", "newcastle"),
+                name=session.get("community", "newcastle"),
                 parameters=Parameters(
                     Command_Argument=commandArgument(
-                        n_runs=st.session_state.get("runCount", 24),
-                        n_cycles=st.session_state.get("cycleCount", 360) * 2,
+                        n_runs=session.get("runCount", 24),
+                        n_cycles=session.get("cycleCount", 360) * 2,
                     ),
                     Scenario_Parameter=scenarioParameters(
                         start_day_of_week=(
@@ -106,7 +111,7 @@ def createConfig(scenarioCount):
                             "Thursday",
                             "Friday",
                             "Saturday",
-                        ).index(st.session_state.get("startDay", "Monday"))
+                        ).index(session.get("startDay", "Monday"))
                     ),
                 ),
             )
@@ -115,11 +120,11 @@ def createConfig(scenarioCount):
         simulation_sets=[
             simulationSet(
                 name="Dashboard Simulation Set",
-                version=st.session_state.sessionID,
+                version=session.sessionID,
                 simulations=[simulation(name="Baseline")]
                 + [
                     simulation(
-                        name=st.session_state[f"scenarioName{i}"],
+                        name=session[f"scenarioName{i}"],
                         override_setting=overrideParams(parameters=scenarioParams[i]),
                     )
                     for i in range(1, scenarioCount)
@@ -134,12 +139,12 @@ def runSimulationButton():
     """
     Callback function for the Run Simulation button
     """
-    scenarioCount = st.session_state.get("scenarioCount", 0)
+    scenarioCount = session.get("scenarioCount", 0)
     if scenarioCount == 0:
         st.markdown(
             f"""
 With the current parameters, this modelling experiment will use the
-"{st.session_state.get('community', 'newcastle').capitalize()}"
+"{session.get('community', 'newcastle').capitalize()}"
 community data to simulate the baseline scenario.
     """
         )
@@ -147,14 +152,14 @@ community data to simulate the baseline scenario.
         st.markdown(
             f"""
 With the current parameters, this modelling experiment will use the
-"{st.session_state.get('community', 'newcastle').capitalize()}"
+"{session.get('community', 'newcastle').capitalize()}"
 community data to simulate each of the following {scenarioCount + 1} scenarios:
         """
         )
         st.markdown(
             "- Baseline\n"
             + "\n".join(
-                f"- {st.session_state[f'scenarioName{id}']}"
+                f"- {session[f'scenarioName{id}']}"
                 for id in range(1, scenarioCount + 1)
             )
         )
@@ -166,7 +171,7 @@ community data to simulate each of the following {scenarioCount + 1} scenarios:
         severeErrorsFound = severeErrorsFound or errorChecker(
             id,
             f"""Errors in {
-                st.session_state[f'scenarioName{id}'] if id > 0 else 'Baseline'
+                session[f'scenarioName{id}'] if id > 0 else 'Baseline'
             }""",
         )
     if severeErrorsFound:
@@ -177,67 +182,10 @@ community data to simulate each of the following {scenarioCount + 1} scenarios:
             """,
             icon=":material/error:",
         )
-        unusedErrors = """
-    errors = [checkErrors(id) for id in range(scenarioCount + 1)]
-    if max((max(e) for e in errors)) >= 2:
-        st.error(
-            f'''
-There are errors with the parameters that have currently been selected
-for the following scenarios: {'\n'.join(
-f'''
-- {
-    st.session_state[f'scenarioName{id}'] if id > 0 else 'Baseline'
-}: {errors[id].count(2)} error(s)
-'''
-for id in range(scenarioCount + 1) if max(errors[id]) >= 2)
-}
-
-Please correct these errors by modifying the corresponding parameters
-to valid values before running the simulation.
-''',
-            icon=":material/error:",
-        )
-        """
     else:
-        unusedErrors = """
-        st.markdown(
-            f'''
-With the current parameters, this simulation will use the
-"{st.session_state.get('community', 'newcastle').capitalize()}"
-community data, {'with only a single baseline scenario.' if not scenarioCount
-else f'''
-with the following {scenarioCount + 1} scenarios:
-
-- Baseline
-{'\n'.join(
-    f'- {st.session_state[f'scenarioName{id}']}'
-    for id in range(1, scenarioCount + 1)
-)}
-'''}
-'''
-        )
-        if max((max(e) for e in errors)) >= 1:
-            st.warning(
-                f'''
-There are minor issues with the parameters that have currently been
-selected for the following scenarios:
-
-- Baseline
-{'\n'.join(
-f'''
-- {st.session_state[f'scenarioName{id}']}: {errors[id].count(1)} issue(s)
-'''
-for id in range(1, scenarioCount + 1) if max(errors[id]) >= 1)}
-
-Please make sure that these issues do not interfere with your intended
-simulation design before running the simulation.
-''',
-                icon=":material/warning:",
-            )
-        """
         # TODO: Display estimated simulation run time
         # TODO: Make warning display for the chart one too
-        if st.session_state.get("ChartGenerated"):
+        if session.get("ChartGenerated"):
             st.warning(
                 """
 Running a new simulation will result in future tables and graphs using
@@ -255,8 +203,8 @@ simulation.
         )
         if st.button("Run Simulation"):
             # Set params indicating model is simulating
-            st.session_state.simulationInProgress = True
-            st.session_state.simulationStartTime = datetime.now()
+            session.simulationInProgress = True
+            session.simulationStartTime = datetime.now()
 
             # Create the final model JSON
             # Load debug parameters from file
@@ -279,18 +227,15 @@ simulation.
                     with open("./savedJSON.json", "w") as file:
                         file.write(parameterJSON)
                 scenarioNames = ["Baseline"] + [
-                    st.session_state[f"scenarioName{i}"]
-                    for i in range(1, scenarioCount + 1)
+                    session[f"scenarioName{i}"] for i in range(1, scenarioCount + 1)
                 ]
 
             # Save current parameter values that'll be used for
             # visualisation when the user has potentially changed them
-            st.session_state.PendingDataCommunity = st.session_state.get(
-                "community", "newcastle"
-            )
-            st.session_state.PendingDataScenarioNames = scenarioNames
-            st.session_state.PendingDataScenarioCount = scenarioCount
-            st.session_state.PendingDataHealthOutcomeRates = {
+            session.PendingDataCommunity = session.get("community", "newcastle")
+            session.PendingDataScenarioNames = scenarioNames
+            session.PendingDataScenarioCount = scenarioCount
+            session.PendingDataHealthOutcomeRates = {
                 outcome: {
                     scenario: idGet(
                         outcomeRateVariables[outcome], i, outcomeRateDefaults[outcome]
@@ -299,7 +244,7 @@ simulation.
                 }
                 for outcome in outcomeRateDefaults.keys()
             }
-            oldMort = """st.session_state.PendingDataMortalityRates = {
+            oldMort = """session.PendingDataMortalityRates = {
                 scenarioNames[scenarioID]: {
                     idGet("deathAgeGroup", scenarioID, None, f"-{rowID}"): idGet(
                         "deathRatio",
@@ -315,10 +260,12 @@ simulation.
                 scenarioID: idGet("deathRatio", scenarioID, 0.1)
                 for scenarioID in range(scenarioCount + 1)
             }
-            st.session_state.PendingDataMortalityRates = {
+            # TODO: Make sure new mort rates don't cause issues in practice
+            session.PendingDataMortalityRates = {
                 scenarioNames[scenarioID]: {
-                    age: pendingDeaths[scenarioID] for age in ageTimeDict.keys()
-                }.update(
+                    age: pendingDeaths[scenarioID] for age in ageWithTime
+                }
+                | (
                     idGet(
                         "mortAgeForm",
                         scenarioID,
@@ -329,6 +276,7 @@ simulation.
                             },
                         ),
                     )
+                    .replace({"Age Group": ageTimeDict})
                     .set_index("Age Group")["Mortality Rate"]
                     .to_dict()
                 )
@@ -339,20 +287,36 @@ simulation.
             runModelWrapper(scenarioNames, parameterJSON)
 
             # Generate popup to let the user know it's pending
-            stn.toast(
+            toast(
                 "Sending a request to run the simulation. Please wait...",
                 icon=":material/experiment:",
             )
             st.rerun()
 
 
-"""
-Function to send JSON model parameters to the server, awaiting a
-response containing the results of the simulation
-"""
+# TODO: Clean up this function so that errors are more easily read
+# and the returned types don't need as much checking
+async def runModel(scenarioNames: list[str], parameterJSON: str):
+    """
+    Asynchronous function to send JSON model parameters to the server, awaiting a
+    response containing the results of the simulation
 
+    Parameters:
+        scenarioNames (list of str): A list of names to assign to each scenario.
 
-async def runModel(scenarioNames, parameterJSON):
+        parameterJSON (str): A string containing the JSON representation of
+            the simulation experiment to run.
+
+    Returns:
+        list: A list containing tuples for each analysis performed on the
+            data. Each tuple contains the byte data of the analysed CSV
+            results alongside a string to identify the type
+            of analysis it represents.
+
+        tuple: A string identifying what kind of error
+            was encountered when running the model, alongside the error itself
+            as an Exception subclass.
+    """
     try:
         dataForms = [
             AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=True),
@@ -394,7 +358,7 @@ async def runModel(scenarioNames, parameterJSON):
         with ZipFile(BytesIO(responseData)) as analyses:
             fileNames = analyses.namelist()
             for file in fileNames:
-                functionLog.info(f"File Data: {analyses.read(file)}")
+                functionLog.info(f"File Data: {analyses.read(file).decode()}")
             if len(fileNames) == 0:
                 functionLog.error("[runModel] Server returned no readable files")
                 return "EmptyZipFile"
@@ -431,26 +395,35 @@ async def runModel(scenarioNames, parameterJSON):
         return ("UncaughtError", e)
 
 
-"""
-Async wrapper function for runModel, allowing HTTP requests to be made
-asynchronously without blocking Streamlit operations
-"""
-
-
 def runModelWrapper(scenarioNames, parameterJSON):
+    """
+    Async wrapper function for runModel, allowing HTTP requests to be made
+    asynchronously without blocking Streamlit operations
+
+    Parameters:
+        scenarioNames (list of str): A list of names to assign to each scenario.
+
+        parameterJSON (str): A string containing the JSON representation of
+            the simulation experiment to run.
+    """
+
     # Inner function to asynchronously call the server and await results
     # Needed to avoid interrupting Streamlit UI functionality
     def threadRunner():
+        """
+        Inner function to asynchronously call the server and await results,
+        needed to avoid interrupting Streamlit UI functionality
+        """
         try:
             # time.sleep(5)  # Debug for testing dashboard while running
             formattedData = asyncio.run(runModel(scenarioNames, parameterJSON))
             if formattedData:
-                resultQueue.put(formattedData)
+                resultQueue.put(formattedData)  # type: ignore
         except Exception as e:
             functionLog.info(f"[runner] Encountered {type(e).__name__}: {e}")
             functionLog.error(f"[runner] Encountered {type(e).__name__}: {e}")
             raise e
 
-    st.session_state.simulationInProgress = True
+    session.simulationInProgress = True
     runModelThread = threading.Thread(target=threadRunner)
     runModelThread.start()
