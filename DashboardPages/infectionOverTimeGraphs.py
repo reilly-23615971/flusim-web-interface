@@ -111,7 +111,6 @@ if currentDataExists and session.simulationInProgress:
     )
 
 
-# TODO: Settings to configure the line graph ala table
 graphSettings = st.expander("Graph Settings")
 with graphSettings:
     st.markdown(

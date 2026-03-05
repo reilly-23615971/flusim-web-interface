@@ -260,7 +260,6 @@ simulation.
                 scenarioID: idGet("deathRatio", scenarioID, 0.1)
                 for scenarioID in range(scenarioCount + 1)
             }
-            # TODO: Make sure new mort rates don't cause issues in practice
             session.PendingDataMortalityRates = {
                 scenarioNames[scenarioID]: {
                     age: pendingDeaths[scenarioID] for age in ageWithTime

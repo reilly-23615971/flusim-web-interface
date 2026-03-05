@@ -13,6 +13,7 @@ from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import (
     dayCount,
+    dualError,
     dynamicScaleChange,
     hasDuplicates,
     idGet,
@@ -706,6 +707,37 @@ group to contract the disease when interacting with infected individuals.
                 recovered/no longer infectious.
             """,
         )
+        dualError(
+            "noInfectiousPeriod",
+            id,
+            lambda: preSymptomPeriod + symptomPeriod + postSymptomPeriod == 0,
+            lambda: symptomPeriod == 0,
+            f"""
+                Error: The disease life cycle used by the {
+                    'baseline scenario' if id == 0
+                    else f'scenario named "{session[f'scenarioName{id}']}"'
+                } has pre-symptomatic, symptomatic and post-symptomatic
+                periods all set to have a length of 0 days. As such,
+                there is no point where the disease is infectious, and
+                it cannot spread.
+
+                Please increase either Pre-Symptomatic Period Length,
+                Symptomatic Period Length or Post-Symptomatic Period
+                Length in :primary-badge[:material/coronavirus: Disease]
+                to be greater than 0.
+            """,
+            f"""
+                Error: The disease life cycle used by the {
+                    'baseline scenario' if id == 0
+                    else f'scenario named "{session[f'scenarioName{id}']}"'
+                } has its symptomatic period set to have a length of 0 days.
+                As such, there is no point where the disease shows symptoms.
+
+                Please increase Symptomatic Period Length in
+                :primary-badge[:material/coronavirus: Disease]
+                to be greater than 0.
+            """,
+        )
 
         # Display duration lengths via Cool Bar Graph Thing™
         stageNames = ["Latent", "Pre-Symptomatic", "Symptomatic", "Post-Symptomatic"]
@@ -730,6 +762,7 @@ group to contract the disease when interacting with infected individuals.
                 x=alt.X(
                     "start:Q",
                     title="Length (Days)",
+                    axis=alt.Axis(tickMinStep=1),
                     scale=alt.Scale(
                         domain=[
                             0,
@@ -899,7 +932,6 @@ group to contract the disease when interacting with infected individuals.
         )
 
         # Dataframe for age-based mortality
-        # TODO: Ensure health burden tables work with the new input format
         st.markdown(
             "### Age-Specific Mortality Rate",
             help="""

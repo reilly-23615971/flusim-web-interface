@@ -294,7 +294,6 @@ def plotEpidemic(
 
 
 # TODO: more options
-# TODO: fix new mort
 # TODO: refactor to allow identical columns
 def formatAsir(
     rawCSV: bytes,

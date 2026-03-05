@@ -151,7 +151,6 @@ import pandas as pd
 from ClientResources.SharedResources import ageWithTime
 from st_aggrid import AgGrid, GridOptionsBuilder, JsCode, GridUpdateMode
 
-# TODO: New variable-length form structure
 startTestData = pd.DataFrame(
     {
         "Age Group": [],

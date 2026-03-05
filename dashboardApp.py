@@ -17,7 +17,6 @@ from ClientResources.SharedResources import resultQueue, usePresetData, usePrese
 # from ClientResources.SimulationRunFunctions import runSimulationButton
 
 # Set this early to minimise the time spent with a different page title
-# TODO: Populate About section with credits to SMRG-Flusim and Paul Tol
 st.set_page_config(
     page_title="SMRG Flusim Web Dashboard",
     page_icon=":material/microbiology:",
@@ -116,7 +115,6 @@ flusimPages = st.navigation(pages)
 flusimPages.run()
 
 # Add run simulation button to sidebar below pages
-# TODO: Check if server is available and grey out button if not
 # TODO: consider adding progress updates to the sidebar (time remaining,
 # progress bars, server availability etc.)
 oldButton = '''

@@ -65,7 +65,6 @@ def selectTextColour(colour):
 
 
 # Callback function to generate and format the table
-# TODO: Fix multiselect options becoming lists
 def generateTable():
     # Throw error if no data is present
     if not usePresetData and not session.get("modelDataRawAsir"):

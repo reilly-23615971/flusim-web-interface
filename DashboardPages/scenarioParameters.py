@@ -396,7 +396,3 @@ st.button(
     """
     ),
 )
-
-# TODO: Debug
-# st.header('DEBUG ZONE')
-# st.write(session)
