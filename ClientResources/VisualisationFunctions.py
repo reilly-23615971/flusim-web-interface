@@ -412,19 +412,21 @@ def formatAsir(
     columnConfig = {}
 
     columnConfig["Scenario"] = st.column_config.TextColumn(
+        pinned=True,
         help="""
 The scenario that each row's data originates from. 'Baseline'
 refers to the scenario using the base parameters at the
 Baseline Parameters page, while additional scenarios use the
 names given to them at the Scenario Parameters page.
-    """
+    """,
     )
     columnConfig["Age Group"] = st.column_config.TextColumn(
+        pinned=True,
         help="""
 The age range of the individuals that each row's data is derived from.
 'Total' includes the entire population of the simulation, at all ages;
 other age groups list the age range they cover as part of their name.
-    """
+    """,
     )
 
     # Generate columns

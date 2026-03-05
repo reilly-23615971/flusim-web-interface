@@ -423,8 +423,8 @@ in the case of the 'Total' group).
     st.subheader(
         "Select Health Burden Columns",
         help="""
-Here you may specify health burden outcomes to include as columns in the table
-and how to format them. Each outcome selected here will be listed for each age
+This table specifies health burden outcomes to include as columns in the outcome
+table and their format. Each selected outcome will be listed for each age
 group in each scenario from the simulation. Note that if multiple columns are
 defined with identical parameters, only the first instance of them will be
 included in the table.
@@ -445,6 +445,7 @@ included in the table.
     )
     healthColumnForm = st.data_editor(
         session["healthColumnForm"],
+        height="content",
         num_rows="dynamic",
         key="_healthColumnForm",
         on_change=saveKey,

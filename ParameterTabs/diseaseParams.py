@@ -70,19 +70,13 @@ def buildDiseaseTab(id: int):
     # getRemainingGroups(ageGroupSets, ageCategories.keys())
 
     # Tab Content
-    st.header("Disease Parameters")
+    st.header("Disease-Related Parameters")
     st.markdown(
         """
-        This tab contains parameters relating to the disease
-        itself, including how it initially enters the community,
-        the rate at which it spreads and how long infection lasts
-        before recovery.
-
-        Note that despite being related to the disease's effects,
-        hospitalisation and mortality rate are defined in the
-        "Health Burden Outcomes" section of the "Community" tab
-        instead of being in this tab, in order to group them with
-        other health burden outcomes.
+        This tab contains parameters relating to the disease itself, including
+        the rate of infectious individuals entering the modelled community, the
+        rate at which the disease spreads and how long infection lasts before
+        recovery.
     """
     )
 
@@ -343,6 +337,7 @@ are not specified for a specific age group.
         )
         transAgeForm = st.data_editor(
             session[f"transAgeForm{id}"],
+            height="content",
             num_rows="dynamic",
             key=f"_transAgeForm{id}",
             on_change=saveKey,
@@ -953,6 +948,7 @@ each age group, overriding the global rate defined above.
         )
         mortAgeForm = st.data_editor(
             session[f"mortAgeForm{id}"],
+            height="content",
             num_rows="dynamic",
             key=f"_mortAgeForm{id}",
             on_change=saveKey,

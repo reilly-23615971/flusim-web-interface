@@ -113,6 +113,7 @@ def buildDynamicTab(id: int):
     )
     seedTimeForm = st.data_editor(
         session[f"seedTimeForm{id}"],
+        height="content",
         num_rows="dynamic",
         key=f"_seedTimeForm{id}",
         on_change=saveKey,
@@ -424,6 +425,7 @@ each day of the simulation is 2 cycles.
     )
     closeTimeForm = st.data_editor(
         session[f"closeTimeForm{id}"],
+        height="content",
         num_rows="dynamic",
         key=f"_closeTimeForm{id}",
         on_change=saveKey,
@@ -794,6 +796,7 @@ they are closed after the specified point in the simulation.
     )
     bccTimeForm = st.data_editor(
         session[f"bccTimeForm{id}"],
+        height="content",
         num_rows="dynamic",
         key=f"_bccTimeForm{id}",
         on_change=saveKey,

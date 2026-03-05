@@ -348,6 +348,7 @@ defined above.
             )
             vacPropAgeForm = st.data_editor(
                 session[f"vacPropAgeForm{id}"],
+                height="content",
                 num_rows="dynamic",
                 key=f"_vacPropAgeForm{id}",
                 on_change=saveKey,
@@ -859,6 +860,7 @@ efficacy value for this dose defined above.
                     )
                     vacInitialEfficacyAgeForm = st.data_editor(
                         session[f"vacInitialEfficacyAgeForm{id}-{i}"],
+                        height="content",
                         num_rows="dynamic",
                         key=f"_vacInitialEfficacyAgeForm{id}-{i}",
                         on_change=saveKey,
@@ -1310,6 +1312,7 @@ the global waned efficacy defined above.
             )
             vacWaneAgeForm = st.data_editor(
                 session[f"vacWaneAgeForm{id}"],
+                height="content",
                 num_rows="dynamic",
                 key=f"_vacWaneAgeForm{id}",
                 on_change=saveKey,
@@ -1764,6 +1767,7 @@ global booster efficacy values defined above.
             )
             boostEfficacyAgeForm = st.data_editor(
                 session[f"boostEfficacyAgeForm{id}"],
+                height="content",
                 num_rows="dynamic",
                 key=f"_boostEfficacyAgeForm{id}",
                 on_change=saveKey,
@@ -2207,6 +2211,7 @@ defined above.
             )
             distanceAgeForm = st.data_editor(
                 session[f"distanceAgeForm{id}"],
+                height="content",
                 num_rows="dynamic",
                 key=f"_distanceAgeForm{id}",
                 on_change=saveKey,

@@ -114,6 +114,10 @@ notify(remove=True)
 flusimPages = st.navigation(pages)
 flusimPages.run()
 
+st.sidebar.link_button(
+    "User Manual", "/app/static/UserManual.pdf", icon=":material/quick_reference:"
+)
+
 # Add run simulation button to sidebar below pages
 # TODO: consider adding progress updates to the sidebar (time remaining,
 # progress bars, server availability etc.)

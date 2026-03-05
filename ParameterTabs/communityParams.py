@@ -49,7 +49,7 @@ def buildCommunityTab(id: int):
     # getRemainingGroups(ageGroupSets, ageCategories.keys())
 
     # Tab Content
-    st.header("Community Parameters")
+    st.header("Community-Related Parameters")
     st.markdown(
         """
         This tab contains parameters relating to the community that
