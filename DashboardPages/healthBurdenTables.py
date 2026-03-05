@@ -420,6 +420,7 @@ in the case of the 'Total' group).
 
     # Variable-length form for choosing columns
     # TODO: Axe the duplicate column rule
+    # TODO: Either fix or prevent percentage infection >100 due to reinfection
     st.subheader(
         "Select Health Burden Columns",
         help="""

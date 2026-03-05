@@ -193,8 +193,8 @@ def buildCommunityTab(id: int):
                 schools and childcare facilities in the simulation.
             """,
         )
-        # TODO: Triple check if this affects the simulation
-        loadKey("maxClassCount", id, 1)
+
+        unusedClassCount = '''loadKey("maxClassCount", id, 1)
         st.slider(
             "Number of School Class Subgroups",
             1,
@@ -210,7 +210,7 @@ def buildCommunityTab(id: int):
                 regularly interact with each other but not with the
                 rest of the class.
             """,
-        )
+        )'''
         loadKey("maxWorkGroupSize", id, 10)
         st.slider(
             "Maximum Work Group Size (Number of People)",
@@ -255,7 +255,7 @@ def communitySchema(schema: Parameters, id: int = 0):
         scenarioParams.diagnosis_delay = idGet("diagnosisDelay", id, 1) * 2
         scenarioParams.background_contact_count = idGet("bccRate", id, 4.0)
         scenarioParams.prob_child_supervision = idGet("childSupervision", id, 1.0)
-        scenarioParams.max_class_count = idGet("maxClassCount", id, 1)
+        # scenarioParams.max_class_count = idGet("maxClassCount", id, 1)
         scenarioParams.max_class_size = idGet("maxClassSize", id, 10)
         scenarioParams.max_workgroup_size = idGet("maxWorkGroupSize", id, 10)
         """

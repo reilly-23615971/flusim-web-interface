@@ -193,10 +193,11 @@ def updateData():
                     successes += 1
                     session[f"modelData{tag}"] = data
 
-            # Update parameters
+            # Tell the user what's happened
             session.simulationEndTime = datetime.now()
             totalTime = session.simulationEndTime - session.simulationStartTime
-            timeString = f"{totalTime.seconds // 60}:{totalTime.seconds % 60}"
+            seconds = str(totalTime.seconds % 60).zfill(2)
+            timeString = f"{totalTime.seconds // 60}:{seconds}"
             if successes == 3:
                 toast(
                     f"Simulation complete! Total duration: {timeString}",
