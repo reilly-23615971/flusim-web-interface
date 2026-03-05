@@ -201,7 +201,7 @@ simulation.
             selected parameters?
         """
         )
-        if st.button("Run Simulation"):
+        if st.button("Confirm"):
             # Set params indicating model is simulating
             session.simulationInProgress = True
             session.simulationStartTime = datetime.now()

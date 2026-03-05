@@ -204,7 +204,7 @@ def deleteScenario(scenarioID):
         you sure you want to delete this scenario?
     """
     )
-    if st.button("Delete Scenario"):
+    if st.button("Confirm"):
         # Get set of saved params
         savedParams = session["scenarioSetParams"]
         savedExtraParams = session["scenarioSetParamsExtra"]
