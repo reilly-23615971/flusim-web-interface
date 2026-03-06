@@ -2,6 +2,14 @@
 
 disableWidgetStateDuplicationWarning = true
 
+[server]
+
+enableStaticServing = true
+
 [browser]
 
 gatherUsageStats = false
+
+[theme]
+
+baseFontSize = 18
