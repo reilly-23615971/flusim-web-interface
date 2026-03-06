@@ -150,6 +150,7 @@ def formatEpidemic(
         # age-split time series graphs will be (redundant with asir)
         return pd.DataFrame()
     else:
+        # TODO: Duplicate final row if data ends before final cycle
         framedData = (
             pd.read_csv(
                 BytesIO(rawCSV),

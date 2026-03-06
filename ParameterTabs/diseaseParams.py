@@ -735,6 +735,7 @@ group to contract the disease when interacting with infected individuals.
         )
 
         # Display duration lengths via Cool Bar Graph Thing™
+        # TODO: Fix legend being cut off (and menu dots being slightly cut off)
         stageNames = ["Latent", "Pre-Symptomatic", "Symptomatic", "Post-Symptomatic"]
         data = pd.DataFrame(
             {
