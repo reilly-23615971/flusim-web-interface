@@ -134,6 +134,13 @@ def generateTable():
     if usePresetData:
         # Set default session_state params
         session.DataCommunity = "newcastle"
+        session.DataAsymptomatic = [
+            [
+                1 - idGet("asymptomaticChild", scenarioID, 0.35),
+                1 - idGet("asymptomaticAdult", scenarioID, 0.35),
+            ]
+            for scenarioID in range(4)
+        ]
         session.DataHealthOutcomeRates = {
             outcome: {
                 scenario: idGet(

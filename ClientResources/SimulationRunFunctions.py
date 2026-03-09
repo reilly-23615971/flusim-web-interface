@@ -235,6 +235,13 @@ simulation.
             session.PendingDataCommunity = session.get("community", "newcastle")
             session.PendingDataScenarioNames = scenarioNames
             session.PendingDataScenarioCount = scenarioCount
+            session.PendingDataAsymptomatic = [
+                [
+                    1 - idGet("asymptomaticChild", scenarioID, 0.35),
+                    1 - idGet("asymptomaticAdult", scenarioID, 0.35),
+                ]
+                for scenarioID in range(scenarioCount)
+            ]
             session.PendingDataHealthOutcomeRates = {
                 outcome: {
                     scenario: idGet(

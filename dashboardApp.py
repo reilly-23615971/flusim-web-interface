@@ -328,6 +328,7 @@ def updateData():
             "Community",
             "ScenarioNames",
             "ScenarioCount",
+            "Asymptomatic",
             "HealthOutcomeRates",
             "MortalityRates",
         }

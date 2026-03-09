@@ -151,14 +151,13 @@ def formatEpidemic(
         return pd.DataFrame()
     else:
         # TODO: Duplicate final row if data ends before final cycle
-        # TODO: Scale by symptomatic likelihood
         framedData = (
             pd.read_csv(
                 BytesIO(rawCSV),
                 header=0,
                 names=["Days Since First Infection"] + scenarioNames,
             )
-            .fillna(0.0)
+            .ffill()
             .round()
         )
 
@@ -391,6 +390,18 @@ def formatAsir(
         f"Scenario names are {scenarioNames}; current index is {framedData.index}"
     )
     framedData.columns = pd.Index(["Total"] + ageWithTime)
+
+    # Scale the data by symptomatic likelihood
+    asymptomaticChild, asymptomaticAdult = zip(*session.DataAsymptomatic)
+    framedData.loc[:, ageWithTime[:6]] = framedData.loc[:, ageWithTime[:6]].mul(
+        asymptomaticChild, axis=0
+    )
+    framedData.loc[:, ageWithTime[6:]] = framedData.loc[:, ageWithTime[6:]].mul(
+        asymptomaticAdult, axis=0
+    )
+    framedData["Total"] = framedData.loc[:, ageWithTime].sum(axis=1)
+
+    # Reset indices
     framedData.index = pd.Index(scenarioNames)
     framedData.reset_index(names="Scenario", inplace=True)
 
