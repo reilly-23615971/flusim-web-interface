@@ -363,12 +363,12 @@ def idGet(key: str, scenarioID: int, defaultValue, extra: Optional[str] = None):
         )
 
 
-def dayCount(count: int):
+def dayCount(count: int | float):
     """
     Simple function to convert an integer into a string describing a number of days
 
     Parameters:
-        count (int): The number of days to return.
+        count (in or float): The number of days to return.
     """
     return "1 Day" if count == 1 else f"{count} Days"
 

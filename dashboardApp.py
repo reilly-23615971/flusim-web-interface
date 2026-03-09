@@ -10,7 +10,19 @@ from datetime import datetime
 
 import pandas as pd
 import streamlit as st
-from streamlit_notify import notify, toast  # type: ignore
+
+# Reload streamlit_notify if it fails the first time
+try:
+    from streamlit_notify import notify, toast
+except ImportError:
+    import importlib
+    import time
+
+    time.sleep(0.01)
+    importlib.reload(importlib.import_module("streamlit_notify"))
+    from streamlit_notify import notify, toast  # type: ignore
+
+# from streamlit_notify import notify, toast  # type: ignore
 
 from ClientResources.SharedResources import resultQueue, usePresetData, usePresetParams
 

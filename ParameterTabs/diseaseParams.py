@@ -634,16 +634,16 @@ group to contract the disease when interacting with infected individuals.
             stage in the disease's life cycle.
         """
         )
-        # TODO: Add errors for diseases with no symptomatic/infectious period
-
-        loadKey("latencyPeriod", id, 10)
-        latencyPeriod = st.select_slider(
+        loadKey("latencyPeriod", id, 0.5)
+        latencyPeriod = st.slider(
             "Latency Period Length (Days)",
-            range(22),
-            10,
+            min_value=0.0,
+            max_value=14.0,
+            value=0.5,
+            step=0.5,
+            format="%f Days",
             on_change=saveKey,
             args=["latencyPeriod", id],  # type: ignore
-            format_func=dayCount,
             key=f"_latencyPeriod{id}",
             help="""
                 The length in days of the disease's latency period,
@@ -652,12 +652,14 @@ group to contract the disease when interacting with infected individuals.
                 individual becoming infectious themselves.
             """,
         )
-        loadKey("preSymptomPeriod", id, 2)
-        preSymptomPeriod = st.select_slider(
+        loadKey("preSymptomPeriod", id, 2.0)
+        preSymptomPeriod = st.slider(
             "Pre-Symptomatic Period Length (Days)",
-            range(22),
-            2,
-            format_func=dayCount,
+            min_value=0.0,
+            max_value=14.0,
+            value=2.0,
+            step=0.5,
+            format="%f Days",
             key=f"_preSymptomPeriod{id}",
             on_change=saveKey,
             args=["preSymptomPeriod", id],  # type: ignore
@@ -669,14 +671,16 @@ group to contract the disease when interacting with infected individuals.
                 beginning to show symptoms.
             """,
         )
-        loadKey("symptomPeriod", id, 7)
-        symptomPeriod = st.select_slider(
+        loadKey("symptomPeriod", id, 2.0)
+        symptomPeriod = st.slider(
             "Symptomatic Period Length (Days)",
-            range(22),
-            7,
+            min_value=0.0,
+            max_value=14.0,
+            value=2.0,
+            step=0.5,
+            format="%f Days",
             on_change=saveKey,
             args=["symptomPeriod", id],  # type: ignore
-            format_func=dayCount,
             key=f"_symptomPeriod{id}",
             help="""
                 The length in days of the disease's symptomatic
@@ -685,12 +689,14 @@ group to contract the disease when interacting with infected individuals.
                 disease.
             """,
         )
-        loadKey("postSymptomPeriod", id, 1)
-        postSymptomPeriod = st.select_slider(
+        loadKey("postSymptomPeriod", id, 2.0)
+        postSymptomPeriod = st.slider(
             "Post-Symptomatic Period Length (Days)",
-            range(22),
-            1,
-            format_func=dayCount,
+            min_value=0.0,
+            max_value=14.0,
+            value=2.0,
+            step=0.5,
+            format="%f Days",
             key=f"_postSymptomPeriod{id}",
             on_change=saveKey,
             args=["postSymptomPeriod", id],  # type: ignore
@@ -758,7 +764,7 @@ group to contract the disease when interacting with infected individuals.
                 x=alt.X(
                     "start:Q",
                     title="Length (Days)",
-                    axis=alt.Axis(tickMinStep=1),
+                    axis=alt.Axis(format=".1~f", tickMinStep=0.5),
                     scale=alt.Scale(
                         domain=[
                             0,
@@ -778,7 +784,7 @@ group to contract the disease when interacting with infected individuals.
                 ),
                 tooltip=["Life Stage", "Length (Days)"],
             )
-            .properties(width=600, height=175)
+            .properties(width="container", height=200)
         )
         st.altair_chart(chart)
 

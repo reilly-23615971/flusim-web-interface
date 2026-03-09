@@ -151,6 +151,7 @@ def formatEpidemic(
         return pd.DataFrame()
     else:
         # TODO: Duplicate final row if data ends before final cycle
+        # TODO: Scale by symptomatic likelihood
         framedData = (
             pd.read_csv(
                 BytesIO(rawCSV),
@@ -296,6 +297,7 @@ def plotEpidemic(
 
 # TODO: more options
 # TODO: refactor to allow identical columns
+# TODO: scale by symptomatic likelihood
 def formatAsir(
     rawCSV: bytes,
     scenarioNames: list[str],
