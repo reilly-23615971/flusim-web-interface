@@ -162,7 +162,7 @@ def generateTable():
         }"""
         session.DataMortalityRates = {
             scenarioNames[scenarioID]: {
-                age: idGet("deathRatio", scenarioID, 0.1) for age in ageWithTime
+                age: idGet("deathRatio", scenarioID, 0.000115) for age in ageWithTime
             }
             | (
                 idGet(

@@ -146,10 +146,10 @@ outcomeRateVariables = {
 # Default values for rates
 outcomeRateDefaults = {
     "Diagnosed Cases": 0.5,
-    "Hospitalisations": 0.25,
-    "Deaths": 0.05,
-    "ICU Visits": 0.1,
-    "GP Visits": 0.333,
+    "Hospitalisations": 0.00316,
+    "Deaths": 0.000115,
+    "ICU Visits": 0.00063,
+    "GP Visits": 0.17,
 }
 
 

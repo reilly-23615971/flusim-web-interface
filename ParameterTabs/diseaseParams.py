@@ -175,15 +175,18 @@ def buildDiseaseTab(id: int):
         )
 
         # Beta and symptom multipliers
-        loadKey("beta", id, 0.11)
-        st.select_slider(
+        # Previous default was 0.11
+        loadKey("beta", id, 0.0616)
+        st.number_input(
             "Basic Transmission Parameter (β)",
-            np.linspace(0.005, 1.0, 200),
-            0.11,
-            format_func=lambda x: f"{x:0.3g}",
+            min_value=0.00001,
+            max_value=1.0,
+            value=0.0616,
+            step=0.00001,
+            format="%0.5g",
             key=f"_beta{id}",
             on_change=saveKey,
-            args=["beta", id],  # type: ignore
+            args=["beta", id],
             help="""
                 The value of the basic transmission parameter
                 $\\beta$, the base constant used to calculate the
@@ -195,14 +198,18 @@ def buildDiseaseTab(id: int):
                 individuals.
             """,
         )
+        # TODO: Make number inputs
+        leftCol, rightCol = st.columns(2)
         loadKey("betaAsymptomatic", id, 0.55)
-        st.select_slider(
+        leftCol.number_input(
             "Asymptomatic Transmission Multiplier",
-            np.linspace(0.0, 1.0, 201),
-            0.55,
-            format_func=lambda x: f"{x:0.3g}",
+            min_value=0.00001,
+            max_value=1.0,
+            value=0.55,
+            step=0.00001,
+            format="%0.5g",
             on_change=saveKey,
-            args=["betaAsymptomatic", id],  # type: ignore
+            args=["betaAsymptomatic", id],
             key=f"_betaAsymptomatic{id}",
             help="""
                 The value of the transmissibility modifier
@@ -219,13 +226,15 @@ def buildDiseaseTab(id: int):
             """,
         )
         loadKey("betaPostSymptomatic", id, 0.55)
-        st.select_slider(
+        rightCol.number_input(
             "Post-Symptomatic Transmission Multiplier",
-            np.linspace(0.0, 1.0, 201),
-            0.55,
-            format_func=lambda x: f"{x:0.3g}",
+            min_value=0.00001,
+            max_value=1.0,
+            value=0.55,
+            step=0.00001,
+            format="%0.5g",
             on_change=saveKey,
-            args=["betaPostSymptomatic", id],  # type: ignore
+            args=["betaPostSymptomatic", id],
             key=f"_betaPostSymptomatic{id}",
             help="""
                 The value of the transmissibility modifier
@@ -238,33 +247,17 @@ def buildDiseaseTab(id: int):
                 individuals.
             """,
         )
-        loadKey("householdKappa", id, 2.2)
-        st.select_slider(
-            "Household Transmission Multiplier",
-            np.linspace(0.0, 5.0, 201),
-            2.2,
-            key=f"_householdKappa{id}",
-            on_change=saveKey,
-            args=["householdKappa", id],  # type: ignore
-            format_func=lambda x: f"{x:0.4g}",
-            help="""
-                The value of the transmissibility modifier
-                $\\kappa$ when an interaction takes place in a
-                household. The higher this value is, the more
-                likely it is for uninfected individuals to contract
-                the disease when interacting with infected
-                individuals in households.
-                """,
-        )
         loadKey("schoolKappa", id, 1.0)
-        st.select_slider(
+        leftCol.number_input(
             "School Transmission Multiplier",
-            np.linspace(0.0, 1.0, 201),
-            1.0,
+            min_value=0.00001,
+            max_value=10.0,
+            value=1.0,
+            step=0.00001,
+            format="%0.5g",
             key=f"_schoolKappa{id}",
             on_change=saveKey,
-            args=["schoolKappa", id],  # type: ignore
-            format_func=lambda x: f"{x:0.3g}",
+            args=["schoolKappa", id],
             help="""
                 The value of the transmissibility modifier
                 $\\kappa$ when an interaction takes place in a
@@ -275,14 +268,16 @@ def buildDiseaseTab(id: int):
                 """,
         )
         loadKey("workKappa", id, 1.0)
-        st.select_slider(
+        rightCol.number_input(
             "Workplace Transmission Multiplier",
-            np.linspace(0.0, 1.0, 201),
-            1.0,
+            min_value=0.00001,
+            max_value=10.0,
+            value=1.0,
+            step=0.00001,
+            format="%0.5g",
             key=f"_workKappa{id}",
             on_change=saveKey,
-            args=["workKappa", id],  # type: ignore
-            format_func=lambda x: f"{x:0.3g}",
+            args=["workKappa", id],
             help="""
                 The value of the transmissibility modifier
                 $\\kappa$ when an interaction takes place in a
@@ -292,15 +287,37 @@ def buildDiseaseTab(id: int):
                 individuals in workplaces.
                 """,
         )
+        loadKey("householdKappa", id, 2.2)
+        leftCol.number_input(
+            "Household Transmission Multiplier",
+            min_value=0.00001,
+            max_value=10.0,
+            value=2.2,
+            step=0.00001,
+            format="%0.5g",
+            key=f"_householdKappa{id}",
+            on_change=saveKey,
+            args=["householdKappa", id],
+            help="""
+                The value of the transmissibility modifier
+                $\\kappa$ when an interaction takes place in a
+                household. The higher this value is, the more
+                likely it is for uninfected individuals to contract
+                the disease when interacting with infected
+                individuals in households.
+                """,
+        )
         loadKey("backgroundKappa", id, 1.0)
-        st.select_slider(
+        rightCol.number_input(
             "Background Contact Transmission Multiplier",
-            np.linspace(0.0, 1.0, 201),
-            1.0,
+            min_value=0.00001,
+            max_value=10.0,
+            value=1.0,
+            step=0.00001,
+            format="%0.5g",
             key=f"_backgroundKappa{id}",
             on_change=saveKey,
-            args=["backgroundKappa", id],  # type: ignore
-            format_func=lambda x: f"{x:0.3g}",
+            args=["backgroundKappa", id],
             help="""
                 The value of the transmissibility modifier
                 $\\kappa$ when an interaction takes place during the
@@ -635,6 +652,7 @@ group to contract the disease when interacting with infected individuals.
         """
         )
         loadKey("latencyPeriod", id, 0.5)
+        # Previous default was 10
         latencyPeriod = st.slider(
             "Latency Period Length (Days)",
             min_value=0.0,
@@ -652,12 +670,13 @@ group to contract the disease when interacting with infected individuals.
                 individual becoming infectious themselves.
             """,
         )
-        loadKey("preSymptomPeriod", id, 2.0)
+        loadKey("preSymptomPeriod", id, 1.0)
+        # Previous default was 2
         preSymptomPeriod = st.slider(
             "Pre-Symptomatic Period Length (Days)",
             min_value=0.0,
             max_value=14.0,
-            value=2.0,
+            value=1.0,
             step=0.5,
             format="%f Days",
             key=f"_preSymptomPeriod{id}",
@@ -672,6 +691,7 @@ group to contract the disease when interacting with infected individuals.
             """,
         )
         loadKey("symptomPeriod", id, 2.0)
+        # Previous default was 7
         symptomPeriod = st.slider(
             "Symptomatic Period Length (Days)",
             min_value=0.0,
@@ -689,12 +709,13 @@ group to contract the disease when interacting with infected individuals.
                 disease.
             """,
         )
-        loadKey("postSymptomPeriod", id, 2.0)
+        loadKey("postSymptomPeriod", id, 2.5)
+        # Previous default was 1
         postSymptomPeriod = st.slider(
             "Post-Symptomatic Period Length (Days)",
             min_value=0.0,
             max_value=14.0,
-            value=2.0,
+            value=2.5,
             step=0.5,
             format="%f Days",
             key=f"_postSymptomPeriod{id}",
@@ -856,79 +877,90 @@ group to contract the disease when interacting with infected individuals.
 
         # Health Burden Outcomes
         # TODO: Make default values more realistic
+        # TODO: Note how scientific notation works in the description or something
         loadKey("caseRatio", id, 0.5)
-        st.select_slider(
-            "Diagnosed Case Rate (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            0.5,
+        st.number_input(
+            "Diagnosed Case Rate (Proportion of Population)",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.5,
+            step=0.00001,
+            format="%0.5g",
             key=f"_caseRatio{id}",
             on_change=saveKey,
-            args=["caseRatio", id],  # type: ignore
-            format_func=lambda x: f"{100 * x:0.3g}%",
+            args=["caseRatio", id],
             help="""
-                The probability that an infected, symptomatic
-                individual will be formally diagnosed as a
+                The proportion of infected, symptomatic
+                individuals who will be formally diagnosed as a
                 confirmed case of the disease.
             """,
         )
-        loadKey("gpRatio", id, 0.35)
-        st.select_slider(
-            "GP Visit Rate (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            0.35,
+        loadKey("gpRatio", id, 0.17)
+        st.number_input(
+            "GP Visit Rate (Proportion of Population)",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.17,
+            step=0.00001,
+            format="%0.5g",
             key=f"_gpRatio{id}",
             on_change=saveKey,
-            args=["gpRatio", id],  # type: ignore
-            format_func=lambda x: f"{100 * x:0.3g}%",
+            args=["gpRatio", id],
             help="""
-                The probability that an infected, symptomatic
-                individual will visit their general practitioner
+                The proportion of infected, symptomatic
+                individuals who will visit their general practitioner
                 (GP) as a result of the disease.
             """,
         )
-        loadKey("hospitalRatio", id, 0.25)
-        st.select_slider(
-            "Hospitalisation Rate (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            0.25,
+        loadKey("hospitalRatio", id, 0.00316)
+        st.number_input(
+            "Hospitalisation Rate (Proportion of Population)",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.00316,
+            step=0.00001,
+            format="%0.5g",
             key=f"_hospitalRatio{id}",
             on_change=saveKey,
-            args=["hospitalRatio", id],  # type: ignore
-            format_func=lambda x: f"{100 * x:0.3g}%",
+            args=["hospitalRatio", id],
             help="""
-                The probability that an infected, symptomatic
-                individual will be admitted to a hospital as a
+                The proportion of infected, symptomatic
+                individuals who will be admitted to a hospital as a
                 result of the disease.
             """,
         )
-        loadKey("icuRatio", id, 0.1)
-        st.select_slider(
-            "ICU Visit Rate (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            0.1,
+        loadKey("icuRatio", id, 0.000632)
+        st.number_input(
+            "ICU Visit Rate (Proportion of Population)",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.00063,
+            step=0.00001,
+            format="%0.5g",
             key=f"_icuRatio{id}",
             on_change=saveKey,
-            args=["icuRatio", id],  # type: ignore
-            format_func=lambda x: f"{100 * x:0.3g}%",
+            args=["icuRatio", id],
             help="""
-                The probability that an infected, symptomatic
-                individual will be admitted to a hospital's
+                The proportion of infected, symptomatic
+                individuals who will be admitted to a hospital's
                 intensive care unit (ICU) as a result of the
                 disease.
             """,
         )
-        loadKey("deathRatio", id, 0.05)
-        deathRate = st.select_slider(
-            "Mortality Rate (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            0.05,
+        loadKey("deathRatio", id, 0.000115)
+        deathRate = st.number_input(
+            "Mortality Rate (Proportion of Population)",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.000115,
+            step=0.00001,
+            format="%0.5g",
             key=f"_deathRatio{id}",
             on_change=saveKey,
-            args=["deathRatio", id],  # type: ignore
-            format_func=lambda x: f"{100 * x:0.3g}%",
+            args=["deathRatio", id],
             help="""
-                The base probability that an infected, symptomatic
-                individual will die as a direct result of the
+                The base proportion of infected, symptomatic
+                individuals who will die as a direct result of the
                 disease.
             """,
         )
@@ -970,19 +1002,19 @@ each age group, overriding the global rate defined above.
                     format_func=lambda x: ageTimeDict[x],  # type: ignore
                     help="""
 An age group that will have a specific mortality rate defined for it,
-overriding the base probability.
+overriding the base proportion.
                     """,
                 ),
                 "Mortality Rate": st.column_config.NumberColumn(
-                    "Mortality Rate",
+                    "Mortality Rate (Proportion of Population)",
                     required=True,
                     default=deathRate,
                     min_value=0.0,
                     max_value=1.0,
-                    format="percent",
+                    format="%0.5g",
                     help="""
-The probability that an infected, symptomatic individual in this age group
-will die as a direct result of the disease.
+The proportion of infected, symptomatic individuals in this age
+group who will die as a direct result of the disease.
                     """,
                 ),
             },
@@ -1064,12 +1096,12 @@ will die as a direct result of the disease.
                 """,
                 )
             # Mortality column
-            loadKey("deathRatio", id, 0.05, f"-{i}")
+            loadKey("deathRatio", id, 0.000115, f"-{i}")
             with deathRateColumn:
                 st.select_slider(
                     "Mortality Rate (Probability)",
                     np.linspace(0.0, 1.0, 201),
-                    0.05,
+                    0.000115,
                     key=f"_deathRatio{id}-{i}",
                     on_change=saveKey,
                     args=["deathRatio", id, f"-{i}"],  # type: ignore
@@ -1229,14 +1261,14 @@ def diseaseSchema(schema: Parameters, id: int = 0):
 
         # Load reused parameters immediately to save time
         seedPeriod = idGet("seedPeriod", id, (1, 30))
-        latencyPeriod = idGet("latencyPeriod", id, 10)
-        preSymptomPeriod = idGet("preSymptomPeriod", id, 2)
-        symptomPeriod = idGet("symptomPeriod", id, 7)
-        postSymptomPeriod = idGet("postSymptomPeriod", id, 1)
+        latencyPeriod = idGet("latencyPeriod", id, 0.5)
+        preSymptomPeriod = idGet("preSymptomPeriod", id, 1.0)
+        symptomPeriod = idGet("symptomPeriod", id, 2.0)
+        postSymptomPeriod = idGet("postSymptomPeriod", id, 2.5)
 
         # Strain Parameters
         schema.Scenario_Strain = [
-            strainParameters(StrainId=0, Beta=idGet("beta", id, 0.11))
+            strainParameters(StrainId=0, Beta=idGet("beta", id, 0.0616))
         ]
 
         # Scenario Parameters With Age Prefix
@@ -1245,7 +1277,7 @@ def diseaseSchema(schema: Parameters, id: int = 0):
             if schema.Scenario_ParameterWithAgePrefix
             else ageScenarioParameters()
         )
-        deathRate = idGet("deathRatio", id, 0.05)
+        deathRate = idGet("deathRatio", id, 0.000115)
         ageScenarioParams.mort = deathRate
         schema.Scenario_ParameterWithAgePrefix = ageScenarioParams
 
@@ -1279,7 +1311,7 @@ def diseaseSchema(schema: Parameters, id: int = 0):
         ) * 2
         # Health Burden Outcomes
         scenarioParams.prob_diagnosis = idGet("caseRatio", id, 0.5)
-        scenarioParams.prob_hospitalisation = idGet("hospitalRatio", id, 0.25)
+        scenarioParams.prob_hospitalisation = idGet("hospitalRatio", id, 0.00316)
         scenarioParams.prob_withdrawal = idGet("withdrawalWork", id, 0.5)
         scenarioParams.prob_school_withdrawal = idGet("withdrawalSchool", id, 0.9)
         # Immunity Waning

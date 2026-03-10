@@ -240,7 +240,7 @@ simulation.
                     1 - idGet("asymptomaticChild", scenarioID, 0.35),
                     1 - idGet("asymptomaticAdult", scenarioID, 0.35),
                 ]
-                for scenarioID in range(scenarioCount+1)
+                for scenarioID in range(scenarioCount + 1)
             ]
             session.PendingDataHealthOutcomeRates = {
                 outcome: {
@@ -264,7 +264,7 @@ simulation.
                 for scenarioID in range(scenarioCount + 1)
             }"""
             pendingDeaths = {
-                scenarioID: idGet("deathRatio", scenarioID, 0.1)
+                scenarioID: idGet("deathRatio", scenarioID, 0.000115)
                 for scenarioID in range(scenarioCount + 1)
             }
             session.PendingDataMortalityRates = {
