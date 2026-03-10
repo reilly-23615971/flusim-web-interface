@@ -61,7 +61,7 @@ def buildVaccinationNPITab(id: int):
     sessionParameters = {
         # Row counts
         f"vacAgeRowCount{id}": 0,
-        f"primaryDoseCount{id}": 2,
+        f"primaryDoseCount{id}": 1,
         f"primWanedRowCount{id}": 0,
         f"boostAgeRowCount{id}": 0,
         f"socialRowCount{id}": 0,
@@ -716,12 +716,12 @@ are vaccinated may be lower if there are an insufficient number of doses availab
             )
 
             # Universal primary parameters
-            loadKey("primaryDoseCount", id, 2)
+            loadKey("primaryDoseCount", id, 1)
             primaryDoseCount = st.slider(
                 "Number of Vaccine Doses",
                 1,
                 5,
-                2,
+                1,
                 key=f"_primaryDoseCount{id}",
                 on_change=saveKey,
                 args=["primaryDoseCount", id],  # type: ignore
@@ -3462,7 +3462,7 @@ def vaccineSchema(schema: Parameters, id: int = 0):
         socialDistanceToggle = idGet("socialDistancingToggle", id, False)
 
         ageNames = list(ageTimeDict.keys())
-        primDoseCount = idGet("primaryDoseCount", id, 2)
+        primDoseCount = idGet("primaryDoseCount", id, 1)
         primBaseEfficacy = [
             idGet("primaryBaseEfficacy", id, 0.5, f"-{i}") for i in range(primDoseCount)
         ]
