@@ -240,7 +240,7 @@ simulation.
                     1 - idGet("asymptomaticChild", scenarioID, 0.35),
                     1 - idGet("asymptomaticAdult", scenarioID, 0.35),
                 ]
-                for scenarioID in range(scenarioCount)
+                for scenarioID in range(scenarioCount+1)
             ]
             session.PendingDataHealthOutcomeRates = {
                 outcome: {
