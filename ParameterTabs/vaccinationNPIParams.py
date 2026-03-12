@@ -3841,8 +3841,8 @@ def vaccineSchema(schema: Parameters, id: int = 0):
         # Add the unused vaccination trigger things as a good luck charm
         scenarioParams.vaccination_delay = 0
         scenarioParams.vaccination_duration = 99999
-        scenarioParams.vaccination_trigger = trigCast("timed")
-        scenarioParams.vaccination_relaxation = trigCast("none")
+        scenarioParams.vaccination_trigger = trigCast("Timed")
+        scenarioParams.vaccination_relaxation = trigCast("Always")
         # Save the updated parameters
         schema.Scenario_Parameter = scenarioParams
     except (ValueError, ValidationError) as e:
