@@ -1634,7 +1634,7 @@ immunity will not remain healthy when exposed to the disease.
                 "Booster Immunity Waning Delay (Months)",
                 1,
                 36,
-                2,
+                4,
                 disabled=not useVaccinesToggle or not useBoostersToggle,
                 on_change=saveKey,
                 args=["boosterDuration", id],  # type: ignore
@@ -1646,6 +1646,7 @@ immunity will not remain healthy when exposed to the disease.
                     where a month is 30 days.
                 """,
             )
+            # TODO: Fix conditions so doesn't trigger when boosters are disabled
             paramError(
                 "boosterWanesTooFast",
                 id,
