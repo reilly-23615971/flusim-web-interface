@@ -3,6 +3,7 @@
 # Functions used by tables and graphs
 
 # Imports
+import os
 import logging
 from io import BytesIO
 from math import ceil
@@ -32,7 +33,7 @@ session = st.session_state
 
 # Dictionary getting health outcome descriptions
 outcomeDescriptions = {
-    "Infections": "infected by the disease",
+    "Symptomatic Infections": "showing symptoms of the disease",
     "Diagnosed Cases": "formally diagnosed as cases of the disease",
     "Hospitalisations": "sent to a hospital due to the disease",
     "Deaths": "killed as a direct result of the disease",
@@ -80,7 +81,7 @@ def formatData(data: bytes, settings: AnalysisFile) -> tuple[pd.DataFrame | byte
 def formatEpidemic(
     rawCSV: bytes,
     scenarioNames: list[str],
-    outcome: str = "Infections",
+    outcomeName: str = "Symptomatic Infections",
     cumulative=False,
     splitByAge=False,
 ) -> pd.DataFrame:
@@ -97,7 +98,7 @@ def formatEpidemic(
             non-descriptive placeholders).
 
         outcome (str): A string indicating the health outcome the epidemic
-            data represents. Can be either 'Infections', 'Diagnosed Cases',
+            data represents. Can be either 'Symptomatic Infections', 'Diagnosed Cases',
             'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
 
         cumulative (bool): Set to True when the CSV contains cumulative
@@ -127,12 +128,14 @@ def formatEpidemic(
             )
         if not scenarioNames:
             raise ValueError("scenarioNames should not be empty.")
-        if outcome not in tableOutcomes:
+        if outcomeName not in tableOutcomes:
             raise ValueError(
                 (
-                    'outcome should be either "Infections", "Diagnosed Cases", '
-                    '"Hospitalisations", "ICU Visits", "GP Visits", '
-                    f'or "Deaths"; was "{outcome}".'
+                    'outcome should be either "Symptomatic Infections", '
+                    "Diagnosed Cases",
+                    "Hospitalisations",
+                    "ICU Visits",
+                    "" f'"GP Visits", or "Deaths"; was "{outcomeName}".',
                 )
             )
     except Exception as e:
@@ -143,23 +146,22 @@ def formatEpidemic(
             )
         )
         raise e
-
+    outcome = "Infections"  # TODO: placeholder until other burdens can be graphed
     # Generate and format the dataframe
     if splitByAge:
         # TODO: Complete if desired; not sure how useful/desirable
         # age-split time series graphs will be (redundant with asir)
         return pd.DataFrame()
     else:
-        # TODO: Duplicate final row if data ends before final cycle
-        framedData = (
-            pd.read_csv(
-                BytesIO(rawCSV),
-                header=0,
-                names=["Days Since First Infection"] + scenarioNames,
-            )
-            .ffill()
-            .round()
+        framedData = pd.read_csv(
+            BytesIO(rawCSV),
+            header=0,
+            names=["Days Since First Infection"] + scenarioNames,
         )
+        if cumulative:
+            framedData = framedData.ffill().round()
+        else:
+            framedData = framedData.fillna(0.0).round()
 
         # Reshape data for better Altair usage
         valueLabel = f"Total {outcome}" if cumulative else f"{outcome} per Day"
@@ -171,7 +173,7 @@ def formatEpidemic(
 
 def plotEpidemic(
     data: pd.DataFrame,
-    outcome: str = "Infections",
+    outcomeName: str = "Symptomatic Infections",
     cumulative=False,
     includedScenarios: list[str] | Literal["all"] = "all",
 ) -> alt.LayerChart:
@@ -184,7 +186,7 @@ def plotEpidemic(
             the formatEpidemic function.
 
         outcome (str): A string indicating the health outcome the epidemic
-            data represents. Can be either 'Infections', 'Diagnosed Cases',
+            data represents. Can be either 'Symptomatic Infections', 'Diagnosed Cases',
             'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
 
         cumulative (bool): Boolean that is True when the DataFrame contains
@@ -208,12 +210,12 @@ def plotEpidemic(
     try:
         if not isinstance(data, pd.DataFrame):
             raise ValueError(f"data should be a DataFrame, was {type(data)}")
-        if outcome not in tableOutcomes:
+        if outcomeName not in tableOutcomes:
             raise ValueError(
                 (
-                    'outcome should be either "Infections", "Diagnosed Cases", '
-                    '"Hospitalisations", "ICU Visits", "GP Visits", '
-                    f'or "Deaths"; was "{outcome}".'
+                    'outcome should be either "Symptomatic Infections", '
+                    '"Diagnosed Cases", "Hospitalisations", "ICU Visits", '
+                    f'"GP Visits", or "Deaths"; was "{outcomeName}".'
                 )
             )
     except Exception as e:
@@ -224,7 +226,7 @@ def plotEpidemic(
             )
         )
         raise e
-
+    outcome = "Infections"  # TODO: placeholder until other burdens can be graphed
     # Define reusable chart components
     plotTitle = (
         f"Cumulative Median {outcome} Over Time"
@@ -296,11 +298,10 @@ def plotEpidemic(
 
 # TODO: more options
 # TODO: refactor to allow identical columns
-# TODO: scale by symptomatic likelihood
 def formatAsir(
     rawCSV: bytes,
     scenarioNames: list[str],
-    columns: list[tuple[str, bool, bool]] = [("Infections", False, False)],
+    columns: list[tuple[str, bool, bool]] = [("Symptomatic Infections", False, False)],
     includedScenarios: list[str] | Literal["all"] = "all",
     includedAges: list[str] | Literal["all", False] = "all",
 ) -> tuple[pd.DataFrame, dict[str, ColumnConfig], list[str], list[str]]:
@@ -444,9 +445,10 @@ other age groups list the age range they cover as part of their name.
     )
 
     # Generate columns
+    # TODO: See if case matching is better here than elif chains
     for outcome, proportion, baselineDifference in columns:
         # Multiply base infection rate with corresponding outcome rate
-        if outcome not in {"Infections", "Deaths"}:
+        if outcome not in {"Symptomatic Infections", "Deaths"}:
             currentColumn = meltedData["Base Values"] * meltedData["Scenario"].map(
                 session["DataHealthOutcomeRates"][outcome]
             )
@@ -479,6 +481,7 @@ other age groups list the age range they cover as part of their name.
             columnBaselines = baselineValues.copy()
 
         # Apply proportion/difference modifications
+        # TODO: Either fix or disable just proportion
         if proportion and not baselineDifference:
             currentColumn /= meltedData["Age Group"].map(communityAgePops[community])
             columnName = f"{outcomeAdjectives[outcome]} % of Population"
@@ -506,9 +509,9 @@ scenario{' (in the same age group)' if includedAges else ''}.
             )
             differenceCols.append(columnName)
         elif proportion and baselineDifference:
-            currentColumn -= columnBaselines
+            currentColumn = currentColumn.round() - columnBaselines.round()
             # Account for potential division by 0
-            currentColumn = (currentColumn / columnBaselines).where(
+            currentColumn = (currentColumn / columnBaselines.round()).where(
                 columnBaselines != 0, other=np.nan
             )
             columnName = f"{outcome} (% Difference from Baseline)"
@@ -541,6 +544,22 @@ who were {outcomeDescriptions[outcome]}.
 
     # Remove the base values column once it's redundant
     meltedData.drop("Base Values", axis=1, inplace=True)
+
+    # Recalculate totals to be accurate sums of the other columns
+    # TODO: Recalculate total percentages as well
+    for scenario in scenarioNames:
+        meltedData.loc[
+            (meltedData["Scenario"] == scenario) & (meltedData["Age Group"] == "Total"),
+            meltedData.columns.difference(["Scenario", "Age Group"] + percentCols),
+        ] = (
+            meltedData.loc[
+                (meltedData["Scenario"] == scenario)
+                & (meltedData["Age Group"] != "Total"),
+                meltedData.columns.difference(["Scenario", "Age Group"] + percentCols),
+            ]
+            .sum()
+            .values
+        )
 
     # Remove any scenarios/age groups not specified in the data
     if includedScenarios != "all" and (set(scenarioNames) != set(includedScenarios)):

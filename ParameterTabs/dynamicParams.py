@@ -169,7 +169,6 @@ each day of the simulation is 2 cycles.
     seedStart, seedEnd = idGet("seedPeriod", id, (0, 29))
     seedErrorContainer = st.container()
     seedContainer = st.container()
-    # TODO: Update errors after variable length forms are replaced
     for i in range(seedRowCount):
         (seedCycleColumn, seedNewColumn, seedRemoveColumn) = seedContainer.columns(
             (0.4, 0.4, 0.2), vertical_alignment="center"
@@ -486,7 +485,6 @@ they are closed after the specified point in the simulation.
     baseCloseValue = idGet("schoolClosureCompliance", id, 0.9)
     closeActive = idGet("schoolClosureToggle", id, False)
     closeTrigger = idGet("schoolClosureTrigger", id, "Always")
-    # TODO: Make sure closure period uses new system
     closeStart, closeEnd = idGet("schoolClosurePeriod", id, (29, 59))
     # Warn if school closure is disabled
     if not closeActive:

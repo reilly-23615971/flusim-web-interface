@@ -74,6 +74,8 @@ def generateTable():
                 "run a simulation before attempting to generate a table."
             )
         )
+    # Ensure latest column settings are used
+    saveKey("healthColumnForm", dataframe=True)
 
     scenarioNames = session.get(
         "DataScenarioNames",
@@ -110,7 +112,7 @@ def generateTable():
     oldVarLengthForm = """outcomeColumnCount = session.get("healthOutcomeRowCount", 1)
     columnDetails = [
         (
-            session.get(f"healthOutcome{colNumber}", "Infections"),
+            session.get(f"healthOutcome{colNumber}", "Symptomatic Infections"),
             session.get(f"useBaselineDifference{colNumber}", False),
             session.get(f"useProportion{colNumber}", False),
         )
@@ -162,7 +164,7 @@ def generateTable():
         }"""
         session.DataMortalityRates = {
             scenarioNames[scenarioID]: {
-                age: idGet("deathRatio", scenarioID, 0.000115) for age in ageWithTime
+                age: idGet("deathRatio", scenarioID, 0.00050034) for age in ageWithTime
             }
             | (
                 idGet(
@@ -477,7 +479,9 @@ Select the health burden outcome you would like to be included as a column on th
 Select any number of options here to modify how the column will be displayed.
 ### Options:
 - Percentage: The health burden outcome will be displayed as a percentage
-of the total population.
+of the total population. Note that this percentage may exceed 100% if infection
+waning is present in the simulation, as it is possible for the same individual
+to be infected multiple times.
 - Difference from Baseline: The column will display the difference in the
 selected health burden outcome between the baseline scenario and each other
 scenario. If "Percentage" is also selected, this difference will be displayed
@@ -494,7 +498,7 @@ as the percentage increase/decrease from the baseline value.
             outcomeTypeColumn,
             healthRemoveColumn,
         ) = st.columns((0.25, 0.275, 0.275, 0.2))
-        currentOutcome = session.get(f"healthOutcome{i}", "Infections")
+        currentOutcome = session.get(f"healthOutcome{i}", "Symptomatic Infections")
 
         # Health burden outcome column
         loadKey(f"healthOutcome", i, currentOutcome, noZeroDefault=True)
@@ -520,7 +524,7 @@ as the percentage increase/decrease from the baseline value.
                 included as a column on the table.
 
                 ### Options:
-                - Infections: the number of individuals infected with
+                - Symptomatic Infections: the number of individuals infected with
                 the disease in the simulation.
                 - Diagnosed Cases: the number of individuals formally diagnosed
                 with the disease in the simulation.
@@ -567,7 +571,7 @@ as the percentage increase/decrease from the baseline value.
                 result in the simulation the row is for. For example,
                 if the number of infected individuals was 300 in the
                 baseline scenario and 400 in Scenario 1, an
-                'Infections' column with this setting enabled would
+                'Symptomatic Infections' column with this setting enabled would
                 display +100 in the row for Scenario 1.
 
                 Note that this option will always be set to False if
@@ -604,7 +608,7 @@ as the percentage increase/decrease from the baseline value.
                 each age group in each scenario's community. For
                 example, if the number of infected adults was 20,000 in
                 a scenario with the Newcastle community (which has
-                71,299 adults), an 'Infections' column with
+                71,299 adults), an 'Symptomatic Infections' column with
                 'Percentage' disabled would display 20,000 while a
                 column with it enabled would display 28.051%.
 
@@ -613,7 +617,7 @@ as the percentage increase/decrease from the baseline value.
                 in the baseline scenario for the given age group. For
                 example, if the number of infected individuals was 300
                 in the baseline scenario and 400 in Scenario 1, an
-                'Infections' column with both 'Percentage' and
+                'Symptomatic Infections' column with both 'Percentage' and
                 'Difference from Baseline' enabled would display
                 +33.333% in the row for Scenario 1.
             """,
@@ -653,7 +657,7 @@ as the percentage increase/decrease from the baseline value.
         args=(
             f"healthOutcomeRowCount",
             {
-                f"healthOutcome{healthOutcomeRowCount}": "Infections",
+                f"healthOutcome{healthOutcomeRowCount}": "Symptomatic Infections",
                 f"useBaselineDifference{healthOutcomeRowCount}": False,
                 f"useProportion{healthOutcomeRowCount}": False,
             },
@@ -708,7 +712,9 @@ tableData = session.get("HealthOutcomeTableData")
 tableConfig = session.get("HealthOutcomeTableConfig")
 if tableData is not None:
     st.header("Health Burden Outcome Table")
-    st.dataframe(tableData, column_config=tableConfig, hide_index=True)
+    st.dataframe(
+        tableData, height="content", column_config=tableConfig, hide_index=True
+    )
 
     # Button to download the CSV data used by the table
     @st.fragment()

@@ -44,6 +44,7 @@ vaccineLog = logging.getLogger(__name__)
 session = st.session_state
 
 
+# TODO: Figure out what makes vaccination not happen with our baselines
 @st.fragment
 def buildVaccinationNPITab(id: int):
     """
@@ -609,7 +610,6 @@ are vaccinated may be lower if there are an insufficient number of doses availab
             )
 
             # Age-based errors if initial proportion is above target
-            # TODO: Update errors once variable length form is replaced
             for age in vacAgeInitials.keys():
                 currentInitial = vacAgeInitials[age]
                 currentTarget = vacAgeTargets[age]
@@ -743,7 +743,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
                 1,
                 36,
                 3,
-                disabled=not useVaccinesToggle,
+                disabled=(not useVaccinesToggle) or primaryDoseCount == 1,
                 on_change=saveKey,
                 args=["primaryDelay", id],  # type: ignore
                 key=f"_primaryDelay{id}",
@@ -770,6 +770,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
                     where a month is 30 days.
                 """,
             )
+            # TODO: Allow fully disabling vaccine waning
             loadKey("primaryWaningRate", id, 12)
             st.slider(
                 "Vaccine Waning Duration (Months)",
@@ -1370,7 +1371,6 @@ immunity will not remain healthy when exposed to the disease.
                 """,
                 True,
             )
-            # TODO: Error if initial is above waned
             # TODO: Have these errors highlight specific ages
             finalInitialEfficacyAgeForm = idGet(
                 "vacInitialEfficacyAgeForm",
@@ -1596,7 +1596,7 @@ immunity will not remain healthy when exposed to the disease.
                 """,
             )
             loadKey("boosterDoseCount", id, 3)
-            st.slider(
+            boosterDoseCount = st.slider(
                 "Number of Booster Doses",
                 1,
                 10,
@@ -1617,7 +1617,9 @@ immunity will not remain healthy when exposed to the disease.
                 1,
                 36,
                 3,
-                disabled=not useVaccinesToggle or not useBoostersToggle,
+                disabled=not useVaccinesToggle
+                or not useBoostersToggle
+                or boosterDoseCount == 1,
                 on_change=saveKey,
                 args=["boosterDelay", id],  # type: ignore
                 key=f"_boosterDelay{id}",
@@ -2044,7 +2046,6 @@ immunity will remain healthy when exposed to the disease.
             )
 
             # Age-based errors if waned efficacy is above initial
-            # TODO: update errors once variable-length form is replaced
             for age in boostAgeInitials.keys():
                 currentInitial = boostAgeInitials[age]
                 currentWaned = boostAgeWaneds[age]
@@ -3301,7 +3302,6 @@ social distancing interventions in the simulation.
                 # Note that this theoretically can be done error-free with
                 # dynamic parameter maximums and/or a 2-element slider,
                 # but those would be less intuitive to the user
-                # TODO: Confirm if relax>trigger should be an allowed feature
                 paramError(
                     "relaxAboveTrigger",
                     id,
@@ -3545,7 +3545,6 @@ def vaccineSchema(schema: Parameters, id: int = 0):
                 )
             ]
             # Age-Specific Primary Efficacy Values
-            # TODO: Integrate new initial and waned efficacy values
             vacInitialEfficacyAgeForms = [
                 idGet(
                     "vacInitialEfficacyAgeForm",
@@ -3693,12 +3692,17 @@ def vaccineSchema(schema: Parameters, id: int = 0):
         )
         # Vaccination
         if vaccineToggle:
-            scenarioParams.vaccine_doses = (
-                idGet("initialDoseReserve", id, 0)
-                if idGet("limitDosesToggle", id, False)
-                else 99999999
+            scenarioParams.vaccine_doses = min(
+                (
+                    idGet("initialDoseReserve", id, 0)
+                    if idGet("limitDosesToggle", id, False)
+                    else 99999999
+                ),
+                2000000000,
             )
-            scenarioParams.vaccination_first_dose_rate = idGet("firstDoseRate", id, 300)
+            scenarioParams.vaccination_first_dose_rate = min(
+                idGet("firstDoseRate", id, 300), 2000000000
+            )
         # School Closure
         if idGet("schoolClosureToggle", id, False):
             scenarioParams.school_closure_compliance = idGet(

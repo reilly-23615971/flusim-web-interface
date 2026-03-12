@@ -109,7 +109,7 @@ communityAgePops = {
 
 # Set containing health outcomes selectable for tables
 tableOutcomes = {
-    "Infections",
+    "Symptomatic Infections",
     "Diagnosed Cases",
     "Hospitalisations",
     "Deaths",
@@ -126,7 +126,7 @@ tableTypes = {
 
 # Dictionary getting adjective forms of health outcomes
 outcomeAdjectives = {
-    "Infections": "Infected",
+    "Symptomatic Infections": "Symptomatic",
     "Diagnosed Cases": "Diagnosed",
     "Hospitalisations": "Hospitalised",
     "Deaths": "Dead",
@@ -146,9 +146,9 @@ outcomeRateVariables = {
 # Default values for rates
 outcomeRateDefaults = {
     "Diagnosed Cases": 0.5,
-    "Hospitalisations": 0.00316,
-    "Deaths": 0.000115,
-    "ICU Visits": 0.00063,
+    "Hospitalisations": 0.01374491,
+    "Deaths": 0.00050034,
+    "ICU Visits": 0.00274898,
     "GP Visits": 0.17,
 }
 
@@ -223,13 +223,13 @@ class AnalysisFile:
         names: List[str],
         summaryValue: Literal["mean", "median"] = "median",
         outcome: Literal[
-            "Infections",
+            "Symptomatic Infections",
             "Diagnosed Cases",
             "Hospitalisations",
             "Deaths",
             "ICU Visits",
             "GP Visits",
-        ] = "Infections",
+        ] = "Symptomatic Infections",
         **kwargs
     ):
         self.tool = tool

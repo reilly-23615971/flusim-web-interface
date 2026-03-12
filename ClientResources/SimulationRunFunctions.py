@@ -264,7 +264,7 @@ simulation.
                 for scenarioID in range(scenarioCount + 1)
             }"""
             pendingDeaths = {
-                scenarioID: idGet("deathRatio", scenarioID, 0.000115)
+                scenarioID: idGet("deathRatio", scenarioID, 0.00050034)
                 for scenarioID in range(scenarioCount + 1)
             }
             session.PendingDataMortalityRates = {

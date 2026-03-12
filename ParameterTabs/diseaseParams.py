@@ -93,10 +93,9 @@ def buildDiseaseTab(id: int):
             daily.
         """
         )
-
         loadKey("seedRate", id, 0.25)
         st.select_slider(
-            "Infection Seeding Rate (Average Individuals per Day)",
+            "Infection Seeding Rate (Average Individuals per Cycle)",
             np.linspace(0.025, 5.0, 200),
             0.25,
             key=f"_seedRate{id}",
@@ -198,7 +197,6 @@ def buildDiseaseTab(id: int):
                 individuals.
             """,
         )
-        # TODO: Make number inputs
         leftCol, rightCol = st.columns(2)
         loadKey("betaAsymptomatic", id, 0.55)
         leftCol.number_input(
@@ -762,7 +760,6 @@ group to contract the disease when interacting with infected individuals.
         )
 
         # Display duration lengths via Cool Bar Graph Thing™
-        # TODO: Fix legend being cut off (and menu dots being slightly cut off)
         stageNames = ["Latent", "Pre-Symptomatic", "Symptomatic", "Post-Symptomatic"]
         data = pd.DataFrame(
             {
@@ -876,7 +873,9 @@ group to contract the disease when interacting with infected individuals.
         )
 
         # Health Burden Outcomes
-        # TODO: Make default values more realistic
+        # TODO: Consider having these be just infected proportion rather than
+        # infected symptomatic proportion (which one is easier for
+        # researchers to calculate?)
         # TODO: Note how scientific notation works in the description or something
         loadKey("caseRatio", id, 0.5)
         st.number_input(
@@ -912,14 +911,14 @@ group to contract the disease when interacting with infected individuals.
                 (GP) as a result of the disease.
             """,
         )
-        loadKey("hospitalRatio", id, 0.00316)
+        loadKey("hospitalRatio", id, 0.01374491)
         st.number_input(
             "Hospitalisation Rate (Proportion of Population)",
             min_value=0.0,
             max_value=1.0,
-            value=0.00316,
+            value=0.01374491,
             step=0.00001,
-            format="%0.5g",
+            format="%0.5e",
             key=f"_hospitalRatio{id}",
             on_change=saveKey,
             args=["hospitalRatio", id],
@@ -929,14 +928,14 @@ group to contract the disease when interacting with infected individuals.
                 result of the disease.
             """,
         )
-        loadKey("icuRatio", id, 0.000632)
+        loadKey("icuRatio", id, 0.00274898)
         st.number_input(
             "ICU Visit Rate (Proportion of Population)",
             min_value=0.0,
             max_value=1.0,
-            value=0.00063,
+            value=0.00274898,
             step=0.00001,
-            format="%0.5g",
+            format="%0.5e",
             key=f"_icuRatio{id}",
             on_change=saveKey,
             args=["icuRatio", id],
@@ -947,14 +946,14 @@ group to contract the disease when interacting with infected individuals.
                 disease.
             """,
         )
-        loadKey("deathRatio", id, 0.000115)
+        loadKey("deathRatio", id, 0.00050034)
         deathRate = st.number_input(
             "Mortality Rate (Proportion of Population)",
             min_value=0.0,
             max_value=1.0,
-            value=0.000115,
+            value=0.00050034,
             step=0.00001,
-            format="%0.5g",
+            format="%0.5e",
             key=f"_deathRatio{id}",
             on_change=saveKey,
             args=["deathRatio", id],
@@ -1011,7 +1010,7 @@ overriding the base proportion.
                     default=deathRate,
                     min_value=0.0,
                     max_value=1.0,
-                    format="%0.5g",
+                    format="%0.5e",
                     help="""
 The proportion of infected, symptomatic individuals in this age
 group who will die as a direct result of the disease.
@@ -1096,12 +1095,12 @@ group who will die as a direct result of the disease.
                 """,
                 )
             # Mortality column
-            loadKey("deathRatio", id, 0.000115, f"-{i}")
+            loadKey("deathRatio", id, 0.00050034, f"-{i}")
             with deathRateColumn:
                 st.select_slider(
                     "Mortality Rate (Probability)",
                     np.linspace(0.0, 1.0, 201),
-                    0.000115,
+                    0.00050034,
                     key=f"_deathRatio{id}-{i}",
                     on_change=saveKey,
                     args=["deathRatio", id, f"-{i}"],  # type: ignore
@@ -1161,6 +1160,7 @@ group who will die as a direct result of the disease.
         )'''
 
     # Waning Immunity Parameters
+    # TODO: Allow fully disabling immunity waning
     with st.expander("Immunity Waning"):
         # Describe what sort of parameters are here
         st.markdown(
@@ -1277,7 +1277,7 @@ def diseaseSchema(schema: Parameters, id: int = 0):
             if schema.Scenario_ParameterWithAgePrefix
             else ageScenarioParameters()
         )
-        deathRate = idGet("deathRatio", id, 0.000115)
+        deathRate = idGet("deathRatio", id, 0.00050034)
         ageScenarioParams.mort = deathRate
         schema.Scenario_ParameterWithAgePrefix = ageScenarioParams
 
@@ -1311,7 +1311,7 @@ def diseaseSchema(schema: Parameters, id: int = 0):
         ) * 2
         # Health Burden Outcomes
         scenarioParams.prob_diagnosis = idGet("caseRatio", id, 0.5)
-        scenarioParams.prob_hospitalisation = idGet("hospitalRatio", id, 0.00316)
+        scenarioParams.prob_hospitalisation = idGet("hospitalRatio", id, 0.01374491)
         scenarioParams.prob_withdrawal = idGet("withdrawalWork", id, 0.5)
         scenarioParams.prob_school_withdrawal = idGet("withdrawalSchool", id, 0.9)
         # Immunity Waning

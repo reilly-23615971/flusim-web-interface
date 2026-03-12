@@ -151,7 +151,7 @@ def saveKey(
     keyString = f"{key}{scenarioID}{extra}" if extra else f"{key}{scenarioID}"
     if dataframe:
         # Load both data and changes
-        currentData = session[keyString]
+        currentData = session[keyString].copy()
         modifiedData = session[f"_{keyString}"]
 
         # Row changes
@@ -215,7 +215,11 @@ def loadKey(
     if noZeroDefault or isinstance(scenarioID, str):
         session[f"{hiddenPrefix}{keyString}"] = session.get(f"{keyString}", default)
     else:
-        session[f"{hiddenPrefix}{keyString}"] = idGet(key, scenarioID, default, extra)
+        session[f"{hiddenPrefix}{keyString}"] = (
+            idGet(key, scenarioID, default, extra).copy()
+            if dataframe
+            else idGet(key, scenarioID, default, extra)
+        )
 
 
 # List of parameters that will be affected by changing cycleCount
@@ -511,7 +515,6 @@ class Parameter:
         """Populate a schema with this parameter's value"""
         setattr(schema, self.paramName, self.value)
 
-    # TODO: Add error functionality
 
 
 """
