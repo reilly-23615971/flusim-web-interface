@@ -1629,7 +1629,7 @@ immunity will not remain healthy when exposed to the disease.
                     to receive another, where a month is 30 days.
                 """,
             )
-            loadKey("boosterDuration", id, 2)
+            loadKey("boosterDuration", id, 4)
             boosterDuration = st.slider(
                 "Booster Immunity Waning Delay (Months)",
                 1,
@@ -3550,7 +3550,7 @@ def vaccineSchema(schema: Parameters, id: int = 0):
                         DoseType="booster",
                         Count=idGet("boosterDoseCount", id, 3),
                         DoseSpacingCycles=idGet("boosterDelay", id, 3) * 60,
-                        WaningDelay=idGet("boosterDuration", id, 2) * 60,
+                        WaningDelay=idGet("boosterDuration", id, 4) * 60,
                         WaningRatePerCycle=(boostBaseEfficacy - boostWanedEfficacy)
                         / (idGet("boosterWaningRate", id, 6) * 60),
                     )
