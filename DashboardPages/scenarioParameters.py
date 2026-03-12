@@ -195,6 +195,7 @@ def addScenario():
 
 
 # Function to delete a scenario from the page
+# TODO: Rebuild to be more stable and less reliant on a massive list
 @st.dialog("Delete Scenario", width="large", icon=":material/delete:")
 def deleteScenario(scenarioID):
     st.markdown(

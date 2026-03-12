@@ -1612,7 +1612,7 @@ immunity will not remain healthy when exposed to the disease.
                 """,
             )
             loadKey("boosterDelay", id, 3)
-            st.slider(
+            boosterDelay = st.slider(
                 "Time Between Booster Doses (Months)",
                 1,
                 36,
@@ -1630,7 +1630,7 @@ immunity will not remain healthy when exposed to the disease.
                 """,
             )
             loadKey("boosterDuration", id, 2)
-            st.slider(
+            boosterDuration = st.slider(
                 "Booster Immunity Waning Delay (Months)",
                 1,
                 36,
@@ -1645,6 +1645,29 @@ immunity will not remain healthy when exposed to the disease.
                     conferred by this vaccine begins to diminish,
                     where a month is 30 days.
                 """,
+            )
+            paramError(
+                "boosterWanesTooFast",
+                id,
+                lambda: boosterDelay > boosterDuration,
+                f"""
+                    Error: The time between booster vaccine doses used by the {
+                        'baseline scenario' if id == 0
+                        else f'scenario named "{session[f'scenarioName{id}']}"'
+                    } is longer than the time before a booster vaccine's efficacy
+                    begins to wane. As such, the booster vaccines will begin waning
+                    before all doses have been received.
+
+                    Please make one of the following changes:
+
+                    - Increase Booster Immunity Waning Delay in
+                    :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    to be greater than {boosterDelay}.
+                    - Decrease Time Between Booster Doses in
+                    :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    to be lower than {boosterDuration}.
+                """,
+                True,
             )
             loadKey("boosterBaseEfficacy", id, 0.9)
             boosterBaseEfficacy = st.select_slider(
@@ -3814,6 +3837,11 @@ def vaccineSchema(schema: Parameters, id: int = 0):
         scenarioParams.rate_trigger_threshold = idGet("rateStartThreshold", id, 10)
         scenarioParams.rate_relaxation_threshold = idGet("rateRelaxThreshold", id, 5)
         scenarioParams.maximum_trigger_count = 250
+        # Add the unused vaccination trigger things as a good luck charm
+        scenarioParams.vaccination_delay = 0
+        scenarioParams.vaccination_duration = 99999
+        scenarioParams.vaccination_trigger = trigCast("timed")
+        scenarioParams.vaccination_relaxation = trigCast("none")
         # Save the updated parameters
         schema.Scenario_Parameter = scenarioParams
     except (ValueError, ValidationError) as e:
