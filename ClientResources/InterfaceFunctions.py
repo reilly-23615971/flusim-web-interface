@@ -148,6 +148,9 @@ def saveKey(
         dataframe (bool): Set to True if the widget is a dataframe that requires
             manual application of changes.
     """
+    # Prevent invalid calls after deleting scenarios
+    if not isinstance(scenarioID, str) and scenarioID > session["scenarioCount"]:
+        return
     keyString = f"{key}{scenarioID}{extra}" if extra else f"{key}{scenarioID}"
     if dataframe:
         # Load both data and changes
@@ -168,7 +171,7 @@ def saveKey(
             drop=True
         )
 
-        # Save the widget and note scenario differences
+        # Save the edited data
         session[keyString] = currentData
     else:
         session[keyString] = session.get(f"_{keyString}")
@@ -176,9 +179,9 @@ def saveKey(
     # Add to scenario param lists if it's a scenario param (ID != 0 or "")
     if not notScenario and scenarioID:
         if extra:
-            session["scenarioSetParamsExtra"][scenarioID].append((key, extra))
+            session["scenarioSetParamsExtra"][scenarioID].add((key, extra))
         else:
-            session["scenarioSetParams"][scenarioID].append(key)
+            session["scenarioSetParams"][scenarioID].add(key)
 
 
 def loadKey(
@@ -220,6 +223,12 @@ def loadKey(
             if dataframe
             else idGet(key, scenarioID, default, extra)
         )
+    # Ensure dataframes are properly cleaned up even if never edited
+    if dataframe and scenarioID:
+        if extra:
+            session["scenarioSetParamsExtra"][scenarioID].add((key, extra))
+        else:
+            session["scenarioSetParams"][scenarioID].add(key)
 
 
 # List of parameters that will be affected by changing cycleCount
@@ -322,8 +331,8 @@ def dynamicScaleChange(
         else:
             # Only update the relevant scenario
             fullKey = f"{formKey}{scenarioID}"
-            if session.get(fullKey, None):
-                form = session[fullKey]
+            form = session.get(fullKey, None)
+            if form is not None and not form.empty:
                 form["Day to Update Parameter"] = form["Day to Update Parameter"].clip(
                     lower=newMin, upper=newMax
                 )
@@ -509,7 +518,7 @@ class Parameter:
         """Save the new value for this parameter set by its widget"""
         session[self.fullKey] = session.get(self.internalKey)
         if self.scenarioID != 0:
-            session["scenarioSetParams"][self.scenarioID].append(self.key)
+            session["scenarioSetParams"][self.scenarioID].add(self.key)
 
     def populateSchema(self, schema):
         """Populate a schema with this parameter's value"""

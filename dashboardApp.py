@@ -25,7 +25,6 @@ except ImportError:
 # from streamlit_notify import notify, toast  # type: ignore
 
 from ClientResources.SharedResources import (
-    maxScenarios,
     resultQueue,
     usePresetData,
     usePresetParams,
@@ -117,8 +116,8 @@ sessionParameters = {
     "simulationInProgress": False,
     "scenarioCount": 0,
     "sessionID": int(datetime.now().timestamp()),
-    "scenarioSetParamsExtra": {i: [] for i in range(1, maxScenarios + 1)},
-    "scenarioSetParams": {i: [] for i in range(1, maxScenarios + 1)},
+    "scenarioSetParamsExtra": {},
+    "scenarioSetParams": {},
     "activeErrors": {0: {}},
 }
 for parameter, default in sessionParameters.items():

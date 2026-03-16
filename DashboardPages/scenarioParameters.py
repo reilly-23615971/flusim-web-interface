@@ -7,7 +7,13 @@ import logging
 
 import streamlit as st
 
-from ClientResources.InterfaceFunctions import errorChecker, loadKey, rerunTime, saveKey
+from ClientResources.InterfaceFunctions import (
+    errorChecker,
+    loadKey,
+    rerunTime,
+    saveKey,
+    idGet,
+)
 from ClientResources.SharedResources import maxScenarios
 from ParameterTabs.communityParams import buildCommunityTab
 
@@ -22,180 +28,31 @@ scenarioLog = logging.getLogger(__name__)
 # Store st.session_state as variable for efficiency
 session = st.session_state
 
-# Load necessary parameter values
+# Load scenario count early for efficiency
 scenarioCount = session.get("scenarioCount", 0)
 
-# Parameter lists for transferring scenarios upon deletion
-# TODO: Refine these to account for changes and reduce hardcoding
-parameterSet = {
-    "scenarioName",
-    "transAgeForm",
-    "mortAgeForm",
-    "deathRowCount",
-    "deathRemainingAgeGroups",
-    "caseRatio",
-    "gpRatio",
-    "hospitalRatio",
-    "icuRatio",
-    "deathRatio",
-    "withdrawalWork",
-    "withdrawalSchool",
-    "diagnosisDelay",
-    "bccRate",
-    "childSupervision",
-    "maxClassCount",
-    "maxClassSize",
-    "maxAdultClassSize",
-    "maxWorkGroupSize",
-    "maxNeighborGroupSize",
-    "maxChurchGroupSize",
-    "transRowCount",
-    "kappaRowCount",
-    "seedPeriodError",
-    "transRemainingAgeGroups",
-    "kappaRemainingLocations",
-    "seedRate",
-    "seedPeriod",
-    "beta",
-    "betaAsymptomatic",
-    "betaPostSymptomatic",
-    "householdKappa",
-    "asymptomaticChild",
-    "asymptomaticAdult",
-    "latencyPeriod",
-    "preSymptomPeriod",
-    "symptomPeriod",
-    "postSymptomPeriod",
-    "naturalImmunityDuration",
-    "naturalWanedEfficacy",
-    "naturalWaningRate",
-    "seedRowCount",
-    "closeRowCount",
-    "bccRowCount",
-    "seedDynamicError",
-    "closeDynamicError",
-    "bccDynamicError",
-    "vacAgeRowCount",
-    "primaryDoseCount",
-    "primWanedRowCount",
-    "boostAgeRowCount",
-    "socialRowCount",
-    "baseVacPropError",
-    "ageVacPropError",
-    "basePrimEfficacyError",
-    "agePrimEfficacyError",
-    "baseBoostEfficacyError",
-    "ageBoostEfficacyError",
-    "schoolTypeError",
-    "adultWithdrawalError",
-    "childWithdrawalError",
-    "reducedGroupError",
-    "bccError",
-    "triggerRateError",
-    "triggerTotalError",
-    "vaccinePeriodError",
-    "schoolClosurePeriodError",
-    "withdrawalIncreasePeriodError",
-    "reducedGroupPeriodError",
-    "bccPeriodError",
-    "classDismissal",
-    "vaccineRemainingAgeGroups",
-    "primaryRemainingWanedGroups",
-    "boosterRemainingAgeGroups",
-    "socialRemainingAgeGroups",
-    "vaccineToggle",
-    "vaccineTrigger",
-    "vaccinePeriod",
-    "limitDosesToggle",
-    "initialDoseReserve",
-    "firstDoseRate",
-    "initialVaccinated",
-    "targetVaccinated",
-    "primaryDoseCount",
-    "primaryDelay",
-    "primaryDuration",
-    "primaryWanedEfficacy",
-    "primaryWaningRate",
-    "boosterToggle",
-    "boosterDoseCount",
-    "boosterDelay",
-    "boosterDuration",
-    "boosterBaseEfficacy",
-    "boosterWanedEfficacy",
-    "boosterWaningRate",
-    "socialDistancingToggle",
-    "socialDistancingCompliance",
-    "caseIsolation",
-    "classDismissal",
-    "schoolClosureToggle",
-    "schoolClosureTrigger",
-    "schoolClosurePeriod",
-    "schoolClosureTypes",
-    "schoolClosureCompliance",
-    "withdrawalIncreaseToggle",
-    "withdrawalIncreaseTrigger",
-    "withdrawalIncreasePeriod",
-    "withdrawalIncreaseAdult",
-    "withdrawalIncreaseChild",
-    "reducedGroupToggle",
-    "reducedGroupTrigger",
-    "reducedGroupPeriod",
-    "reducedGroupSize",
-    "bccToggle",
-    "bccTrigger",
-    "bccPeriod",
-    "bccReducedRate",
-    "rateStartThreshold",
-    "rateRelaxThreshold",
-    "caseTotalThreshold",
-}
 
-doubleParameterSet = {
-    "deathAgeGroup",
-    "deathRatio",
-    "transAgeGroup",
-    "kappaLocation",
-    "transInfect",
-    "transSuscept",
-    "kappaValue",
-    "seedCycle",
-    "seedNewRate",
-    "closeCycle",
-    "closeNewRate",
-    "bccCycle",
-    "bccNewRate",
-    "vacAgeGroup",
-    "primWanedGroup",
-    "boostAgeGroup",
-    "socialAgeGroup",
-    "primAgeRowCount",
-    "primaryRemainingAgeGroups",
-    "vacAgeInitial",
-    "vacAgeTarget",
-    "primAgeWanedEfficacy",
-    "primaryBaseEfficacy",
-    "boostAgeEfficacy",
-    "boostAgeWanedEfficacy",
-    "socialCompliance",
-}
-
-tripleParameterSet = {"primAgeGroup", "primAgeEfficacy"}
-
-
-# Simple function to add an additional scenario
 def addScenario():
-    session["scenarioCount"] += 1
-    newCount = session["scenarioCount"]
+    """
+    Simple function to initialise an empty scenario
+    """
+    newCount = session["scenarioCount"] + 1
+    session["scenarioCount"] = newCount
     session[f"scenarioName{newCount}"] = f"Scenario #{newCount}"
-    session["scenarioSetParams"][newCount] = []
-    session["scenarioSetParamsExtra"][newCount] = []
+    session["scenarioSetParams"][newCount] = set()
+    session["scenarioSetParamsExtra"][newCount] = set()
     session["activeErrors"][newCount] = {}
 
 
 # Function to delete a scenario from the page
-# TODO: Rebuild to be more stable and less reliant on a massive list
 @st.dialog("Delete Scenario", width="large", icon=":material/delete:")
-def deleteScenario(scenarioID):
+def deleteScenario(scenarioID: int):
+    """
+    Dialog function that removes a scenario if confirmed
+
+    Parameters:
+        scenarioID (int): The ID representing the scenario to be deleted.
+    """
     st.markdown(
         f"""
         Deleting the "{session[f'scenarioName{scenarioID}']}"
@@ -210,25 +67,37 @@ def deleteScenario(scenarioID):
 
         # Shift existing values down
         for s in range(scenarioID, scenarioCount):
-            for param in savedParams[s]:
-                session[f"{param}{s}"] = session[f"{param}{s + 1}"]
-                session[f"_{param}{s}"] = session[f"_{param}{s + 1}"]
-            for param, extra in savedExtraParams[s]:
-                session[f"{param}{s}{extra}"] = session[f"{param}{s + 1}{extra}"]
-                session[f"_{param}{s}{extra}"] = session[f"_{param}{s + 1}{extra}"]
+            paramsToConsider = savedParams[s] | savedParams[s + 1]
+            for param in paramsToConsider:
+                newValue = idGet(param, s + 1, None)
+                if newValue is None:
+                    del session[f"{param}{s}"]
+                else:
+                    session[f"{param}{s}"] = newValue
+                # session[f"_{param}{s}"] = idGet(f"_{param}", s + 1, None)
+            extraParamsToConsider = savedExtraParams[s] | savedExtraParams[s + 1]
+            for param, extra in extraParamsToConsider:
+                newValue = idGet(param, s + 1, None, extra=extra)
+                if newValue is None:
+                    del session[f"{param}{s}{extra}"]
+                else:
+                    session[f"{param}{s}{extra}"] = newValue
+                # session[f"_{param}{s}{extra}"] =
+                # idGet(f"_{param}", s+1, None, extra=extra)
             session["scenarioSetParams"][s] = savedParams[s + 1]
             session["scenarioSetParamsExtra"][s] = savedExtraParams[s + 1]
             session["activeErrors"][s] = session["activeErrors"][s + 1]
 
-        # Delete end scenario params
+        # Delete duplicated end scenario params
+        # TODO: Confirm if underscore params need to be deleted
         for param in savedParams[scenarioCount]:
             del session[f"{param}{scenarioCount}"]
-            del session[f"_{param}{scenarioCount}"]
+            # del session[f"_{param}{scenarioCount}"]
         for param, extra in savedExtraParams[scenarioCount]:
             del session[f"{param}{scenarioCount}{extra}"]
-            del session[f"_{param}{scenarioCount}{extra}"]
-        session["scenarioSetParams"][scenarioCount] = []
-        session["scenarioSetParamsExtra"][scenarioCount] = []
+            # del session[f"_{param}{scenarioCount}{extra}"]
+        del session["scenarioSetParams"][scenarioCount]
+        del session["scenarioSetParamsExtra"][scenarioCount]
         del session["activeErrors"][scenarioCount]
 
         # Update scenario count
@@ -322,7 +191,7 @@ for id in range(1, scenarioCount + 1):
             icon=":material/delete:",
             key=f"scenarioRemove{id}",
             on_click=deleteScenario,
-            args=[id],  # type: ignore
+            args=[id],
             help="""
                 Remove this scenario from the simulation set, thus
                 ensuring that it is not ran when you run the
@@ -336,16 +205,6 @@ for id in range(1, scenarioCount + 1):
         errorChecker(id, f"Errors in {scenarioName}")
 
         # Create tabs for each category of parameters
-        oldTabs = """
-        (basicTab, diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
-            [
-                ":material/start: Initialisation",
-                ":material/coronavirus: Disease",
-                ":material/groups: Community",
-                ":material/vaccines: Vaccination and NPIs",
-                ":material/manage_history: Dynamic",
-            ]
-        )"""
         (diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
             [
                 ":material/coronavirus: Disease",

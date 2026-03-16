@@ -93,6 +93,7 @@ def buildDiseaseTab(id: int):
             daily.
         """
         )
+        # TODO: Check if there's a better way to rerun that doesn't eat tabs
         loadKey("seedRate", id, 0.25)
         st.select_slider(
             "Infection Seeding Rate (Average Individuals per Cycle)",
