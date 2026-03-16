@@ -44,7 +44,8 @@ vaccineLog = logging.getLogger(__name__)
 session = st.session_state
 
 
-# TODO: Figure out what makes vaccination not happen with our baselines
+# TODO: See if the vaccination trigger parameters are fully working
+# and reimplement them if they are
 @st.fragment
 def buildVaccinationNPITab(id: int):
     """

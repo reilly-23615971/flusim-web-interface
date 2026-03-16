@@ -876,6 +876,8 @@ group to contract the disease when interacting with infected individuals.
         # TODO: Consider having these be just infected proportion rather than
         # infected symptomatic proportion (which one is easier for
         # researchers to calculate?)
+        # TODO: Spreadsheet is most likely referring to symptomatic infection rate
+        # already; adjust defaults accordingly
         # TODO: Note how scientific notation works in the description or something
         loadKey("caseRatio", id, 0.5)
         st.number_input(
@@ -911,12 +913,12 @@ group to contract the disease when interacting with infected individuals.
                 (GP) as a result of the disease.
             """,
         )
-        loadKey("hospitalRatio", id, 0.01374491)
+        loadKey("hospitalRatio", id, 0.00316133)
         st.number_input(
             "Hospitalisation Rate (Proportion of Population)",
             min_value=0.0,
             max_value=1.0,
-            value=0.01374491,
+            value=0.00316133,
             step=0.00001,
             format="%0.5e",
             key=f"_hospitalRatio{id}",
@@ -928,12 +930,12 @@ group to contract the disease when interacting with infected individuals.
                 result of the disease.
             """,
         )
-        loadKey("icuRatio", id, 0.00274898)
+        loadKey("icuRatio", id, 0.00063227)
         st.number_input(
             "ICU Visit Rate (Proportion of Population)",
             min_value=0.0,
             max_value=1.0,
-            value=0.00274898,
+            value=0.00063227,
             step=0.00001,
             format="%0.5e",
             key=f"_icuRatio{id}",
@@ -946,12 +948,12 @@ group to contract the disease when interacting with infected individuals.
                 disease.
             """,
         )
-        loadKey("deathRatio", id, 0.00050034)
+        loadKey("deathRatio", id, 0.000115077)
         deathRate = st.number_input(
             "Mortality Rate (Proportion of Population)",
             min_value=0.0,
             max_value=1.0,
-            value=0.00050034,
+            value=0.000115077,
             step=0.00001,
             format="%0.5e",
             key=f"_deathRatio{id}",
@@ -1095,12 +1097,12 @@ group who will die as a direct result of the disease.
                 """,
                 )
             # Mortality column
-            loadKey("deathRatio", id, 0.00050034, f"-{i}")
+            loadKey("deathRatio", id, 0.000115077, f"-{i}")
             with deathRateColumn:
                 st.select_slider(
                     "Mortality Rate (Probability)",
                     np.linspace(0.0, 1.0, 201),
-                    0.00050034,
+                    0.000115077,
                     key=f"_deathRatio{id}-{i}",
                     on_change=saveKey,
                     args=["deathRatio", id, f"-{i}"],  # type: ignore
@@ -1277,7 +1279,7 @@ def diseaseSchema(schema: Parameters, id: int = 0):
             if schema.Scenario_ParameterWithAgePrefix
             else ageScenarioParameters()
         )
-        deathRate = idGet("deathRatio", id, 0.00050034)
+        deathRate = idGet("deathRatio", id, 0.000115077)
         ageScenarioParams.mort = deathRate
         schema.Scenario_ParameterWithAgePrefix = ageScenarioParams
 
@@ -1311,7 +1313,7 @@ def diseaseSchema(schema: Parameters, id: int = 0):
         ) * 2
         # Health Burden Outcomes
         scenarioParams.prob_diagnosis = idGet("caseRatio", id, 0.5)
-        scenarioParams.prob_hospitalisation = idGet("hospitalRatio", id, 0.01374491)
+        scenarioParams.prob_hospitalisation = idGet("hospitalRatio", id, 0.00316133)
         scenarioParams.prob_withdrawal = idGet("withdrawalWork", id, 0.5)
         scenarioParams.prob_school_withdrawal = idGet("withdrawalSchool", id, 0.9)
         # Immunity Waning

@@ -164,7 +164,7 @@ def generateTable():
         }"""
         session.DataMortalityRates = {
             scenarioNames[scenarioID]: {
-                age: idGet("deathRatio", scenarioID, 0.00050034) for age in ageWithTime
+                age: idGet("deathRatio", scenarioID, 0.000115077) for age in ageWithTime
             }
             | (
                 idGet(
@@ -226,14 +226,14 @@ def generateTable():
 
     # Colour the index cells
 
-    # Generate and map colour palette
+    # Generate and map scenario colour palette
     scenarioColourMap = brightCodes[: len(scenarioNames)]
     scenarioColourDictionary = {
         scenario: to_hex(scenarioColourMap[index])
         for index, scenario in enumerate(scenarioNames)
     }
 
-    # Apply the colours
+    # Apply the colours to the scenario column
     def scenarioColourString(value):
         colour = scenarioColourDictionary[value]
         return f"background-color: {colour}; color: {selectTextColour(colour)}"
@@ -263,6 +263,11 @@ def generateTable():
             vmax=1,
             subset=[column],
             gmap=getSlopeNorm(colVals)(colVals),  # type: ignore
+        )
+        # Set white background for NA values to make them readable
+        ageStyle = ageStyle.map(
+            lambda val: "background-color: #F7F7F7" if pd.isna(val) else "",
+            subset=[column],
         )
 
     # Save the generated table
@@ -713,7 +718,11 @@ tableConfig = session.get("HealthOutcomeTableConfig")
 if tableData is not None:
     st.header("Health Burden Outcome Table")
     st.dataframe(
-        tableData, height="content", column_config=tableConfig, hide_index=True
+        tableData,
+        height="content",
+        column_config=tableConfig,
+        hide_index=True,
+        placeholder="N/A",
     )
 
     # Button to download the CSV data used by the table
