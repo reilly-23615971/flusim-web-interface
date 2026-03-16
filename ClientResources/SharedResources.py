@@ -26,6 +26,9 @@ saveJSON = False
 
 # Other Constants
 
+# Maximum number of additional scenarios
+maxScenarios = 4
+
 # URLs where client/server is located (change to hosted URLs)
 clientUrl = "http://localhost:8501/"
 serverUrl = "http://127.0.0.1:8000/"
@@ -45,7 +48,6 @@ ordinals = {
     9: "Ninth",
     10: "Tenth",
 }
-
 
 # Dictionary getting the population of each community the simulator uses
 communityPopulation = {"newcastle": 272407, "cairns": 140402}

@@ -4,19 +4,17 @@
 
 # Imports
 import logging
+
 import streamlit as st
+
+from ClientResources.InterfaceFunctions import errorChecker, loadKey, rerunTime, saveKey
+from ClientResources.SharedResources import maxScenarios
+from ParameterTabs.communityParams import buildCommunityTab
 
 # from ParameterTabs.basicParams import buildBasicTab, rerunTime
 from ParameterTabs.diseaseParams import buildDiseaseTab
-from ParameterTabs.communityParams import buildCommunityTab
-from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
 from ParameterTabs.dynamicParams import buildDynamicTab
-from ClientResources.InterfaceFunctions import (
-    saveKey,
-    loadKey,
-    errorChecker,
-    rerunTime,
-)
+from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
 
 # Logging
 scenarioLog = logging.getLogger(__name__)
@@ -243,11 +241,11 @@ st.title("Scenario Parameters")
 
 st.markdown(
     (
-        """
+        f"""
     This page allows for configuring the parameters that will be used
     in different scenarios by the simulation. To allow for direct
     comparison of different parameter sets, you may define a series of
-    scenarios in which different parameter values are used. Up to 4
+    scenarios in which different parameter values are used. Up to {maxScenarios}
     additional scenarios plus the baseline can be run in a single
     simulation.
 
@@ -382,16 +380,16 @@ st.button(
     icon=":material/add:",
     on_click=addScenario,
     key=f"scenarioAdd{id}",
-    disabled=not scenarioCount < 4,
+    disabled=not scenarioCount < maxScenarios,
     help=(
         """
         Add another scenario to the simulation, where you can configure
         different parameter values to use instead of the baseline
         values.
     """
-        if scenarioCount <= 3
-        else """
-        To keep the number of scenarios manageable, no more than 4
+        if scenarioCount < maxScenarios
+        else f"""
+        To keep the number of scenarios manageable, no more than {maxScenarios}
         scenarios plus the baseline may be added to the simulation set
         at once.
     """

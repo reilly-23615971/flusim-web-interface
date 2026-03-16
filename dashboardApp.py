@@ -24,7 +24,12 @@ except ImportError:
 
 # from streamlit_notify import notify, toast  # type: ignore
 
-from ClientResources.SharedResources import resultQueue, usePresetData, usePresetParams
+from ClientResources.SharedResources import (
+    maxScenarios,
+    resultQueue,
+    usePresetData,
+    usePresetParams,
+)
 
 # from ClientResources.SimulationRunFunctions import runSimulationButton
 
@@ -112,8 +117,8 @@ sessionParameters = {
     "simulationInProgress": False,
     "scenarioCount": 0,
     "sessionID": int(datetime.now().timestamp()),
-    "scenarioSetParamsExtra": {1: [], 2: [], 3: [], 4: [], 5: []},
-    "scenarioSetParams": {1: [], 2: [], 3: [], 4: [], 5: []},
+    "scenarioSetParamsExtra": {i: [] for i in range(1, maxScenarios + 1)},
+    "scenarioSetParams": {i: [] for i in range(1, maxScenarios + 1)},
     "activeErrors": {0: {}},
 }
 for parameter, default in sessionParameters.items():
