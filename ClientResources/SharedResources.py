@@ -27,7 +27,7 @@ saveJSON = False
 # Other Constants
 
 # Maximum number of additional scenarios
-maxScenarios = 4
+maxScenarios = 20
 
 # URLs where client/server is located (change to hosted URLs)
 clientUrl = "http://localhost:8501/"
@@ -201,6 +201,7 @@ def backgroundColour():
 
 
 # Colour codes for Paul Tol's "bright" colourblind-safe palette
+# (and other pallettes if enough scenarios are created)
 brightCodes = (
     "#BBBBBB",
     "#4477AA",
@@ -209,9 +210,24 @@ brightCodes = (
     "#CCBB44",
     "#66CCEE",
     "#AA3377",
-    "#000000",
+    "#EE7733",
+    "#0077BB",
+    "#33BBEE",
+    "#EE3377",
+    "#CC3311",
+    "#009988",
+    "#CC6677",
+    "#332288",
+    "#DDCC77",
+    "#117733",
+    "#88CCEE",
+    "#882255",
+    "#448899",
 )
 
+# Extend pallette list if absolutely necessary
+while len(brightCodes) < maxScenarios:
+    brightCodes = brightCodes + brightCodes  # type: ignore
 
 """
 Class for analysis file parameters

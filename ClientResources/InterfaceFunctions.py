@@ -283,7 +283,6 @@ def timeScaleChange():
                 )
     for param, form in dynamicParamList.items():
         dynamicScaleChange(param, form, 0, noSave=True)
-    # session["rerunTime"] = True
 
 
 def dynamicScaleChange(
@@ -340,6 +339,7 @@ def dynamicScaleChange(
         session["rerunTime"] = True
 
 
+# TODO: Remove this and replace any functions that use it
 @st.fragment(run_every=1)
 def rerunTime():
     """

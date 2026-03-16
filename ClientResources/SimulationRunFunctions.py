@@ -334,10 +334,11 @@ async def runModel(scenarioNames: list[str], parameterJSON: str):
         functionLog.info(
             f"[runModel] Initialising session with base url {serverUrl}..."
         )
+        # TODO: Adjust timeout as necessary (2 hours isn't normal)
         async with ClientSession(
             raise_for_status=False,
             base_url=serverUrl,
-            timeout=ClientTimeout(total=1800),
+            timeout=ClientTimeout(total=7200),
         ) as session:
             functionLog.info("[runModel] Sending post request...")
             async with session.post(
