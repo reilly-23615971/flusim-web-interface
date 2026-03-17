@@ -7,7 +7,7 @@ import logging
 
 import streamlit as st
 
-from ClientResources.InterfaceFunctions import errorChecker, rerunTime
+from ClientResources.InterfaceFunctions import errorChecker
 from ParameterTabs.communityParams import buildCommunityTab
 
 # from streamlit_push_notifications import send_push, send_alert
@@ -48,7 +48,6 @@ st.markdown(
 
 # Fragments to display errors and rerun on sim length change
 errorChecker(0)
-rerunTime()
 
 
 # TODO: Consider having a tab for templates that load parameters for
@@ -64,22 +63,21 @@ rerunTime()
         ":material/groups: Community",
         ":material/vaccines: Vaccination and NPIs",
         ":material/manage_history: Dynamic",
-    ]
+    ],
+    on_change="rerun",
+    key="paramTabs0",
 )
 # TODO: :material/pattern: for the template tab
 
-# Disease parameters
-with diseaseTab:
-    buildDiseaseTab(0)
-
-# Environment parameters
-with communityTab:
-    buildCommunityTab(0)
-
-# Vaccination and NPIs
-with interventionTab:
-    buildVaccinationNPITab(0)
-
-# Dynamic parameters
-with dynamicTab:
-    buildDynamicTab(0)
+if diseaseTab.open:
+    with diseaseTab:
+        buildDiseaseTab(0)
+if communityTab.open:
+    with communityTab:
+        buildCommunityTab(0)
+if interventionTab.open:
+    with interventionTab:
+        buildVaccinationNPITab(0)
+if dynamicTab.open:
+    with dynamicTab:
+        buildDynamicTab(0)

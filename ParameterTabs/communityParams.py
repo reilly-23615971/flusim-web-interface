@@ -21,6 +21,7 @@ from ClientResources.ModelSchema import Parameters, scenarioParameters
 communityLog = logging.getLogger(__name__)
 
 
+# TODO: Optimise expanders with rerun functionality if need be
 @st.fragment
 def buildCommunityTab(id: int):
     """

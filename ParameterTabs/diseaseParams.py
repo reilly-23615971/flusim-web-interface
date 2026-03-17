@@ -20,7 +20,6 @@ from ClientResources.InterfaceFunctions import (
     loadKey,
     paramError,
     saveKey,
-    saveWithRerun,
 )
 from ClientResources.ModelSchema import (
     Parameters,
@@ -37,6 +36,7 @@ diseaseLog = logging.getLogger(__name__)
 session = st.session_state
 
 
+# TODO: Optimise expanders with rerun functionality if need be
 @st.fragment
 def buildDiseaseTab(id: int):
     """
@@ -100,7 +100,7 @@ def buildDiseaseTab(id: int):
             np.linspace(0.025, 5.0, 200),
             0.25,
             key=f"_seedRate{id}",
-            on_change=saveWithRerun,
+            on_change=saveKey,
             args=["seedRate", id],  # type: ignore
             format_func=lambda x: f"{x:0.4g}",
             help="""
@@ -586,6 +586,7 @@ group to contract the disease when interacting with infected individuals.
         )
 
         # Asymptomatic params
+        # TODO: See if other slider options are more percent-friendly
         loadKey("asymptomaticChild", id, 0.35)
         st.select_slider(
             "Probability of Young (0-24) Asymptomatic Case",

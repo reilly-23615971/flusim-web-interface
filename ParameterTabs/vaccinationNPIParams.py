@@ -18,7 +18,6 @@ from ClientResources.InterfaceFunctions import (
     loadKey,
     paramError,
     saveKey,
-    saveWithRerun,
 )
 from ClientResources.ModelSchema import (
     Parameters,
@@ -46,6 +45,7 @@ session = st.session_state
 
 # TODO: See if the vaccination trigger parameters are fully working
 # and reimplement them if they are
+# TODO: Optimise expanders with rerun functionality if need be
 @st.fragment
 def buildVaccinationNPITab(id: int):
     """
@@ -216,6 +216,7 @@ def buildVaccinationNPITab(id: int):
                     assuming there are enough doses available.
                 """,
             )
+            # TODO: Change to numeric input/proportion/more precise slider
             loadKey("initialVaccinated", id, 0.0)
             initialVaccinated = st.select_slider(
                 "Initial Vaccinated Proportion of Population",
@@ -813,6 +814,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
                 will affect how many sections are present here.
             """
             )
+            # TODO: Change to numeric input/proportion/more precise slider
             for i in range(primaryDoseCount):
                 with st.container(border=True):
                     st.markdown(f"#### {ordinals[i+1]} Vaccine Dose")
@@ -2487,7 +2489,7 @@ social distancing interventions in the simulation.
             useSchoolClosureToggle = st.toggle(
                 "Enable School Closures",
                 value=False,
-                on_change=saveWithRerun,
+                on_change=saveKey,
                 args=["schoolClosureToggle", id],  # type: ignore
                 key=f"_schoolClosureToggle{id}",
                 help="""
@@ -2616,8 +2618,8 @@ social distancing interventions in the simulation.
                 0.9,
                 format_func=lambda x: f"{100 * x:0.3g}%",
                 disabled=not useSchoolClosureToggle,
-                on_change=saveWithRerun,
-                args=["schoolClosureCompliance", id],  # type: ignore
+                on_change=saveKey,
+                args=["schoolClosureCompliance", id],
                 key=f"_schoolClosureCompliance{id}",
                 help="""
                     The probability that an individual will
@@ -3046,8 +3048,8 @@ social distancing interventions in the simulation.
             useBCCToggle = st.toggle(
                 "Enable BCC Reduction",
                 value=False,
-                on_change=saveWithRerun,
-                args=["bccToggle", id],  # type: ignore
+                on_change=saveKey,
+                args=["bccToggle", id],
                 key=f"_bccToggle{id}",
                 help="""
                     Toggle whether or not background contact count
@@ -3166,8 +3168,8 @@ social distancing interventions in the simulation.
                 8.0,
                 0.2,
                 disabled=not useBCCToggle,
-                on_change=saveWithRerun,
-                args=["bccReducedRate", id],  # type: ignore
+                on_change=saveKey,
+                args=["bccReducedRate", id],
                 key=f"_bccReducedRate{id}",
                 help="""
                     The average number of other people each
