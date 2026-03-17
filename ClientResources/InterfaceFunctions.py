@@ -125,6 +125,9 @@ def errorChecker(scenarioID: int, name: str = "Errors in Current Scenario"):
 
 
 # Widget Functions
+# TODO: See if dataframes can not reload after every change
+# TODO: See if scenario dataframes can adapt to baseline changes
+# (e.g. by having None/NA cells with the placeholder "Same as baseline")
 def saveKey(
     key: str,
     scenarioID: int | Literal[""] = "",

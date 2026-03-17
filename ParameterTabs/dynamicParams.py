@@ -387,6 +387,9 @@ each day of the simulation is 2 cycles.
         ),
     )'''
 
+    # TODO: Consider hiding inactive forms (e.g. school closure compliance
+    # when school closures are disabled) instead of merely disabling input
+
     # School Closure Compliance
     st.subheader("School Closure Compliance")
     closeActive = idGet("schoolClosureToggle", id, False)

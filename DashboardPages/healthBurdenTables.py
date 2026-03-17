@@ -364,7 +364,7 @@ specified health burden outcomes in that scenario.
             """,
         )
         if not scenariosToUse:
-            healthOutcomeErrorContainer.error(
+            st.error(
                 """
             Error: No scenarios have been included in the table. If you
             attempt to generate the table now, it will be empty. Please
@@ -421,7 +421,7 @@ in the case of the 'Total' group).
         """,
     )
     if not agesToUse:
-        healthOutcomeErrorContainer.error(
+        st.error(
             """
         Error: No age groups have been included in the table. If you
         attempt to generate the table now, it will be empty. Please

@@ -243,6 +243,7 @@ def plotEpidemic(
     scenarioNames = data["Scenario"].unique()
 
     # Remove any scenarios/age groups not specified in the data
+    # TODO: Affect the legend as well, preferably without affecting the colours
     if includedScenarios != "all":
         newData = data[data["Scenario"].isin(includedScenarios)]
     else:
@@ -446,6 +447,9 @@ other age groups list the age range they cover as part of their name.
 
     # Generate columns
     # TODO: See if case matching is better here than elif chains
+    # TODO: Redo system to ensure scaled columns are consistent
+    # (difference from baseline should report the accurate difference in that column)
+    # (also double check if %diff accounts for rounding beforehand)
     for outcome, proportion, baselineDifference in columns:
         # Multiply base infection rate with corresponding outcome rate
         if outcome not in {"Symptomatic Infections", "Deaths"}:

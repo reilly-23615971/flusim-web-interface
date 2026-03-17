@@ -176,6 +176,8 @@ def buildVaccinationNPITab(id: int):
                     simulation.
                 """,
             )
+            # TODO: Consider hiding when doses aren't limited
+            # instead of merely disabling input
             loadKey("initialDoseReserve", id, 0)
             st.number_input(
                 "Total Number of Vaccine First Doses",
@@ -1649,11 +1651,12 @@ immunity will not remain healthy when exposed to the disease.
                     where a month is 30 days.
                 """,
             )
-            # TODO: Fix conditions so doesn't trigger when boosters are disabled
             paramError(
                 "boosterWanesTooFast",
                 id,
-                lambda: boosterDelay > boosterDuration,
+                lambda: useVaccinesToggle
+                and useBoostersToggle
+                and boosterDelay > boosterDuration,
                 f"""
                     Error: The time between booster vaccine doses used by the {
                         'baseline scenario' if id == 0
@@ -2593,6 +2596,8 @@ social distancing interventions in the simulation.
                         icon=":material/info:",
                     )
                 # Case triggers
+                # TODO: Update these links to go directly to the parameter
+                # in question (using container.open and the like)
                 elif schoolClosureTrigger in {
                     "Community Case Total",
                     "Cases per School",

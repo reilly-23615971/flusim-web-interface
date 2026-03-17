@@ -93,7 +93,6 @@ def buildDiseaseTab(id: int):
             daily.
         """
         )
-        # TODO: Check if there's a better way to rerun that doesn't eat tabs
         loadKey("seedRate", id, 0.25)
         st.select_slider(
             "Infection Seeding Rate (Average Individuals per Cycle)",
@@ -878,8 +877,6 @@ group to contract the disease when interacting with infected individuals.
         # TODO: Consider having these be just infected proportion rather than
         # infected symptomatic proportion (which one is easier for
         # researchers to calculate?)
-        # TODO: Spreadsheet is most likely referring to symptomatic infection rate
-        # already; adjust defaults accordingly
         # TODO: Note how scientific notation works in the description or something
         loadKey("caseRatio", id, 0.5)
         st.number_input(

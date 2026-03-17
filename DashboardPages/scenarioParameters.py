@@ -67,7 +67,6 @@ def deleteScenario(scenarioID: int):
                     del session[f"{param}{s}"]
                 else:
                     session[f"{param}{s}"] = newValue
-                # session[f"_{param}{s}"] = idGet(f"_{param}", s + 1, None)
             extraParamsToConsider = savedExtraParams[s] | savedExtraParams[s + 1]
             for param, extra in extraParamsToConsider:
                 newValue = idGet(param, s + 1, None, extra=extra)
@@ -75,20 +74,15 @@ def deleteScenario(scenarioID: int):
                     del session[f"{param}{s}{extra}"]
                 else:
                     session[f"{param}{s}{extra}"] = newValue
-                # session[f"_{param}{s}{extra}"] =
-                # idGet(f"_{param}", s+1, None, extra=extra)
             session["scenarioSetParams"][s] = savedParams[s + 1]
             session["scenarioSetParamsExtra"][s] = savedExtraParams[s + 1]
             session["activeErrors"][s] = session["activeErrors"][s + 1]
 
         # Delete duplicated end scenario params
-        # TODO: Confirm if underscore params need to be deleted
         for param in savedParams[scenarioCount]:
             del session[f"{param}{scenarioCount}"]
-            # del session[f"_{param}{scenarioCount}"]
         for param, extra in savedExtraParams[scenarioCount]:
             del session[f"{param}{scenarioCount}{extra}"]
-            # del session[f"_{param}{scenarioCount}{extra}"]
         del session["scenarioSetParams"][scenarioCount]
         del session["scenarioSetParamsExtra"][scenarioCount]
         del session["activeErrors"][scenarioCount]
