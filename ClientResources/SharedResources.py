@@ -211,18 +211,10 @@ brightCodes = (
     "#66CCEE",
     "#AA3377",
     "#EE7733",
-    "#0077BB",
-    "#33BBEE",
-    "#EE3377",
     "#CC3311",
     "#009988",
-    "#CC6677",
     "#332288",
-    "#DDCC77",
-    "#117733",
-    "#88CCEE",
     "#882255",
-    "#448899",
 )
 
 # Extend pallette list if absolutely necessary
