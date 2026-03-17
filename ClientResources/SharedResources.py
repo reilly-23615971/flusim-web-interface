@@ -27,7 +27,7 @@ saveJSON = False
 # Other Constants
 
 # Maximum number of additional scenarios
-maxScenarios = 20
+maxScenarios = 10
 
 # URLs where client/server is located (change to hosted URLs)
 clientUrl = "http://localhost:8501/"
