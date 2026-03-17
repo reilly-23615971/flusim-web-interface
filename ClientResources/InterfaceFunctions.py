@@ -323,17 +323,6 @@ def dynamicScaleChange(
                 session[fullKey] = form
 
 
-# TODO: Remove this and replace any functions that use it
-@st.fragment(run_every=1)
-def rerunTime():
-    """
-    Fragment for rerunning the app when simulation length changes
-    """
-    if session.get("rerunTime", None):
-        session["rerunTime"] = False
-        st.rerun(scope="app")
-
-
 def idGet(key: str, scenarioID: int, defaultValue, extra: Optional[str] = None):
     """
     Simple function to get a specific session state value with a specific
