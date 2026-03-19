@@ -7,3 +7,5 @@ TestData/*
 modelConfig.guide.json
 samples/*
 __pycache__/*
+savedJSON.json
+FullLAIVJSON.json
