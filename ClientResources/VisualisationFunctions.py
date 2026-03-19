@@ -393,6 +393,7 @@ def formatAsir(
     framedData.columns = pd.Index(["Total"] + ageWithTime)
 
     # Scale the data by symptomatic likelihood
+    # TODO: Heed the pandas deprecation warning regarding implicit casting
     asymptomaticChild, asymptomaticAdult = zip(*session.DataAsymptomatic)
     framedData.loc[:, ageWithTime[:6]] = framedData.loc[:, ageWithTime[:6]].mul(
         asymptomaticChild, axis=0

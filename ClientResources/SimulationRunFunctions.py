@@ -139,6 +139,10 @@ def runSimulationButton():
     """
     Callback function for the Run Simulation button
     """
+    # Disable button if it's taking a while to run
+    runPending = bool(session.get("confirmRunButton"))
+
+    # List scenarios
     scenarioCount = session.get("scenarioCount", 0)
     if scenarioCount == 0:
         st.markdown(
@@ -201,7 +205,12 @@ simulation.
             selected parameters?
         """
         )
-        if st.button("Confirm"):
+        if st.button(
+            "Confirm",
+            key="confirmRunButton",
+            icon="spinner" if runPending else None,
+            disabled=runPending,
+        ):
             # Set params indicating model is simulating
             session.simulationInProgress = True
             session.simulationStartTime = datetime.now()

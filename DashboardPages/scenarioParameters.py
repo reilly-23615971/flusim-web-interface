@@ -45,6 +45,8 @@ def deleteScenario(scenarioID: int):
     Parameters:
         scenarioID (int): The ID representing the scenario to be deleted.
     """
+    # Disable button if it's taking a while to delete
+    deletePending = bool(session.get("confirmDeleteButton"))
     st.markdown(
         f"""
         Removing the "{session[f'scenarioName{scenarioID}']}"
@@ -52,8 +54,12 @@ def deleteScenario(scenarioID: int):
         you sure you want to remove this scenario?
     """
     )
-    # TODO: Disable button while deletion is in progress
-    if st.button("Confirm"):
+    if st.button(
+        "Confirm",
+        key="confirmDeleteButton",
+        icon="spinner" if deletePending else None,
+        disabled=deletePending,
+    ):
         # Get set of saved params
         savedParams = session["scenarioSetParams"]
         savedExtraParams = session["scenarioSetParamsExtra"]
