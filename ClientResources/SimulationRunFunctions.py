@@ -302,6 +302,7 @@ simulation.
 
 # TODO: Clean up this function so that errors are more easily read
 # and the returned types don't need as much checking
+# TODO: See if st.cache_data makes a difference here
 async def runModel(scenarioNames: list[str], parameterJSON: str):
     """
     Asynchronous function to send JSON model parameters to the server, awaiting a

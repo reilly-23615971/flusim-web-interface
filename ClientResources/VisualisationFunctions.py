@@ -3,11 +3,10 @@
 # Functions used by tables and graphs
 
 # Imports
-import os
 import logging
 from io import BytesIO
 from math import ceil
-from typing import Literal
+from typing import Any, Literal
 
 import altair as alt
 import numpy as np
@@ -305,7 +304,7 @@ def formatAsir(
     columns: list[tuple[str, bool, bool]] = [("Symptomatic Infections", False, False)],
     includedScenarios: list[str] | Literal["all"] = "all",
     includedAges: list[str] | Literal["all", False] = "all",
-) -> tuple[pd.DataFrame, dict[str, ColumnConfig], list[str], list[str]]:
+) -> tuple[pd.DataFrame, dict[str, ColumnConfig], set[str], set[str]]:
     """
     Function to convert raw data from the age-specific infection rate
     ('asir') Flusim analysis tool into the desired DataFrame format for
@@ -343,10 +342,10 @@ def formatAsir(
         columnConfig (dict of str and ColumnConfig): A dictionary storing the
             configuration settings for each column in the table.
 
-        percentCols (list of str): A list of strings holding the names of
+        percentCols (set of str): A set of strings holding the names of
             each column that uses percentage formatting.
 
-        differenceCols (list of str): A list of strings holding the names of
+        differenceCols (set of str): A set of strings holding the names of
             each column that uses difference from baseline formatting.
 
     Raises:
@@ -401,14 +400,13 @@ def formatAsir(
     framedData.loc[:, ageWithTime[6:]] = framedData.loc[:, ageWithTime[6:]].mul(
         asymptomaticAdult, axis=0
     )
-    framedData["Total"] = framedData.loc[:, ageWithTime].sum(axis=1)
 
     # Reset indices
     framedData.index = pd.Index(scenarioNames)
     framedData.reset_index(names="Scenario", inplace=True)
 
     # Reshape data for better Streamlit usage with placeholder infections
-    meltedData = framedData.melt(
+    meltedData = framedData.round().melt(
         "Scenario", var_name="Age Group", value_name="Base Values"
     )
 
@@ -423,8 +421,7 @@ def formatAsir(
     community = session.DataCommunity
 
     # Generate config data for Streamlit display
-    percentCols = []
-    differenceCols = []
+    percentCols, differenceCols = set(), set()
     columnConfig = {}
 
     columnConfig["Scenario"] = st.column_config.TextColumn(
@@ -445,44 +442,74 @@ other age groups list the age range they cover as part of their name.
     """,
     )
 
+    # Prepare burden-scaled columns beforehand for efficiency
+    requiredOutcomes = {outcome for outcome, _, _ in columns}
+    outcomeColumns: dict[str, pd.Series[Any]] = {}
+    outcomeBaselines: dict[str, pd.Series[Any]] = {}
+    for outcome in requiredOutcomes:
+        match outcome:
+            case "Symptomatic Infections":
+                scaledColumn = meltedData["Base Values"].copy()
+                scaledBaseline = baselineValues.copy()
+            case "Deaths":
+                # Account for age-specific mortality
+                # Convert death rates to DataFrame for efficiency
+                deathRates = pd.DataFrame(session.DataMortalityRates).T.stack()
+                dataIndexValues = pd.MultiIndex.from_frame(
+                    meltedData[["Scenario", "Age Group"]]
+                )
+                scaledColumn = (
+                    meltedData["Base Values"]
+                    * pd.Series(
+                        dataIndexValues.map(deathRates), index=meltedData.index
+                    ).fillna(
+                        meltedData["Scenario"].map(
+                            session["DataHealthOutcomeRates"]["Deaths"]
+                        )
+                    )
+                ).round()
+
+                # Baseline values
+                baselineDeath = session.DataMortalityRates[baselineScenario]
+                scaledBaseline = (
+                    baselineValues
+                    * (
+                        meltedData["Age Group"]
+                        .map(baselineDeath)
+                        .fillna(
+                            session["DataHealthOutcomeRates"]["Deaths"][
+                                baselineScenario
+                            ]
+                        )
+                    )
+                ).round()
+            case _:
+                scaledColumn = (
+                    meltedData["Base Values"]
+                    * meltedData["Scenario"].map(
+                        session["DataHealthOutcomeRates"][outcome]
+                    )
+                ).round()
+                scaledBaseline = (
+                    baselineValues
+                    * (session["DataHealthOutcomeRates"][outcome][baselineScenario])
+                ).round()
+        # Recalculate totals to avoid rounding-induced mismatch
+        if includedAges and (includedAges == "all" or "Total" in includedAges):
+            scenarioCount = len(scenarioNames)
+            scaledColumn.iloc[:scenarioCount] = (
+                scaledColumn.groupby(scaledColumn.index % scenarioCount).sum()
+                - scaledColumn.iloc[:scenarioCount]
+            )
+            scaledBaseline.iloc[:scenarioCount] = scaledColumn.iloc[0]
+        outcomeColumns[outcome] = scaledColumn
+        outcomeBaselines[outcome] = scaledBaseline
+
     # Generate columns
     # TODO: See if case matching is better here than elif chains
-    # TODO: Redo system to ensure scaled columns are consistent
-    # (difference from baseline should report the accurate difference in that column)
-    # (also double check if %diff accounts for rounding beforehand)
     for outcome, proportion, baselineDifference in columns:
-        # Multiply base infection rate with corresponding outcome rate
-        if outcome not in {"Symptomatic Infections", "Deaths"}:
-            currentColumn = meltedData["Base Values"] * meltedData["Scenario"].map(
-                session["DataHealthOutcomeRates"][outcome]
-            )
-            columnBaselines = baselineValues * (
-                session["DataHealthOutcomeRates"][outcome]["Baseline"]
-            )
-        elif outcome == "Deaths":
-            # Account for age-specific mortality
-            # Convert death rates to DataFrame for efficiency
-            deathRates = pd.DataFrame(session.DataMortalityRates).T.stack()
-            dataIndexValues = pd.MultiIndex.from_frame(
-                meltedData[["Scenario", "Age Group"]]
-            )
-            currentColumn = meltedData["Base Values"] * pd.Series(
-                dataIndexValues.map(deathRates), index=meltedData.index
-            ).fillna(
-                meltedData["Scenario"].map(session["DataHealthOutcomeRates"]["Deaths"])
-            )
-
-            # Baseline values
-            baselineDeath = session.DataMortalityRates["Baseline"]
-            columnBaselines = baselineValues * (
-                meltedData["Age Group"]
-                .map(baselineDeath)
-                .fillna(session["DataHealthOutcomeRates"]["Deaths"]["Baseline"])
-            )
-
-        else:
-            currentColumn = meltedData["Base Values"].copy()
-            columnBaselines = baselineValues.copy()
+        currentColumn = outcomeColumns[outcome]
+        columnBaselines = outcomeBaselines[outcome]
 
         # Apply proportion/difference modifications
         # TODO: Either fix or disable just proportion
@@ -497,9 +524,9 @@ that was {outcomeDescriptions[outcome]}, as a
 percentage.
             """
             )
-            percentCols.append(columnName)
+            percentCols.add(columnName)
         elif not proportion and baselineDifference:
-            currentColumn = (currentColumn - columnBaselines).round()
+            currentColumn = currentColumn - columnBaselines
             columnName = f"{outcome} (Difference from Baseline)"
             columnConfig[columnName] = st.column_config.Column(
                 help=f"""
@@ -511,11 +538,11 @@ and the number of people who were
 scenario{' (in the same age group)' if includedAges else ''}.
             """
             )
-            differenceCols.append(columnName)
+            differenceCols.add(columnName)
         elif proportion and baselineDifference:
-            currentColumn = currentColumn.round() - columnBaselines.round()
+            currentColumn = currentColumn - columnBaselines
             # Account for potential division by 0
-            currentColumn = (currentColumn / columnBaselines.round()).where(
+            currentColumn = (currentColumn / columnBaselines).where(
                 columnBaselines != 0, other=np.nan
             )
             columnName = f"{outcome} (% Difference from Baseline)"
@@ -530,10 +557,9 @@ scenario{' (in the same age group)' if includedAges else ''},
 as a percentage.
             """
             )
-            percentCols.append(columnName)
-            differenceCols.append(columnName)
+            percentCols.add(columnName)
+            differenceCols.add(columnName)
         else:
-            currentColumn = currentColumn.round()
             columnName = outcome
             columnConfig[columnName] = st.column_config.Column(
                 help=f"""
@@ -548,22 +574,6 @@ who were {outcomeDescriptions[outcome]}.
 
     # Remove the base values column once it's redundant
     meltedData.drop("Base Values", axis=1, inplace=True)
-
-    # Recalculate totals to be accurate sums of the other columns
-    # TODO: Recalculate total percentages as well
-    for scenario in scenarioNames:
-        meltedData.loc[
-            (meltedData["Scenario"] == scenario) & (meltedData["Age Group"] == "Total"),
-            meltedData.columns.difference(["Scenario", "Age Group"] + percentCols),
-        ] = (
-            meltedData.loc[
-                (meltedData["Scenario"] == scenario)
-                & (meltedData["Age Group"] != "Total"),
-                meltedData.columns.difference(["Scenario", "Age Group"] + percentCols),
-            ]
-            .sum()
-            .values
-        )
 
     # Remove any scenarios/age groups not specified in the data
     if includedScenarios != "all" and (set(scenarioNames) != set(includedScenarios)):

@@ -38,8 +38,19 @@ for parameter, default in sessionParameters.items():
 ageGroups = ageWithTime + ["Total"]
 
 
-# Get norms needed for proper background gradients
-def getSlopeNorm(column):
+def getSlopeNorm(column: pd.Series) -> TwoSlopeNorm:
+    """
+    Function to generate the slope norm used for table background gradients
+
+    Parameters:
+        column (Series): A Pandas series representing the column to make a slope
+            norm for.
+
+    Returns:
+        TwoSlopeNorm: The slope norm, with the column's minimum and maximum
+            values as the minimum and maximum and correction for columns that
+            do not cross zero or are homogenous.
+    """
     minVal, maxVal = column.min(), column.max()
     return TwoSlopeNorm(
         vcenter=0,
@@ -55,17 +66,28 @@ def getSlopeNorm(column):
 
 
 # Function to choose whether dataframe cells should have white or black text
-def selectTextColour(colour):
+def selectTextColour(colour: str) -> str:
+    """
+    Function to decide whether cells in a table have black or white text
+
+    Parameters:
+        colour (str): A string representing a hexadecimal RGB colour.
+
+    Returns:
+        str: The hexadecimal code for either black (#000000) or white (#ffffff).
+    """
     luminosity = (
         0.299 * int(colour[1:3], 16)  # red
         + 0.587 * int(colour[3:5], 16)  # green
         + 0.114 * int(colour[5:], 16)
     )  # blue
-    return "#000000" if luminosity > 180 else "#ffffff"
+    return "#000000" if luminosity > 135 else "#ffffff"
 
 
-# Callback function to generate and format the table
 def generateTable():
+    """
+    Callback function used to generate and format health burden tables
+    """
     # Throw error if no data is present
     if not usePresetData and not session.get("modelDataRawAsir"):
         raise FileNotFoundError(
@@ -186,7 +208,7 @@ def generateTable():
     else:
         unformattedData = session.get("modelDataRawAsir")
 
-    ageData, columnConfig, percentColumns, differenceColumns = formatAsir(
+    ageData, columnConfig, percSet, diffSet = formatAsir(
         unformattedData,  # type: ignore
         scenarioNames,
         columnDetails,
@@ -195,8 +217,6 @@ def generateTable():
     )
 
     # Format data according to column type
-    diffSet = set(differenceColumns)
-    percSet = set(percentColumns)
     formatValues = (
         {column: "{:+.5n}" for column in diffSet - percSet}
         | {column: "{:+.3%}" for column in diffSet & percSet}
@@ -255,7 +275,7 @@ def generateTable():
         ageStyle = ageStyle.map(ageColourString, subset=["Age Group"])
 
     # Use background gradients on difference from baseline columns
-    for column in differenceColumns:
+    for column in diffSet:
         colVals = ageData[column]
         ageStyle = ageStyle.background_gradient(
             "RdBu_r",
@@ -289,10 +309,10 @@ st.markdown(
 # Modify CSS to avoid age group names being cut off
 st.html(
     """
-    <style>
-        .stMultiSelect [data-baseweb=select] span{max-width: 500px;}
-    </style>
-"""
+        <style>
+            .stMultiSelect [data-baseweb=select] span{max-width: 500px;}
+        </style>
+    """
 )
 
 # Save relevant params as variables to avoid lookups
