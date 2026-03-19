@@ -36,7 +36,6 @@ diseaseLog = logging.getLogger(__name__)
 session = st.session_state
 
 
-# TODO: Optimise expanders with rerun functionality if need be
 @st.fragment
 def buildDiseaseTab(id: int):
     """
@@ -82,7 +81,9 @@ def buildDiseaseTab(id: int):
 
     # Seeding Parameters
     simLength = session.get("cycleCount", 360)
-    with st.expander("Infection Seeding"):
+    with st.expander(
+        "Infection Seeding", key=f"infectionSeedingContainer{id}", on_change="rerun"
+    ):
         # Describe what sort of parameters are here
         st.markdown(
             """
@@ -136,7 +137,9 @@ def buildDiseaseTab(id: int):
         )
 
     # Transmission Parameters
-    with st.expander("Disease Transmission"):
+    with st.expander(
+        "Disease Transmission", key=f"transmissionContainer{id}", on_change="rerun"
+    ):
         # Describe what sort of parameters are here
         st.markdown(
             """
@@ -574,7 +577,9 @@ group to contract the disease when interacting with infected individuals.
         )'''
 
     # Life Cycle Parameters
-    with st.expander("Disease Life Cycle"):
+    with st.expander(
+        "Disease Life Cycle", key=f"lifeCycleContainer{id}", on_change="rerun"
+    ):
         # Describe what sort of parameters are here
         st.markdown(
             """
@@ -852,7 +857,11 @@ group to contract the disease when interacting with infected individuals.
         )
 
     # Health Burden Outcome Parameters
-    with st.expander("Health Burden Outcomes"):
+    with st.expander(
+        "Health Burden Outcomes",
+        key=f"healthBurdenContainer{id}",
+        on_change="rerun",
+    ):
         # Describe what sort of parameters are here
         st.markdown(
             """
@@ -1162,7 +1171,9 @@ group who will die as a direct result of the disease.
 
     # Waning Immunity Parameters
     # TODO: Allow fully disabling immunity waning
-    with st.expander("Immunity Waning"):
+    with st.expander(
+        "Immunity Waning", key=f"naturalWaningContainer{id}", on_change="rerun"
+    ):
         # Describe what sort of parameters are here
         st.markdown(
             """

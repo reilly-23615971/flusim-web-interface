@@ -154,7 +154,12 @@ names:
 # rendering a thousand widgets at once
 st.header("Scenario Parameter Configuration")
 for id in range(1, scenarioCount + 1):
-    with st.container(border=True):
+    # TODO: Consider changing expanders to popovers or tabs
+    # to avoid the nested expander issue
+    # with st.container(border=True):
+    with st.expander(
+        f"Scenario #{id} Settings", key=f"scenarioContainer{id}", on_change="rerun"
+    ):
         st.header(f"Scenario #{id}")
         # Scenario name
         loadKey("scenarioName", id, f"Scenario #{id}")
