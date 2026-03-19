@@ -125,9 +125,24 @@ def errorChecker(scenarioID: int, name: str = "Errors in Current Scenario"):
 
 
 # Widget Functions
-# TODO: See if dataframes can not reload after every change
-# TODO: See if scenario dataframes can adapt to baseline changes
-# (e.g. by having None/NA cells with the placeholder "Same as baseline")
+def openSave(key: str, scenarioID: int | Literal[""] = "", container: str = ""):
+    """
+    Wrapper for saveKey that keeps a specific container open, used when
+    changing a scenario's name would reload the container it's defined in
+
+    Parameters:
+        key (str): The string used to identify the widget.
+
+        scenarioID (int or ""): The integer representing the scenario the widget
+            is part of. Defaults to "", allowing for parameters that are not
+            associated with scenarios to be saved.
+
+        container (str): The string used to identify the container to open.
+    """
+    saveKey(key, scenarioID)
+    session[container] = True
+
+
 def saveKey(
     key: str,
     scenarioID: int | Literal[""] = "",
@@ -153,6 +168,9 @@ def saveKey(
         dataframe (bool): Set to True if the widget is a dataframe that requires
             manual application of changes.
     """
+    # TODO: See if dataframes can not reload after every change
+    # TODO: See if scenario dataframes can adapt to baseline changes
+    # (e.g. by having None/NA cells with the placeholder "Same as baseline")
     # Prevent invalid calls after deleting scenarios
     if not isinstance(scenarioID, str) and scenarioID > session["scenarioCount"]:
         return

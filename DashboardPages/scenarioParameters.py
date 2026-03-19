@@ -7,7 +7,7 @@ import logging
 
 import streamlit as st
 
-from ClientResources.InterfaceFunctions import errorChecker, idGet, loadKey, saveKey
+from ClientResources.InterfaceFunctions import errorChecker, idGet, loadKey, openSave
 from ClientResources.SharedResources import maxScenarios
 from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.diseaseParams import buildDiseaseTab
@@ -162,10 +162,8 @@ st.header("Scenario Parameter Configuration")
 for id in range(1, scenarioCount + 1):
     # TODO: Consider changing expanders to popovers or tabs
     # to avoid the nested expander issue
-    # with st.container(border=True):
-    with st.expander(
-        f"Scenario #{id} Settings", key=f"scenarioContainer{id}", on_change="rerun"
-    ):
+    tempScenarioName = session.get(f"scenarioName{id}", f"Scenario #{id}")
+    with st.expander(tempScenarioName, key=f"scenarioContainer{id}", on_change="rerun"):
         st.header(f"Scenario #{id}")
         # Scenario name
         loadKey("scenarioName", id, f"Scenario #{id}")
@@ -175,8 +173,8 @@ for id in range(1, scenarioCount + 1):
             max_chars=50,
             key=f"_scenarioName{id}",
             autocomplete="off",
-            on_change=saveKey,
-            args=["scenarioName", id],  # type: ignore
+            on_change=openSave,
+            args=["scenarioName", id, f"scenarioContainer{id}"],  # type: ignore
             placeholder="Enter a name for this scenario",
             help="""
                 The name to give to this scenario, which will display
