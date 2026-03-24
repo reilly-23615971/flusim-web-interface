@@ -497,7 +497,7 @@ other age groups list the age range they cover as part of their name.
                     * (session["DataHealthOutcomeRates"][outcome][baselineScenario])
                 ).round()
         # Recalculate totals to avoid rounding-induced mismatch
-        if includedAges and (includedAges == "all" or "Total" in includedAges):
+        if not includedAges or (includedAges == "all" or "Total" in includedAges):
             scenarioCount = len(scenarioNames)
             scaledColumn.iloc[:scenarioCount] = (
                 scaledColumn.groupby(scaledColumn.index % scenarioCount).sum()
