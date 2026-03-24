@@ -7,7 +7,7 @@ import logging
 
 import streamlit as st
 
-from ClientResources.InterfaceFunctions import errorChecker, loadKey, saveKey
+from ClientResources.InterfaceFunctions import errorChecker, loadKey, openSave
 from ParameterTabs.communityParams import buildCommunityTab
 
 # from streamlit_push_notifications import send_push, send_alert
@@ -52,8 +52,9 @@ showAdvanced = st.toggle(
     "Show Advanced Parameters",
     False,
     key="_showAdvanced",
-    on_change=saveKey,
+    on_change=openSave,
     args=["showAdvanced"],
+    kwargs={"tabs": ["paramTabs0"]},
     help="""
         Toggle whether to display parameters that control more fine-grain
         aspects of the simulation environment, such as age-specific NPI
@@ -84,18 +85,6 @@ if showAdvanced:
         on_change="rerun",
         key="paramTabs0",
     )
-    if diseaseTab.open:
-        with diseaseTab:
-            buildDiseaseTab(0)
-    if communityTab.open:
-        with communityTab:
-            buildCommunityTab(0)
-    if interventionTab.open:
-        with interventionTab:
-            buildVaccinationNPITab(0)
-    if dynamicTab.open:
-        with dynamicTab:
-            buildDynamicTab(0)
 else:
     (diseaseTab, communityTab, interventionTab) = st.tabs(
         [
@@ -106,12 +95,15 @@ else:
         on_change="rerun",
         key="paramTabs0",
     )
-    if diseaseTab.open:
-        with diseaseTab:
-            buildDiseaseTab(0)
-    if communityTab.open:
-        with communityTab:
-            buildCommunityTab(0)
-    if interventionTab.open:
-        with interventionTab:
-            buildVaccinationNPITab(0)
+if diseaseTab.open:
+    with diseaseTab:
+        buildDiseaseTab(0, showAdvanced)
+if communityTab.open:
+    with communityTab:
+        buildCommunityTab(0, showAdvanced)
+if interventionTab.open:
+    with interventionTab:
+        buildVaccinationNPITab(0)
+if showAdvanced and dynamicTab.open:  # type: ignore
+    with dynamicTab:  # type: ignore
+        buildDynamicTab(0)

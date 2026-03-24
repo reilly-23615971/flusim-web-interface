@@ -125,10 +125,15 @@ def errorChecker(scenarioID: int, name: str = "Errors in Current Scenario"):
 
 
 # Widget Functions
-def openSave(key: str, scenarioID: int | Literal[""] = "", container: str = ""):
+def openSave(
+    key: str,
+    scenarioID: int | Literal[""] = "",
+    containers: list[str] = [],
+    tabs: list[str] = [],
+):
     """
-    Wrapper for saveKey that keeps a specific container open, used when
-    changing a scenario's name would reload the container it's defined in
+    Wrapper for saveKey that keeps specific containers open, used for
+    advanced parameters and scenario names
 
     Parameters:
         key (str): The string used to identify the widget.
@@ -137,10 +142,15 @@ def openSave(key: str, scenarioID: int | Literal[""] = "", container: str = ""):
             is part of. Defaults to "", allowing for parameters that are not
             associated with scenarios to be saved.
 
-        container (str): The string used to identify the container to open.
+        containers (list of str): String used to identify each container to open.
+
+        tabs (list of str): Strings used to identify tab-like containers to keep open.
     """
     saveKey(key, scenarioID)
-    session[container] = True
+    for container in containers:
+        session[container] = True
+    for tab in tabs:
+        session[tab] = session.get(tab)
 
 
 def saveKey(

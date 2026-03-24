@@ -102,7 +102,7 @@ st.slider(
 
 loadKey("startDay", default="Monday")
 st.select_slider(
-    "Simulation Starting Day of the Week",
+    "Starting Day of the Week",
     ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"),
     "Monday",
     key="_startDay",

@@ -184,6 +184,7 @@ def generateTable():
             }
             for scenarioID in range(4)
         }"""
+        # TODO: Fix null getting added here when age tables are unchanged
         session.DataMortalityRates = {
             scenarioNames[scenarioID]: {
                 age: idGet("deathRatio", scenarioID, 0.000115077) for age in ageWithTime
@@ -733,6 +734,7 @@ No simulation experiments have been completed yet, so there is no data to tabula
     ),
 )
 # Display the table itself
+# TODO: Get opinion on whether table should scroll or not
 tableData = session.get("HealthOutcomeTableData")
 tableConfig = session.get("HealthOutcomeTableConfig")
 if tableData is not None:

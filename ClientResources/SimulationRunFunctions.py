@@ -80,12 +80,14 @@ def createConfig(scenarioCount: int):
     scenarioParams = [Parameters() for _ in range(scenarioCount)]
 
     # Populate parameters with session_state values
+    useAdvanced = session.get("showAdvanced", False)
     for id, scenario in enumerate(scenarioParams):
         # basicSchema(scenario, id)
-        diseaseSchema(scenario, id)
-        communitySchema(scenario, id)
+        diseaseSchema(scenario, id, useAdvanced)
+        communitySchema(scenario, id, useAdvanced)
         vaccineSchema(scenario, id)
-        dynamicSchema(scenario, id)
+        if useAdvanced:
+            dynamicSchema(scenario, id)
 
     # Create config object with non-scenario parameters as overrides
     return modelGuideFile(
@@ -276,6 +278,7 @@ simulation.
                 scenarioID: idGet("deathRatio", scenarioID, 0.000115077)
                 for scenarioID in range(scenarioCount + 1)
             }
+            # TODO: Fix null getting added here when age tables are unchanged
             session.PendingDataMortalityRates = {
                 scenarioNames[scenarioID]: {
                     age: pendingDeaths[scenarioID] for age in ageWithTime

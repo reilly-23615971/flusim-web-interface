@@ -401,7 +401,6 @@ def formatAsir(
     framedData.loc[:, ageWithTime[6:]] = framedData.loc[:, ageWithTime[6:]].mul(
         asymptomaticAdult, axis=0
     )
-    framedData["Total"] = framedData.loc[:, ageWithTime].sum(axis=1)
 
     # Reset indices
     framedData.index = pd.Index(scenarioNames)

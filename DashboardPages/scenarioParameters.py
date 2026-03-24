@@ -7,13 +7,7 @@ import logging
 
 import streamlit as st
 
-from ClientResources.InterfaceFunctions import (
-    errorChecker,
-    idGet,
-    loadKey,
-    openSave,
-    saveKey,
-)
+from ClientResources.InterfaceFunctions import errorChecker, idGet, loadKey, openSave
 from ClientResources.SharedResources import maxScenarios
 from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.diseaseParams import buildDiseaseTab
@@ -170,8 +164,9 @@ showAdvanced = st.toggle(
     "Show Advanced Parameters",
     False,
     key="_showAdvanced",
-    on_change=saveKey,
+    on_change=openSave,
     args=["showAdvanced"],
+    kwargs={"tabs": [f"paramTabs{id}" for id in range(1, scenarioCount + 1)]},
     help="""
         Toggle whether to display parameters that control more fine-grain
         aspects of the simulation environment, such as age-specific NPI
@@ -198,7 +193,7 @@ for id in range(1, scenarioCount + 1):
                 key=f"_scenarioName{id}",
                 autocomplete="off",
                 on_change=openSave,
-                args=["scenarioName", id, f"scenarioContainer{id}"],  # type: ignore
+                args=["scenarioName", id, [f"scenarioContainer{id}"]],  # type: ignore
                 placeholder="Enter a name for this scenario",
                 help="""
                     The name to give to this scenario, which will display
@@ -223,19 +218,6 @@ for id in range(1, scenarioCount + 1):
                     on_change="rerun",
                     key=f"paramTabs{id}",
                 )
-                # :material/pattern: for the template tab
-                if diseaseTab.open:
-                    with diseaseTab:
-                        buildDiseaseTab(id)
-                if communityTab.open:
-                    with communityTab:
-                        buildCommunityTab(id)
-                if interventionTab.open:
-                    with interventionTab:
-                        buildVaccinationNPITab(id)
-                if dynamicTab.open:
-                    with dynamicTab:
-                        buildDynamicTab(id)
             else:
                 (diseaseTab, communityTab, interventionTab) = st.tabs(
                     [
@@ -246,16 +228,18 @@ for id in range(1, scenarioCount + 1):
                     on_change="rerun",
                     key=f"paramTabs{id}",
                 )
-                # :material/pattern: for the template tab
-                if diseaseTab.open:
-                    with diseaseTab:
-                        buildDiseaseTab(id)
-                if communityTab.open:
-                    with communityTab:
-                        buildCommunityTab(id)
-                if interventionTab.open:
-                    with interventionTab:
-                        buildVaccinationNPITab(id)
+            if diseaseTab.open:
+                with diseaseTab:
+                    buildDiseaseTab(id, showAdvanced)
+            if communityTab.open:
+                with communityTab:
+                    buildCommunityTab(id, showAdvanced)
+            if interventionTab.open:
+                with interventionTab:
+                    buildVaccinationNPITab(id)
+            if showAdvanced and dynamicTab.open:  # type: ignore
+                with dynamicTab:  # type: ignore
+                    buildDynamicTab(id)
 
             # Remove button
             st.button(
