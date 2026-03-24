@@ -7,7 +7,7 @@ import logging
 
 import streamlit as st
 
-from ClientResources.InterfaceFunctions import errorChecker
+from ClientResources.InterfaceFunctions import errorChecker, loadKey, saveKey
 from ParameterTabs.communityParams import buildCommunityTab
 
 # from streamlit_push_notifications import send_push, send_alert
@@ -46,6 +46,21 @@ st.markdown(
 """
 )
 
+# Advanced parameters toggle
+loadKey("showAdvanced", default=False, noZeroDefault=True)
+showAdvanced = st.toggle(
+    "Show Advanced Parameters",
+    False,
+    key="_showAdvanced",
+    on_change=saveKey,
+    args=["showAdvanced"],
+    help="""
+        Toggle whether to display parameters that control more fine-grain
+        aspects of the simulation environment, such as age-specific NPI
+        compliance or dynamic parameter updates.
+    """,
+)
+
 # Fragments to display errors and rerun on sim length change
 errorChecker(0)
 
@@ -57,27 +72,46 @@ errorChecker(0)
 # change scale or switch to number input
 
 # Create tabs for each category of parameters
-(diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
-    [
-        ":material/coronavirus: Disease",
-        ":material/groups: Community",
-        ":material/vaccines: Vaccination and NPIs",
-        ":material/manage_history: Dynamic",
-    ],
-    on_change="rerun",
-    key="paramTabs0",
-)
 # TODO: :material/pattern: for the template tab
-
-if diseaseTab.open:
-    with diseaseTab:
-        buildDiseaseTab(0)
-if communityTab.open:
-    with communityTab:
-        buildCommunityTab(0)
-if interventionTab.open:
-    with interventionTab:
-        buildVaccinationNPITab(0)
-if dynamicTab.open:
-    with dynamicTab:
-        buildDynamicTab(0)
+if showAdvanced:
+    (diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
+        [
+            ":material/coronavirus: Disease",
+            ":material/groups: Community",
+            ":material/vaccines: Vaccination and NPIs",
+            ":material/manage_history: Dynamic",
+        ],
+        on_change="rerun",
+        key="paramTabs0",
+    )
+    if diseaseTab.open:
+        with diseaseTab:
+            buildDiseaseTab(0)
+    if communityTab.open:
+        with communityTab:
+            buildCommunityTab(0)
+    if interventionTab.open:
+        with interventionTab:
+            buildVaccinationNPITab(0)
+    if dynamicTab.open:
+        with dynamicTab:
+            buildDynamicTab(0)
+else:
+    (diseaseTab, communityTab, interventionTab) = st.tabs(
+        [
+            ":material/coronavirus: Disease",
+            ":material/groups: Community",
+            ":material/vaccines: Vaccination and NPIs",
+        ],
+        on_change="rerun",
+        key="paramTabs0",
+    )
+    if diseaseTab.open:
+        with diseaseTab:
+            buildDiseaseTab(0)
+    if communityTab.open:
+        with communityTab:
+            buildCommunityTab(0)
+    if interventionTab.open:
+        with interventionTab:
+            buildVaccinationNPITab(0)

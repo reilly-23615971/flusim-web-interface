@@ -507,13 +507,13 @@ other age groups list the age range they cover as part of their name.
         outcomeBaselines[outcome] = scaledBaseline
 
     # Generate columns
-    # TODO: See if case matching is better here than elif chains
     for outcome, proportion, baselineDifference in columns:
         currentColumn = outcomeColumns[outcome]
         columnBaselines = outcomeBaselines[outcome]
 
         # Apply proportion/difference modifications
         # TODO: Either fix or disable just proportion
+        # TODO: See if case matching is better here than elif chains
         if proportion and not baselineDifference:
             currentColumn /= meltedData["Age Group"].map(communityAgePops[community])
             columnName = f"{outcomeAdjectives[outcome]} % of Population"
