@@ -126,6 +126,8 @@ st.markdown(
     )
 )
 
+
+oldScenarioNames = '''
 # List current scenarios
 st.header("Current Scenarios")
 
@@ -149,19 +151,20 @@ elif scenarioCount == 1:
     )
 else:
     st.markdown(
-        f'''
+        f"""
 There are currently {scenarioCount} additional scenarios defined for
 the simulation (excluding the baseline scenario), with the following
 names:
 
 {'\n'.join(f'- {session[f'scenarioName{id}']}' for id in range(1, scenarioCount + 1))}
-'''
+"""
     )
 
-# TODO: Loadable parameter templates (part of template tab?)
+st.header("Scenario Parameter Configuration")
+'''
 
 # Scenario addition field
-st.header("Scenario Parameter Configuration")
+
 
 # Advanced parameters toggle
 loadKey("showAdvanced", default=False, noZeroDefault=True)
@@ -215,6 +218,7 @@ for id in range(1, scenarioCount + 1):
             errorChecker(id, f"Errors in {scenarioName}")
 
             # Create tabs for each category of parameters
+            # TODO: Loadable parameter templates (part of template tab?)
             # TODO: Allow copying other scenarios when adding templates
             if showAdvanced:
                 (diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(

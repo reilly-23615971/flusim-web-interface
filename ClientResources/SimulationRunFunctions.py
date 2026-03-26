@@ -163,13 +163,14 @@ With the current parameters, this modelling experiment will use the
 community data to simulate each of the following {scenarioCount + 1} scenarios:
         """
         )
-        st.markdown(
-            "- Baseline\n"
-            + "\n".join(
-                f"- {session[f'scenarioName{id}']}"
-                for id in range(1, scenarioCount + 1)
+        with st.container() if scenarioCount < 10 else st.expander("Scenario Names"):
+            st.markdown(
+                "- Baseline\n"
+                + "\n".join(
+                    f"- {session[f'scenarioName{id}']}"
+                    for id in range(1, scenarioCount + 1)
+                )
             )
-        )
 
     # Display any errors
     # TODO: Hide scenario errors that are copies of baseline errors
