@@ -741,7 +741,7 @@ if tableData is not None:
     st.header("Health Burden Outcome Table")
     st.dataframe(
         tableData,
-        height="content",
+        height="auto",
         column_config=tableConfig,
         hide_index=True,
         placeholder="N/A",
