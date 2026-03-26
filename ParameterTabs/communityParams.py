@@ -9,19 +9,13 @@ import numpy as np
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import (
-    dayCount,
-    idGet,
-    loadKey,
-    saveKey,
-)
+from ClientResources.InterfaceFunctions import dayCount, idGet, loadKey, saveKey
 from ClientResources.ModelSchema import Parameters, scenarioParameters
 
 # Logging
 communityLog = logging.getLogger(__name__)
 
 
-# TODO: Optimise expanders with rerun functionality if need be
 @st.fragment
 def buildCommunityTab(id: int, advanced: bool = False):
     """

@@ -7,7 +7,12 @@ import logging
 
 import streamlit as st
 
-from ClientResources.InterfaceFunctions import errorChecker, idGet, loadKey, openSave
+from ClientResources.InterfaceFunctions import (
+    containerSave,
+    errorChecker,
+    idGet,
+    loadKey,
+)
 from ClientResources.SharedResources import maxScenarios
 from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.diseaseParams import buildDiseaseTab
@@ -160,13 +165,14 @@ st.header("Scenario Parameter Configuration")
 
 # Advanced parameters toggle
 loadKey("showAdvanced", default=False, noZeroDefault=True)
+containersToOpen: set[str] = {f"paramTabs{id}" for id in range(1, scenarioCount + 1)}
 showAdvanced = st.toggle(
     "Show Advanced Parameters",
     False,
     key="_showAdvanced",
-    on_change=openSave,
+    on_change=containerSave,
     args=["showAdvanced"],
-    kwargs={"tabs": [f"paramTabs{id}" for id in range(1, scenarioCount + 1)]},
+    kwargs={"containers": containersToOpen},
     help="""
         Toggle whether to display parameters that control more fine-grain
         aspects of the simulation environment, such as age-specific NPI
@@ -177,9 +183,11 @@ showAdvanced = st.toggle(
 for id in range(1, scenarioCount + 1):
     # TODO: Consider changing expanders to popovers or tabs
     # to avoid the nested expander issue
-    tempScenarioName = session.get(f"scenarioName{id}", f"Scenario #{id}")
+    containerScenarioName = session.get(f"scenarioName{id}", f"Scenario #{id}")
     scenarioExpander = st.expander(
-        tempScenarioName, key=f"scenarioContainer{id}", on_change="rerun"
+        f"#{id}: {containerScenarioName}",
+        key=f"scenarioContainer{id}",
+        on_change="rerun",
     )
     if scenarioExpander.open:
         with scenarioExpander:
@@ -192,7 +200,7 @@ for id in range(1, scenarioCount + 1):
                 max_chars=50,
                 key=f"_scenarioName{id}",
                 autocomplete="off",
-                on_change=openSave,
+                on_change=containerSave,
                 args=["scenarioName", id, [f"scenarioContainer{id}"]],  # type: ignore
                 placeholder="Enter a name for this scenario",
                 help="""
@@ -207,6 +215,7 @@ for id in range(1, scenarioCount + 1):
             errorChecker(id, f"Errors in {scenarioName}")
 
             # Create tabs for each category of parameters
+            # TODO: Allow copying other scenarios when adding templates
             if showAdvanced:
                 (diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
                     [
@@ -235,8 +244,15 @@ for id in range(1, scenarioCount + 1):
                 with communityTab:
                     buildCommunityTab(id, showAdvanced)
             if interventionTab.open:
+                containersToOpen |= {
+                    f"npiContainer{id}",
+                    f"schoolClosureContainer{id}",
+                    f"withdrawalContainer{id}",
+                    f"workGroupContainer{id}",
+                    f"bccContainer{id}",
+                }
                 with interventionTab:
-                    buildVaccinationNPITab(id)
+                    buildVaccinationNPITab(id, showAdvanced)
             if showAdvanced and dynamicTab.open:  # type: ignore
                 with dynamicTab:  # type: ignore
                     buildDynamicTab(id)

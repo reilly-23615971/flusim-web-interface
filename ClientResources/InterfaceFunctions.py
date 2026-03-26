@@ -125,11 +125,10 @@ def errorChecker(scenarioID: int, name: str = "Errors in Current Scenario"):
 
 
 # Widget Functions
-def openSave(
+def containerSave(
     key: str,
     scenarioID: int | Literal[""] = "",
-    containers: list[str] = [],
-    tabs: list[str] = [],
+    containers: set[str] = set(),
 ):
     """
     Wrapper for saveKey that keeps specific containers open, used for
@@ -143,14 +142,10 @@ def openSave(
             associated with scenarios to be saved.
 
         containers (list of str): String used to identify each container to open.
-
-        tabs (list of str): Strings used to identify tab-like containers to keep open.
     """
     saveKey(key, scenarioID)
     for container in containers:
-        session[container] = True
-    for tab in tabs:
-        session[tab] = session.get(tab)
+        session[container] = session.get(container)
 
 
 def saveKey(

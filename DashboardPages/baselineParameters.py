@@ -7,7 +7,7 @@ import logging
 
 import streamlit as st
 
-from ClientResources.InterfaceFunctions import errorChecker, loadKey, openSave
+from ClientResources.InterfaceFunctions import containerSave, errorChecker, loadKey
 from ParameterTabs.communityParams import buildCommunityTab
 
 # from streamlit_push_notifications import send_push, send_alert
@@ -48,13 +48,14 @@ st.markdown(
 
 # Advanced parameters toggle
 loadKey("showAdvanced", default=False, noZeroDefault=True)
+containersToOpen: set[str] = {"paramTabs0"}
 showAdvanced = st.toggle(
     "Show Advanced Parameters",
     False,
     key="_showAdvanced",
-    on_change=openSave,
+    on_change=containerSave,
     args=["showAdvanced"],
-    kwargs={"tabs": ["paramTabs0"]},
+    kwargs={"containers": containersToOpen},
     help="""
         Toggle whether to display parameters that control more fine-grain
         aspects of the simulation environment, such as age-specific NPI
@@ -102,8 +103,15 @@ if communityTab.open:
     with communityTab:
         buildCommunityTab(0, showAdvanced)
 if interventionTab.open:
+    containersToOpen |= {
+        "npiContainer0",
+        "schoolClosureContainer0",
+        "withdrawalContainer0",
+        "workGroupContainer0",
+        "bccContainer0",
+    }
     with interventionTab:
-        buildVaccinationNPITab(0)
+        buildVaccinationNPITab(0, showAdvanced)
 if showAdvanced and dynamicTab.open:  # type: ignore
     with dynamicTab:  # type: ignore
         buildDynamicTab(0)

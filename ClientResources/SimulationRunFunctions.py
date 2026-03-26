@@ -85,7 +85,7 @@ def createConfig(scenarioCount: int):
         # basicSchema(scenario, id)
         diseaseSchema(scenario, id, useAdvanced)
         communitySchema(scenario, id, useAdvanced)
-        vaccineSchema(scenario, id)
+        vaccineSchema(scenario, id, useAdvanced)
         if useAdvanced:
             dynamicSchema(scenario, id)
 
@@ -145,6 +145,7 @@ def runSimulationButton():
     runPending = bool(session.get("confirmRunButton"))
 
     # List scenarios
+    # TODO: Contain in dropdown if too long
     scenarioCount = session.get("scenarioCount", 0)
     if scenarioCount == 0:
         st.markdown(
