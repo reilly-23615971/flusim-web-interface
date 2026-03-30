@@ -20,7 +20,6 @@ from ClientResources.InterfaceFunctions import (
     loadKey,
     paramError,
     saveKey,
-    saveWithRerun,
 )
 from ClientResources.ModelSchema import (
     Parameters,
@@ -38,7 +37,7 @@ session = st.session_state
 
 
 @st.fragment
-def buildDiseaseTab(id: int):
+def buildDiseaseTab(id: int, advanced: bool = False):
     """
     Function to generate the parameters for the disease in a specified
     container with scenario differentiation
@@ -47,6 +46,9 @@ def buildDiseaseTab(id: int):
         id (int): An integer that will be used to differentiate the parameters in
             different instances of the tab by adding a number to the Streamlit
             session state variables.
+
+        advanced (bool): Set to True to show more complex parameters like
+            location-specific transmission modifiers.
     """
     # Initialise session variables needed by the disease forms
     # sessionParameters = {
@@ -82,7 +84,9 @@ def buildDiseaseTab(id: int):
 
     # Seeding Parameters
     simLength = session.get("cycleCount", 360)
-    with st.expander("Infection Seeding"):
+    with st.expander(
+        "Infection Seeding", key=f"infectionSeedingContainer{id}", on_change="rerun"
+    ):
         # Describe what sort of parameters are here
         st.markdown(
             """
@@ -93,14 +97,13 @@ def buildDiseaseTab(id: int):
             daily.
         """
         )
-
         loadKey("seedRate", id, 0.25)
         st.select_slider(
-            "Infection Seeding Rate (Average Individuals per Day)",
+            "Infection Seeding Rate (Average Individuals per Cycle)",
             np.linspace(0.025, 5.0, 200),
             0.25,
             key=f"_seedRate{id}",
-            on_change=saveWithRerun,
+            on_change=saveKey,
             args=["seedRate", id],  # type: ignore
             format_func=lambda x: f"{x:0.4g}",
             help="""
@@ -137,7 +140,9 @@ def buildDiseaseTab(id: int):
         )
 
     # Transmission Parameters
-    with st.expander("Disease Transmission"):
+    with st.expander(
+        "Disease Transmission", key=f"transmissionContainer{id}", on_change="rerun"
+    ):
         # Describe what sort of parameters are here
         st.markdown(
             """
@@ -175,15 +180,18 @@ def buildDiseaseTab(id: int):
         )
 
         # Beta and symptom multipliers
-        loadKey("beta", id, 0.11)
-        st.select_slider(
+        # Previous default for beta was 0.11
+        loadKey("beta", id, 0.0616)
+        st.number_input(
             "Basic Transmission Parameter (β)",
-            np.linspace(0.005, 1.0, 200),
-            0.11,
-            format_func=lambda x: f"{x:0.3g}",
+            min_value=0.00001,
+            max_value=1.0,
+            value=0.0616,
+            step=0.00001,
+            format="%0.5g",
             key=f"_beta{id}",
             on_change=saveKey,
-            args=["beta", id],  # type: ignore
+            args=["beta", id],
             help="""
                 The value of the basic transmission parameter
                 $\\beta$, the base constant used to calculate the
@@ -195,14 +203,17 @@ def buildDiseaseTab(id: int):
                 individuals.
             """,
         )
+        leftCol, rightCol = st.columns(2)
         loadKey("betaAsymptomatic", id, 0.55)
-        st.select_slider(
+        leftCol.number_input(
             "Asymptomatic Transmission Multiplier",
-            np.linspace(0.0, 1.0, 201),
-            0.55,
-            format_func=lambda x: f"{x:0.3g}",
+            min_value=0.00001,
+            max_value=1.0,
+            value=0.55,
+            step=0.00001,
+            format="%0.5g",
             on_change=saveKey,
-            args=["betaAsymptomatic", id],  # type: ignore
+            args=["betaAsymptomatic", id],
             key=f"_betaAsymptomatic{id}",
             help="""
                 The value of the transmissibility modifier
@@ -219,13 +230,15 @@ def buildDiseaseTab(id: int):
             """,
         )
         loadKey("betaPostSymptomatic", id, 0.55)
-        st.select_slider(
+        rightCol.number_input(
             "Post-Symptomatic Transmission Multiplier",
-            np.linspace(0.0, 1.0, 201),
-            0.55,
-            format_func=lambda x: f"{x:0.3g}",
+            min_value=0.00001,
+            max_value=1.0,
+            value=0.55,
+            step=0.00001,
+            format="%0.5g",
             on_change=saveKey,
-            args=["betaPostSymptomatic", id],  # type: ignore
+            args=["betaPostSymptomatic", id],
             key=f"_betaPostSymptomatic{id}",
             help="""
                 The value of the transmissibility modifier
@@ -238,80 +251,91 @@ def buildDiseaseTab(id: int):
                 individuals.
             """,
         )
-        loadKey("householdKappa", id, 2.2)
-        st.select_slider(
-            "Household Transmission Multiplier",
-            np.linspace(0.0, 5.0, 201),
-            2.2,
-            key=f"_householdKappa{id}",
-            on_change=saveKey,
-            args=["householdKappa", id],  # type: ignore
-            format_func=lambda x: f"{x:0.4g}",
-            help="""
-                The value of the transmissibility modifier
-                $\\kappa$ when an interaction takes place in a
-                household. The higher this value is, the more
-                likely it is for uninfected individuals to contract
-                the disease when interacting with infected
-                individuals in households.
-                """,
-        )
-        loadKey("schoolKappa", id, 1.0)
-        st.select_slider(
-            "School Transmission Multiplier",
-            np.linspace(0.0, 1.0, 201),
-            1.0,
-            key=f"_schoolKappa{id}",
-            on_change=saveKey,
-            args=["schoolKappa", id],  # type: ignore
-            format_func=lambda x: f"{x:0.3g}",
-            help="""
-                The value of the transmissibility modifier
-                $\\kappa$ when an interaction takes place in a
-                school. The higher this value is, the more
-                likely it is for uninfected individuals to contract
-                the disease when interacting with infected
-                individuals in schools.
-                """,
-        )
-        loadKey("workKappa", id, 1.0)
-        st.select_slider(
-            "Workplace Transmission Multiplier",
-            np.linspace(0.0, 1.0, 201),
-            1.0,
-            key=f"_workKappa{id}",
-            on_change=saveKey,
-            args=["workKappa", id],  # type: ignore
-            format_func=lambda x: f"{x:0.3g}",
-            help="""
-                The value of the transmissibility modifier
-                $\\kappa$ when an interaction takes place in a
-                workplace. The higher this value is, the more
-                likely it is for uninfected individuals to contract
-                the disease when interacting with infected
-                individuals in workplaces.
-                """,
-        )
-        loadKey("backgroundKappa", id, 1.0)
-        st.select_slider(
-            "Background Contact Transmission Multiplier",
-            np.linspace(0.0, 1.0, 201),
-            1.0,
-            key=f"_backgroundKappa{id}",
-            on_change=saveKey,
-            args=["backgroundKappa", id],  # type: ignore
-            format_func=lambda x: f"{x:0.3g}",
-            help="""
-                The value of the transmissibility modifier
-                $\\kappa$ when an interaction takes place during the
-                model's background phase (i.e. outside of simulated
-                locations). The higher this value is, the more
-                likely it is for uninfected individuals to contract
-                the disease during the background phase.
-                """,
-        )
+        # Transmission multipliers (only if advanced params are enabled)
+        if advanced:
+            loadKey("schoolKappa", id, 1.0)
+            leftCol.number_input(
+                "School Transmission Multiplier",
+                min_value=0.00001,
+                max_value=10.0,
+                value=1.0,
+                step=0.00001,
+                format="%0.5g",
+                key=f"_schoolKappa{id}",
+                on_change=saveKey,
+                args=["schoolKappa", id],
+                help="""
+                    The value of the transmissibility modifier
+                    $\\kappa$ when an interaction takes place in a
+                    school. The higher this value is, the more
+                    likely it is for uninfected individuals to contract
+                    the disease when interacting with infected
+                    individuals in schools.
+                    """,
+            )
+            loadKey("workKappa", id, 1.0)
+            rightCol.number_input(
+                "Workplace Transmission Multiplier",
+                min_value=0.00001,
+                max_value=10.0,
+                value=1.0,
+                step=0.00001,
+                format="%0.5g",
+                key=f"_workKappa{id}",
+                on_change=saveKey,
+                args=["workKappa", id],
+                help="""
+                    The value of the transmissibility modifier
+                    $\\kappa$ when an interaction takes place in a
+                    workplace. The higher this value is, the more
+                    likely it is for uninfected individuals to contract
+                    the disease when interacting with infected
+                    individuals in workplaces.
+                    """,
+            )
+            loadKey("householdKappa", id, 2.2)
+            leftCol.number_input(
+                "Household Transmission Multiplier",
+                min_value=0.00001,
+                max_value=10.0,
+                value=2.2,
+                step=0.00001,
+                format="%0.5g",
+                key=f"_householdKappa{id}",
+                on_change=saveKey,
+                args=["householdKappa", id],
+                help="""
+                    The value of the transmissibility modifier
+                    $\\kappa$ when an interaction takes place in a
+                    household. The higher this value is, the more
+                    likely it is for uninfected individuals to contract
+                    the disease when interacting with infected
+                    individuals in households.
+                    """,
+            )
+            loadKey("backgroundKappa", id, 1.0)
+            rightCol.number_input(
+                "Background Contact Transmission Multiplier",
+                min_value=0.00001,
+                max_value=10.0,
+                value=1.0,
+                step=0.00001,
+                format="%0.5g",
+                key=f"_backgroundKappa{id}",
+                on_change=saveKey,
+                args=["backgroundKappa", id],
+                help="""
+                    The value of the transmissibility modifier
+                    $\\kappa$ when an interaction takes place during the
+                    model's background phase (i.e. outside of simulated
+                    locations). The higher this value is, the more
+                    likely it is for uninfected individuals to contract
+                    the disease during the background phase.
+                    """,
+            )
 
         # Dataframe for age-based transmissibility modifiers
+        # TODO: Is this advanced enough to hide?
         st.markdown(
             "### Age-Specific Infectiousness/Susceptibility",
             help="""
@@ -559,7 +583,11 @@ group to contract the disease when interacting with infected individuals.
         )'''
 
     # Life Cycle Parameters
-    with st.expander("Disease Life Cycle"):
+    # TODO: Note that the rerun thing makes the life cycle graph sized wrong;
+    # implement it properly with expander.open next time
+    with st.expander(
+        "Disease Life Cycle",  # key=f"lifeCycleContainer{id}", on_change="rerun"
+    ):
         # Describe what sort of parameters are here
         st.markdown(
             """
@@ -569,39 +597,58 @@ group to contract the disease when interacting with infected individuals.
         """
         )
 
-        # Asymptomatic params
-        loadKey("asymptomaticChild", id, 0.35)
-        st.select_slider(
-            "Probability of Young (0-24) Asymptomatic Case",
-            np.linspace(0.0, 1.0, 201),
-            0.35,
-            format_func=lambda x: f"{100 * x:0.3g}%",
-            on_change=saveKey,
-            args=["asymptomaticChild", id],  # type: ignore
-            key=f"_asymptomaticChild{id}",
-            help="""
-                The probability that an infected young person
-                (defined as 0-24 years old) in the simulation will
-                be asymptomatic (i.e. they never show any symptoms
-                of the disease despite being infectious).
-            """,
-        )
-        loadKey("asymptomaticAdult", id, 0.35)
-        st.select_slider(
-            "Probability of Adult (24+) Asymptomatic Case",
-            np.linspace(0.0, 1.0, 201),
-            0.35,
-            format_func=lambda x: f"{100 * x:0.3g}%",
-            on_change=saveKey,
-            args=["asymptomaticAdult", id],  # type: ignore
-            key=f"_asymptomaticAdult{id}",
-            help="""
-                The probability that an infected adult (defined as
-                24+ years old) in the simulation will be
-                asymptomatic (i.e. they never show any symptoms of
-                the disease despite being infectious).
-            """,
-        )
+        # Asymptomatic params (age-separated if advanced params are enabled)
+        # TODO: See if other slider options are more percent-friendly
+        # TODO: Parity between simple and advanced parameter inputs
+        if advanced:
+            loadKey("asymptomaticChild", id, 0.35)
+            st.select_slider(
+                "Probability of Young (0-24) Asymptomatic Case",
+                np.linspace(0.0, 1.0, 201),
+                0.35,
+                format_func=lambda x: f"{100 * x:0.3g}%",
+                on_change=saveKey,
+                args=["asymptomaticChild", id],  # type: ignore
+                key=f"_asymptomaticChild{id}",
+                help="""
+                    The probability that an infected young person
+                    (defined as 0-24 years old) in the simulation will
+                    be asymptomatic (i.e. they never show any symptoms
+                    of the disease despite being infectious).
+                """,
+            )
+            loadKey("asymptomaticAdult", id, 0.35)
+            st.select_slider(
+                "Probability of Adult (24+) Asymptomatic Case",
+                np.linspace(0.0, 1.0, 201),
+                0.35,
+                format_func=lambda x: f"{100 * x:0.3g}%",
+                on_change=saveKey,
+                args=["asymptomaticAdult", id],  # type: ignore
+                key=f"_asymptomaticAdult{id}",
+                help="""
+                    The probability that an infected adult (defined as
+                    24+ years old) in the simulation will be
+                    asymptomatic (i.e. they never show any symptoms of
+                    the disease despite being infectious).
+                """,
+            )
+        else:
+            loadKey("asymptomaticBoth", id, 0.35)
+            st.select_slider(
+                "Probability of Asymptomatic Case",
+                np.linspace(0.0, 1.0, 201),
+                0.35,
+                format_func=lambda x: f"{100 * x:0.3g}%",
+                on_change=saveKey,
+                args=["asymptomaticBoth", id],  # type: ignore
+                key=f"_asymptomaticBoth{id}",
+                help="""
+                    The probability that an infected individual in the
+                    simulation will be asymptomatic (i.e. they never
+                    show any symptoms of the disease despite being infectious).
+                """,
+            )
 
         # Duration Parameters
         st.markdown(
@@ -634,16 +681,17 @@ group to contract the disease when interacting with infected individuals.
             stage in the disease's life cycle.
         """
         )
-        # TODO: Add errors for diseases with no symptomatic/infectious period
-
-        loadKey("latencyPeriod", id, 10)
-        latencyPeriod = st.select_slider(
+        loadKey("latencyPeriod", id, 0.5)
+        # Previous default was 10
+        latencyPeriod = st.slider(
             "Latency Period Length (Days)",
-            range(22),
-            10,
+            min_value=0.0,
+            max_value=14.0,
+            value=0.5,
+            step=0.5,
+            format="%f Days",
             on_change=saveKey,
             args=["latencyPeriod", id],  # type: ignore
-            format_func=dayCount,
             key=f"_latencyPeriod{id}",
             help="""
                 The length in days of the disease's latency period,
@@ -652,12 +700,15 @@ group to contract the disease when interacting with infected individuals.
                 individual becoming infectious themselves.
             """,
         )
-        loadKey("preSymptomPeriod", id, 2)
-        preSymptomPeriod = st.select_slider(
+        loadKey("preSymptomPeriod", id, 1.0)
+        # Previous default was 2
+        preSymptomPeriod = st.slider(
             "Pre-Symptomatic Period Length (Days)",
-            range(22),
-            2,
-            format_func=dayCount,
+            min_value=0.0,
+            max_value=14.0,
+            value=1.0,
+            step=0.5,
+            format="%f Days",
             key=f"_preSymptomPeriod{id}",
             on_change=saveKey,
             args=["preSymptomPeriod", id],  # type: ignore
@@ -669,14 +720,17 @@ group to contract the disease when interacting with infected individuals.
                 beginning to show symptoms.
             """,
         )
-        loadKey("symptomPeriod", id, 7)
-        symptomPeriod = st.select_slider(
+        loadKey("symptomPeriod", id, 2.0)
+        # Previous default was 7
+        symptomPeriod = st.slider(
             "Symptomatic Period Length (Days)",
-            range(22),
-            7,
+            min_value=0.0,
+            max_value=14.0,
+            value=2.0,
+            step=0.5,
+            format="%f Days",
             on_change=saveKey,
             args=["symptomPeriod", id],  # type: ignore
-            format_func=dayCount,
             key=f"_symptomPeriod{id}",
             help="""
                 The length in days of the disease's symptomatic
@@ -685,12 +739,15 @@ group to contract the disease when interacting with infected individuals.
                 disease.
             """,
         )
-        loadKey("postSymptomPeriod", id, 1)
-        postSymptomPeriod = st.select_slider(
+        loadKey("postSymptomPeriod", id, 2.5)
+        # Previous default was 1
+        postSymptomPeriod = st.slider(
             "Post-Symptomatic Period Length (Days)",
-            range(22),
-            1,
-            format_func=dayCount,
+            min_value=0.0,
+            max_value=14.0,
+            value=2.5,
+            step=0.5,
+            format="%f Days",
             key=f"_postSymptomPeriod{id}",
             on_change=saveKey,
             args=["postSymptomPeriod", id],  # type: ignore
@@ -734,8 +791,7 @@ group to contract the disease when interacting with infected individuals.
             """,
         )
 
-        # Display duration lengths via Cool Bar Graph Thing™
-        # TODO: Fix legend being cut off (and menu dots being slightly cut off)
+        # Display duration lengths via Cool Bar Graph Thing (tm)
         stageNames = ["Latent", "Pre-Symptomatic", "Symptomatic", "Post-Symptomatic"]
         data = pd.DataFrame(
             {
@@ -758,7 +814,7 @@ group to contract the disease when interacting with infected individuals.
                 x=alt.X(
                     "start:Q",
                     title="Length (Days)",
-                    axis=alt.Axis(tickMinStep=1),
+                    axis=alt.Axis(format=".1~f", tickMinStep=0.5),
                     scale=alt.Scale(
                         domain=[
                             0,
@@ -778,7 +834,7 @@ group to contract the disease when interacting with infected individuals.
                 ),
                 tooltip=["Life Stage", "Length (Days)"],
             )
-            .properties(width=600, height=175)
+            .properties(width="container", height=200)
         )
         st.altair_chart(chart)
 
@@ -827,7 +883,11 @@ group to contract the disease when interacting with infected individuals.
         )
 
     # Health Burden Outcome Parameters
-    with st.expander("Health Burden Outcomes"):
+    with st.expander(
+        "Health Burden Outcomes",
+        key=f"healthBurdenContainer{id}",
+        on_change="rerun",
+    ):
         # Describe what sort of parameters are here
         st.markdown(
             """
@@ -849,360 +909,378 @@ group to contract the disease when interacting with infected individuals.
         )
 
         # Health Burden Outcomes
-        # TODO: Make default values more realistic
+        # TODO: Consider having these be just infected proportion rather than
+        # infected symptomatic proportion (which one is easier for
+        # researchers to calculate?)
+        # TODO: Note how scientific notation works in the description or something
         loadKey("caseRatio", id, 0.5)
-        st.select_slider(
-            "Diagnosed Case Rate (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            0.5,
+        st.number_input(
+            "Diagnosed Case Rate (Proportion of Population)",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.5,
+            step=0.00001,
+            format="%0.5g",
             key=f"_caseRatio{id}",
             on_change=saveKey,
-            args=["caseRatio", id],  # type: ignore
-            format_func=lambda x: f"{100 * x:0.3g}%",
+            args=["caseRatio", id],
             help="""
-                The probability that an infected, symptomatic
-                individual will be formally diagnosed as a
+                The proportion of infected, symptomatic
+                individuals who will be formally diagnosed as a
                 confirmed case of the disease.
             """,
         )
-        loadKey("gpRatio", id, 0.35)
-        st.select_slider(
-            "GP Visit Rate (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            0.35,
+        loadKey("gpRatio", id, 0.17)
+        st.number_input(
+            "GP Visit Rate (Proportion of Population)",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.17,
+            step=0.00001,
+            format="%0.5g",
             key=f"_gpRatio{id}",
             on_change=saveKey,
-            args=["gpRatio", id],  # type: ignore
-            format_func=lambda x: f"{100 * x:0.3g}%",
+            args=["gpRatio", id],
             help="""
-                The probability that an infected, symptomatic
-                individual will visit their general practitioner
+                The proportion of infected, symptomatic
+                individuals who will visit their general practitioner
                 (GP) as a result of the disease.
             """,
         )
-        loadKey("hospitalRatio", id, 0.25)
-        st.select_slider(
-            "Hospitalisation Rate (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            0.25,
+        loadKey("hospitalRatio", id, 0.00316133)
+        st.number_input(
+            "Hospitalisation Rate (Proportion of Population)",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.00316133,
+            step=0.00001,
+            format="%0.5e",
             key=f"_hospitalRatio{id}",
             on_change=saveKey,
-            args=["hospitalRatio", id],  # type: ignore
-            format_func=lambda x: f"{100 * x:0.3g}%",
+            args=["hospitalRatio", id],
             help="""
-                The probability that an infected, symptomatic
-                individual will be admitted to a hospital as a
+                The proportion of infected, symptomatic
+                individuals who will be admitted to a hospital as a
                 result of the disease.
             """,
         )
-        loadKey("icuRatio", id, 0.1)
-        st.select_slider(
-            "ICU Visit Rate (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            0.1,
+        loadKey("icuRatio", id, 0.00063227)
+        st.number_input(
+            "ICU Visit Rate (Proportion of Population)",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.00063227,
+            step=0.00001,
+            format="%0.5e",
             key=f"_icuRatio{id}",
             on_change=saveKey,
-            args=["icuRatio", id],  # type: ignore
-            format_func=lambda x: f"{100 * x:0.3g}%",
+            args=["icuRatio", id],
             help="""
-                The probability that an infected, symptomatic
-                individual will be admitted to a hospital's
+                The proportion of infected, symptomatic
+                individuals who will be admitted to a hospital's
                 intensive care unit (ICU) as a result of the
                 disease.
             """,
         )
-        loadKey("deathRatio", id, 0.05)
-        deathRate = st.select_slider(
-            "Mortality Rate (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            0.05,
+        loadKey("deathRatio", id, 0.000115077)
+        deathRate = st.number_input(
+            "Mortality Rate (Proportion of Population)",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.000115077,
+            step=0.00001,
+            format="%0.5e",
             key=f"_deathRatio{id}",
             on_change=saveKey,
-            args=["deathRatio", id],  # type: ignore
-            format_func=lambda x: f"{100 * x:0.3g}%",
+            args=["deathRatio", id],
             help="""
-                The base probability that an infected, symptomatic
-                individual will die as a direct result of the
+                The base proportion of infected, symptomatic
+                individuals who will die as a direct result of the
                 disease.
             """,
         )
 
-        # Dataframe for age-based mortality
-        st.markdown(
-            "### Age-Specific Mortality Rate",
-            help="""
-This table allows for unique likelihoods of death to be defined for
-each age group, overriding the global rate defined above.
-            """,
-        )
-        st.markdown("Double-click a cell in this table to edit its value.")
-        loadKey(
-            "mortAgeForm",
-            id,
-            pd.DataFrame(
-                {
-                    "Age Group": [None],
-                    "Mortality Rate": [deathRate],
-                },
-            ),
-            dataframe=True,
-        )
-        mortAgeForm = st.data_editor(
-            session[f"mortAgeForm{id}"],
-            height="content",
-            num_rows="dynamic",
-            key=f"_mortAgeForm{id}",
-            on_change=saveKey,
-            args=["mortAgeForm", id],
-            kwargs={"dataframe": True},
-            placeholder="Enter a value",
-            column_config={
-                "Age Group": st.column_config.SelectboxColumn(
-                    "Age Group",
-                    required=True,
-                    options=ageTimeDict.keys(),
-                    format_func=lambda x: ageTimeDict[x],  # type: ignore
-                    help="""
-An age group that will have a specific mortality rate defined for it,
-overriding the base probability.
-                    """,
-                ),
-                "Mortality Rate": st.column_config.NumberColumn(
-                    "Mortality Rate",
-                    required=True,
-                    default=deathRate,
-                    min_value=0.0,
-                    max_value=1.0,
-                    format="percent",
-                    help="""
-The probability that an infected, symptomatic individual in this age group
-will die as a direct result of the disease.
-                    """,
-                ),
-            },
-        )
-        paramError(
-            "mortalityAgeFormDuplicates",
-            id,
-            lambda: hasDuplicates(mortAgeForm),
-            f"""
-                Error: The age-specific mortality rate form used by the {
-                    'baseline scenario' if id == 0
-                    else f'scenario named "{session[f'scenarioName{id}']}"'
-                } contains duplicate age group rows. Each age group
-                should only be used in a single row of the form.
-
-                Please remove or change any rows of the Age-Specific
-                Mortality Rate form in
-                :primary-badge[:material/coronavirus: Disease]
-                that use the same age group as another row.
-            """,
-            True,
-        )
-
-        oldVarLengthForm = '''
-        # Save relevant params as variables to avoid lookups
-        deathRowCount = session[f"deathRowCount{id}"]
-        deathRemainingGroups = session[f"deathRemainingAgeGroups{id}"]
-        deathAgeContainer = st.container()
-        for i in range(deathRowCount):
-            (deathGroupColumn, deathRateColumn, deathRemoveColumn) = (
-                deathAgeContainer.columns(
-                    (0.25, 0.55, 0.2), vertical_alignment="center"
-                )
+        # Dataframe for age-based mortality (if advanced params are enabled)
+        if advanced:
+            st.markdown(
+                "### Age-Specific Mortality Rate",
+                help="""
+    This table allows for unique likelihoods of death to be defined for
+    each age group, overriding the global rate defined above.
+                """,
             )
-            deathCurrentGroup = session.get(f"deathAgeGroup{id}-{i}")
-
-            # Age group column
+            st.markdown("Double-click a cell in this table to edit its value.")
             loadKey(
-                "deathAgeGroup",
+                "mortAgeForm",
                 id,
-                deathCurrentGroup if deathCurrentGroup else deathRemainingGroups[0],
-                f"-{i}",
+                pd.DataFrame(
+                    {
+                        "Age Group": [None],
+                        "Mortality Rate": [deathRate],
+                    },
+                ),
+                dataframe=True,
             )
-            with deathGroupColumn:
-                st.selectbox(
-                    "Age Group",
-                    key=f"_deathAgeGroup{id}-{i}",
-                    # Set age group options such that only ages
-                    # that haven't been selected yet can be selected
-                    options=(
-                        [deathCurrentGroup]
-                        + [
-                            group
-                            for group in deathRemainingGroups
-                            if group != deathCurrentGroup
-                        ]
-                        if deathCurrentGroup
-                        else deathRemainingGroups
+            mortAgeForm = st.data_editor(
+                session[f"mortAgeForm{id}"],
+                height="content",
+                num_rows="dynamic",
+                key=f"_mortAgeForm{id}",
+                on_change=saveKey,
+                args=["mortAgeForm", id],
+                kwargs={"dataframe": True},
+                placeholder="Enter a value",
+                column_config={
+                    "Age Group": st.column_config.SelectboxColumn(
+                        "Age Group",
+                        required=True,
+                        options=ageTimeDict.keys(),
+                        format_func=lambda x: ageTimeDict[x],  # type: ignore
+                        help="""
+    An age group that will have a specific mortality rate defined for it,
+    overriding the base proportion.
+                        """,
                     ),
-                    on_change=saveKey,
-                    args=["deathAgeGroup", id, f"-{i}"],  # type: ignore
-                    disabled=not deathRowCount < 10,
-                    help="""
-                    An age group that will have specific mortality
-                    rates defined for it, overriding the base
-                    probability.
-
-                    ##### Options:
-                    - Young Infant: 0-6 months old.
-                    - Infant: 7-24 months old.
-                    - Young Child: 3-5 years old.
-                    - Child: 6-12 years old.
-                    - Adolescent: 13-17 years old.
-                    - Young Adult: 18-24 years old.
-                    - Adult: 25-44 years old.
-                    - Older Adult: 45-64 years old.
-                    - Senior: 65-79 years old.
-                    - Older Senior: 80+ years old.
-                """,
-                )
-            # Mortality column
-            loadKey("deathRatio", id, 0.05, f"-{i}")
-            with deathRateColumn:
-                st.select_slider(
-                    "Mortality Rate (Probability)",
-                    np.linspace(0.0, 1.0, 201),
-                    0.05,
-                    key=f"_deathRatio{id}-{i}",
-                    on_change=saveKey,
-                    args=["deathRatio", id, f"-{i}"],  # type: ignore
-                    format_func=lambda x: f"{100 * x:0.3g}%",
-                    help="""
-                    The probability that an infected, symptomatic
-                    individual in this age group will die as a
-                    direct result of the disease.
-                """,
-                )
-            # Delete button column
-            with deathRemoveColumn:
-                st.button(
-                    label="Remove Age Group",
-                    icon=":material/delete:",
-                    key=f"deathRemove{id}-{i}",
-                    on_click=deleteFormRow,
-                    args=(
-                        i,
-                        f"deathRowCount{id}",
-                        {f"deathAgeGroup{id}-", f"deathRate{id}-"},
+                    "Mortality Rate": st.column_config.NumberColumn(
+                        "Mortality Rate (Proportion of Population)",
+                        required=True,
+                        default=deathRate,
+                        min_value=0.0,
+                        max_value=1.0,
+                        format="%0.5e",
+                        help="""
+    The proportion of infected, symptomatic individuals in this age
+    group who will die as a direct result of the disease.
+                        """,
                     ),
-                    help="""
-                    Remove this row of the form and remove these
-                    age-specific mortality rates from the
-                    simulation.
-                """,
-                )
-        # Button to add another row for age specific params
-        deathAgeContainer.button(
-            label="Add Age Group",
-            icon=":material/add:",
-            on_click=addFormRow,
-            key=f"deathAdd{id}",
-            args=(
-                f"deathRowCount{id}",
-                {
-                    f"deathAgeGroup{id}-{deathRowCount}": (
-                        deathRemainingGroups[0] if deathRemainingGroups else None
-                    ),
-                    f"deathRatio{id}-{deathRowCount}": deathRate,
                 },
-            ),
-            disabled=not deathRowCount < 10,
-            help=(
+            )
+            paramError(
+                "mortalityAgeFormDuplicates",
+                id,
+                lambda: hasDuplicates(mortAgeForm),
+                f"""
+                    Error: The age-specific mortality rate form used by the {
+                        'baseline scenario' if id == 0
+                        else f'scenario named "{session[f'scenarioName{id}']}"'
+                    } contains duplicate age group rows. Each age group
+                    should only be used in a single row of the form.
+
+                    Please remove or change any rows of the Age-Specific
+                    Mortality Rate form in
+                    :primary-badge[:material/coronavirus: Disease]
+                    that use the same age group as another row.
+                """,
+                True,
+            )
+
+            oldVarLengthForm = '''
+            # Save relevant params as variables to avoid lookups
+            deathRowCount = session[f"deathRowCount{id}"]
+            deathRemainingGroups = session[f"deathRemainingAgeGroups{id}"]
+            deathAgeContainer = st.container()
+            for i in range(deathRowCount):
+                (deathGroupColumn, deathRateColumn, deathRemoveColumn) = (
+                    deathAgeContainer.columns(
+                        (0.25, 0.55, 0.2), vertical_alignment="center"
+                    )
+                )
+                deathCurrentGroup = session.get(f"deathAgeGroup{id}-{i}")
+
+                # Age group column
+                loadKey(
+                    "deathAgeGroup",
+                    id,
+                    deathCurrentGroup if deathCurrentGroup else deathRemainingGroups[0],
+                    f"-{i}",
+                )
+                with deathGroupColumn:
+                    st.selectbox(
+                        "Age Group",
+                        key=f"_deathAgeGroup{id}-{i}",
+                        # Set age group options such that only ages
+                        # that haven't been selected yet can be selected
+                        options=(
+                            [deathCurrentGroup]
+                            + [
+                                group
+                                for group in deathRemainingGroups
+                                if group != deathCurrentGroup
+                            ]
+                            if deathCurrentGroup
+                            else deathRemainingGroups
+                        ),
+                        on_change=saveKey,
+                        args=["deathAgeGroup", id, f"-{i}"],  # type: ignore
+                        disabled=not deathRowCount < 10,
+                        help="""
+                        An age group that will have specific mortality
+                        rates defined for it, overriding the base
+                        probability.
+
+                        ##### Options:
+                        - Young Infant: 0-6 months old.
+                        - Infant: 7-24 months old.
+                        - Young Child: 3-5 years old.
+                        - Child: 6-12 years old.
+                        - Adolescent: 13-17 years old.
+                        - Young Adult: 18-24 years old.
+                        - Adult: 25-44 years old.
+                        - Older Adult: 45-64 years old.
+                        - Senior: 65-79 years old.
+                        - Older Senior: 80+ years old.
+                    """,
+                    )
+                # Mortality column
+                loadKey("deathRatio", id, 0.000115077, f"-{i}")
+                with deathRateColumn:
+                    st.select_slider(
+                        "Mortality Rate (Probability)",
+                        np.linspace(0.0, 1.0, 201),
+                        0.000115077,
+                        key=f"_deathRatio{id}-{i}",
+                        on_change=saveKey,
+                        args=["deathRatio", id, f"-{i}"],  # type: ignore
+                        format_func=lambda x: f"{100 * x:0.3g}%",
+                        help="""
+                        The probability that an infected, symptomatic
+                        individual in this age group will die as a
+                        direct result of the disease.
+                    """,
+                    )
+                # Delete button column
+                with deathRemoveColumn:
+                    st.button(
+                        label="Remove Age Group",
+                        icon=":material/delete:",
+                        key=f"deathRemove{id}-{i}",
+                        on_click=deleteFormRow,
+                        args=(
+                            i,
+                            f"deathRowCount{id}",
+                            {f"deathAgeGroup{id}-", f"deathRate{id}-"},
+                        ),
+                        help="""
+                        Remove this row of the form and remove these
+                        age-specific mortality rates from the
+                        simulation.
+                    """,
+                    )
+            # Button to add another row for age specific params
+            deathAgeContainer.button(
+                label="Add Age Group",
+                icon=":material/add:",
+                on_click=addFormRow,
+                key=f"deathAdd{id}",
+                args=(
+                    f"deathRowCount{id}",
+                    {
+                        f"deathAgeGroup{id}-{deathRowCount}": (
+                            deathRemainingGroups[0] if deathRemainingGroups else None
+                        ),
+                        f"deathRatio{id}-{deathRowCount}": deathRate,
+                    },
+                ),
+                disabled=not deathRowCount < 10,
+                help=(
+                    """
+                    Add another row to this form, where you can select
+                    an additional age group to have a unique mortality
+                    rate.
                 """
-                Add another row to this form, where you can select
-                an additional age group to have a unique mortality
-                rate.
+                    if deathRowCount <= 9
+                    else """
+                    All age groups have been given unique mortality
+                    rates, so a new age group cannot be added.
+                """
+                ),
+            )'''
+
+    # Waning Immunity Parameters (if advanced parameters are enabled)
+    if advanced:
+        with st.expander(
+            "Immunity Waning", key=f"naturalWaningContainer{id}", on_change="rerun"
+        ):
+            # Describe what sort of parameters are here
+            st.markdown(
+                """
+                These parameters control how immunity to the disease
+                conferred by having been infected by it in the past
+                will become less effective over time. Note that
+                individuals in the simulation are assumed to be
+                completely immune to the disease immediately after
+                recovering from it; the efficacy before waning is 100%.
+
+                Note that these parameters do not affect immunity to
+                the disease that is obtained from vaccination. This
+                type of immunity can be configured using the parameters
+                in the "Vaccinations and NPIs" tab.
             """
-                if deathRowCount <= 9
-                else """
-                All age groups have been given unique mortality
-                rates, so a new age group cannot be added.
-            """
-            ),
-        )'''
+            )
+            # TODO: Toggle to fully disable immunity waning
 
-    # Waning Immunity Parameters
-    with st.expander("Immunity Waning"):
-        # Describe what sort of parameters are here
-        st.markdown(
-            """
-            These parameters control how immunity to the disease
-            conferred by having been infected by it in the past
-            will become less effective over time. Note that
-            individuals in the simulation are assumed to be
-            completely immune to the disease immediately after
-            recovering from it; the efficacy before waning is 100%.
+            # Waning immunity
+            loadKey("naturalImmunityDuration", id, 2)
+            st.slider(
+                "Natural Immunity Waning Delay (Months)",
+                1,
+                36,
+                2,
+                on_change=saveKey,
+                args=["naturalImmunityDuration", id],  # type: ignore
+                key=f"_naturalImmunityDuration{id}",
+                help="""
+                    The number of months after an individual fully
+                    recovers from the disease before the immunity
+                    conferred by having been infected begins to
+                    diminish, where a month is 30 days.
+                """,
+            )
+            loadKey("naturalWanedEfficacy", id, 0.5)
+            st.select_slider(
+                "Natural Immunity After Waning (Probability)",
+                np.linspace(0.0, 1.0, 201),
+                0.5,
+                key=f"_naturalWanedEfficacy{id}",
+                on_change=saveKey,
+                args=["naturalWanedEfficacy", id],  # type: ignore
+                format_func=lambda x: f"{100 * x:0.3g}%",
+                help="""
+                    The final efficacy value that an individual's
+                    natural immunity after recovering from the disease
+                    will approach as it begins to diminish, represented
+                    as the probability that the individual will remain
+                    healthy when exposed to the disease after their
+                    immunity is fully waned.
+                """,
+            )
+            loadKey("naturalWaningRate", id, 6)
+            st.slider(
+                "Natural Immunity Waning Duration (Months)",
+                0,
+                36,
+                6,
+                on_change=saveKey,
+                args=["naturalWaningRate", id],  # type: ignore
+                key=f"_naturalWaningRate{id}",
+                help="""
+                    The number of months after the immunity from having
+                    fully recovered from the disease begins waning
+                    before the efficacy of the immunity stabilises,
+                    where a month is 30 days. Natural immunity in the
+                    *Flusim* simulation will wane at a linear rate, so
+                    this parameter represents how long it takes for the
+                    immunity level to decrease from 100% immunity to
+                    the final immunity probability defined above.
 
-            Note that these parameters do not affect immunity to
-            the disease that is obtained from vaccination. This
-            type of immunity can be configured using the parameters
-            in the "Vaccinations and NPIs" tab.
-        """
-        )
-
-        # Waning immunity
-        loadKey("naturalImmunityDuration", id, 2)
-        st.slider(
-            "Natural Immunity Waning Delay (Months)",
-            1,
-            36,
-            2,
-            on_change=saveKey,
-            args=["naturalImmunityDuration", id],  # type: ignore
-            key=f"_naturalImmunityDuration{id}",
-            help="""
-                The number of months after an individual fully
-                recovers from the disease before the immunity
-                conferred by having been infected begins to
-                diminish, where a month is 30 days.
-            """,
-        )
-        loadKey("naturalWanedEfficacy", id, 0.5)
-        st.select_slider(
-            "Natural Immunity After Waning (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            0.5,
-            key=f"_naturalWanedEfficacy{id}",
-            on_change=saveKey,
-            args=["naturalWanedEfficacy", id],  # type: ignore
-            format_func=lambda x: f"{100 * x:0.3g}%",
-            help="""
-                The final efficacy value that an individual's
-                natural immunity after recovering from the disease
-                will approach as it begins to diminish, represented
-                as the probability that the individual will remain
-                healthy when exposed to the disease after their
-                immunity is fully waned.
-            """,
-        )
-        loadKey("naturalWaningRate", id, 6)
-        st.slider(
-            "Natural Immunity Waning Duration (Months)",
-            0,
-            36,
-            6,
-            on_change=saveKey,
-            args=["naturalWaningRate", id],  # type: ignore
-            key=f"_naturalWaningRate{id}",
-            help="""
-                The number of months after the immunity from having
-                fully recovered from the disease begins waning
-                before the efficacy of the immunity stabilises,
-                where a month is 30 days. Natural immunity in the
-                *Flusim* simulation will wane at a linear rate, so
-                this parameter represents how long it takes for the
-                immunity level to decrease from 100% immunity to
-                the final immunity probability defined above.
-
-                If this parameter is set to 0, the immunity
-                provided by recovering from the disease will never
-                diminish.
-            """,
-        )
+                    If this parameter is set to 0, the immunity
+                    provided by recovering from the disease will never
+                    diminish.
+                """,
+            )
 
 
-def diseaseSchema(schema: Parameters, id: int = 0):
+def diseaseSchema(schema: Parameters, id: int = 0, advanced: bool = False):
     """
     Function to populate the Pydantic model schema with the parameters in
     this tab with scenario differentiation
@@ -1215,7 +1293,11 @@ def diseaseSchema(schema: Parameters, id: int = 0):
             different instances of the tab by adding a number to the Streamlit
             session state variables. A value of 0 means that this is the
             baseline scenario and will be treated accordingly.
+
+        advanced (bool): Set to True to account for more complex parameters like
+            location-specific transmission modifiers.
     """
+    # TODO: avoid adding parameters unchanged from the baseline for scenario efficiency
     try:
         # Validate parameters
         if not isinstance(schema, Parameters):
@@ -1223,14 +1305,14 @@ def diseaseSchema(schema: Parameters, id: int = 0):
 
         # Load reused parameters immediately to save time
         seedPeriod = idGet("seedPeriod", id, (1, 30))
-        latencyPeriod = idGet("latencyPeriod", id, 10)
-        preSymptomPeriod = idGet("preSymptomPeriod", id, 2)
-        symptomPeriod = idGet("symptomPeriod", id, 7)
-        postSymptomPeriod = idGet("postSymptomPeriod", id, 1)
+        latencyPeriod = idGet("latencyPeriod", id, 0.5)
+        preSymptomPeriod = idGet("preSymptomPeriod", id, 1.0)
+        symptomPeriod = idGet("symptomPeriod", id, 2.0)
+        postSymptomPeriod = idGet("postSymptomPeriod", id, 2.5)
 
         # Strain Parameters
         schema.Scenario_Strain = [
-            strainParameters(StrainId=0, Beta=idGet("beta", id, 0.11))
+            strainParameters(StrainId=0, Beta=idGet("beta", id, 0.0616))
         ]
 
         # Scenario Parameters With Age Prefix
@@ -1239,7 +1321,7 @@ def diseaseSchema(schema: Parameters, id: int = 0):
             if schema.Scenario_ParameterWithAgePrefix
             else ageScenarioParameters()
         )
-        deathRate = idGet("deathRatio", id, 0.05)
+        deathRate = idGet("deathRatio", id, 0.000115077)
         ageScenarioParams.mort = deathRate
         schema.Scenario_ParameterWithAgePrefix = ageScenarioParams
 
@@ -1249,6 +1331,50 @@ def diseaseSchema(schema: Parameters, id: int = 0):
             if schema.Scenario_Parameter
             else scenarioParameters()
         )
+
+        # Advanced parameter differences
+        if advanced:
+            scenarioParams.prob_asymptomatic_young = idGet(
+                "asymptomaticChild", id, 0.35
+            )
+            scenarioParams.prob_asymptomatic = idGet("asymptomaticAdult", id, 0.35)
+            scenarioParams.kappa_household = idGet("householdKappa", id, 2.2)
+            scenarioParams.kappa_child_education = idGet("schoolKappa", id, 1.0)
+            scenarioParams.kappa_workplace = idGet("workKappa", id, 1.0)
+            scenarioParams.kappa_background = idGet("backgroundKappa", id, 1.0)
+            # Immunity Waning
+            scenarioParams.infection_waning_cycle_delay = (
+                idGet("naturalImmunityDuration", id, 2) * 60
+            )
+            scenarioParams.infection_waned_protection = idGet(
+                "naturalWanedEfficacy", id, 0.5
+            )
+            scenarioParams.infection_waning_rate_per_cycle = idGet(
+                "naturalWaningRate", id, 6
+            )
+            mortAgeForm = idGet(
+                "mortAgeForm",
+                id,
+                pd.DataFrame(
+                    {
+                        "Age Group": [None],
+                        "Mortality Rate": [deathRate],
+                    },
+                ),
+            )
+            for age, mort in zip(
+                mortAgeForm["Age Group"],
+                mortAgeForm["Mortality Rate"],
+            ):
+                if age:
+                    setattr(scenarioParams, f"{age}_mort", mort)
+        else:
+            probAsymptomatic = idGet("asymptomaticBoth", id, 0.35)
+            scenarioParams.prob_asymptomatic_young = probAsymptomatic
+            scenarioParams.prob_asymptomatic = probAsymptomatic
+            scenarioParams.infection_waning_cycle_delay = (
+                session.get("cycleCount", 360) * 2
+            )
         # Infection Seeding
         scenarioParams.seed_rate = idGet("seedRate", id, 0.25)
         scenarioParams.seeding_start_cycle = (seedPeriod[0] - 1) * 2
@@ -1256,12 +1382,6 @@ def diseaseSchema(schema: Parameters, id: int = 0):
         # Transmission
         scenarioParams.beta_asymptomatic = idGet("betaAsymptomatic", id, 0.55)
         scenarioParams.beta_post_symptomatic = idGet("betaPostSymptomatic", id, 0.55)
-        scenarioParams.prob_asymptomatic_young = idGet("asymptomaticChild", id, 0.35)
-        scenarioParams.prob_asymptomatic = idGet("asymptomaticAdult", id, 0.35)
-        scenarioParams.kappa_household = idGet("householdKappa", id, 2.2)
-        scenarioParams.kappa_child_education = idGet("schoolKappa", id, 1.0)
-        scenarioParams.kappa_workplace = idGet("workKappa", id, 1.0)
-        scenarioParams.kappa_background = idGet("backgroundKappa", id, 1.0)
         # Life Cycle
         scenarioParams.transmissibility_delay = latencyPeriod * 2
         scenarioParams.symptom_latency = (latencyPeriod + preSymptomPeriod) * 2
@@ -1273,19 +1393,7 @@ def diseaseSchema(schema: Parameters, id: int = 0):
         ) * 2
         # Health Burden Outcomes
         scenarioParams.prob_diagnosis = idGet("caseRatio", id, 0.5)
-        scenarioParams.prob_hospitalisation = idGet("hospitalRatio", id, 0.25)
-        scenarioParams.prob_withdrawal = idGet("withdrawalWork", id, 0.5)
-        scenarioParams.prob_school_withdrawal = idGet("withdrawalSchool", id, 0.9)
-        # Immunity Waning
-        scenarioParams.infection_waning_cycle_delay = (
-            idGet("naturalImmunityDuration", id, 2) * 60
-        )
-        scenarioParams.infection_waned_protection = idGet(
-            "naturalWanedEfficacy", id, 0.5
-        )
-        scenarioParams.infection_waning_rate_per_cycle = idGet(
-            "naturalWaningRate", id, 6
-        )
+        scenarioParams.prob_hospitalisation = idGet("hospitalRatio", id, 0.00316133)
         # Age-Specific Parameters
         transAgeForm = idGet(
             "transAgeForm",
@@ -1306,22 +1414,6 @@ def diseaseSchema(schema: Parameters, id: int = 0):
             if age:
                 setattr(scenarioParams, f"{age}_trans", trans)
                 setattr(scenarioParams, f"{age}_susc", susc)
-        mortAgeForm = idGet(
-            "mortAgeForm",
-            id,
-            pd.DataFrame(
-                {
-                    "Age Group": [None],
-                    "Mortality Rate": [deathRate],
-                },
-            ),
-        )
-        for age, mort in zip(
-            mortAgeForm["Age Group"],
-            mortAgeForm["Mortality Rate"],
-        ):
-            if age:
-                setattr(scenarioParams, f"{age}_mort", mort)
         oldVarLengthForm = """
         for i in range(session.get(f"transRowCount{id}", 0)):
             varAgeGroup = ageCategories[session[f"transAgeGroup{id}-{i}"]]

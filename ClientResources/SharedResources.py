@@ -26,6 +26,9 @@ saveJSON = False
 
 # Other Constants
 
+# Maximum number of additional scenarios
+maxScenarios = 10
+
 # URLs where client/server is located (change to hosted URLs)
 clientUrl = "http://localhost:8501/"
 serverUrl = "http://127.0.0.1:8000/"
@@ -45,7 +48,6 @@ ordinals = {
     9: "Ninth",
     10: "Tenth",
 }
-
 
 # Dictionary getting the population of each community the simulator uses
 communityPopulation = {"newcastle": 272407, "cairns": 140402}
@@ -109,7 +111,7 @@ communityAgePops = {
 
 # Set containing health outcomes selectable for tables
 tableOutcomes = {
-    "Infections",
+    "Symptomatic Infections",
     "Diagnosed Cases",
     "Hospitalisations",
     "Deaths",
@@ -126,7 +128,7 @@ tableTypes = {
 
 # Dictionary getting adjective forms of health outcomes
 outcomeAdjectives = {
-    "Infections": "Infected",
+    "Symptomatic Infections": "Symptomatic",
     "Diagnosed Cases": "Diagnosed",
     "Hospitalisations": "Hospitalised",
     "Deaths": "Dead",
@@ -146,10 +148,10 @@ outcomeRateVariables = {
 # Default values for rates
 outcomeRateDefaults = {
     "Diagnosed Cases": 0.5,
-    "Hospitalisations": 0.25,
-    "Deaths": 0.05,
-    "ICU Visits": 0.1,
-    "GP Visits": 0.333,
+    "Hospitalisations": 0.00316133,
+    "Deaths": 0.000115077,
+    "ICU Visits": 0.00063227,
+    "GP Visits": 0.17,
 }
 
 
@@ -199,6 +201,7 @@ def backgroundColour():
 
 
 # Colour codes for Paul Tol's "bright" colourblind-safe palette
+# (and other pallettes if enough scenarios are created)
 brightCodes = (
     "#BBBBBB",
     "#4477AA",
@@ -207,9 +210,16 @@ brightCodes = (
     "#CCBB44",
     "#66CCEE",
     "#AA3377",
-    "#000000",
+    "#EE7733",
+    "#CC3311",
+    "#009988",
+    "#332288",
+    "#882255",
 )
 
+# Extend pallette list if absolutely necessary
+while len(brightCodes) < maxScenarios:
+    brightCodes = brightCodes + brightCodes  # type: ignore
 
 """
 Class for analysis file parameters
@@ -223,13 +233,13 @@ class AnalysisFile:
         names: List[str],
         summaryValue: Literal["mean", "median"] = "median",
         outcome: Literal[
-            "Infections",
+            "Symptomatic Infections",
             "Diagnosed Cases",
             "Hospitalisations",
             "Deaths",
             "ICU Visits",
             "GP Visits",
-        ] = "Infections",
+        ] = "Symptomatic Infections",
         **kwargs
     ):
         self.tool = tool

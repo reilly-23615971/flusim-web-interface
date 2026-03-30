@@ -25,6 +25,8 @@ warnFormat = partial(st.warning, icon=":material/warning:")
 # Use sRGB in the colour picker for the best display/code match
 
 
+# TODO: Allow errors to link to the affected parameter
+# since containers can be dynamically opened now
 def paramError(
     label: str,
     scenarioID: int,
@@ -123,6 +125,29 @@ def errorChecker(scenarioID: int, name: str = "Errors in Current Scenario"):
 
 
 # Widget Functions
+def containerSave(
+    key: str,
+    scenarioID: int | Literal[""] = "",
+    containers: set[str] = set(),
+):
+    """
+    Wrapper for saveKey that keeps specific containers open, used for
+    advanced parameters and scenario names
+
+    Parameters:
+        key (str): The string used to identify the widget.
+
+        scenarioID (int or ""): The integer representing the scenario the widget
+            is part of. Defaults to "", allowing for parameters that are not
+            associated with scenarios to be saved.
+
+        containers (list of str): String used to identify each container to open.
+    """
+    saveKey(key, scenarioID)
+    for container in containers:
+        session[container] = session.get(container)
+
+
 def saveKey(
     key: str,
     scenarioID: int | Literal[""] = "",
@@ -148,10 +173,16 @@ def saveKey(
         dataframe (bool): Set to True if the widget is a dataframe that requires
             manual application of changes.
     """
+    # TODO: See if dataframes can not reload after every change
+    # TODO: See if scenario dataframes can adapt to baseline changes
+    # (e.g. by having None/NA cells with the placeholder "Same as baseline")
+    # Prevent invalid calls after deleting scenarios
+    if not isinstance(scenarioID, str) and scenarioID > session["scenarioCount"]:
+        return
     keyString = f"{key}{scenarioID}{extra}" if extra else f"{key}{scenarioID}"
     if dataframe:
         # Load both data and changes
-        currentData = session[keyString]
+        currentData = session[keyString].copy()
         modifiedData = session[f"_{keyString}"]
 
         # Row changes
@@ -168,7 +199,7 @@ def saveKey(
             drop=True
         )
 
-        # Save the widget and note scenario differences
+        # Save the edited data
         session[keyString] = currentData
     else:
         session[keyString] = session.get(f"_{keyString}")
@@ -176,9 +207,9 @@ def saveKey(
     # Add to scenario param lists if it's a scenario param (ID != 0 or "")
     if not notScenario and scenarioID:
         if extra:
-            session["scenarioSetParamsExtra"][scenarioID].append((key, extra))
+            session["scenarioSetParamsExtra"][scenarioID].add((key, extra))
         else:
-            session["scenarioSetParams"][scenarioID].append(key)
+            session["scenarioSetParams"][scenarioID].add(key)
 
 
 def loadKey(
@@ -215,7 +246,17 @@ def loadKey(
     if noZeroDefault or isinstance(scenarioID, str):
         session[f"{hiddenPrefix}{keyString}"] = session.get(f"{keyString}", default)
     else:
-        session[f"{hiddenPrefix}{keyString}"] = idGet(key, scenarioID, default, extra)
+        session[f"{hiddenPrefix}{keyString}"] = (
+            idGet(key, scenarioID, default, extra).copy()
+            if dataframe
+            else idGet(key, scenarioID, default, extra)
+        )
+    # Ensure dataframes are properly cleaned up even if never edited
+    if dataframe and scenarioID:
+        if extra:
+            session["scenarioSetParamsExtra"][scenarioID].add((key, extra))
+        else:
+            session["scenarioSetParams"][scenarioID].add(key)
 
 
 # List of parameters that will be affected by changing cycleCount
@@ -236,23 +277,6 @@ dynamicParamList = {
 }
 
 
-def saveWithRerun(
-    key: str,
-    scenarioID: int,
-):
-    """
-    Simple function to trigger a page rerun after saving widget values
-
-    Parameters:
-        key (str): The string used to identify the widget.
-
-        scenarioID (int): The integer representing the scenario the widget
-            is part of.
-    """
-    saveKey(key, scenarioID)
-    session["rerunTime"] = True
-
-
 # TODO: Notify users if parameters are changed when cycle count is adjusted
 def timeScaleChange():
     """
@@ -270,7 +294,6 @@ def timeScaleChange():
                 )
     for param, form in dynamicParamList.items():
         dynamicScaleChange(param, form, 0, noSave=True)
-    # session["rerunTime"] = True
 
 
 def dynamicScaleChange(
@@ -318,23 +341,12 @@ def dynamicScaleChange(
         else:
             # Only update the relevant scenario
             fullKey = f"{formKey}{scenarioID}"
-            if session.get(fullKey, None):
-                form = session[fullKey]
+            form = session.get(fullKey, None)
+            if form is not None and not form.empty:
                 form["Day to Update Parameter"] = form["Day to Update Parameter"].clip(
                     lower=newMin, upper=newMax
                 )
                 session[fullKey] = form
-        session["rerunTime"] = True
-
-
-@st.fragment(run_every=1)
-def rerunTime():
-    """
-    Fragment for rerunning the app when simulation length changes
-    """
-    if session.get("rerunTime", None):
-        session["rerunTime"] = False
-        st.rerun(scope="app")
 
 
 def idGet(key: str, scenarioID: int, defaultValue, extra: Optional[str] = None):
@@ -363,12 +375,12 @@ def idGet(key: str, scenarioID: int, defaultValue, extra: Optional[str] = None):
         )
 
 
-def dayCount(count: int):
+def dayCount(count: int | float):
     """
     Simple function to convert an integer into a string describing a number of days
 
     Parameters:
-        count (int): The number of days to return.
+        count (in or float): The number of days to return.
     """
     return "1 Day" if count == 1 else f"{count} Days"
 
@@ -505,13 +517,12 @@ class Parameter:
         """Save the new value for this parameter set by its widget"""
         session[self.fullKey] = session.get(self.internalKey)
         if self.scenarioID != 0:
-            session["scenarioSetParams"][self.scenarioID].append(self.key)
+            session["scenarioSetParams"][self.scenarioID].add(self.key)
 
     def populateSchema(self, schema):
         """Populate a schema with this parameter's value"""
         setattr(schema, self.paramName, self.value)
 
-    # TODO: Add error functionality
 
 
 """

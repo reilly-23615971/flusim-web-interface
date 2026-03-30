@@ -80,12 +80,14 @@ def createConfig(scenarioCount: int):
     scenarioParams = [Parameters() for _ in range(scenarioCount)]
 
     # Populate parameters with session_state values
+    useAdvanced = session.get("showAdvanced", False)
     for id, scenario in enumerate(scenarioParams):
         # basicSchema(scenario, id)
-        diseaseSchema(scenario, id)
-        communitySchema(scenario, id)
-        vaccineSchema(scenario, id)
-        dynamicSchema(scenario, id)
+        diseaseSchema(scenario, id, useAdvanced)
+        communitySchema(scenario, id, useAdvanced)
+        vaccineSchema(scenario, id, useAdvanced)
+        if useAdvanced:
+            dynamicSchema(scenario, id)
 
     # Create config object with non-scenario parameters as overrides
     return modelGuideFile(
@@ -139,6 +141,11 @@ def runSimulationButton():
     """
     Callback function for the Run Simulation button
     """
+    # Disable button if it's taking a while to run
+    runPending = bool(session.get("confirmRunButton"))
+
+    # List scenarios
+    # TODO: Contain in dropdown if too long
     scenarioCount = session.get("scenarioCount", 0)
     if scenarioCount == 0:
         st.markdown(
@@ -156,13 +163,14 @@ With the current parameters, this modelling experiment will use the
 community data to simulate each of the following {scenarioCount + 1} scenarios:
         """
         )
-        st.markdown(
-            "- Baseline\n"
-            + "\n".join(
-                f"- {session[f'scenarioName{id}']}"
-                for id in range(1, scenarioCount + 1)
+        with st.container() if scenarioCount < 10 else st.expander("Scenario Names"):
+            st.markdown(
+                "- Baseline\n"
+                + "\n".join(
+                    f"- {session[f'scenarioName{id}']}"
+                    for id in range(1, scenarioCount + 1)
+                )
             )
-        )
 
     # Display any errors
     # TODO: Hide scenario errors that are copies of baseline errors
@@ -201,7 +209,12 @@ simulation.
             selected parameters?
         """
         )
-        if st.button("Confirm"):
+        if st.button(
+            "Confirm",
+            key="confirmRunButton",
+            icon="spinner" if runPending else None,
+            disabled=runPending,
+        ):
             # Set params indicating model is simulating
             session.simulationInProgress = True
             session.simulationStartTime = datetime.now()
@@ -235,6 +248,13 @@ simulation.
             session.PendingDataCommunity = session.get("community", "newcastle")
             session.PendingDataScenarioNames = scenarioNames
             session.PendingDataScenarioCount = scenarioCount
+            session.PendingDataAsymptomatic = [
+                [
+                    1 - idGet("asymptomaticChild", scenarioID, 0.35),
+                    1 - idGet("asymptomaticAdult", scenarioID, 0.35),
+                ]
+                for scenarioID in range(scenarioCount + 1)
+            ]
             session.PendingDataHealthOutcomeRates = {
                 outcome: {
                     scenario: idGet(
@@ -257,9 +277,10 @@ simulation.
                 for scenarioID in range(scenarioCount + 1)
             }"""
             pendingDeaths = {
-                scenarioID: idGet("deathRatio", scenarioID, 0.1)
+                scenarioID: idGet("deathRatio", scenarioID, 0.000115077)
                 for scenarioID in range(scenarioCount + 1)
             }
+            # TODO: Fix null getting added here when age tables are unchanged
             session.PendingDataMortalityRates = {
                 scenarioNames[scenarioID]: {
                     age: pendingDeaths[scenarioID] for age in ageWithTime
@@ -295,6 +316,7 @@ simulation.
 
 # TODO: Clean up this function so that errors are more easily read
 # and the returned types don't need as much checking
+# TODO: See if st.cache_data makes a difference here
 async def runModel(scenarioNames: list[str], parameterJSON: str):
     """
     Asynchronous function to send JSON model parameters to the server, awaiting a
@@ -327,10 +349,11 @@ async def runModel(scenarioNames: list[str], parameterJSON: str):
         functionLog.info(
             f"[runModel] Initialising session with base url {serverUrl}..."
         )
+        # TODO: Adjust timeout as necessary (2 hours isn't normal)
         async with ClientSession(
             raise_for_status=False,
             base_url=serverUrl,
-            timeout=ClientTimeout(total=1800),
+            timeout=ClientTimeout(total=7200),
         ) as session:
             functionLog.info("[runModel] Sending post request...")
             async with session.post(

@@ -9,12 +9,7 @@ import numpy as np
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import (
-    dayCount,
-    idGet,
-    loadKey,
-    saveKey,
-)
+from ClientResources.InterfaceFunctions import dayCount, idGet, loadKey, saveKey
 from ClientResources.ModelSchema import Parameters, scenarioParameters
 
 # Logging
@@ -22,7 +17,7 @@ communityLog = logging.getLogger(__name__)
 
 
 @st.fragment
-def buildCommunityTab(id: int):
+def buildCommunityTab(id: int, advanced: bool = False):
     """
     Function to generate the parameters for the simulation environment in a
     specified container with scenario differentiation
@@ -31,6 +26,9 @@ def buildCommunityTab(id: int):
         id (int): An integer that will be used to differentiate the parameters in
             different instances of the tab by adding a number to the Streamlit
             session state variables.
+
+        advanced (bool): Set to True to show more complex parameters like
+            child supervision rate.
     """
     # Initialise session variables needed by the disease forms
     # sessionParameters = {f"deathRowCount{id}": 0}
@@ -60,8 +58,8 @@ def buildCommunityTab(id: int):
     """
     )
 
-    # Disease Response Parameters
-    with st.expander("Withdrawals and Diagnosis"):
+    # Withdrawal and BCC
+    oldExpander = '''with st.expander("Withdrawals and Diagnosis"):
         # Describe what sort of parameters are here
         st.markdown(
             """
@@ -77,39 +75,67 @@ def buildCommunityTab(id: int):
             the disease. These interventions can be configured
             using the parameters in the "Vaccinations and NPIs" tab.
         """
-        )
+        )'''
+    st.subheader("Withdrawals and Contact")
 
-        # The parameters in question
-        loadKey("withdrawalWork", id, 0.5)
-        st.select_slider(
-            "Work Withdrawal Rate (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            0.5,
-            format_func=lambda x: f"{100 * x:0.3g}%",
-            on_change=saveKey,
-            args=["withdrawalWork", id],  # type: ignore
-            key=f"_withdrawalWork{id}",
-            help="""
-                The probability of an infected individual in the
-                simulation voluntarily withdrawing from work after
-                becoming symptomatic.
-            """,
-        )
-        loadKey("withdrawalSchool", id, 0.9)
-        st.select_slider(
-            "School Withdrawal Rate (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            0.9,
-            format_func=lambda x: f"{100 * x:0.3g}%",
-            on_change=saveKey,
-            args=["withdrawalSchool", id],  # type: ignore
-            key=f"_withdrawalSchool{id}",
-            help="""
-                The probability of an infected individual in the
-                simulation voluntarily withdrawing from school
-                after becoming symptomatic.
-            """,
-        )
+    # The parameters in question
+    loadKey("withdrawalWork", id, 0.5)
+    st.select_slider(
+        "Work Withdrawal Rate (Probability)",
+        np.linspace(0.0, 1.0, 201),
+        0.5,
+        format_func=lambda x: f"{100 * x:0.3g}%",
+        on_change=saveKey,
+        args=["withdrawalWork", id],  # type: ignore
+        key=f"_withdrawalWork{id}",
+        help="""
+            The probability of an infected individual in the
+            simulation voluntarily withdrawing from work after
+            becoming symptomatic.
+        """,
+    )
+    loadKey("withdrawalSchool", id, 0.9)
+    st.select_slider(
+        "School Withdrawal Rate (Probability)",
+        np.linspace(0.0, 1.0, 201),
+        0.9,
+        format_func=lambda x: f"{100 * x:0.3g}%",
+        on_change=saveKey,
+        args=["withdrawalSchool", id],  # type: ignore
+        key=f"_withdrawalSchool{id}",
+        help="""
+            The probability of an infected individual in the
+            simulation voluntarily withdrawing from school
+            after becoming symptomatic.
+        """,
+    )
+    loadKey("bccRate", id, 4.0)
+    st.slider(
+        (
+            (
+                "Background Contact Count (Average "
+                "Number of Interactions per Person per Day)"
+            )
+        ),
+        0.0,
+        8.0,
+        4.0,
+        key=f"_bccRate{id}",
+        on_change=saveKey,
+        args=["bccRate", id],  # type: ignore
+        help="""
+            The average number of other people each individual
+            will interact with in the background phase of each
+            day in the simulation. These interactions emulate
+            interactions outside of locations simulated by the
+            model.
+        """,
+    )
+
+    if advanced:
+        # Other Community Parameters
+        st.subheader("Advanced Community Settings")
+
         loadKey("diagnosisDelay", id, 1)
         st.select_slider(
             "Case Diagnosis Delay (Days)",
@@ -127,41 +153,6 @@ def buildCommunityTab(id: int):
             """,
         )
 
-    # Behaviour Parameters
-    with st.expander("Population Behaviours"):
-        # Describe what sort of parameters are here
-        st.markdown(
-            """
-            These parameters control various aspects of how
-            individuals behave in the simulation, including the
-            size of groups that they form and how many people they
-            interact with each day.
-        """
-        )
-
-        # BCC and Child Supervision
-        loadKey("bccRate", id, 4.0)
-        st.slider(
-            (
-                (
-                    "Background Contact Count (Average "
-                    "Number of Interactions per Person per Day)"
-                )
-            ),
-            0.0,
-            8.0,
-            4.0,
-            key=f"_bccRate{id}",
-            on_change=saveKey,
-            args=["bccRate", id],  # type: ignore
-            help="""
-                The average number of other people each individual
-                will interact with in the background phase of each
-                day in the simulation. These interactions emulate
-                interactions outside of locations simulated by the
-                model.
-            """,
-        )
         loadKey("childSupervision", id, 1.0)
         st.select_slider(
             "Child Supervision Rate (Probability)",
@@ -227,7 +218,7 @@ def buildCommunityTab(id: int):
         )
 
 
-def communitySchema(schema: Parameters, id: int = 0):
+def communitySchema(schema: Parameters, id: int = 0, advanced: bool = False):
     """
     Function to populate the Pydantic model schema with the parameters in
     this tab with scenario differentiation
@@ -240,6 +231,9 @@ def communitySchema(schema: Parameters, id: int = 0):
             different instances of the tab by adding a number to the Streamlit
             session state variables. A value of 0 means that this is the
             baseline scenario and will be treated accordingly.
+
+        advanced (bool): Set to True to show more complex parameters like
+            child supervision rate.
     """
     try:
         # Validate parameters
@@ -252,21 +246,27 @@ def communitySchema(schema: Parameters, id: int = 0):
             if schema.Scenario_Parameter
             else scenarioParameters()
         )
-        scenarioParams.diagnosis_delay = idGet("diagnosisDelay", id, 1) * 2
+        # Withdrawals and Contact
+        scenarioParams.prob_withdrawal = idGet("withdrawalWork", id, 0.5)
+        scenarioParams.prob_school_withdrawal = idGet("withdrawalSchool", id, 0.9)
         scenarioParams.background_contact_count = idGet("bccRate", id, 4.0)
-        scenarioParams.prob_child_supervision = idGet("childSupervision", id, 1.0)
-        # scenarioParams.max_class_count = idGet("maxClassCount", id, 1)
-        scenarioParams.max_class_size = idGet("maxClassSize", id, 10)
-        scenarioParams.max_workgroup_size = idGet("maxWorkGroupSize", id, 10)
-        """
-        scenarioParams.max_adult_class_size = idGet("maxAdultClassSize", id, 10)
-        scenarioParams.max_neighbourgroup_size = idGet(
-            'maxNeighborGroupSize', id, 10
-        )
-        scenarioParams.max_churchgroup_size = idGet(
-            'maxChurchGroupSize', id, 10
-        )
-        """
+
+        # The Rest
+        if advanced:
+            scenarioParams.diagnosis_delay = idGet("diagnosisDelay", id, 1) * 2
+            scenarioParams.prob_child_supervision = idGet("childSupervision", id, 1.0)
+            # scenarioParams.max_class_count = idGet("maxClassCount", id, 1)
+            scenarioParams.max_class_size = idGet("maxClassSize", id, 10)
+            scenarioParams.max_workgroup_size = idGet("maxWorkGroupSize", id, 10)
+            """
+            scenarioParams.max_adult_class_size = idGet("maxAdultClassSize", id, 10)
+            scenarioParams.max_neighbourgroup_size = idGet(
+                'maxNeighborGroupSize', id, 10
+            )
+            scenarioParams.max_churchgroup_size = idGet(
+                'maxChurchGroupSize', id, 10
+            )
+            """
         # Save the updated params
         schema.Scenario_Parameter = scenarioParams
     except (ValueError, ValidationError) as e:

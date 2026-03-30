@@ -6,7 +6,7 @@
 import logging
 from io import BytesIO
 from math import ceil
-from typing import Literal
+from typing import Any, Literal
 
 import altair as alt
 import numpy as np
@@ -32,7 +32,7 @@ session = st.session_state
 
 # Dictionary getting health outcome descriptions
 outcomeDescriptions = {
-    "Infections": "infected by the disease",
+    "Symptomatic Infections": "showing symptoms of the disease",
     "Diagnosed Cases": "formally diagnosed as cases of the disease",
     "Hospitalisations": "sent to a hospital due to the disease",
     "Deaths": "killed as a direct result of the disease",
@@ -80,7 +80,7 @@ def formatData(data: bytes, settings: AnalysisFile) -> tuple[pd.DataFrame | byte
 def formatEpidemic(
     rawCSV: bytes,
     scenarioNames: list[str],
-    outcome: str = "Infections",
+    outcomeName: str = "Symptomatic Infections",
     cumulative=False,
     splitByAge=False,
 ) -> pd.DataFrame:
@@ -97,7 +97,7 @@ def formatEpidemic(
             non-descriptive placeholders).
 
         outcome (str): A string indicating the health outcome the epidemic
-            data represents. Can be either 'Infections', 'Diagnosed Cases',
+            data represents. Can be either 'Symptomatic Infections', 'Diagnosed Cases',
             'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
 
         cumulative (bool): Set to True when the CSV contains cumulative
@@ -127,12 +127,14 @@ def formatEpidemic(
             )
         if not scenarioNames:
             raise ValueError("scenarioNames should not be empty.")
-        if outcome not in tableOutcomes:
+        if outcomeName not in tableOutcomes:
             raise ValueError(
                 (
-                    'outcome should be either "Infections", "Diagnosed Cases", '
-                    '"Hospitalisations", "ICU Visits", "GP Visits", '
-                    f'or "Deaths"; was "{outcome}".'
+                    'outcome should be either "Symptomatic Infections", '
+                    "Diagnosed Cases",
+                    "Hospitalisations",
+                    "ICU Visits",
+                    "" f'"GP Visits", or "Deaths"; was "{outcomeName}".',
                 )
             )
     except Exception as e:
@@ -143,23 +145,22 @@ def formatEpidemic(
             )
         )
         raise e
-
+    outcome = "Infections"  # TODO: placeholder until other burdens can be graphed
     # Generate and format the dataframe
     if splitByAge:
         # TODO: Complete if desired; not sure how useful/desirable
         # age-split time series graphs will be (redundant with asir)
         return pd.DataFrame()
     else:
-        # TODO: Duplicate final row if data ends before final cycle
-        framedData = (
-            pd.read_csv(
-                BytesIO(rawCSV),
-                header=0,
-                names=["Days Since First Infection"] + scenarioNames,
-            )
-            .fillna(0.0)
-            .round()
+        framedData = pd.read_csv(
+            BytesIO(rawCSV),
+            header=0,
+            names=["Days Since First Infection"] + scenarioNames,
         )
+        if cumulative:
+            framedData = framedData.ffill().round()
+        else:
+            framedData = framedData.fillna(0.0).round()
 
         # Reshape data for better Altair usage
         valueLabel = f"Total {outcome}" if cumulative else f"{outcome} per Day"
@@ -171,7 +172,7 @@ def formatEpidemic(
 
 def plotEpidemic(
     data: pd.DataFrame,
-    outcome: str = "Infections",
+    outcomeName: str = "Symptomatic Infections",
     cumulative=False,
     includedScenarios: list[str] | Literal["all"] = "all",
 ) -> alt.LayerChart:
@@ -184,7 +185,7 @@ def plotEpidemic(
             the formatEpidemic function.
 
         outcome (str): A string indicating the health outcome the epidemic
-            data represents. Can be either 'Infections', 'Diagnosed Cases',
+            data represents. Can be either 'Symptomatic Infections', 'Diagnosed Cases',
             'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
 
         cumulative (bool): Boolean that is True when the DataFrame contains
@@ -208,12 +209,12 @@ def plotEpidemic(
     try:
         if not isinstance(data, pd.DataFrame):
             raise ValueError(f"data should be a DataFrame, was {type(data)}")
-        if outcome not in tableOutcomes:
+        if outcomeName not in tableOutcomes:
             raise ValueError(
                 (
-                    'outcome should be either "Infections", "Diagnosed Cases", '
-                    '"Hospitalisations", "ICU Visits", "GP Visits", '
-                    f'or "Deaths"; was "{outcome}".'
+                    'outcome should be either "Symptomatic Infections", '
+                    '"Diagnosed Cases", "Hospitalisations", "ICU Visits", '
+                    f'"GP Visits", or "Deaths"; was "{outcomeName}".'
                 )
             )
     except Exception as e:
@@ -224,7 +225,7 @@ def plotEpidemic(
             )
         )
         raise e
-
+    outcome = "Infections"  # TODO: placeholder until other burdens can be graphed
     # Define reusable chart components
     plotTitle = (
         f"Cumulative Median {outcome} Over Time"
@@ -241,6 +242,7 @@ def plotEpidemic(
     scenarioNames = data["Scenario"].unique()
 
     # Remove any scenarios/age groups not specified in the data
+    # TODO: Affect the legend as well, preferably without affecting the colours
     if includedScenarios != "all":
         newData = data[data["Scenario"].isin(includedScenarios)]
     else:
@@ -299,10 +301,10 @@ def plotEpidemic(
 def formatAsir(
     rawCSV: bytes,
     scenarioNames: list[str],
-    columns: list[tuple[str, bool, bool]] = [("Infections", False, False)],
+    columns: list[tuple[str, bool, bool]] = [("Symptomatic Infections", False, False)],
     includedScenarios: list[str] | Literal["all"] = "all",
     includedAges: list[str] | Literal["all", False] = "all",
-) -> tuple[pd.DataFrame, dict[str, ColumnConfig], list[str], list[str]]:
+) -> tuple[pd.DataFrame, dict[str, ColumnConfig], set[str], set[str]]:
     """
     Function to convert raw data from the age-specific infection rate
     ('asir') Flusim analysis tool into the desired DataFrame format for
@@ -340,10 +342,10 @@ def formatAsir(
         columnConfig (dict of str and ColumnConfig): A dictionary storing the
             configuration settings for each column in the table.
 
-        percentCols (list of str): A list of strings holding the names of
+        percentCols (set of str): A set of strings holding the names of
             each column that uses percentage formatting.
 
-        differenceCols (list of str): A list of strings holding the names of
+        differenceCols (set of str): A set of strings holding the names of
             each column that uses difference from baseline formatting.
 
     Raises:
@@ -389,11 +391,23 @@ def formatAsir(
         f"Scenario names are {scenarioNames}; current index is {framedData.index}"
     )
     framedData.columns = pd.Index(["Total"] + ageWithTime)
+
+    # Scale the data by symptomatic likelihood
+    # TODO: Heed the pandas deprecation warning regarding implicit casting
+    asymptomaticChild, asymptomaticAdult = zip(*session.DataAsymptomatic)
+    framedData.loc[:, ageWithTime[:6]] = framedData.loc[:, ageWithTime[:6]].mul(
+        asymptomaticChild, axis=0
+    )
+    framedData.loc[:, ageWithTime[6:]] = framedData.loc[:, ageWithTime[6:]].mul(
+        asymptomaticAdult, axis=0
+    )
+
+    # Reset indices
     framedData.index = pd.Index(scenarioNames)
     framedData.reset_index(names="Scenario", inplace=True)
 
     # Reshape data for better Streamlit usage with placeholder infections
-    meltedData = framedData.melt(
+    meltedData = framedData.round().melt(
         "Scenario", var_name="Age Group", value_name="Base Values"
     )
 
@@ -408,8 +422,7 @@ def formatAsir(
     community = session.DataCommunity
 
     # Generate config data for Streamlit display
-    percentCols = []
-    differenceCols = []
+    percentCols, differenceCols = set(), set()
     columnConfig = {}
 
     columnConfig["Scenario"] = st.column_config.TextColumn(
@@ -430,42 +443,77 @@ other age groups list the age range they cover as part of their name.
     """,
     )
 
+    # Prepare burden-scaled columns beforehand for efficiency
+    requiredOutcomes = {outcome for outcome, _, _ in columns}
+    outcomeColumns: dict[str, pd.Series[Any]] = {}
+    outcomeBaselines: dict[str, pd.Series[Any]] = {}
+    for outcome in requiredOutcomes:
+        match outcome:
+            case "Symptomatic Infections":
+                scaledColumn = meltedData["Base Values"].copy()
+                scaledBaseline = baselineValues.copy()
+            case "Deaths":
+                # Account for age-specific mortality
+                # Convert death rates to DataFrame for efficiency
+                deathRates = pd.DataFrame(session.DataMortalityRates).T.stack()
+                dataIndexValues = pd.MultiIndex.from_frame(
+                    meltedData[["Scenario", "Age Group"]]
+                )
+                scaledColumn = (
+                    meltedData["Base Values"]
+                    * pd.Series(
+                        dataIndexValues.map(deathRates), index=meltedData.index
+                    ).fillna(
+                        meltedData["Scenario"].map(
+                            session["DataHealthOutcomeRates"]["Deaths"]
+                        )
+                    )
+                ).round()
+
+                # Baseline values
+                baselineDeath = session.DataMortalityRates[baselineScenario]
+                scaledBaseline = (
+                    baselineValues
+                    * (
+                        meltedData["Age Group"]
+                        .map(baselineDeath)
+                        .fillna(
+                            session["DataHealthOutcomeRates"]["Deaths"][
+                                baselineScenario
+                            ]
+                        )
+                    )
+                ).round()
+            case _:
+                scaledColumn = (
+                    meltedData["Base Values"]
+                    * meltedData["Scenario"].map(
+                        session["DataHealthOutcomeRates"][outcome]
+                    )
+                ).round()
+                scaledBaseline = (
+                    baselineValues
+                    * (session["DataHealthOutcomeRates"][outcome][baselineScenario])
+                ).round()
+        # Recalculate totals to avoid rounding-induced mismatch
+        if not includedAges or (includedAges == "all" or "Total" in includedAges):
+            scenarioCount = len(scenarioNames)
+            scaledColumn.iloc[:scenarioCount] = (
+                scaledColumn.groupby(scaledColumn.index % scenarioCount).sum()
+                - scaledColumn.iloc[:scenarioCount]
+            )
+            scaledBaseline.iloc[:scenarioCount] = scaledColumn.iloc[0]
+        outcomeColumns[outcome] = scaledColumn
+        outcomeBaselines[outcome] = scaledBaseline
+
     # Generate columns
     for outcome, proportion, baselineDifference in columns:
-        # Multiply base infection rate with corresponding outcome rate
-        if outcome not in {"Infections", "Deaths"}:
-            currentColumn = meltedData["Base Values"] * meltedData["Scenario"].map(
-                session["DataHealthOutcomeRates"][outcome]
-            )
-            columnBaselines = baselineValues * (
-                session["DataHealthOutcomeRates"][outcome]["Baseline"]
-            )
-        elif outcome == "Deaths":
-            # Account for age-specific mortality
-            # Convert death rates to DataFrame for efficiency
-            deathRates = pd.DataFrame(session.DataMortalityRates).T.stack()
-            dataIndexValues = pd.MultiIndex.from_frame(
-                meltedData[["Scenario", "Age Group"]]
-            )
-            currentColumn = meltedData["Base Values"] * pd.Series(
-                dataIndexValues.map(deathRates), index=meltedData.index
-            ).fillna(
-                meltedData["Scenario"].map(session["DataHealthOutcomeRates"]["Deaths"])
-            )
-
-            # Baseline values
-            baselineDeath = session.DataMortalityRates["Baseline"]
-            columnBaselines = baselineValues * (
-                meltedData["Age Group"]
-                .map(baselineDeath)
-                .fillna(session["DataHealthOutcomeRates"]["Deaths"]["Baseline"])
-            )
-
-        else:
-            currentColumn = meltedData["Base Values"].copy()
-            columnBaselines = baselineValues.copy()
+        currentColumn = outcomeColumns[outcome]
+        columnBaselines = outcomeBaselines[outcome]
 
         # Apply proportion/difference modifications
+        # TODO: Either fix or disable just proportion
+        # TODO: See if case matching is better here than elif chains
         if proportion and not baselineDifference:
             currentColumn /= meltedData["Age Group"].map(communityAgePops[community])
             columnName = f"{outcomeAdjectives[outcome]} % of Population"
@@ -477,9 +525,9 @@ that was {outcomeDescriptions[outcome]}, as a
 percentage.
             """
             )
-            percentCols.append(columnName)
+            percentCols.add(columnName)
         elif not proportion and baselineDifference:
-            currentColumn = (currentColumn - columnBaselines).round()
+            currentColumn = currentColumn - columnBaselines
             columnName = f"{outcome} (Difference from Baseline)"
             columnConfig[columnName] = st.column_config.Column(
                 help=f"""
@@ -491,9 +539,9 @@ and the number of people who were
 scenario{' (in the same age group)' if includedAges else ''}.
             """
             )
-            differenceCols.append(columnName)
+            differenceCols.add(columnName)
         elif proportion and baselineDifference:
-            currentColumn -= columnBaselines
+            currentColumn = currentColumn - columnBaselines
             # Account for potential division by 0
             currentColumn = (currentColumn / columnBaselines).where(
                 columnBaselines != 0, other=np.nan
@@ -510,10 +558,9 @@ scenario{' (in the same age group)' if includedAges else ''},
 as a percentage.
             """
             )
-            percentCols.append(columnName)
-            differenceCols.append(columnName)
+            percentCols.add(columnName)
+            differenceCols.add(columnName)
         else:
-            currentColumn = currentColumn.round()
             columnName = outcome
             columnConfig[columnName] = st.column_config.Column(
                 help=f"""

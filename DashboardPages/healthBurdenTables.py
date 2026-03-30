@@ -38,8 +38,19 @@ for parameter, default in sessionParameters.items():
 ageGroups = ageWithTime + ["Total"]
 
 
-# Get norms needed for proper background gradients
-def getSlopeNorm(column):
+def getSlopeNorm(column: pd.Series) -> TwoSlopeNorm:
+    """
+    Function to generate the slope norm used for table background gradients
+
+    Parameters:
+        column (Series): A Pandas series representing the column to make a slope
+            norm for.
+
+    Returns:
+        TwoSlopeNorm: The slope norm, with the column's minimum and maximum
+            values as the minimum and maximum and correction for columns that
+            do not cross zero or are homogenous.
+    """
     minVal, maxVal = column.min(), column.max()
     return TwoSlopeNorm(
         vcenter=0,
@@ -55,17 +66,28 @@ def getSlopeNorm(column):
 
 
 # Function to choose whether dataframe cells should have white or black text
-def selectTextColour(colour):
+def selectTextColour(colour: str) -> str:
+    """
+    Function to decide whether cells in a table have black or white text
+
+    Parameters:
+        colour (str): A string representing a hexadecimal RGB colour.
+
+    Returns:
+        str: The hexadecimal code for either black (#000000) or white (#ffffff).
+    """
     luminosity = (
         0.299 * int(colour[1:3], 16)  # red
         + 0.587 * int(colour[3:5], 16)  # green
         + 0.114 * int(colour[5:], 16)
     )  # blue
-    return "#000000" if luminosity > 180 else "#ffffff"
+    return "#000000" if luminosity > 135 else "#ffffff"
 
 
-# Callback function to generate and format the table
 def generateTable():
+    """
+    Callback function used to generate and format health burden tables
+    """
     # Throw error if no data is present
     if not usePresetData and not session.get("modelDataRawAsir"):
         raise FileNotFoundError(
@@ -74,6 +96,8 @@ def generateTable():
                 "run a simulation before attempting to generate a table."
             )
         )
+    # Ensure latest column settings are used
+    saveKey("healthColumnForm", dataframe=True)
 
     scenarioNames = session.get(
         "DataScenarioNames",
@@ -110,7 +134,7 @@ def generateTable():
     oldVarLengthForm = """outcomeColumnCount = session.get("healthOutcomeRowCount", 1)
     columnDetails = [
         (
-            session.get(f"healthOutcome{colNumber}", "Infections"),
+            session.get(f"healthOutcome{colNumber}", "Symptomatic Infections"),
             session.get(f"useBaselineDifference{colNumber}", False),
             session.get(f"useProportion{colNumber}", False),
         )
@@ -134,6 +158,13 @@ def generateTable():
     if usePresetData:
         # Set default session_state params
         session.DataCommunity = "newcastle"
+        session.DataAsymptomatic = [
+            [
+                1 - idGet("asymptomaticChild", scenarioID, 0.35),
+                1 - idGet("asymptomaticAdult", scenarioID, 0.35),
+            ]
+            for scenarioID in range(4)
+        ]
         session.DataHealthOutcomeRates = {
             outcome: {
                 scenario: idGet(
@@ -153,9 +184,10 @@ def generateTable():
             }
             for scenarioID in range(4)
         }"""
+        # TODO: Fix null getting added here when age tables are unchanged
         session.DataMortalityRates = {
             scenarioNames[scenarioID]: {
-                age: idGet("deathRatio", scenarioID, 0.1) for age in ageWithTime
+                age: idGet("deathRatio", scenarioID, 0.000115077) for age in ageWithTime
             }
             | (
                 idGet(
@@ -177,7 +209,7 @@ def generateTable():
     else:
         unformattedData = session.get("modelDataRawAsir")
 
-    ageData, columnConfig, percentColumns, differenceColumns = formatAsir(
+    ageData, columnConfig, percSet, diffSet = formatAsir(
         unformattedData,  # type: ignore
         scenarioNames,
         columnDetails,
@@ -186,8 +218,6 @@ def generateTable():
     )
 
     # Format data according to column type
-    diffSet = set(differenceColumns)
-    percSet = set(percentColumns)
     formatValues = (
         {column: "{:+.5n}" for column in diffSet - percSet}
         | {column: "{:+.3%}" for column in diffSet & percSet}
@@ -217,14 +247,14 @@ def generateTable():
 
     # Colour the index cells
 
-    # Generate and map colour palette
+    # Generate and map scenario colour palette
     scenarioColourMap = brightCodes[: len(scenarioNames)]
     scenarioColourDictionary = {
         scenario: to_hex(scenarioColourMap[index])
         for index, scenario in enumerate(scenarioNames)
     }
 
-    # Apply the colours
+    # Apply the colours to the scenario column
     def scenarioColourString(value):
         colour = scenarioColourDictionary[value]
         return f"background-color: {colour}; color: {selectTextColour(colour)}"
@@ -246,7 +276,7 @@ def generateTable():
         ageStyle = ageStyle.map(ageColourString, subset=["Age Group"])
 
     # Use background gradients on difference from baseline columns
-    for column in differenceColumns:
+    for column in diffSet:
         colVals = ageData[column]
         ageStyle = ageStyle.background_gradient(
             "RdBu_r",
@@ -254,6 +284,11 @@ def generateTable():
             vmax=1,
             subset=[column],
             gmap=getSlopeNorm(colVals)(colVals),  # type: ignore
+        )
+        # Set white background for NA values to make them readable
+        ageStyle = ageStyle.map(
+            lambda val: "background-color: #F7F7F7" if pd.isna(val) else "",
+            subset=[column],
         )
 
     # Save the generated table
@@ -275,10 +310,10 @@ st.markdown(
 # Modify CSS to avoid age group names being cut off
 st.html(
     """
-    <style>
-        .stMultiSelect [data-baseweb=select] span{max-width: 500px;}
-    </style>
-"""
+        <style>
+            .stMultiSelect [data-baseweb=select] span{max-width: 500px;}
+        </style>
+    """
 )
 
 # Save relevant params as variables to avoid lookups
@@ -350,7 +385,7 @@ specified health burden outcomes in that scenario.
             """,
         )
         if not scenariosToUse:
-            healthOutcomeErrorContainer.error(
+            st.error(
                 """
             Error: No scenarios have been included in the table. If you
             attempt to generate the table now, it will be empty. Please
@@ -407,7 +442,7 @@ in the case of the 'Total' group).
         """,
     )
     if not agesToUse:
-        healthOutcomeErrorContainer.error(
+        st.error(
             """
         Error: No age groups have been included in the table. If you
         attempt to generate the table now, it will be empty. Please
@@ -470,7 +505,9 @@ Select the health burden outcome you would like to be included as a column on th
 Select any number of options here to modify how the column will be displayed.
 ### Options:
 - Percentage: The health burden outcome will be displayed as a percentage
-of the total population.
+of the total population. Note that this percentage may exceed 100% if infection
+waning is present in the simulation, as it is possible for the same individual
+to be infected multiple times.
 - Difference from Baseline: The column will display the difference in the
 selected health burden outcome between the baseline scenario and each other
 scenario. If "Percentage" is also selected, this difference will be displayed
@@ -487,7 +524,7 @@ as the percentage increase/decrease from the baseline value.
             outcomeTypeColumn,
             healthRemoveColumn,
         ) = st.columns((0.25, 0.275, 0.275, 0.2))
-        currentOutcome = session.get(f"healthOutcome{i}", "Infections")
+        currentOutcome = session.get(f"healthOutcome{i}", "Symptomatic Infections")
 
         # Health burden outcome column
         loadKey(f"healthOutcome", i, currentOutcome, noZeroDefault=True)
@@ -513,7 +550,7 @@ as the percentage increase/decrease from the baseline value.
                 included as a column on the table.
 
                 ### Options:
-                - Infections: the number of individuals infected with
+                - Symptomatic Infections: the number of individuals infected with
                 the disease in the simulation.
                 - Diagnosed Cases: the number of individuals formally diagnosed
                 with the disease in the simulation.
@@ -560,7 +597,7 @@ as the percentage increase/decrease from the baseline value.
                 result in the simulation the row is for. For example,
                 if the number of infected individuals was 300 in the
                 baseline scenario and 400 in Scenario 1, an
-                'Infections' column with this setting enabled would
+                'Symptomatic Infections' column with this setting enabled would
                 display +100 in the row for Scenario 1.
 
                 Note that this option will always be set to False if
@@ -597,7 +634,7 @@ as the percentage increase/decrease from the baseline value.
                 each age group in each scenario's community. For
                 example, if the number of infected adults was 20,000 in
                 a scenario with the Newcastle community (which has
-                71,299 adults), an 'Infections' column with
+                71,299 adults), an 'Symptomatic Infections' column with
                 'Percentage' disabled would display 20,000 while a
                 column with it enabled would display 28.051%.
 
@@ -606,7 +643,7 @@ as the percentage increase/decrease from the baseline value.
                 in the baseline scenario for the given age group. For
                 example, if the number of infected individuals was 300
                 in the baseline scenario and 400 in Scenario 1, an
-                'Infections' column with both 'Percentage' and
+                'Symptomatic Infections' column with both 'Percentage' and
                 'Difference from Baseline' enabled would display
                 +33.333% in the row for Scenario 1.
             """,
@@ -646,7 +683,7 @@ as the percentage increase/decrease from the baseline value.
         args=(
             f"healthOutcomeRowCount",
             {
-                f"healthOutcome{healthOutcomeRowCount}": "Infections",
+                f"healthOutcome{healthOutcomeRowCount}": "Symptomatic Infections",
                 f"useBaselineDifference{healthOutcomeRowCount}": False,
                 f"useProportion{healthOutcomeRowCount}": False,
             },
@@ -697,11 +734,18 @@ No simulation experiments have been completed yet, so there is no data to tabula
     ),
 )
 # Display the table itself
+# TODO: Get opinion on whether table should scroll or not
 tableData = session.get("HealthOutcomeTableData")
 tableConfig = session.get("HealthOutcomeTableConfig")
 if tableData is not None:
     st.header("Health Burden Outcome Table")
-    st.dataframe(tableData, column_config=tableConfig, hide_index=True)
+    st.dataframe(
+        tableData,
+        height="auto",
+        column_config=tableConfig,
+        hide_index=True,
+        placeholder="N/A",
+    )
 
     # Button to download the CSV data used by the table
     @st.fragment()

@@ -10,9 +10,25 @@ from datetime import datetime
 
 import pandas as pd
 import streamlit as st
-from streamlit_notify import notify, toast  # type: ignore
 
-from ClientResources.SharedResources import resultQueue, usePresetData, usePresetParams
+# Reload streamlit_notify if it fails the first time
+try:
+    from streamlit_notify import notify, toast
+except ImportError:
+    import importlib
+    import time
+
+    time.sleep(0.01)
+    importlib.reload(importlib.import_module("streamlit_notify"))
+    from streamlit_notify import notify, toast  # type: ignore
+
+# from streamlit_notify import notify, toast  # type: ignore
+
+from ClientResources.SharedResources import (
+    resultQueue,
+    usePresetData,
+    usePresetParams,
+)
 
 # from ClientResources.SimulationRunFunctions import runSimulationButton
 
@@ -100,8 +116,8 @@ sessionParameters = {
     "simulationInProgress": False,
     "scenarioCount": 0,
     "sessionID": int(datetime.now().timestamp()),
-    "scenarioSetParamsExtra": {1: [], 2: [], 3: [], 4: [], 5: []},
-    "scenarioSetParams": {1: [], 2: [], 3: [], 4: [], 5: []},
+    "scenarioSetParamsExtra": {},
+    "scenarioSetParams": {},
     "activeErrors": {0: {}},
 }
 for parameter, default in sessionParameters.items():
@@ -316,6 +332,7 @@ def updateData():
             "Community",
             "ScenarioNames",
             "ScenarioCount",
+            "Asymptomatic",
             "HealthOutcomeRates",
             "MortalityRates",
         }
