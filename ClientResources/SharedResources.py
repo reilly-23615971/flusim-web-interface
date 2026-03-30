@@ -119,21 +119,14 @@ tableOutcomes = {
     "GP Visits",
 }
 
-"""
-# Set containing possible forms the health outcomes can take
-tableTypes = {
-    'Frequency', 'Percentage of Population'
-}
-"""
-
 # Dictionary getting adjective forms of health outcomes
 outcomeAdjectives = {
     "Symptomatic Infections": "Symptomatic",
     "Diagnosed Cases": "Diagnosed",
     "Hospitalisations": "Hospitalised",
     "Deaths": "Dead",
-    "ICU Visits": "Severely Ill",
-    "GP Visits": "Visiting",
+    "ICU Visits": "ICU Visiting",
+    "GP Visits": "GP Visiting",
 }
 
 # Dictionary getting session_state variables for outcome rates
@@ -152,6 +145,13 @@ outcomeRateDefaults = {
     "Deaths": 0.000115077,
     "ICU Visits": 0.00063227,
     "GP Visits": 0.17,
+}
+
+# Adjective forms of vaccination statuses
+vaccineAdjectives = {
+    "All": "",
+    "Vaccinated": "Vaccinated ",
+    "Unvaccinated": "Unvaccinated ",
 }
 
 
@@ -176,19 +176,6 @@ triggerConditions = {
     "Cases per School": "per_school_cases",
     # "Cases per K-12 School": "per_primary_high_school_cases",
 }
-
-# Tuple holding the different location types for kappa selection
-"""
-kappaLocations = {
-    "Households": "household",
-    "K-12 Education": "child_education",
-    "Tertiary Education": "adult_education",
-    "Workplaces": "workplace",
-    "Childcare": "child_care",
-    "Hospitals": "hospital",
-    "Background": "background",
-}
-"""
 
 
 # Simple function to get theme colours
@@ -253,3 +240,4 @@ class AnalysisFile:
         if tool == "asir":
             self.useProportion = kwargs.get("useProportion", False)
             self.differenceType = kwargs.get("differenceType", "")
+            self.vaccinatedOnly = kwargs.get("vaccinated", False)

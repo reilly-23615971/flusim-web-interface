@@ -3768,7 +3768,7 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False) -> bo
                             "Dose Efficacy After Waning": [primWanedEfficacy],
                         },
                     ),
-                )
+                ).dropna()
                 ageWaneDict.update(
                     vacWaneAgeForm.set_index("Age Group")[
                         "Dose Efficacy After Waning"

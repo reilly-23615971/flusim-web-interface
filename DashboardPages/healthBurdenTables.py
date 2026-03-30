@@ -22,7 +22,7 @@ from ClientResources.SharedResources import (
     tableOutcomes,
     usePresetData,
 )
-from ClientResources.VisualisationFunctions import formatAsir
+from ClientResources.VisualisationFunctions import formatAsir, generateAsir
 
 # Logging
 tableLog = logging.getLogger(__name__)
@@ -89,7 +89,7 @@ def generateTable():
     Callback function used to generate and format health burden tables
     """
     # Throw error if no data is present
-    if not usePresetData and not session.get("modelDataRawAsir"):
+    if not usePresetData and not session.get("modelDataAsirFull"):
         raise FileNotFoundError(
             (
                 "No simulation ASIR data was available to plot; please "
@@ -97,6 +97,7 @@ def generateTable():
             )
         )
     # Ensure latest column settings are used
+    # TODO: Check that this loading is fixing the bug it's meant to
     saveKey("healthColumnForm", dataframe=True)
 
     scenarioNames = session.get(
@@ -109,23 +110,23 @@ def generateTable():
         pd.DataFrame(
             {
                 "Health Burden Outcome": [None],
-                "Options": [None],
+                "Vaccination Status": ["All"],
+                "Options": [[]],
             },
         ),
     )
 
+    useVaccinationSplit = usePresetData or session.get("modelDataAsirVaccinated")
     columnDetails = [
         (
             outcome,
-            "Percentage" in options if isinstance(options, list) else False,
-            (
-                "Difference from Baseline" in options
-                if isinstance(options, list)
-                else False
-            ),
+            vaccineStatus if useVaccinationSplit else "All",
+            "Percentage" in options,
+            "Difference from Baseline" in options,
         )
-        for outcome, options in zip(
+        for outcome, vaccineStatus, options in zip(
             healthColumnForm["Health Burden Outcome"],
+            healthColumnForm["Vaccination Status"],
             healthColumnForm["Options"],
         )
         if outcome
@@ -140,11 +141,11 @@ def generateTable():
         )
         for colNumber in range(0, outcomeColumnCount)
     ]"""
-    scenariosUsed = session.get("healthOutcomeScenariosToUse", "all")
+    scenariosUsed = session.get("healthOutcomeScenariosToUse", scenarioNames)
     agesUsed = (
         False
         if not session.get("healthOutcomeAgeGroupToggle")
-        else session.get("healthOutcomeAgesToUse", "all")
+        else session.get("healthOutcomeAgesToUse", ageGroups)
     )
     tableLog.info(
         f"""
@@ -195,26 +196,31 @@ def generateTable():
                     scenarioID,
                     pd.DataFrame(columns=["Age Group", "Mortality Rate"]),
                 )
+                .dropna()
                 .replace({"Age Group": ageTimeDict})
                 .set_index("Age Group")["Mortality Rate"]
                 .to_dict()
             )
             for scenarioID in range(4)
         }
-        # Load test data from file
+        # Load test data from files
         with open("./TestData/asirMedianAbsolute.csv", "rb") as csv:
-            unformattedData = csv.read()
+            fullData = formatAsir(csv.read(), scenarioNames)
+        with open("./TestData/asirMedianVaccinated.csv", "rb") as csv:
+            vaccinatedData = formatAsir(csv.read(), scenarioNames)
 
     # Load data from session_state
     else:
-        unformattedData = session.get("modelDataRawAsir")
+        fullData = session.get("modelDataAsirFull")
+        vaccinatedData = session.get("modelDataAsirVaccinated")
 
-    ageData, columnConfig, percSet, diffSet = formatAsir(
-        unformattedData,  # type: ignore
+    ageData, columnConfig, percSet, diffSet = generateAsir(
+        fullData,  # type: ignore
         scenarioNames,
-        columnDetails,
+        columnDetails,  # type: ignore
         includedScenarios=scenariosUsed,
         includedAges=agesUsed,
+        vaccinatedData=vaccinatedData,
     )
 
     # Format data according to column type
@@ -321,7 +327,8 @@ healthOutcomeRowCount = session["healthOutcomeRowCount"]
 healthOutcomeErrorContainer = st.container()
 
 # Check if there is data to tabulate
-currentDataExists = not (session.get("modelDataRawAsir") is None)
+currentDataExists = not (session.get("modelDataAsirFull") is None)
+currentDataUsesVaccines = not (session.get("modelDataAsirVaccinated") is None)
 if not currentDataExists and not usePresetData:
     healthOutcomeErrorContainer.warning(
         """
@@ -473,6 +480,7 @@ included in the table.
         pd.DataFrame(
             {
                 "Health Burden Outcome": [None],
+                "Vaccination Status": ["All"],
                 "Options": [[]],
             },
         ),
@@ -487,6 +495,11 @@ included in the table.
         args=["healthColumnForm"],
         kwargs={"dataframe": True},
         placeholder="Select a health burden outcome",
+        column_order=(
+            None
+            if currentDataUsesVaccines or usePresetData
+            else ("Health Burden Outcome", "Options")
+        ),
         column_config={
             "Health Burden Outcome": st.column_config.SelectboxColumn(
                 "Health Burden Outcome",
@@ -496,10 +509,26 @@ included in the table.
 Select the health burden outcome you would like to be included as a column on the table.
                 """,
             ),
+            "Vaccination Status": st.column_config.SelectboxColumn(
+                "Vaccination Status",
+                required=True,
+                default="All",
+                options={"All", "Vaccinated", "Unvaccinated"},
+                help="""
+Select what vaccination status should be considered for health burdens in this column.
+### Options:
+- All: The column will include all health burden outcomes recorded in the
+simulation, regardless of vaccination status.
+- Vaccinated: The column will only include health burden outcomes recorded in
+individuals who had already received vaccines in the simulation.
+- Unvaccinated: The column will only include health burden outcomes recorded in
+individuals who had not received vaccines in the simulation.
+                """,
+            ),
             "Options": st.column_config.MultiselectColumn(
                 "Options",
                 default=[],
-                options=["Percentage", "Difference from Baseline"],
+                options={"Percentage", "Difference from Baseline"},
                 color="auto",
                 help="""
 Select any number of options here to modify how the column will be displayed.
@@ -726,7 +755,7 @@ Use the data from the last simulation to generate a table displaying different
 health outcomes on the scenarios in the simulation, with the specific columns
 displayed depending on the parameters selected above.
             """
-            if session.get("modelDataRawAsir")
+            if currentDataExists
             else """
 No simulation experiments have been completed yet, so there is no data to tabulate.
             """

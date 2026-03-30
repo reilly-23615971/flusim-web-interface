@@ -42,6 +42,11 @@ type Proportion = Annotated[float, Ge(0), Le(1)]
 type Probability = Annotated[float, Ge(0), Le(1)]
 type EfficacyValue = Annotated[float, Ge(0), Le(1)]
 
+# Vaccination priority is defined in advance for type checking purposes
+vaccinePriorityDefault: list[
+    Literal["elderly", "healthcare", "essential_workers", "other"]
+] = ["elderly", "healthcare", "essential_workers", "other"]
+
 # Validation constants
 parameterCategories = {
     "Scenario_CrossImmunity": ["FromStrainId", "ToStrainId"],
@@ -940,7 +945,7 @@ class scenarioParameters(BaseModel):
     vaccination_priority: Optional[
         list[Literal["elderly", "healthcare", "essential_workers", "other"]]
     ] = Field(
-        default=["elderly", "healthcare", "essential_workers", "other"],
+        default=vaccinePriorityDefault,
         title="Vaccination Priority",
         description=(
             (
@@ -1930,7 +1935,7 @@ class Parameters(BaseModel):
                     or info.field_name == "Scenario_VaccineDoseEfficacy"
                 ):
                     clearValues = [
-                        (first, "All Ages" if second is None else second)
+                        first + ("All Ages" if second is None else second)
                         for first, second in duplicateValues
                     ]
                 else:

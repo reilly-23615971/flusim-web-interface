@@ -304,6 +304,7 @@ simulation.
                             },
                         ),
                     )
+                    .dropna()
                     .replace({"Age Group": ageTimeDict})
                     .set_index("Age Group")["Mortality Rate"]
                     .to_dict()

@@ -22,8 +22,6 @@ except ImportError:
     importlib.reload(importlib.import_module("streamlit_notify"))
     from streamlit_notify import notify, toast  # type: ignore
 
-# from streamlit_notify import notify, toast  # type: ignore
-
 from ClientResources.SharedResources import (
     resultQueue,
     usePresetData,
@@ -135,10 +133,12 @@ st.sidebar.link_button(
 )
 
 
-# Fragment to regularly check if model results have been received yet
-# TODO: Rewrite this to be cleaner and more readable
 @st.fragment(run_every=1)
 def updateData():
+    """
+    Fragment to regularly check if model results have been received yet
+    """
+    # TODO: Rewrite this to be cleaner and more readable
     if session.simulationInProgress and not resultQueue.empty():
         processedData = resultQueue.get()
         appLog.info(f"[updateData] Processing the following data:\n{processedData}")
@@ -149,6 +149,12 @@ def updateData():
             scenarios = (
                 4 if usePresetData or usePresetParams else session.scenarioCount + 1
             )
+            # Remove any old session data that won't be overridden here
+            # TODO: Make more robust when number of returned values can vary more
+            # TODO: Consider creating vaccinated/unvaccinated asir dataframes
+            # here rather than in generateAsir
+            if len(processedData) < 4:
+                session.pop("modelDataAsirVaccinated", None)
             for data, tag in processedData:
                 # Further error checking
                 if len(data) == 0:
@@ -174,25 +180,6 @@ def updateData():
                     """,
                         icon=":material/donut_small:",
                     )
-                    vaccineDifference = """ elif tag == "AsirVaccinated":
-                    # Construct vaccinated and unvaccinated ASIR tables
-                    fullData = session.get("modelDataAsirFull")
-                    if not fullData:
-                        appLog.error(
-                            "[updateData] Vaccinated data received before full data"
-                        )
-                    else:
-                        # TODO: Debug text
-                        os.write(1, f"Full data:\n{fullData}\n\n".encode())
-                        os.write(1, f"Vaccine data:\n{data}\n\n".encode())
-                        unvaccinatedData = fullData - data
-                        os.write(
-                            1,
-                            f"Unvaccinated data:\n{unvaccinatedData}\n\n".encode(),
-                        )
-                        session["modelDataAsirVaccinated"] = data
-                        session["modelDataAsirUnvaccinated"] = unvaccinatedData
-                        successes += 1 """
 
                 else:
                     successes += 1
