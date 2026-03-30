@@ -69,6 +69,7 @@ def formatData(data: bytes, settings: AnalysisFile) -> tuple[pd.DataFrame | byte
             f"Epidemic{typeTag}",
         )
     # Leave asir alone since it gets formatted when generating the table
+    # TODO: Account for vaccinated/unvaccinated split
     elif settings.tool == "asir":
         return data, "RawAsir"
     else:

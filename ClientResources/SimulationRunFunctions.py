@@ -80,22 +80,29 @@ def createConfig(scenarioCount: int):
     scenarioParams = [Parameters() for _ in range(scenarioCount)]
 
     # Populate parameters with session_state values
+    useVaccines = False
     useAdvanced = session.get("showAdvanced", False)
     for id, scenario in enumerate(scenarioParams):
-        # basicSchema(scenario, id)
         diseaseSchema(scenario, id, useAdvanced)
         communitySchema(scenario, id, useAdvanced)
-        vaccineSchema(scenario, id, useAdvanced)
+        useVaccines = useVaccines or vaccineSchema(scenario, id, useAdvanced)
         if useAdvanced:
             dynamicSchema(scenario, id)
 
-    # Create config object with non-scenario parameters as overrides
+    # Use middle joint to control options
+    # TODO: Account for more conditionals
+    middleJoint = "-dashboard"
+    if useVaccines:
+        middleJoint += "+vaccines"
+
+    # Create config object
     return modelGuideFile(
         name="Flusim Dashboard Simulation",
         description=str(session.sessionID),
         output_folder="./results/",
-        middle_joint="-usingEpidemic",
+        middle_joint=middleJoint,
         community_used=[session.get("community", "newcastle")],
+        # Community overrides are global parameters e.g. number of runs
         community_overrides=[
             communityOverride(
                 name=session.get("community", "newcastle"),
@@ -118,6 +125,7 @@ def createConfig(scenarioCount: int):
                 ),
             )
         ],
+        # Shared overrides are baseline parameters
         shared_overrides=overrideParams(parameters=scenarioParams[0]),
         simulation_sets=[
             simulationSet(
@@ -191,8 +199,7 @@ community data to simulate each of the following {scenarioCount + 1} scenarios:
             icon=":material/error:",
         )
     else:
-        # TODO: Display estimated simulation run time
-        # TODO: Make warning display for the chart one too
+        # TODO: Ensure any visualisations show this chart warning
         if session.get("ChartGenerated"):
             st.warning(
                 """
@@ -203,6 +210,7 @@ simulation.
         """,
                 icon=":material/bar_chart_off:",
             )
+            # TODO: Display estimated simulation run time
         st.markdown(
             """
             Are you sure you want to begin running simulations with the
@@ -338,12 +346,27 @@ async def runModel(scenarioNames: list[str], parameterJSON: str):
             was encountered when running the model, alongside the error itself
             as an Exception subclass.
     """
+    # TODO: Account for direct vs. indirect protection
+    # (via extra asir filtered to vaccinated only)
     try:
-        dataForms = [
-            AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=True),
-            AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=False),
-            AnalysisFile(tool="asir", names=scenarioNames),
-        ]
+        # Prepare correct data forms
+        schema = json.loads(parameterJSON)
+        # TODO: Account for more potential analysis options
+        if "+vaccine" in schema.get("middle_joint"):
+            dataForms = [
+                AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=True),
+                AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=False),
+                AnalysisFile(tool="asir", names=scenarioNames),
+                AnalysisFile(tool="asir", names=scenarioNames, vaccinated=True),
+            ]
+            functionLog.info("[runModel] Ready to run model with vaccines...")
+        else:
+            dataForms = [
+                AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=True),
+                AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=False),
+                AnalysisFile(tool="asir", names=scenarioNames),
+            ]
+            functionLog.info("[runModel] Ready to run model...")
 
         # Send POST request to server with parameters
         functionLog.info(
@@ -355,10 +378,8 @@ async def runModel(scenarioNames: list[str], parameterJSON: str):
             base_url=serverUrl,
             timeout=ClientTimeout(total=7200),
         ) as session:
-            functionLog.info("[runModel] Sending post request...")
-            async with session.post(
-                "runModel", json=json.loads(parameterJSON)
-            ) as response:
+            functionLog.info("[runModel] Sending post request to run sim...")
+            async with session.post("runModel", json=schema) as response:
                 responseData = await response.read()
                 if response.status == 422:
                     responseText = await response.text()
@@ -369,7 +390,6 @@ async def runModel(scenarioNames: list[str], parameterJSON: str):
                 response.raise_for_status()
             functionLog.info("[runModel] Response received! Returning data...")
 
-        # Convert CSV statistics into DataFrame(s)
         functionLog.info(
             f"[runModel] Preparing to process {len(dataForms)} analyses..."
         )
@@ -395,7 +415,7 @@ async def runModel(scenarioNames: list[str], parameterJSON: str):
                 return ("ValueError", e)
             except Exception as e:
                 functionLog.error(
-                    "[runModel] Server returned " f"unspecified malformed files: {e}"
+                    f"[runModel] Server returned unspecified malformed files: {e}"
                 )
                 return ("UncaughtFormatError", e)
         return processedData

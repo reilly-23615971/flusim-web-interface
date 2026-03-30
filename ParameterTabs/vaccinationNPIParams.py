@@ -3625,7 +3625,7 @@ def trigCast(x):
     )
 
 
-def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
+def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False) -> bool:
     """
     Function to populate the Pydantic model schema with the parameters in
     this tab with scenario differentiation
@@ -3641,21 +3641,24 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
 
         advanced (bool): Set to True to show more complex parameters like
             individual vaccine dose efficacies.
+
+    Returns:
+        bool: True if vaccines were used in the scenario, permitting
+            direct vs. indirect protection calculations.
     """
+    # Load reused parameters immediately to save time
+    vaccineToggle = idGet("vaccineToggle", id, False)
+    boosterToggle = idGet("boosterToggle", id, False)
+    socialDistanceToggle = idGet("socialDistancingToggle", id, False)
+    ageNames = list(ageTimeDict.keys())
+    primDoseCount = idGet("primaryDoseCount", id, 1)
+    initialProportion = idGet("initialVaccinated", id, 0.0)
+    targetProportion = idGet("targetVaccinated", id, 0.8)
+    socialCompliance = idGet("socialDistancingCompliance", id, 0.9)
     try:
         # Validate parameters
         if not isinstance(schema, Parameters):
             raise ValueError("schema should be a Parameters object")
-
-        # Load reused parameters immediately to save time
-        vaccineToggle = idGet("vaccineToggle", id, False)
-        boosterToggle = idGet("boosterToggle", id, False)
-        socialDistanceToggle = idGet("socialDistancingToggle", id, False)
-        ageNames = list(ageTimeDict.keys())
-        primDoseCount = idGet("primaryDoseCount", id, 1)
-        initialProportion = idGet("initialVaccinated", id, 0.0)
-        targetProportion = idGet("targetVaccinated", id, 0.8)
-        socialCompliance = idGet("socialDistancingCompliance", id, 0.9)
 
         # Initialising Scenario Parameters
         scenarioParams = (
@@ -4091,3 +4094,4 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
             )
         )
         raise e
+    return vaccineToggle
