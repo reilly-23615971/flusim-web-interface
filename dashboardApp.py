@@ -134,42 +134,9 @@ st.sidebar.link_button(
     "User Manual", "/app/static/UserManual.pdf", icon=":material/quick_reference:"
 )
 
-# Add run simulation button to sidebar below pages
-# TODO: consider adding progress updates to the sidebar (time remaining,
-# progress bars, server availability etc.)
-oldButton = '''
-runModelButton = st.sidebar.button(
-    label=(
-        "Running simulations..." if session.simulationInProgress else "Run Simulations"
-    ),
-    on_click=runSimulationButton,
-    key="_runSimSidebar",
-    disabled=session.simulationInProgress,
-    type="primary",
-    icon=(
-        ":material/hourglass:"
-        if session.simulationInProgress
-        else ":material/motion_play:"
-    ),
-    help=(
-        """
-        Send a request to the *Flusim* model server to run the model
-        with the specified parameters. Once the request has been made,
-        you will be unable to run the model again until it completes,
-        so make sure you have configured your parameters to appropriate
-        values before clicking.
-    """
-        if not session.simulationInProgress
-        else """
-        A simulation is already running; please wait for it to conclude
-        before running another one.
-    """
-    ),
-)
-'''
-
 
 # Fragment to regularly check if model results have been received yet
+# TODO: Rewrite this to be cleaner and more readable
 @st.fragment(run_every=1)
 def updateData():
     if session.simulationInProgress and not resultQueue.empty():
@@ -207,6 +174,26 @@ def updateData():
                     """,
                         icon=":material/donut_small:",
                     )
+                    vaccineDifference = """ elif tag == "AsirVaccinated":
+                    # Construct vaccinated and unvaccinated ASIR tables
+                    fullData = session.get("modelDataAsirFull")
+                    if not fullData:
+                        appLog.error(
+                            "[updateData] Vaccinated data received before full data"
+                        )
+                    else:
+                        # TODO: Debug text
+                        os.write(1, f"Full data:\n{fullData}\n\n".encode())
+                        os.write(1, f"Vaccine data:\n{data}\n\n".encode())
+                        unvaccinatedData = fullData - data
+                        os.write(
+                            1,
+                            f"Unvaccinated data:\n{unvaccinatedData}\n\n".encode(),
+                        )
+                        session["modelDataAsirVaccinated"] = data
+                        session["modelDataAsirUnvaccinated"] = unvaccinatedData
+                        successes += 1 """
+
                 else:
                     successes += 1
                     session[f"modelData{tag}"] = data
