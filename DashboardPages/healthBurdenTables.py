@@ -89,7 +89,7 @@ def generateTable():
     Callback function used to generate and format health burden tables
     """
     # Throw error if no data is present
-    if not usePresetData and not session.get("modelDataAsirFull"):
+    if not usePresetData and session.get("modelDataAsirFull") is None:
         raise FileNotFoundError(
             (
                 "No simulation ASIR data was available to plot; please "
@@ -116,7 +116,7 @@ def generateTable():
         ),
     )
 
-    useVaccinationSplit = usePresetData or session.get("modelDataAsirVaccinated")
+    useVaccinationSplit = usePresetData or session.get("modelDataAsirVaccinated") is not None
     columnDetails = [
         (
             outcome,
@@ -159,13 +159,17 @@ def generateTable():
     if usePresetData:
         # Set default session_state params
         session.DataCommunity = "newcastle"
+        useAdvanced = session.get("showAdvanced", False)
         session.DataAsymptomatic = [
             [
                 1 - idGet("asymptomaticChild", scenarioID, 0.35),
                 1 - idGet("asymptomaticAdult", scenarioID, 0.35),
             ]
             for scenarioID in range(4)
-        ]
+        ] if useAdvanced else [
+                [1 - idGet("asymptomaticBoth", scenarioID, 0.35)] * 2
+                for scenarioID in range(4)
+            ]
         session.DataHealthOutcomeRates = {
             outcome: {
                 scenario: idGet(
@@ -220,7 +224,7 @@ def generateTable():
         columnDetails,  # type: ignore
         includedScenarios=scenariosUsed,
         includedAges=agesUsed,
-        vaccinatedData=vaccinatedData,
+        baseVaccinatedData=vaccinatedData,
     )
 
     # Format data according to column type
@@ -462,6 +466,7 @@ in the case of the 'Total' group).
     # Variable-length form for choosing columns
     # TODO: Axe the duplicate column rule
     # TODO: Either fix or prevent percentage infection >100 due to reinfection
+    # TODO: Sort the dropdowns
     st.subheader(
         "Select Health Burden Columns",
         help="""

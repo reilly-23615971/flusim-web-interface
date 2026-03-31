@@ -3,6 +3,7 @@
 # Functions used by tables and graphs
 
 # Imports
+import os
 import logging
 from collections import defaultdict
 from io import BytesIO
@@ -51,7 +52,7 @@ vaccineDescriptions = {
 }
 
 
-def formatData(data: bytes, settings: AnalysisFile) -> tuple[pd.DataFrame | bytes, str]:
+def formatData(data: bytes, settings: AnalysisFile) -> tuple[pd.DataFrame, str]:
     """
     Wrapper function to perform the correct formatting process on csv data
 
@@ -61,8 +62,11 @@ def formatData(data: bytes, settings: AnalysisFile) -> tuple[pd.DataFrame | byte
         settings (AnalysisFile): The AnalysisFile containing the settings to use.
 
     Returns:
+        DataFrame: The formatted data.
 
+        str: A string identifying what sort of data was formatted.
     """
+    # TODO: Axe typeTag since updateData can access the data forms directly
     if settings.tool == "epidemic":
         typeTag = "Cumulative" if settings.useCumulative else "Daily"
         return (
@@ -401,7 +405,7 @@ def scaleAsirColumn(
             deathRates = pd.DataFrame(session.DataMortalityRates).T.stack()
             dataIndexValues = pd.MultiIndex.from_frame(data[["Scenario", "Age Group"]])
             scaledColumn = data["Base Values"] * pd.Series(
-                dataIndexValues.map(deathRates), index=data.index
+                dataIndexValues.map(deathRates), index=data.index # type: ignore
             ).fillna(data["Scenario"].map(session["DataHealthOutcomeRates"]["Deaths"]))
 
             baselineDeath = session.DataMortalityRates[baselineScenario]
@@ -452,21 +456,21 @@ def recalculateTotals(
 # TODO: more options
 # TODO: refactor to allow identical columns
 def generateAsir(
-    fullData: pd.DataFrame,
+    baseData: pd.DataFrame,
     scenarioNames: list[str],
     columns: Sequence[
         tuple[str, Literal["All", "Vaccinated", "Unvaccinated"], bool, bool]
     ] = [("Symptomatic Infections", "All", False, False)],
     includedScenarios: list[str] | Literal["all"] = "all",
     includedAges: list[str] | Literal["all", False] = "all",
-    vaccinatedData: Optional[pd.DataFrame] = None,
+    baseVaccinatedData: Optional[pd.DataFrame] = None,
 ) -> tuple[pd.DataFrame, dict[str, ColumnConfig], set[str], set[str]]:
     """
     Function to create a table of health burden data obtained
     from the 'asir' Flusim analysis tool
 
     Parameters:
-        fullData (DataFrame): A DataFrame containing the asir data, processed with
+        baseData (DataFrame): A DataFrame containing the asir data, processed with
             the formatAsir function.
 
         scenarioNames (list of str): A list of strings containing the names of the
@@ -493,7 +497,7 @@ def generateAsir(
             groups should be included. If this is False, the age group column
             will be omitted entirely.
 
-        vaccinatedData (Dataframe, optional): A DataFrame containing asir data
+        baseVaccinatedData (Dataframe, optional): A DataFrame containing asir data
             specifically for vaccinated individuals in the simulation.
 
     Returns:
@@ -547,6 +551,8 @@ def generateAsir(
         raise e
 
     # Useful constants
+    fullData = baseData.copy()
+    
     community = session.DataCommunity
     scenarioCount = len(scenarioNames)
 
@@ -560,7 +566,8 @@ def generateAsir(
     fullBaselines = fullData["Age Group"].map(baselineRows["Base Values"])
 
     # Generate vaccinated baseline data if needed
-    if vaccinatedData is not None:
+    if baseVaccinatedData is not None:
+        vaccinatedData = baseVaccinatedData.copy()
         vaccinatedBaselineRows = (
             vaccinatedData.loc[vaccinatedData["Scenario"] == baselineScenario]
             .drop("Scenario", axis=1)
@@ -569,6 +576,8 @@ def generateAsir(
         vaccinatedBaselines = vaccinatedData["Age Group"].map(
             vaccinatedBaselineRows["Base Values"]
         )
+    else:
+        vaccinatedData = None
 
     # Generate config data for Streamlit display
     # TODO: Allow more options
@@ -727,5 +736,7 @@ scenario{' and age group' if includedAges else ''}) who were
         if includedAges
         else fullData.set_index("Scenario")
     ).sort_index()
+    if includedAges:
+        fullData = fullData.reindex(ageWithTime + ["Total"], level="Age Group")
 
     return fullData, columnConfig, percentCols, differenceCols

@@ -43,7 +43,6 @@ from ClientResources.SharedResources import (
     serverUrl,
     usePresetParams,
 )
-from ClientResources.VisualisationFunctions import formatData
 from ParameterTabs.communityParams import communitySchema
 
 # from ParameterTabs.basicParams import basicSchema
@@ -253,6 +252,21 @@ simulation.
 
             # Save current parameter values that'll be used for
             # visualisation when the user has potentially changed them
+            useAdvanced = session.get("showAdvanced", False)
+            schema = json.loads(parameterJSON)
+            if "+vaccine" in schema.get("middle_joint"):
+                session.PendingDataForms = [
+                    AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=True),
+                    AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=False),
+                    AnalysisFile(tool="asir", names=scenarioNames),
+                    AnalysisFile(tool="asir", names=scenarioNames, vaccinated=True),
+                ]
+            else:
+                session.PendingDataForms = [
+                    AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=True),
+                    AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=False),
+                    AnalysisFile(tool="asir", names=scenarioNames),
+                ]
             session.PendingDataCommunity = session.get("community", "newcastle")
             session.PendingDataScenarioNames = scenarioNames
             session.PendingDataScenarioCount = scenarioCount
@@ -262,7 +276,11 @@ simulation.
                     1 - idGet("asymptomaticAdult", scenarioID, 0.35),
                 ]
                 for scenarioID in range(scenarioCount + 1)
+            ] if useAdvanced else [
+                [1 - idGet("asymptomaticBoth", scenarioID, 0.35)] * 2
+                for scenarioID in range(scenarioCount + 1)
             ]
+            
             session.PendingDataHealthOutcomeRates = {
                 outcome: {
                     scenario: idGet(
@@ -313,7 +331,7 @@ simulation.
             }
 
             # Make the model call
-            runModelWrapper(scenarioNames, parameterJSON)
+            runModelWrapper(parameterJSON)
 
             # Generate popup to let the user know it's pending
             toast(
@@ -326,22 +344,17 @@ simulation.
 # TODO: Clean up this function so that errors are more easily read
 # and the returned types don't need as much checking
 # TODO: See if st.cache_data makes a difference here
-async def runModel(scenarioNames: list[str], parameterJSON: str):
+async def runModel(parameterJSON: str):
     """
     Asynchronous function to send JSON model parameters to the server, awaiting a
     response containing the results of the simulation
 
     Parameters:
-        scenarioNames (list of str): A list of names to assign to each scenario.
-
         parameterJSON (str): A string containing the JSON representation of
             the simulation experiment to run.
 
     Returns:
-        list: A list containing tuples for each analysis performed on the
-            data. Each tuple contains the byte data of the analysed CSV
-            results alongside a string to identify the type
-            of analysis it represents.
+        list: A list containing the byte data of the analysed CSV results.
 
         tuple: A string identifying what kind of error
             was encountered when running the model, alongside the error itself
@@ -350,24 +363,7 @@ async def runModel(scenarioNames: list[str], parameterJSON: str):
     # TODO: Account for direct vs. indirect protection
     # (via extra asir filtered to vaccinated only)
     try:
-        # Prepare correct data forms
         schema = json.loads(parameterJSON)
-        # TODO: Account for more potential analysis options
-        if "+vaccine" in schema.get("middle_joint"):
-            dataForms = [
-                AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=True),
-                AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=False),
-                AnalysisFile(tool="asir", names=scenarioNames),
-                AnalysisFile(tool="asir", names=scenarioNames, vaccinated=True),
-            ]
-            functionLog.info("[runModel] Ready to run model with vaccines...")
-        else:
-            dataForms = [
-                AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=True),
-                AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=False),
-                AnalysisFile(tool="asir", names=scenarioNames),
-            ]
-            functionLog.info("[runModel] Ready to run model...")
 
         # Send POST request to server with parameters
         functionLog.info(
@@ -390,27 +386,20 @@ async def runModel(scenarioNames: list[str], parameterJSON: str):
                     )
                 response.raise_for_status()
             functionLog.info("[runModel] Response received! Returning data...")
-
-        functionLog.info(
-            f"[runModel] Preparing to process {len(dataForms)} analyses..."
-        )
-        # Process without unzipping if there's only one analysis
-        if len(dataForms) == 1:
-            return [formatData(responseData, dataForms[0])]
+        
+        # Process without unzipping if there's only one analysis (unused currently)
+        #if len(dataForms) == 1:
+            #return [responseData]
         # Unzip data and format each analysis file
         with ZipFile(BytesIO(responseData)) as analyses:
             fileNames = analyses.namelist()
-            for file in fileNames:
-                functionLog.info(f"File Data: {analyses.read(file).decode()}")
+            # for file in fileNames:
+            #     functionLog.info(f"File Data: {analyses.read(file).decode()}")
             if len(fileNames) == 0:
                 functionLog.error("[runModel] Server returned no readable files")
                 return "EmptyZipFile"
-
             try:
-                processedData = [
-                    formatData(analyses.read(file), dataForms[index])
-                    for index, file in enumerate(fileNames)
-                ]
+                processedData = [analyses.read(file) for file in fileNames]
             except ValueError as e:
                 functionLog.error(f"[runModel] Server returned malformed files: {e}")
                 return ("ValueError", e)
@@ -438,14 +427,12 @@ async def runModel(scenarioNames: list[str], parameterJSON: str):
         return ("UncaughtError", e)
 
 
-def runModelWrapper(scenarioNames, parameterJSON):
+def runModelWrapper(parameterJSON):
     """
     Async wrapper function for runModel, allowing HTTP requests to be made
     asynchronously without blocking Streamlit operations
 
     Parameters:
-        scenarioNames (list of str): A list of names to assign to each scenario.
-
         parameterJSON (str): A string containing the JSON representation of
             the simulation experiment to run.
     """
@@ -459,7 +446,7 @@ def runModelWrapper(scenarioNames, parameterJSON):
         """
         try:
             # time.sleep(5)  # Debug for testing dashboard while running
-            formattedData = asyncio.run(runModel(scenarioNames, parameterJSON))
+            formattedData = asyncio.run(runModel(parameterJSON))
             if formattedData:
                 resultQueue.put(formattedData)  # type: ignore
         except Exception as e:

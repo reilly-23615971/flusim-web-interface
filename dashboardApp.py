@@ -27,6 +27,7 @@ from ClientResources.SharedResources import (
     usePresetData,
     usePresetParams,
 )
+from ClientResources.VisualisationFunctions import formatData
 
 # from ClientResources.SimulationRunFunctions import runSimulationButton
 
@@ -140,22 +141,42 @@ def updateData():
     """
     # TODO: Rewrite this to be cleaner and more readable
     if session.simulationInProgress and not resultQueue.empty():
-        processedData = resultQueue.get()
-        appLog.info(f"[updateData] Processing the following data:\n{processedData}")
+        returnedData = resultQueue.get()
+        appLog.info(f"[updateData] Processing the following data:\n{returnedData}")
+        os.write(1, f"Received data from server\n\n".encode())
+
+        # Make pending data no longer pending
+        pendingData = {
+            "Forms",
+            "Community",
+            "ScenarioNames",
+            "ScenarioCount",
+            "Asymptomatic",
+            "HealthOutcomeRates",
+            "MortalityRates",
+        }
+        for name in pendingData:
+            session[f"Data{name}"] = session.get(f"PendingData{name}")
+        # TODO: Add a check to ensure visualisations can't use the new values
+        # while this function is still processing the data
 
         # Check if the server returned an error instead of proper data
-        if isinstance(processedData, list):
+        if isinstance(returnedData, list):
             successes = 0
             scenarios = (
-                4 if usePresetData or usePresetParams else session.scenarioCount + 1
+                4 if usePresetData or usePresetParams else session.DataScenarioCount + 1
             )
             # Remove any old session data that won't be overridden here
             # TODO: Make more robust when number of returned values can vary more
-            # TODO: Consider creating vaccinated/unvaccinated asir dataframes
-            # here rather than in generateAsir
-            if len(processedData) < 4:
+            if len(returnedData) < 4:
                 session.pop("modelDataAsirVaccinated", None)
-            for data, tag in processedData:
+            for rawData, form in zip(returnedData, session.get("DataForms", [])):
+                # TODO: Consider creating vaccinated/unvaccinated asir dataframes
+                # here rather than in generateAsir
+                # TODO: Make better use of data forms
+                # TODO: Consider leaving full errors to runSimulations and
+                # simplifying the toasts to just no errors/errors
+                data, tag = formatData(rawData, form)
                 # Further error checking
                 if len(data) == 0:
                     toast(
@@ -213,13 +234,13 @@ def updateData():
         else:
             appLog.error(
                 "[updateData] Received data was atypical. Contents: "
-                + str(processedData)
+                + str(returnedData)
             )
 
             # Show different toast messages for different errors
-            if isinstance(processedData, tuple):
+            if isinstance(returnedData, tuple):
                 # Errors with exceptions attached
-                errorType, e = processedData
+                errorType, e = returnedData
                 if errorType == "ClientConnectorError":
                     toast(
                         """
@@ -275,7 +296,7 @@ def updateData():
                 )
 
             # Errors without exception messages to send
-            elif isinstance(processedData, pd.DataFrame):
+            elif isinstance(returnedData, pd.DataFrame):
                 toast(
                     """
                 :red-badge[Error]: The data was not processed
@@ -283,7 +304,7 @@ def updateData():
             """,
                     icon=":material/data_alert:",
                 )
-            elif processedData == "EmptyZipFile":
+            elif returnedData == "EmptyZipFile":
                 toast(
                     """
                 :red-badge[Error]: The simulation server did not
@@ -301,22 +322,10 @@ def updateData():
                     icon=":material/error:",
                 )
 
-        # Make pending data no longer pending
-        pendingData = {
-            "Community",
-            "ScenarioNames",
-            "ScenarioCount",
-            "Asymptomatic",
-            "HealthOutcomeRates",
-            "MortalityRates",
-        }
-        for name in pendingData:
-            session[f"Data{name}"] = session.get(f"PendingData{name}")
-        session.scenariosToUse = session.DataScenarioNames
-
         # Re-enable running new simulations and using their data
         session.ChartGenerated = False
         session.simulationInProgress = False
+        session.scenariosToUse = session.DataScenarioNames
         st.rerun()
 
 
