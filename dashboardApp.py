@@ -168,9 +168,10 @@ def updateData():
             )
             # Remove any old session data that won't be overridden here
             # TODO: Make more robust when number of returned values can vary more
-            if len(returnedData) < 4:
+            dataForms = session.get("DataForms", [])
+            if len(dataForms) < 4:
                 session.pop("modelDataAsirVaccinated", None)
-            for rawData, form in zip(returnedData, session.get("DataForms", [])):
+            for rawData, form in zip(returnedData, dataForms):
                 # TODO: Consider creating vaccinated/unvaccinated asir dataframes
                 # here rather than in generateAsir
                 # TODO: Make better use of data forms
@@ -211,7 +212,7 @@ def updateData():
             totalTime = session.simulationEndTime - session.simulationStartTime
             seconds = str(totalTime.seconds % 60).zfill(2)
             timeString = f"{totalTime.seconds // 60}:{seconds}"
-            if successes == 3:
+            if successes == len(dataForms):
                 toast(
                     f"Simulation complete! Total duration: {timeString}",
                     icon=":material/check_circle:",
