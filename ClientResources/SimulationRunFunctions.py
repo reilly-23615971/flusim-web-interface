@@ -84,7 +84,7 @@ def createConfig(scenarioCount: int):
     for id, scenario in enumerate(scenarioParams):
         diseaseSchema(scenario, id, useAdvanced)
         communitySchema(scenario, id, useAdvanced)
-        useVaccines = useVaccines or vaccineSchema(scenario, id, useAdvanced)
+        useVaccines = vaccineSchema(scenario, id, useAdvanced) or useVaccines
         if useAdvanced:
             dynamicSchema(scenario, id)
 
