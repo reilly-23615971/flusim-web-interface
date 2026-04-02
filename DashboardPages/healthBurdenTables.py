@@ -12,7 +12,7 @@ import pandas as pd
 import streamlit as st
 from matplotlib.colors import TwoSlopeNorm, to_hex
 
-from ClientResources.InterfaceFunctions import idGet, loadKey, saveKey
+from ClientResources.ParameterFunctions import idGet, loadKey, saveKey
 from ClientResources.SharedResources import (
     ageTimeDict,
     ageWithTime,
@@ -433,8 +433,8 @@ specified health burden outcomes in that scenario.
         kwargs={"notScenario": True},
         key="_healthOutcomeAgeGroupToggle",
         help="""
-            Toggle whether or not the table should include separate
-            rows for each age group in the simulation population.
+Toggle whether or not the table should include separate rows for each age
+group in the simulation population.
         """,
     )
 
@@ -775,20 +775,24 @@ No simulation experiments have been completed yet, so there is no data to tabula
     ),
 )
 # Display the table itself
-# TODO: Get opinion on whether table should scroll or not
+# TODO: Make it look better; larger font and less wasted space
 tableData = session.get("HealthOutcomeTableData")
 tableConfig = session.get("HealthOutcomeTableConfig")
 if tableData is not None:
     st.header("Health Burden Outcome Table")
+    # TODO: Fix columns being deselected when changing column settings
     st.dataframe(
         tableData,
         height="auto",
+        width="content",
         column_config=tableConfig,
         hide_index=True,
         placeholder="N/A",
     )
 
     # Button to download the CSV data used by the table
+    # TODO: Reflect changes made to the table by the user (reordered cols etc.)
+    # Or just remove this since there's a built-in download button now
     @st.fragment()
     def burdenDataDownload():
         st.download_button(
@@ -799,7 +803,7 @@ if tableData is not None:
             key="infectionDataDownload",
             icon=":material/download:",
             help="""
-            Download the above table as a CSV file.
+Download the above table as a CSV file.
         """,
         )
 

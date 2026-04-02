@@ -3,7 +3,6 @@
 # Functions used by tables and graphs
 
 # Imports
-import os
 import logging
 from collections import defaultdict
 from io import BytesIO
@@ -639,6 +638,7 @@ other age groups list the age range they cover as part of their name.
             outcomeBaselines[(outcome, "Unvaccinated")] = unvaccinatedBaseColumn
 
     # Generate columns
+    # TODO: Column descriptions are repetitive; see if they can be rewritten
     for outcome, vaccineStatus, proportion, baselineDifference in columns:
         currentColumn = outcomeColumns[(outcome, vaccineStatus)]
         columnBaselines = outcomeBaselines[(outcome, vaccineStatus)]

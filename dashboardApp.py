@@ -22,11 +22,7 @@ except ImportError:
     importlib.reload(importlib.import_module("streamlit_notify"))
     from streamlit_notify import notify, toast  # type: ignore
 
-from ClientResources.SharedResources import (
-    resultQueue,
-    usePresetData,
-    usePresetParams,
-)
+from ClientResources.SharedResources import resultQueue, usePresetData, usePresetParams
 from ClientResources.VisualisationFunctions import formatData
 
 # from ClientResources.SimulationRunFunctions import runSimulationButton
@@ -64,8 +60,19 @@ appLog = logging.getLogger(__name__)
 # Store st.session_state as variable for efficiency
 session = st.session_state
 
-# Set environment variables for config
-# os.environ['STREAMLIT_GLOBAL_DISABLE_WIDGET_STATE_DUPLICATION_WARNING'] = '1'
+# Initialise session variables used globally by the dashboard
+# Use current time (Unix) as session ID so that different simulations
+# aren't mixed up by the server
+sessionParameters = {
+    "simulationInProgress": False,
+    "scenarioCount": 0,
+    "sessionID": int(datetime.now().timestamp()),
+    "scenarioSetParamsExtra": {},
+    "scenarioSetParams": {},
+    "activeErrors": {0: {}},
+}
+for parameter, default in sessionParameters.items():
+    session[parameter] = session.get(parameter, default)
 
 st.logo(":material/microbiology:")
 
@@ -107,20 +114,6 @@ pages = {
     "Parameter Configuration": [baselineParameters, scenarioParameters, runSimulation],
     "Results Visualisation": [infectionGraphs, healthTables],
 }
-
-# Initialise session variables used globally by the dashboard
-# Use current time (Unix) as session ID so that different simulations
-# aren't mixed up by the server
-sessionParameters = {
-    "simulationInProgress": False,
-    "scenarioCount": 0,
-    "sessionID": int(datetime.now().timestamp()),
-    "scenarioSetParamsExtra": {},
-    "scenarioSetParams": {},
-    "activeErrors": {0: {}},
-}
-for parameter, default in sessionParameters.items():
-    session[parameter] = session.get(parameter, default)
 
 # Display toasts
 notify(remove=True)

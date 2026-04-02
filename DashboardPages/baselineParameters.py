@@ -7,13 +7,16 @@ import logging
 
 import streamlit as st
 
-from ClientResources.InterfaceFunctions import containerSave, errorChecker, loadKey
+from ClientResources.DownloadFunctions import parameterDownload
+from ClientResources.InterfaceFunctions import errorChecker
+from ClientResources.ParameterFunctions import containerSave, loadKey
 from ParameterTabs.communityParams import buildCommunityTab
-
-# from streamlit_push_notifications import send_push, send_alert
 from ParameterTabs.diseaseParams import buildDiseaseTab
 from ParameterTabs.dynamicParams import buildDynamicTab
 from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
+
+# from streamlit_push_notifications import send_push, send_alert
+
 
 # Logging
 baselineLog = logging.getLogger(__name__)
@@ -57,16 +60,17 @@ showAdvanced = st.toggle(
     args=["showAdvanced"],
     kwargs={"containers": containersToOpen},
     help="""
-        Toggle whether to display parameters that control more fine-grain
-        aspects of the simulation environment, such as age-specific NPI
-        compliance or dynamic parameter updates.
+Toggle whether to display parameters that control more fine-grain aspects
+of the simulation environment, such as age-specific NPI compliance or
+dynamic parameter updates.
     """,
 )
 
 # Fragment to display errors
 errorChecker(0)
 
-# TODO: Buttons to download/upload simulation parameters
+# TODO: Buttons to upload simulation parameters
+parameterDownload()
 
 
 # TODO: Consider having a tab for templates that load parameters for

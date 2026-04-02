@@ -11,14 +11,7 @@ import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import (
-    dynamicScaleChange,
-    hasDuplicates,
-    idGet,
-    loadKey,
-    paramError,
-    saveKey,
-)
+from ClientResources.InterfaceFunctions import paramError
 from ClientResources.ModelSchema import (
     Parameters,
     ageScenarioParameters,
@@ -26,6 +19,13 @@ from ClientResources.ModelSchema import (
     vaccineCoverage,
     vaccineDose,
     vaccineEfficacy,
+)
+from ClientResources.ParameterFunctions import (
+    dynamicScaleChange,
+    hasDuplicates,
+    idGet,
+    loadKey,
+    saveKey,
 )
 from ClientResources.SharedResources import (
     ageTimeDict,
@@ -142,9 +142,9 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
         args=["vaccineToggle", id],  # type: ignore
         key=f"_vaccineToggle{id}",
         help="""
-            Toggle whether or not individuals in the simulation
-            will be vaccinated against the disease, overriding
-            all other vaccine-related parameters.
+Toggle whether or not individuals in the simulation
+will be vaccinated against the disease, overriding
+all other vaccine-related parameters.
         """,
     )
 
@@ -175,12 +175,11 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
                 on_change=saveKey,
                 args=["limitDosesToggle", id],  # type: ignore
                 help="""
-                    Toggle whether the total number of vaccine
-                    first doses that can be administered across the
-                    whole simulation should be limited to a
-                    specific value, putting an upper limit on the
-                    number of vaccinated individuals in the
-                    simulation.
+Toggle whether the total number of vaccine
+first doses that can be administered across the
+whole simulation should be limited to a
+specific value, putting an upper limit on the
+number of vaccinated individuals in the simulation.
                 """,
             )
             # TODO: Consider hiding when doses aren't limited
@@ -195,18 +194,18 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
                 args=["initialDoseReserve", id],  # type: ignore
                 placeholder="Enter a whole number of doses",
                 help="""
-                    The total number of vaccine first doses that
-                    will be available to administer to unvaccinated
-                    individuals throughout the simulation. Once all
-                    first doses have been administered, any
-                    remaining unvaccinated individuals in the
-                    simulation will never be vaccinated.
-                    Individuals who have already received the first
-                    dose of the vaccine will still receive future
-                    doses regardless of the remaining dose count.
+The total number of vaccine first doses that
+will be available to administer to unvaccinated
+individuals throughout the simulation. Once all
+first doses have been administered, any
+remaining unvaccinated individuals in the
+simulation will never be vaccinated.
+Individuals who have already received the first
+dose of the vaccine will still receive future
+doses regardless of the remaining dose count.
 
-                    This parameter is ignored if "Enable Limited
-                    Number of Vaccine Doses" has been toggled off.
+This parameter is ignored if "Enable Limited
+Number of Vaccine Doses" has been toggled off.
                 """,
             )
         loadKey("firstDoseRate", id, 300)
@@ -220,9 +219,9 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
             args=["firstDoseRate", id],  # type: ignore
             disabled=not useVaccinesToggle,
             help="""
-                The number of unvaccinated individuals who will
-                receive the first dose of the vaccine each day,
-                assuming there are enough doses available.
+The number of unvaccinated individuals who will
+receive the first dose of the vaccine each day,
+assuming there are enough doses available.
             """,
         )
         # TODO: Change to numeric input/proportion/more precise slider
@@ -237,9 +236,9 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
             args=["initialVaccinated", id],  # type: ignore
             disabled=not useVaccinesToggle,
             help="""
-                The percentage of the population that will
-                already be vaccinated against the disease at
-                the beginning of the simulation.
+The percentage of the population that will
+already be vaccinated against the disease at
+the beginning of the simulation.
             """,
         )
         noErrorsProportions = '''
@@ -292,12 +291,11 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
             args=["targetVaccinated", id],  # type: ignore
             disabled=not useVaccinesToggle,
             help="""
-                The percentage of the population that will be
-                targeted by the vaccine schedule in the
-                simulation. The actual proportion of the
-                population that is vaccinated may be lower if
-                there are an insufficient number of doses
-                available.
+The percentage of the population that will be
+targeted by the vaccine schedule in the
+simulation. The actual proportion of the
+population that is vaccinated may be lower if
+there are an insufficient number of doses available.
             """,
         )
 
@@ -740,14 +738,14 @@ are vaccinated may be lower if there are an insufficient number of doses availab
             args=["primaryDoseCount", id],  # type: ignore
             disabled=not useVaccinesToggle,
             help="""
-                The number of times each individual in the
-                simulation will be administered a vaccine for
-                the disease, excluding booster vaccines.
+The number of times each individual in the
+simulation will be administered a vaccine for
+the disease, excluding booster vaccines.
 
-                Note that since efficacy is defined separately
-                for each vaccine dose in the schedule,
-                modifying this value will change the number of
-                sections used for specifying efficacy below.
+Note that since efficacy is defined separately
+for each vaccine dose in the schedule,
+modifying this value will change the number of
+sections used for specifying efficacy below.
             """,
         )
         loadKey("primaryDelay", id, 3)
@@ -761,9 +759,9 @@ are vaccinated may be lower if there are an insufficient number of doses availab
             args=["primaryDelay", id],  # type: ignore
             key=f"_primaryDelay{id}",
             help="""
-                The number of months after an individual
-                receives a vaccine dose before they are able to
-                receive another, where a month is 30 days.
+The number of months after an individual
+receives a vaccine dose before they are able to
+receive another, where a month is 30 days.
             """,
         )
         # Waning parameters (only if advanced parameters are enabled)
@@ -779,10 +777,10 @@ are vaccinated may be lower if there are an insufficient number of doses availab
                 args=["primaryDuration", id],  # type: ignore
                 key=f"_primaryDuration{id}",
                 help="""
-                    The number of months after an individual
-                    receives a vaccine dose before the immunity
-                    conferred by this vaccine begins to diminish,
-                    where a month is 30 days.
+The number of months after an individual
+receives a vaccine dose before the immunity
+conferred by this vaccine begins to diminish,
+where a month is 30 days.
                 """,
             )
             # TODO: Allow fully disabling vaccine waning
@@ -797,18 +795,18 @@ are vaccinated may be lower if there are an insufficient number of doses availab
                 args=["primaryWaningRate", id],  # type: ignore
                 key=f"_primaryWaningRate{id}",
                 help="""
-                    The number of months after the immunity from a
-                    vaccine dose begins waning before the efficacy
-                    of the vaccine stabilises, where a month is 30
-                    days. Vaccine-conferred immunity in the
-                    *Flusim* simulation will wane at a linear rate,
-                    so this parameter represents how long it takes
-                    for the vaccine's efficacy to decrease from the
-                    final dose's initial value to its final value.
+The number of months after the immunity from a
+vaccine dose begins waning before the efficacy
+of the vaccine stabilises, where a month is 30
+days. Vaccine-conferred immunity in the
+*Flusim* simulation will wane at a linear rate,
+so this parameter represents how long it takes
+for the vaccine's efficacy to decrease from the
+final dose's initial value to its final value.
 
-                    If this parameter is set to 0, the immunity
-                    provided by the main vaccine schedule will
-                    never diminish.
+If this parameter is set to 0, the immunity
+provided by the main vaccine schedule will
+never diminish.
                 """,
             )
 
@@ -842,11 +840,10 @@ are vaccinated may be lower if there are an insufficient number of doses availab
                         args=["primaryBaseEfficacy", id, f"-{i}"],  # type: ignore
                         key=f"_primaryBaseEfficacy{id}-{i}",
                         help="""
-                            The initial efficacy of this vaccine dose,
-                            represented as the probability that an
-                            individual that has recently received the
-                            dose will remain healthy when exposed
-                            to the disease.
+The initial efficacy of this vaccine dose,
+represented as the probability that an
+individual that has recently received the
+dose will remain healthy when exposed to the disease.
                         """,
                     )
 
@@ -1258,12 +1255,11 @@ that use the same age group as another row.
                 args=["primaryWanedEfficacy", id],  # type: ignore
                 key=f"_primaryWanedEfficacy{id}",
                 help="""
-                    The final efficacy value that the vaccine
-                    schedule will approach as the immunity it
-                    provides begins to diminish, represented as the
-                    probability that an individual with completely
-                    waned immunity will remain healthy when exposed
-                    to the disease.
+The final efficacy value that the vaccine
+schedule will approach as the immunity it
+provides begins to diminish, represented as the
+probability that an individual with completely
+waned immunity will remain healthy when exposed to the disease.
                 """,
             )
             # Last efficacy value is all that's cared about
@@ -1590,11 +1586,10 @@ immunity will not remain healthy when exposed to the disease.
                 args=["primarySingleEfficacy", id],
                 key=f"_primarySingleEfficacy{id}",
                 help="""
-                    The efficacy of each vaccine dose,
-                    represented as the probability that an
-                    individual that has recently received a
-                    dose will remain healthy when exposed
-                    to the disease.
+The efficacy of each vaccine dose,
+represented as the probability that an
+individual that has recently received a
+dose will remain healthy when exposed to the disease.
                 """,
             )
 
@@ -1710,9 +1705,8 @@ remain healthy when exposed to the disease.
                 args=["boosterToggle", id],  # type: ignore
                 disabled=not useVaccinesToggle,
                 help="""
-                    Toggle whether or not booster vaccines are
-                    administered in the simulation, overriding
-                    other booster-related parameters.
+Toggle whether or not booster vaccines are
+administered in the simulation, overriding other booster-related parameters.
                 """,
             )
             loadKey("boosterDoseCount", id, 3)
@@ -1726,9 +1720,8 @@ remain healthy when exposed to the disease.
                 on_change=saveKey,
                 args=["boosterDoseCount", id],  # type: ignore
                 help="""
-                    The number of times each individual in the
-                    simulation will be administered a booster
-                    vaccine.
+The number of times each individual in the
+simulation will be administered a booster vaccine.
                 """,
             )
             loadKey("boosterDelay", id, 3)
@@ -1744,9 +1737,9 @@ remain healthy when exposed to the disease.
                 args=["boosterDelay", id],  # type: ignore
                 key=f"_boosterDelay{id}",
                 help="""
-                    The number of months after an individual receives
-                    one booster vaccine dose before they are able
-                    to receive another, where a month is 30 days.
+The number of months after an individual receives
+one booster vaccine dose before they are able
+to receive another, where a month is 30 days.
                 """,
             )
             loadKey("boosterDuration", id, 4)
@@ -1760,10 +1753,10 @@ remain healthy when exposed to the disease.
                 args=["boosterDuration", id],  # type: ignore
                 key=f"_boosterDuration{id}",
                 help="""
-                    The number of months after an individual receives
-                    a booster vaccine dose before the immunity
-                    conferred by this vaccine begins to diminish,
-                    where a month is 30 days.
+The number of months after an individual receives
+a booster vaccine dose before the immunity
+conferred by this vaccine begins to diminish,
+where a month is 30 days.
                 """,
             )
             paramError(
@@ -1802,11 +1795,10 @@ remain healthy when exposed to the disease.
                 args=["boosterBaseEfficacy", id],  # type: ignore
                 format_func=lambda x: f"{100 * x:0.3g}%",
                 help="""
-                    The initial efficacy of each booster vaccine,
-                    represented as the probability that an
-                    individual that has recently received the
-                    booster will remain healthy when exposed to the
-                    disease.
+The initial efficacy of each booster vaccine,
+represented as the probability that an
+individual that has recently received the
+booster will remain healthy when exposed to the disease.
                 """,
             )
             loadKey("boosterWanedEfficacy", id, 0.6)
@@ -1820,12 +1812,11 @@ remain healthy when exposed to the disease.
                 args=["boosterWanedEfficacy", id],  # type: ignore
                 format_func=lambda x: f"{100 * x:0.3g}%",
                 help="""
-                    The final efficacy value that the booster
-                    vaccine will approach as the immunity it
-                    provides begins to diminish, represented as the
-                    probability that an individual with completely
-                    waned immunity will remain healthy when exposed
-                    to the disease.
+The final efficacy value that the booster
+vaccine will approach as the immunity it
+provides begins to diminish, represented as the
+probability that an individual with completely
+waned immunity will remain healthy when exposed to the disease.
                 """,
             )
 
@@ -1871,18 +1862,17 @@ remain healthy when exposed to the disease.
                 args=["boosterWaningRate", id],  # type: ignore
                 key=f"_boosterWaningRate{id}",
                 help="""
-                    The number of months after the immunity from a
-                    booster vaccine begins waning before the
-                    efficacy of the vaccine stabilises, where a
-                    month is 30 days. Vaccine-conferred immunity in
-                    the *Flusim* simulation will wane at a linear
-                    rate, so this parameter represents how long it
-                    takes for the vaccine's efficacy to decrease
-                    from its initial value to its final value.
+The number of months after the immunity from a
+booster vaccine begins waning before the
+efficacy of the vaccine stabilises, where a
+month is 30 days. Vaccine-conferred immunity in
+the *Flusim* simulation will wane at a linear
+rate, so this parameter represents how long it
+takes for the vaccine's efficacy to decrease
+from its initial value to its final value.
 
-                    If this parameter is set to 0, the immunity
-                    provided by booster vaccines will never
-                    diminish.
+If this parameter is set to 0, the immunity
+provided by booster vaccines will never diminish.
                 """,
             )
 
@@ -2291,9 +2281,7 @@ immunity will remain healthy when exposed to the disease.
 
     # General NPIs
     st.html('<span id = "generalTriggerCondition"></span>')
-    with st.expander(
-        "General NPI Properties", key=f"npiContainer{id}", on_change="rerun"
-    ):
+    with st.expander("Social Distancing", key=f"npiContainer{id}", on_change="rerun"):
         st.markdown(
             """
             These parameters control the implementation of
@@ -2313,10 +2301,9 @@ immunity will remain healthy when exposed to the disease.
             args=["socialDistancingToggle", id],  # type: ignore
             key=f"_socialDistancingToggle{id}",
             help="""
-                Toggle whether or not social distancing
-                interventions are implemented in the
-                simulation, overriding other social distancing
-                parameters.
+Toggle whether or not social distancing
+interventions are implemented in the
+simulation, overriding other social distancing parameters.
             """,
         )
         loadKey("socialDistancingCompliance", id, 0.9)
@@ -2330,9 +2317,8 @@ immunity will remain healthy when exposed to the disease.
             args=["socialDistancingCompliance", id],  # type: ignore
             key=f"_socialDistancingCompliance{id}",
             help="""
-                The probability that an individual will comply
-                with social distancing interventions in the
-                simulation.
+The probability that an individual will comply
+with social distancing interventions in the simulation.
             """,
         )
         # Age-specific social distancing compliance (if advanced params enabled)
@@ -2561,9 +2547,9 @@ social distancing interventions in the simulation.
             args=["caseIsolation", id],  # type: ignore
             key=f"_caseIsolation{id}",
             help="""
-                Toggle whether or not individuals who have been
-                diagnosed as cases of the disease will be
-                forced to isolate at home.
+Toggle whether or not individuals who have been
+diagnosed as cases of the disease will be
+forced to isolate at home.
             """,
         )
 
@@ -2577,13 +2563,13 @@ social distancing interventions in the simulation.
                 args=["classDismissal", id],  # type: ignore
                 key=f"_classDismissal{id}",
                 help="""
-                    Toggle whether or not school classes should be
-                    dismissed when the daily case rate is high enough.
+Toggle whether or not school classes should be
+dismissed when the daily case rate is high enough.
 
-                    Note that the rate that must be reached before
-                    class dismissal begins to occur is shared with
-                    any other NPIs that are set to use case rates
-                    as their trigger threshold.
+Note that the rate that must be reached before
+class dismissal begins to occur is shared with
+any other NPIs that are set to use case rates
+as their trigger threshold.
                 """,
             )
             if classDismissal:
@@ -2620,10 +2606,9 @@ social distancing interventions in the simulation.
             args=["schoolClosureToggle", id],  # type: ignore
             key=f"_schoolClosureToggle{id}",
             help="""
-                Toggle whether or not school closure
-                interventions are implemented in the
-                simulation, overriding other school closure
-                parameters.
+Toggle whether or not school closure
+interventions are implemented in the
+simulation, overriding other school closure parameters.
             """,
         )
 
@@ -2639,37 +2624,37 @@ social distancing interventions in the simulation.
                     args=["schoolClosureTrigger", id],  # type: ignore
                     disabled=not useSchoolClosureToggle,
                     help="""
-                        The type of condition that must be
-                        satisfied before schools will start being
-                        closed in the simulation. Additional
-                        options for configuring the exact trigger
-                        condition will appear after selecting one
-                        of these options.
+The type of condition that must be
+satisfied before schools will start being
+closed in the simulation. Additional
+options for configuring the exact trigger
+condition will appear after selecting one
+of these options.
 
-                        ##### Options:
-                        - Always: Schools will be closed throughout
-                        the entire simulation.
-                        - Timed: Schools will be closed within a
-                        specific time period defined using a start
-                        and end threshold.
-                        - Community Case Rate: Schools will begin
-                        to close if the rate of newly diagnosed
-                        cases per day exceeds a specific threshold,
-                        and will begin to reopen if the rate drops
-                        below a different threshold afterwards.
-                        This trigger rate allows schools to close
-                        and reopen multiple times if the case rate
-                        varies between the two thresholds.
-                        - Community Case Total: Schools will begin
-                        to close after the number of diagnosed
-                        cases in the community exceeds a specific
-                        threshold, and will remain closed for the
-                        rest of the simulation.
-                        - Cases per School: Schools will close
-                        individually when the number of cases
-                        diagnosed within them reaches a certain
-                        threshold, and will remain closed for the
-                        rest of the simulation.
+##### Options:
+- Always: Schools will be closed throughout
+the entire simulation.
+- Timed: Schools will be closed within a
+specific time period defined using a start
+and end threshold.
+- Community Case Rate: Schools will begin
+to close if the rate of newly diagnosed
+cases per day exceeds a specific threshold,
+and will begin to reopen if the rate drops
+below a different threshold afterwards.
+This trigger rate allows schools to close
+and reopen multiple times if the case rate
+varies between the two thresholds.
+- Community Case Total: Schools will begin
+to close after the number of diagnosed
+cases in the community exceeds a specific
+threshold, and will remain closed for the
+rest of the simulation.
+- Cases per School: Schools will close
+individually when the number of cases
+diagnosed within them reaches a certain
+threshold, and will remain closed for the
+rest of the simulation.
                     """,
                 )
                 # Show additional parameters based on trigger value
@@ -2687,22 +2672,20 @@ social distancing interventions in the simulation.
                         args=["schoolClosurePeriod", "closeTimeForm", id],
                         disabled=not useSchoolClosureToggle,
                         help="""
-                            The time period during which schools
-                            will be closed in the simulation. The
-                            first value is the day on which schools
-                            will initially close (where Day 1 is
-                            the first day of the simulation), and
-                            the second value is the day on which
-                            schools will reopen.
+The time period during which schools
+will be closed in the simulation. The
+first value is the day on which schools
+will initially close (where Day 1 is
+the first day of the simulation), and
+the second value is the day on which schools will reopen.
 
-                            Note that if you modify this value, the update
-                            points for school closure compliance defined in
-                            :primary-badge[:material/manage_history: Dynamic]
-                            may have their values altered. For instance, if
-                            you go from school closures ending on Day 60 to
-                            Day 30, an update point set to affect the value
-                            on Day 45 will be changed to affect it on
-                            Day 30 instead.
+Note that if you modify this value, the update
+points for school closure compliance defined in
+:primary-badge[:material/manage_history: Dynamic]
+may have their values altered. For instance, if
+you go from school closures ending on Day 60 to
+Day 30, an update point set to affect the value
+on Day 45 will be changed to affect it on Day 30 instead.
                         """,
                     )
 
@@ -2753,9 +2736,8 @@ social distancing interventions in the simulation.
             args=["schoolClosureCompliance", id],
             key=f"_schoolClosureCompliance{id}",
             help="""
-                The probability that an individual will
-                withdraw from schools when they are closed in
-                the simulation.
+The probability that an individual will
+withdraw from schools when they are closed in the simulation.
             """,
         )
 
@@ -2785,10 +2767,10 @@ social distancing interventions in the simulation.
             args=["withdrawalIncreaseToggle", id],  # type: ignore
             key=f"_withdrawalIncreaseToggle{id}",
             help="""
-                Toggle whether or not withdrawal increasing
-                interventions are implemented in the
-                simulation, overriding other withdrawal
-                increase parameters.
+Toggle whether or not withdrawal increasing
+interventions are implemented in the
+simulation, overriding other withdrawal
+increase parameters.
             """,
         )
 
@@ -2804,34 +2786,34 @@ social distancing interventions in the simulation.
                     args=["withdrawalIncreaseTrigger", id],  # type: ignore
                     disabled=not useWithdrawalIncreaseToggle,
                     help="""
-                        The type of condition that must be
-                        satisfied before the rate of withdrawal
-                        will start increasing in the simulation.
-                        Additional options for configuring the
-                        exact trigger condition will appear after
-                        selecting one of these options.
+The type of condition that must be
+satisfied before the rate of withdrawal
+will start increasing in the simulation.
+Additional options for configuring the
+exact trigger condition will appear after
+selecting one of these options.
 
-                        ##### Options:
-                        - Always: Withdrawal rates will be
-                        increased throughout the entire simulation.
-                        - Timed: Withdrawal rates will be increased
-                        within a specific time period defined using
-                        a start and end threshold.
-                        - Community Case Rate: Withdrawal rates
-                        will begin increasing if the rate of newly
-                        diagnosed cases per day exceeds a specific
-                        threshold, and will revert to normal if the
-                        rate drops below a different threshold
-                        afterwards. This trigger rate allows
-                        withdrawal rates to increase and decrease
-                        multiple times if the case rate varies
-                        between the two thresholds.
-                        - Community Case Total: Withdrawal rates
-                        will begin increasing after the number of
-                        diagnosed cases in the community exceeds a
-                        specific threshold, and will remain at this
-                        elevated rate for the rest of the
-                        simulation.
+##### Options:
+- Always: Withdrawal rates will be
+increased throughout the entire simulation.
+- Timed: Withdrawal rates will be increased
+within a specific time period defined using
+a start and end threshold.
+- Community Case Rate: Withdrawal rates
+will begin increasing if the rate of newly
+diagnosed cases per day exceeds a specific
+threshold, and will revert to normal if the
+rate drops below a different threshold
+afterwards. This trigger rate allows
+withdrawal rates to increase and decrease
+multiple times if the case rate varies
+between the two thresholds.
+- Community Case Total: Withdrawal rates
+will begin increasing after the number of
+diagnosed cases in the community exceeds a
+specific threshold, and will remain at this
+elevated rate for the rest of the
+simulation.
                     """,
                 )
                 # Show additional parameters based on trigger value
@@ -2849,14 +2831,14 @@ social distancing interventions in the simulation.
                         on_change=saveKey,
                         args=["withdrawalIncreasePeriod", id],  # type: ignore
                         help="""
-                            The time period during which withdrawal
-                            rates will be increased in the
-                            simulation. The first value is the day
-                            on which withdrawal rates will first
-                            increase (where Day 1 is the first day
-                            of the simulation), and the second
-                            value is the day on which withdrawal
-                            rates will return to normal.
+The time period during which withdrawal
+rates will be increased in the
+simulation. The first value is the day
+on which withdrawal rates will first
+increase (where Day 1 is the first day
+of the simulation), and the second
+value is the day on which withdrawal
+rates will return to normal.
                         """,
                     )
 
@@ -2903,11 +2885,11 @@ social distancing interventions in the simulation.
             args=["withdrawalIncreaseAdult", id],  # type: ignore
             key=f"_withdrawalIncreaseAdult{id}",
             help="""
-                The probability of an infected adult
-                withdrawing from work after becoming
-                symptomatic while a withdrawal increasing
-                intervention is in effect, overwriting the
-                normal withdrawal rate.
+The probability of an infected adult
+withdrawing from work after becoming
+symptomatic while a withdrawal increasing
+intervention is in effect, overwriting the
+normal withdrawal rate.
             """,
         )
         loadKey("withdrawalIncreaseChild", id, 1.0)
@@ -2921,11 +2903,11 @@ social distancing interventions in the simulation.
             args=["withdrawalIncreaseChild", id],  # type: ignore
             key=f"_withdrawalIncreaseChild{id}",
             help="""
-                The probability of an infected child
-                withdrawing from school after becoming
-                symptomatic while a withdrawal increasing
-                intervention is in effect, overwriting the
-                normal withdrawal rate.
+The probability of an infected child
+withdrawing from school after becoming
+symptomatic while a withdrawal increasing
+intervention is in effect, overwriting the
+normal withdrawal rate.
             """,
         )
 
@@ -3012,10 +2994,10 @@ social distancing interventions in the simulation.
             args=["reducedGroupToggle", id],  # type: ignore
             key=f"_reducedGroupToggle{id}",
             help="""
-                Toggle whether or not group size reduction
-                interventions are implemented in the
-                simulation, overriding other group size
-                reduction parameters.
+Toggle whether or not group size reduction
+interventions are implemented in the
+simulation, overriding other group size
+reduction parameters.
             """,
         )
 
@@ -3031,33 +3013,33 @@ social distancing interventions in the simulation.
                     args=["reducedGroupTrigger", id],  # type: ignore
                     disabled=not useReducedGroupToggle,
                     help="""
-                        The type of condition that must be
-                        satisfied before the size of work groups
-                        will start decreasing in the simulation.
-                        Additional options for configuring the
-                        exact trigger condition will appear after
-                        selecting one of these options.
+The type of condition that must be
+satisfied before the size of work groups
+will start decreasing in the simulation.
+Additional options for configuring the
+exact trigger condition will appear after
+selecting one of these options.
 
-                        ##### Options:
-                        - Always: Work group sizes will be
-                        decreased throughout the entire simulation.
-                        - Timed: Work group sizes will be decreased
-                        within a specific time period defined using
-                        a start and end threshold.
-                        - Community Case Rate: Work groups will
-                        begin shrinking if the rate of newly
-                        diagnosed cases per day exceeds a specific
-                        threshold, and will revert to normal size
-                        if the rate drops below a different
-                        threshold afterwards. This trigger rate
-                        allows group sizes to increase and decrease
-                        multiple times if the case rate varies
-                        between the two thresholds.
-                        - Community Case Total: Work groups will
-                        begin shrinking after the number of
-                        diagnosed cases in the community exceeds a
-                        specific threshold, and will remain at this
-                        reduced size for the rest of the simulation.
+##### Options:
+- Always: Work group sizes will be
+decreased throughout the entire simulation.
+- Timed: Work group sizes will be decreased
+within a specific time period defined using
+a start and end threshold.
+- Community Case Rate: Work groups will
+begin shrinking if the rate of newly
+diagnosed cases per day exceeds a specific
+threshold, and will revert to normal size
+if the rate drops below a different
+threshold afterwards. This trigger rate
+allows group sizes to increase and decrease
+multiple times if the case rate varies
+between the two thresholds.
+- Community Case Total: Work groups will
+begin shrinking after the number of
+diagnosed cases in the community exceeds a
+specific threshold, and will remain at this
+reduced size for the rest of the simulation.
                     """,
                 )
                 # Show additional parameters based on trigger value
@@ -3075,14 +3057,14 @@ social distancing interventions in the simulation.
                         on_change=saveKey,
                         args=["reducedGroupPeriod", id],  # type: ignore
                         help="""
-                            The time period during which work
-                            group sizes will be smaller in the
-                            simulation. The first value is the day
-                            on which work groups will first shrink
-                            (where Day 1 is the first day of the
-                            simulation), and the second value is
-                            the day on which work groups will
-                            return to normal.
+The time period during which work
+group sizes will be smaller in the
+simulation. The first value is the day
+on which work groups will first shrink
+(where Day 1 is the first day of the
+simulation), and the second value is
+the day on which work groups will
+return to normal.
                         """,
                     )
 
@@ -3129,9 +3111,9 @@ social distancing interventions in the simulation.
             args=["reducedGroupSize", id],  # type: ignore
             key=f"_reducedGroupSize{id}",
             help="""
-                The maximum size of work groups while a reduced
-                group size intervention is in effect,
-                overwriting the normal maximum.
+The maximum size of work groups while a reduced
+group size intervention is in effect,
+overwriting the normal maximum.
             """,
         )
 
@@ -3191,10 +3173,9 @@ social distancing interventions in the simulation.
             args=["bccToggle", id],
             key=f"_bccToggle{id}",
             help="""
-                Toggle whether or not background contact count
-                reduction interventions are implemented in the
-                simulation, overriding other BCC reduction
-                parameters.
+Toggle whether or not background contact count
+reduction interventions are implemented in the
+simulation, overriding other BCC reduction parameters.
             """,
         )
 
@@ -3210,34 +3191,34 @@ social distancing interventions in the simulation.
                     args=["bccTrigger", id],  # type: ignore
                     disabled=not useBCCToggle,
                     help="""
-                        The type of condition that must be
-                        satisfied before background contact count
-                        will start decreasing in the simulation.
-                        Additional options for configuring the
-                        exact trigger condition will appear after
-                        selecting one of these options.
+The type of condition that must be
+satisfied before background contact count
+will start decreasing in the simulation.
+Additional options for configuring the
+exact trigger condition will appear after
+selecting one of these options.
 
-                        ##### Options:
-                        - Always: Background contact count will be
-                        reduced throughout the entire simulation.
-                        - Timed: Background contact count will be
-                        reduced within a specific time period
-                        defined using a start and end threshold.
-                        - Community Case Rate: Background contact
-                        count will be reduced if the rate of newly
-                        diagnosed cases per day exceeds a specific
-                        threshold, and will revert to normal levels
-                        if the rate drops below a different
-                        threshold afterwards. This trigger rate
-                        allows BCC levels to increase and decrease
-                        multiple times if the case rate varies
-                        between the two thresholds.
-                        - Community Case Total: Background contact
-                        count will be reduced after the number of
-                        diagnosed cases in the community exceeds a
-                        specific threshold, and will remain at this
-                        reduced level for the rest of the
-                        simulation.
+##### Options:
+- Always: Background contact count will be
+reduced throughout the entire simulation.
+- Timed: Background contact count will be
+reduced within a specific time period
+defined using a start and end threshold.
+- Community Case Rate: Background contact
+count will be reduced if the rate of newly
+diagnosed cases per day exceeds a specific
+threshold, and will revert to normal levels
+if the rate drops below a different
+threshold afterwards. This trigger rate
+allows BCC levels to increase and decrease
+multiple times if the case rate varies
+between the two thresholds.
+- Community Case Total: Background contact
+count will be reduced after the number of
+diagnosed cases in the community exceeds a
+specific threshold, and will remain at this
+reduced level for the rest of the
+simulation.
                     """,
                 )
                 # Show additional parameters based on trigger value
@@ -3255,14 +3236,13 @@ social distancing interventions in the simulation.
                         on_change=dynamicScaleChange,
                         args=["bccPeriod", "bccTimeForm", id],  # type: ignore
                         help="""
-                            The time period during which background
-                            contact count (BCC) will be reduced in
-                            the simulation. The first value is the
-                            day on which BCC will first be reduced
-                            (where Day 1 is the first day of the
-                            simulation), and the second value is
-                            the day on which BCC will return to
-                            normal.
+The time period during which background
+contact count (BCC) will be reduced in
+the simulation. The first value is the
+day on which BCC will first be reduced
+(where Day 1 is the first day of the
+simulation), and the second value is
+the day on which BCC will return to normal.
                         """,
                     )
 
@@ -3312,12 +3292,12 @@ social distancing interventions in the simulation.
             args=["bccReducedRate", id],
             key=f"_bccReducedRate{id}",
             help="""
-                The average number of other people each
-                individual will interact with in the background
-                phase of each day in the simulation (emulating
-                interactions outside of simulated locations)
-                while a BCC reduction intervention is in
-                effect, overwriting the normal BCC rate.
+The average number of other people each
+individual will interact with in the background
+phase of each day in the simulation (emulating
+interactions outside of simulated locations)
+while a BCC reduction intervention is in
+effect, overwriting the normal BCC rate.
             """,
         )
 
@@ -3445,11 +3425,10 @@ social distancing interventions in the simulation.
                         on_change=saveKey,
                         args=["rateStartThreshold", id],  # type: ignore
                         help="""
-                            Any interventions set to trigger using the
-                            "Community Case Rate" condition will begin
-                            taking effect in the simulation once the
-                            number of newly diagnosed cases per day
-                            exceeds this value.
+Any interventions set to trigger using the
+"Community Case Rate" condition will begin
+taking effect in the simulation once the
+number of newly diagnosed cases per day exceeds this value.
                         """,
                     )
                     loadKey("rateRelaxThreshold", id, 5)
@@ -3462,11 +3441,11 @@ social distancing interventions in the simulation.
                         on_change=saveKey,
                         args=["rateRelaxThreshold", id],  # type: ignore
                         help="""
-                            Any active interventions set to trigger
-                            using the "Community Case Rate" condition
-                            will stop taking effect in the simulation
-                            once the number of newly diagnosed cases
-                            per day goes below this value.
+Any active interventions set to trigger
+using the "Community Case Rate" condition
+will stop taking effect in the simulation
+once the number of newly diagnosed cases
+per day goes below this value.
                         """,
                     )
 
@@ -3531,13 +3510,13 @@ social distancing interventions in the simulation.
                         args=["caseTotalThreshold", id],  # type: ignore
                         placeholder="Enter a whole number of cases",
                         help="""
-                            Any interventions set to trigger using the
-                            "Community Case Total" or "Cases per School"
-                            conditions will begin taking effect in the
-                            simulation once the total number of diagnosed
-                            cases in the community (for "Community Case
-                            Total") or in each individual school (for
-                            "Cases per School") exceeds this value.
+Any interventions set to trigger using the
+"Community Case Total" or "Cases per School"
+conditions will begin taking effect in the
+simulation once the total number of diagnosed
+cases in the community (for "Community Case
+Total") or in each individual school (for
+"Cases per School") exceeds this value.
                         """,
                     )
 

@@ -10,14 +10,9 @@ import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import (
-    hasDuplicates,
-    idGet,
-    loadKey,
-    paramError,
-    saveKey,
-)
+from ClientResources.InterfaceFunctions import paramError
 from ClientResources.ModelSchema import Parameters, dynamicIntervention
+from ClientResources.ParameterFunctions import hasDuplicates, idGet, loadKey, saveKey
 
 # Logging
 dynamicLog = logging.getLogger(__name__)

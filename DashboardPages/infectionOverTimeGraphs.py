@@ -9,7 +9,7 @@ from typing import Optional
 
 import streamlit as st
 
-from ClientResources.InterfaceFunctions import loadKey, saveKey
+from ClientResources.ParameterFunctions import loadKey, saveKey
 from ClientResources.SharedResources import usePresetData
 from ClientResources.VisualisationFunctions import formatEpidemic, plotEpidemic
 
@@ -134,14 +134,14 @@ with graphSettings:
         kwargs={"notScenario": True},
         placeholder="Please select a data format",
         help="""
-            Select what kind of data should be displayed in the graph.
+Select what kind of data should be displayed in the graph.
 
-            ### Options:
-            - Cumulative: the chart will plot the total number of
-            infections that have cumulatively occurred at each point of
-            the simulation.
-            - Daily Rate: the chart will plot the number of infections
-            that occur in each day of the simulation.
+### Options:
+- Cumulative: the chart will plot the total number of
+infections that have cumulatively occurred at each point of
+the simulation.
+- Daily Rate: the chart will plot the number of infections
+that occur in each day of the simulation.
         """,
     )
 
@@ -202,14 +202,14 @@ st.button(
     disabled=((not usePresetData and not currentDataExists) or not scenariosToUse),
     help=(
         """
-        Use the data from the last simulation to generate a graph
-        displaying the infections in the simulation, formatted using
-        the settings selected above.
-    """
+Use the data from the last simulation to generate a graph
+displaying the infections in the simulation, formatted using
+the settings selected above.
+        """
         if currentDataExists
         else """
-        No simulations have completed yet, so there is no data to plot.
-    """
+No simulations have completed yet, so there is no data to plot.
+        """
     ),
 )
 
@@ -235,11 +235,11 @@ if chartData is not None:
                 key="infectionDataDownload",
                 icon=":material/download:",
                 help="""
-                    Download the infection data from the most recent
-                    simulation (the data used by the above graph) as a CSV
-                    file. Note that all scenarios are included in the
-                    returned file, even if not all were selected for the
-                    graph.
+Download the infection data from the most recent
+simulation (the data used by the above graph) as a CSV
+file. Note that all scenarios are included in the
+returned file, even if not all were selected for the
+graph.
                 """,
             )
         elif usePresetData:
@@ -262,11 +262,11 @@ if chartData is not None:
                 key="infectionDataDownload",
                 icon=":material/download:",
                 help="""
-                    Download the infection data from the most recent
-                    simulation (the data used by the above graph) as a CSV
-                    file. Note that all scenarios are included in the
-                    returned file, even if not all were selected for the
-                    graph.
+Download the infection data from the most recent
+simulation (the data used by the above graph) as a CSV
+file. Note that all scenarios are included in the
+returned file, even if not all were selected for the
+graph.
                 """,
             )
         else:

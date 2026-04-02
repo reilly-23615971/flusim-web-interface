@@ -11,21 +11,19 @@ import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import (
-    dayCount,
-    dualError,
-    dynamicScaleChange,
-    hasDuplicates,
-    idGet,
-    loadKey,
-    paramError,
-    saveKey,
-)
+from ClientResources.InterfaceFunctions import dayCount, dualError, paramError
 from ClientResources.ModelSchema import (
     Parameters,
     ageScenarioParameters,
     scenarioParameters,
     strainParameters,
+)
+from ClientResources.ParameterFunctions import (
+    dynamicScaleChange,
+    hasDuplicates,
+    idGet,
+    loadKey,
+    saveKey,
 )
 from ClientResources.SharedResources import ageTimeDict, backgroundColour
 
@@ -107,9 +105,9 @@ def buildDiseaseTab(id: int, advanced: bool = False):
             args=["seedRate", id],  # type: ignore
             format_func=lambda x: f"{x:0.4g}",
             help="""
-                The average number of individuals that will be
-                infected directly via infection seeding each cycle.
-                Note that each day of the simulation is 2 cycles.
+The average number of individuals that will be
+infected directly via infection seeding each cycle.
+Note that each day of the simulation is 2 cycles.
             """,
         )
         # TODO: Notify users if dynamic parameters are changed
@@ -124,18 +122,18 @@ def buildDiseaseTab(id: int, advanced: bool = False):
             args=["seedPeriod", "seedTimeForm", id],
             key=f"_seedPeriod{id}",
             help="""
-                The time period during which infection seeding will
-                occur in the simulation. The first value is the day
-                on which seeding will begin (where Day 1 is the
-                first day of the simulation), and the second value
-                is the day on which it will stop.
+The time period during which infection seeding will
+occur in the simulation. The first value is the day
+on which seeding will begin (where Day 1 is the
+first day of the simulation), and the second value
+is the day on which it will stop.
 
-                Note that if you modify this value, the update
-                points for infection seeding defined in
-                :primary-badge[:material/manage_history: Dynamic] may have
-                their values altered. For instance, if you go from seeding
-                ending on Day 60 to Day 30, an update point set to affect
-                the value on Day 45 will be changed to affect it on Day 30 instead.
+Note that if you modify this value, the update
+points for infection seeding defined in
+:primary-badge[:material/manage_history: Dynamic] may have
+their values altered. For instance, if you go from seeding
+ending on Day 60 to Day 30, an update point set to affect
+the value on Day 45 will be changed to affect it on Day 30 instead.
             """,
         )
 
@@ -193,14 +191,13 @@ def buildDiseaseTab(id: int, advanced: bool = False):
             on_change=saveKey,
             args=["beta", id],
             help="""
-                The value of the basic transmission parameter
-                $\\beta$, the base constant used to calculate the
-                probability of an individual being infected with
-                the disease upon interacting with an infected
-                individual. The higher this value is, the more
-                likely it is for uninfected individuals to contract
-                the disease in any interaction with infected
-                individuals.
+The value of the basic transmission parameter
+$\\beta$, the base constant used to calculate the
+probability of an individual being infected with
+the disease upon interacting with an infected
+individual. The higher this value is, the more
+likely it is for uninfected individuals to contract
+the disease in any interaction with infected individuals.
             """,
         )
         leftCol, rightCol = st.columns(2)
@@ -216,17 +213,17 @@ def buildDiseaseTab(id: int, advanced: bool = False):
             args=["betaAsymptomatic", id],
             key=f"_betaAsymptomatic{id}",
             help="""
-                The value of the transmissibility modifier
-                $sym(I_i)$ when the infected individual in an
-                interaction ($I_i$) is asymptomatic (i.e. has not
-                shown any symptoms of the disease despite being
-                infectious). This applies to both individuals who
-                are too early in the disease's lifespan to show
-                symptoms as well as individuals who never show
-                symptoms throughout their infectious period. The
-                lower this value is, the less likely it is for
-                uninfected individuals to contract the disease when
-                interacting with asymptomatic individuals.
+The value of the transmissibility modifier
+$sym(I_i)$ when the infected individual in an
+interaction ($I_i$) is asymptomatic (i.e. has not
+shown any symptoms of the disease despite being
+infectious). This applies to both individuals who
+are too early in the disease's lifespan to show
+symptoms as well as individuals who never show
+symptoms throughout their infectious period. The
+lower this value is, the less likely it is for
+uninfected individuals to contract the disease when
+interacting with asymptomatic individuals.
             """,
         )
         loadKey("betaPostSymptomatic", id, 0.55)
@@ -241,14 +238,14 @@ def buildDiseaseTab(id: int, advanced: bool = False):
             args=["betaPostSymptomatic", id],
             key=f"_betaPostSymptomatic{id}",
             help="""
-                The value of the transmissibility modifier
-                $sym(I_i)$ when the infected individual in an
-                interaction ($I_i$) is post-symptomatic (i.e.
-                previously showed symptoms of the disease, but no
-                longer does). The lower this value is, the less
-                likely it is for uninfected individuals to contract
-                the disease when interacting with post-symptomatic
-                individuals.
+The value of the transmissibility modifier
+$sym(I_i)$ when the infected individual in an
+interaction ($I_i$) is post-symptomatic (i.e.
+previously showed symptoms of the disease, but no
+longer does). The lower this value is, the less
+likely it is for uninfected individuals to contract
+the disease when interacting with post-symptomatic
+individuals.
             """,
         )
         # Transmission multipliers (only if advanced params are enabled)
@@ -265,13 +262,13 @@ def buildDiseaseTab(id: int, advanced: bool = False):
                 on_change=saveKey,
                 args=["schoolKappa", id],
                 help="""
-                    The value of the transmissibility modifier
-                    $\\kappa$ when an interaction takes place in a
-                    school. The higher this value is, the more
-                    likely it is for uninfected individuals to contract
-                    the disease when interacting with infected
-                    individuals in schools.
-                    """,
+The value of the transmissibility modifier
+$\\kappa$ when an interaction takes place in a
+school. The higher this value is, the more
+likely it is for uninfected individuals to contract
+the disease when interacting with infected
+individuals in schools.
+                """,
             )
             loadKey("workKappa", id, 1.0)
             rightCol.number_input(
@@ -285,12 +282,12 @@ def buildDiseaseTab(id: int, advanced: bool = False):
                 on_change=saveKey,
                 args=["workKappa", id],
                 help="""
-                    The value of the transmissibility modifier
-                    $\\kappa$ when an interaction takes place in a
-                    workplace. The higher this value is, the more
-                    likely it is for uninfected individuals to contract
-                    the disease when interacting with infected
-                    individuals in workplaces.
+The value of the transmissibility modifier
+$\\kappa$ when an interaction takes place in a
+workplace. The higher this value is, the more
+likely it is for uninfected individuals to contract
+the disease when interacting with infected
+individuals in workplaces.
                     """,
             )
             loadKey("householdKappa", id, 2.2)
@@ -305,12 +302,12 @@ def buildDiseaseTab(id: int, advanced: bool = False):
                 on_change=saveKey,
                 args=["householdKappa", id],
                 help="""
-                    The value of the transmissibility modifier
-                    $\\kappa$ when an interaction takes place in a
-                    household. The higher this value is, the more
-                    likely it is for uninfected individuals to contract
-                    the disease when interacting with infected
-                    individuals in households.
+The value of the transmissibility modifier
+$\\kappa$ when an interaction takes place in a
+household. The higher this value is, the more
+likely it is for uninfected individuals to contract
+the disease when interacting with infected
+individuals in households.
                     """,
             )
             loadKey("backgroundKappa", id, 1.0)
@@ -325,12 +322,12 @@ def buildDiseaseTab(id: int, advanced: bool = False):
                 on_change=saveKey,
                 args=["backgroundKappa", id],
                 help="""
-                    The value of the transmissibility modifier
-                    $\\kappa$ when an interaction takes place during the
-                    model's background phase (i.e. outside of simulated
-                    locations). The higher this value is, the more
-                    likely it is for uninfected individuals to contract
-                    the disease during the background phase.
+The value of the transmissibility modifier
+$\\kappa$ when an interaction takes place during the
+model's background phase (i.e. outside of simulated
+locations). The higher this value is, the more
+likely it is for uninfected individuals to contract
+the disease during the background phase.
                     """,
             )
 
@@ -611,10 +608,10 @@ group to contract the disease when interacting with infected individuals.
                 args=["asymptomaticChild", id],  # type: ignore
                 key=f"_asymptomaticChild{id}",
                 help="""
-                    The probability that an infected young person
-                    (defined as 0-24 years old) in the simulation will
-                    be asymptomatic (i.e. they never show any symptoms
-                    of the disease despite being infectious).
+The probability that an infected young person
+(defined as 0-24 years old) in the simulation will
+be asymptomatic (i.e. they never show any symptoms
+of the disease despite being infectious).
                 """,
             )
             loadKey("asymptomaticAdult", id, 0.35)
@@ -627,10 +624,10 @@ group to contract the disease when interacting with infected individuals.
                 args=["asymptomaticAdult", id],  # type: ignore
                 key=f"_asymptomaticAdult{id}",
                 help="""
-                    The probability that an infected adult (defined as
-                    24+ years old) in the simulation will be
-                    asymptomatic (i.e. they never show any symptoms of
-                    the disease despite being infectious).
+The probability that an infected adult (defined as
+24+ years old) in the simulation will be
+asymptomatic (i.e. they never show any symptoms of
+the disease despite being infectious).
                 """,
             )
         else:
@@ -644,9 +641,9 @@ group to contract the disease when interacting with infected individuals.
                 args=["asymptomaticBoth", id],  # type: ignore
                 key=f"_asymptomaticBoth{id}",
                 help="""
-                    The probability that an infected individual in the
-                    simulation will be asymptomatic (i.e. they never
-                    show any symptoms of the disease despite being infectious).
+The probability that an infected individual in the
+simulation will be asymptomatic (i.e. they never
+show any symptoms of the disease despite being infectious).
                 """,
             )
 
@@ -694,10 +691,10 @@ group to contract the disease when interacting with infected individuals.
             args=["latencyPeriod", id],  # type: ignore
             key=f"_latencyPeriod{id}",
             help="""
-                The length in days of the disease's latency period,
-                i.e. the length of time between an individual
-                initially being infected by the disease and said
-                individual becoming infectious themselves.
+The length in days of the disease's latency period,
+i.e. the length of time between an individual
+initially being infected by the disease and said
+individual becoming infectious themselves.
             """,
         )
         loadKey("preSymptomPeriod", id, 1.0)
@@ -713,11 +710,11 @@ group to contract the disease when interacting with infected individuals.
             on_change=saveKey,
             args=["preSymptomPeriod", id],  # type: ignore
             help="""
-                The length in days of the disease's pre-symptomatic
-                period, i.e. the length of time between an
-                infected individual becoming capable of infecting
-                others with the disease and said individual
-                beginning to show symptoms.
+The length in days of the disease's pre-symptomatic
+period, i.e. the length of time between an
+infected individual becoming capable of infecting
+others with the disease and said individual
+beginning to show symptoms.
             """,
         )
         loadKey("symptomPeriod", id, 2.0)
@@ -733,10 +730,9 @@ group to contract the disease when interacting with infected individuals.
             args=["symptomPeriod", id],  # type: ignore
             key=f"_symptomPeriod{id}",
             help="""
-                The length in days of the disease's symptomatic
-                period, i.e. the length of time during which an
-                infected individual will show symptoms of the
-                disease.
+The length in days of the disease's symptomatic
+period, i.e. the length of time during which an
+infected individual will show symptoms of the disease.
             """,
         )
         loadKey("postSymptomPeriod", id, 2.5)
@@ -752,11 +748,11 @@ group to contract the disease when interacting with infected individuals.
             on_change=saveKey,
             args=["postSymptomPeriod", id],  # type: ignore
             help="""
-                The length in days of the disease's
-                post-symptomatic period, i.e. the length of time
-                between an individual ceasing to show symptoms of
-                the disease and said individual being fully
-                recovered/no longer infectious.
+The length in days of the disease's
+post-symptomatic period, i.e. the length of time
+between an individual ceasing to show symptoms of
+the disease and said individual being fully
+recovered/no longer infectious.
             """,
         )
         dualError(
@@ -855,31 +851,30 @@ group to contract the disease when interacting with infected individuals.
                 latencyPeriod + preSymptomPeriod + symptomPeriod + postSymptomPeriod
             ),
             help="""
-                The length in days of the disease's total lifespan,
-                i.e. the length of time between an individual
-                initially being infected by the disease and said
-                individual being fully recovered/no longer
-                infectious.
+The length in days of the disease's total lifespan,
+i.e. the length of time between an individual
+initially being infected by the disease and said
+individual being fully recovered/no longer infectious.
             """,
         )
         incubationCol.metric(
             "Incubation Period",
             dayCount(latencyPeriod + preSymptomPeriod),
             help="""
-                The length in days of the disease's incubation
-                period, i.e. the length of time between an
-                individual initially being infected by the disease
-                and said individual beginning to show symptoms.
+The length in days of the disease's incubation
+period, i.e. the length of time between an
+individual initially being infected by the disease
+and said individual beginning to show symptoms.
             """,
         )
         infectiousCol.metric(
             "Infectious Period",
             dayCount(preSymptomPeriod + symptomPeriod + postSymptomPeriod),
             help="""
-                The length in days of the disease's infectious
-                period, i.e. the length of time during which an
-                infected individual is capable of spreading the
-                disease to others.
+The length in days of the disease's infectious
+period, i.e. the length of time during which an
+infected individual is capable of spreading the
+disease to others.
             """,
         )
 
@@ -926,9 +921,9 @@ group to contract the disease when interacting with infected individuals.
             on_change=saveKey,
             args=["caseRatio", id],
             help="""
-                The proportion of infected, symptomatic
-                individuals who will be formally diagnosed as a
-                confirmed case of the disease.
+The proportion of infected, symptomatic
+individuals who will be formally diagnosed as a
+confirmed case of the disease.
             """,
         )
         loadKey("gpRatio", id, 0.17)
@@ -943,9 +938,9 @@ group to contract the disease when interacting with infected individuals.
             on_change=saveKey,
             args=["gpRatio", id],
             help="""
-                The proportion of infected, symptomatic
-                individuals who will visit their general practitioner
-                (GP) as a result of the disease.
+The proportion of infected, symptomatic
+individuals who will visit their general practitioner
+(GP) as a result of the disease.
             """,
         )
         loadKey("hospitalRatio", id, 0.00316133)
@@ -960,9 +955,9 @@ group to contract the disease when interacting with infected individuals.
             on_change=saveKey,
             args=["hospitalRatio", id],
             help="""
-                The proportion of infected, symptomatic
-                individuals who will be admitted to a hospital as a
-                result of the disease.
+The proportion of infected, symptomatic
+individuals who will be admitted to a hospital as a
+result of the disease.
             """,
         )
         loadKey("icuRatio", id, 0.00063227)
@@ -977,10 +972,9 @@ group to contract the disease when interacting with infected individuals.
             on_change=saveKey,
             args=["icuRatio", id],
             help="""
-                The proportion of infected, symptomatic
-                individuals who will be admitted to a hospital's
-                intensive care unit (ICU) as a result of the
-                disease.
+The proportion of infected, symptomatic
+individuals who will be admitted to a hospital's
+intensive care unit (ICU) as a result of the disease.
             """,
         )
         loadKey("deathRatio", id, 0.000115077)
@@ -995,9 +989,8 @@ group to contract the disease when interacting with infected individuals.
             on_change=saveKey,
             args=["deathRatio", id],
             help="""
-                The base proportion of infected, symptomatic
-                individuals who will die as a direct result of the
-                disease.
+The base proportion of infected, symptomatic
+individuals who will die as a direct result of the disease.
             """,
         )
 
@@ -1006,8 +999,8 @@ group to contract the disease when interacting with infected individuals.
             st.markdown(
                 "### Age-Specific Mortality Rate",
                 help="""
-    This table allows for unique likelihoods of death to be defined for
-    each age group, overriding the global rate defined above.
+This table allows for unique likelihoods of death to be defined for
+each age group, overriding the global rate defined above.
                 """,
             )
             st.markdown("Double-click a cell in this table to edit its value.")
@@ -1038,8 +1031,8 @@ group to contract the disease when interacting with infected individuals.
                         options=ageTimeDict.keys(),
                         format_func=lambda x: ageTimeDict[x],  # type: ignore
                         help="""
-    An age group that will have a specific mortality rate defined for it,
-    overriding the base proportion.
+An age group that will have a specific mortality rate defined for it,
+overriding the base proportion.
                         """,
                     ),
                     "Mortality Rate": st.column_config.NumberColumn(
@@ -1050,8 +1043,8 @@ group to contract the disease when interacting with infected individuals.
                         max_value=1.0,
                         format="%0.5e",
                         help="""
-    The proportion of infected, symptomatic individuals in this age
-    group who will die as a direct result of the disease.
+The proportion of infected, symptomatic individuals in this age
+group who will die as a direct result of the disease.
                         """,
                     ),
                 },
@@ -1231,10 +1224,10 @@ group to contract the disease when interacting with infected individuals.
                 args=["naturalImmunityDuration", id],  # type: ignore
                 key=f"_naturalImmunityDuration{id}",
                 help="""
-                    The number of months after an individual fully
-                    recovers from the disease before the immunity
-                    conferred by having been infected begins to
-                    diminish, where a month is 30 days.
+The number of months after an individual fully
+recovers from the disease before the immunity
+conferred by having been infected begins to
+diminish, where a month is 30 days.
                 """,
             )
             loadKey("naturalWanedEfficacy", id, 0.5)
@@ -1247,12 +1240,12 @@ group to contract the disease when interacting with infected individuals.
                 args=["naturalWanedEfficacy", id],  # type: ignore
                 format_func=lambda x: f"{100 * x:0.3g}%",
                 help="""
-                    The final efficacy value that an individual's
-                    natural immunity after recovering from the disease
-                    will approach as it begins to diminish, represented
-                    as the probability that the individual will remain
-                    healthy when exposed to the disease after their
-                    immunity is fully waned.
+The final efficacy value that an individual's
+natural immunity after recovering from the disease
+will approach as it begins to diminish, represented
+as the probability that the individual will remain
+healthy when exposed to the disease after their
+immunity is fully waned.
                 """,
             )
             loadKey("naturalWaningRate", id, 6)
@@ -1265,18 +1258,17 @@ group to contract the disease when interacting with infected individuals.
                 args=["naturalWaningRate", id],  # type: ignore
                 key=f"_naturalWaningRate{id}",
                 help="""
-                    The number of months after the immunity from having
-                    fully recovered from the disease begins waning
-                    before the efficacy of the immunity stabilises,
-                    where a month is 30 days. Natural immunity in the
-                    *Flusim* simulation will wane at a linear rate, so
-                    this parameter represents how long it takes for the
-                    immunity level to decrease from 100% immunity to
-                    the final immunity probability defined above.
+The number of months after the immunity from having
+fully recovered from the disease begins waning
+before the efficacy of the immunity stabilises,
+where a month is 30 days. Natural immunity in the
+*Flusim* simulation will wane at a linear rate, so
+this parameter represents how long it takes for the
+immunity level to decrease from 100% immunity to
+the final immunity probability defined above.
 
-                    If this parameter is set to 0, the immunity
-                    provided by recovering from the disease will never
-                    diminish.
+If this parameter is set to 0, the immunity
+provided by recovering from the disease will never diminish.
                 """,
             )
 

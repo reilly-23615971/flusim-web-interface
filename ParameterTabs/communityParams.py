@@ -9,8 +9,9 @@ import numpy as np
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import dayCount, idGet, loadKey, saveKey
+from ClientResources.InterfaceFunctions import dayCount
 from ClientResources.ModelSchema import Parameters, scenarioParameters
+from ClientResources.ParameterFunctions import idGet, loadKey, saveKey
 
 # Logging
 communityLog = logging.getLogger(__name__)
@@ -89,9 +90,9 @@ def buildCommunityTab(id: int, advanced: bool = False):
         args=["withdrawalWork", id],  # type: ignore
         key=f"_withdrawalWork{id}",
         help="""
-            The probability of an infected individual in the
-            simulation voluntarily withdrawing from work after
-            becoming symptomatic.
+The probability of an infected individual in the
+simulation voluntarily withdrawing from work after
+becoming symptomatic.
         """,
     )
     loadKey("withdrawalSchool", id, 0.9)
@@ -104,9 +105,9 @@ def buildCommunityTab(id: int, advanced: bool = False):
         args=["withdrawalSchool", id],  # type: ignore
         key=f"_withdrawalSchool{id}",
         help="""
-            The probability of an infected individual in the
-            simulation voluntarily withdrawing from school
-            after becoming symptomatic.
+The probability of an infected individual in the
+simulation voluntarily withdrawing from school
+after becoming symptomatic.
         """,
     )
     loadKey("bccRate", id, 4.0)
@@ -124,11 +125,10 @@ def buildCommunityTab(id: int, advanced: bool = False):
         on_change=saveKey,
         args=["bccRate", id],  # type: ignore
         help="""
-            The average number of other people each individual
-            will interact with in the background phase of each
-            day in the simulation. These interactions emulate
-            interactions outside of locations simulated by the
-            model.
+The average number of other people each individual
+will interact with in the background phase of each
+day in the simulation. These interactions emulate
+interactions outside of locations simulated by the model.
         """,
     )
 
@@ -146,10 +146,9 @@ def buildCommunityTab(id: int, advanced: bool = False):
             format_func=dayCount,
             key=f"_diagnosisDelay{id}",
             help="""
-                The number of days after an individual begins
-                showing symptoms of the disease before their
-                infection can be formally diagnosed as a confirmed
-                case.
+The number of days after an individual begins
+showing symptoms of the disease before their
+infection can be formally diagnosed as a confirmed case.
             """,
         )
 
@@ -163,9 +162,9 @@ def buildCommunityTab(id: int, advanced: bool = False):
             args=["childSupervision", id],  # type: ignore
             format_func=lambda x: f"{100 * x:0.3g}%",
             help="""
-                The probability that an adult in the simulation
-                will remain at their household if there is at least
-                one child present and no other adults are at home.
+The probability that an adult in the simulation
+will remain at their household if there is at least
+one child present and no other adults are at home.
             """,
         )
 
@@ -180,8 +179,8 @@ def buildCommunityTab(id: int, advanced: bool = False):
             on_change=saveKey,
             args=["maxClassSize", id],  # type: ignore
             help="""
-                The maximum size of school classes within
-                schools and childcare facilities in the simulation.
+The maximum size of school classes within
+schools and childcare facilities in the simulation.
             """,
         )
 
@@ -195,11 +194,11 @@ def buildCommunityTab(id: int, advanced: bool = False):
             args=["maxClassCount", id],  # type: ignore
             key=f"_maxClassCount{id}",
             help="""
-                The maximum number of subgroups that may exist
-                within a single school class in the simulation.
-                Subgroups are defined as sets of individuals that
-                regularly interact with each other but not with the
-                rest of the class.
+The maximum number of subgroups that may exist
+within a single school class in the simulation.
+Subgroups are defined as sets of individuals that
+regularly interact with each other but not with the
+rest of the class.
             """,
         )'''
         loadKey("maxWorkGroupSize", id, 10)
@@ -212,8 +211,7 @@ def buildCommunityTab(id: int, advanced: bool = False):
             on_change=saveKey,
             args=["maxWorkGroupSize", id],  # type: ignore
             help="""
-                The maximum size of groups within workplaces in the
-                simulation.
+The maximum size of groups within workplaces in the simulation.
             """,
         )
 
