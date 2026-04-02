@@ -29,12 +29,12 @@ from ClientResources.VisualisationFunctions import formatData
 
 # Set this early to minimise the time spent with a different page title
 st.set_page_config(
-    page_title="SMRG Flusim Web Dashboard",
+    page_title="Flusim Web Dashboard",
     page_icon=":material/microbiology:",
     layout="wide",
     menu_items={
         "About": """
-        ## SMRG Flusim Web Dashboard
+        ## Flusim Web Dashboard
         This dashboard is designed to work with the *Flusim* model
         designed by the UWA Software Modelling Research Group.
         ##### Additional Credits
@@ -100,7 +100,7 @@ runSimulation = st.Page(
 )
 infectionGraphs = st.Page(
     "DashboardPages/infectionOverTimeGraphs.py",
-    title="Infection Over Time Graphs",
+    title="Infection Graphs",
     icon=":material/chart_data:",
 )
 healthTables = st.Page(
@@ -110,7 +110,7 @@ healthTables = st.Page(
 )
 
 pages = {
-    "SMRG Flusim Web Dashboard": [modelDescription],
+    "Flusim Web Dashboard": [modelDescription],
     "Parameter Configuration": [baselineParameters, scenarioParameters, runSimulation],
     "Results Visualisation": [infectionGraphs, healthTables],
 }
