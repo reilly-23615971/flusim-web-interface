@@ -7,25 +7,24 @@
 import logging
 import os
 from datetime import datetime
+from functools import partial
 
 import pandas as pd
 import streamlit as st
 
 # Reload streamlit_notify if it fails the first time
 try:
-    from streamlit_notify import notify, toast
+    import streamlit_notify as stn
 except ImportError:
     import importlib
     import time
 
     time.sleep(0.01)
     importlib.reload(importlib.import_module("streamlit_notify"))
-    from streamlit_notify import notify, toast  # type: ignore
+    import streamlit_notify as stn  # type: ignore
 
 from ClientResources.SharedResources import resultQueue, usePresetData, usePresetParams
 from ClientResources.VisualisationFunctions import formatData
-
-# from ClientResources.SimulationRunFunctions import runSimulationButton
 
 # Set this early to minimise the time spent with a different page title
 st.set_page_config(
@@ -74,6 +73,10 @@ sessionParameters = {
 for parameter, default in sessionParameters.items():
     session[parameter] = session.get(parameter, default)
 
+# Define partial function for toasts
+notifyToast = partial(stn.toast, duration="infinite")
+
+
 st.logo(":material/microbiology:")
 
 
@@ -116,7 +119,7 @@ pages = {
 }
 
 # Display toasts
-notify(remove=True)
+stn.notify(remove=True)
 
 # Initialise and run the application pages
 flusimPages = st.navigation(pages)
@@ -173,26 +176,26 @@ def updateData():
                 data, tag = formatData(rawData, form)
                 # Further error checking
                 if len(data) == 0:
-                    toast(
-                        """
-                    :red-badge[Error]: No data was present on one
-                    or more of the files received from the server.
-                    Please make sure your parameters do not possess any
-                    errors and try again.
-                """,
+                    notifyToast(
+                        body="""
+                        :red-badge[Error]: No data was present on one
+                        or more of the files received from the server.
+                        Please make sure your parameters do not possess any
+                        errors and try again.
+                    """,
                         icon=":material/tab_unselected:",
                     )
                 elif (
                     tag in {"EpidemicCumulative", "EpidemicDaily"}
                     and len(data["Scenario"].value_counts()) != scenarios
                 ):
-                    toast(
-                        """
-                        :red-badge[Error]: One or more scenarios
-                        were not run correctly by the simulation
-                        server. Please ensure all scenarios do not
-                        possess any errors and try again.
-                    """,
+                    notifyToast(
+                        body="""
+                            :red-badge[Error]: One or more scenarios
+                            were not run correctly by the simulation
+                            server. Please ensure all scenarios do not
+                            possess any errors and try again.
+                        """,
                         icon=":material/donut_small:",
                     )
 
@@ -206,17 +209,16 @@ def updateData():
             seconds = str(totalTime.seconds % 60).zfill(2)
             timeString = f"{totalTime.seconds // 60}:{seconds}"
             if successes == len(dataForms):
-                toast(
+                notifyToast(
                     f"Simulation complete! Total duration: {timeString}",
                     icon=":material/check_circle:",
                 )
             elif successes > 0:
-                toast(
-                    f"""
-                Simulation complete,
-                though some analyses had errors.
+                notifyToast(
+                    body=f"""
+                Simulation complete, though some analyses had errors.
                 Total duration: {timeString}
-            """,
+                    """,
                     icon=":material/flaky:",
                 )
             appLog.info(
@@ -236,83 +238,83 @@ def updateData():
                 # Errors with exceptions attached
                 errorType, e = returnedData
                 if errorType == "ClientConnectorError":
-                    toast(
-                        """
-                    :red-badge[Error]: Could not connect to the
-                    simulation server. Please make sure you are
-                    connected to the same network as the server, then
-                    try again.
-                """,
+                    notifyToast(
+                        body="""
+                            :red-badge[Error]: Could not connect to the
+                            simulation server. Please make sure you are
+                            connected to the same network as the server,
+                            then try again.
+                        """,
                         icon=":material/link_off:",
                     )
                 elif errorType == "ClientResponseError500":
-                    toast(
-                        """
-                    :red-badge[Error]: Simulation server had an
-                    internal error. Please try again later.
-                """,
+                    notifyToast(
+                        body="""
+                            :red-badge[Error]: The simulation server had an
+                            internal error. Please try again later.
+                        """,
                         icon=":material/error:",
                     )
                 elif errorType == "ValueError":
-                    toast(
-                        """
-                    :red-badge[Error]: The data received from the
-                    simulation server was incorrectly formatted. Please
-                    make sure your parameters do not possess any errors
-                    and try again.
-                """,
+                    notifyToast(
+                        body="""
+                            :red-badge[Error]: The data received from the
+                            simulation server was incorrectly formatted. Please
+                            make sure your parameters do not possess any errors
+                            and try again.
+                        """,
                         icon=":material/broken_image:",
                     )
                 elif errorType == "InvalidSchemaError":
-                    toast(
-                        """
-                        :red-badge[Error]: The parameters sent to the
-                        server do not match the required format. Please
-                        check your parameters for errors and try again.
-                    """,
+                    notifyToast(
+                        body="""
+                            :red-badge[Error]: The parameters sent to the
+                            server do not match the required format. Please
+                            check your parameters for errors and try again.
+                        """,
                         icon=":material/schema:",
                     )
-                    toast(
+                    notifyToast(
                         f":red-badge[Response Body]: {e.response}",
                         icon=":material/breaking_news:",
                     )
                 else:
-                    toast(
-                        """
-                    :red-badge[Error]: The simulation server
-                    encountered an error. Please try again later.
-                """,
+                    notifyToast(
+                        body="""
+                            :red-badge[Error]: The simulation server
+                            encountered an error. Please try again later.
+                        """,
                         icon=":material/error:",
                     )
-                toast(
+                notifyToast(
                     f":red-badge[Full Error Message]: {e}",
                     icon=":material/breaking_news:",
                 )
 
             # Errors without exception messages to send
             elif isinstance(returnedData, pd.DataFrame):
-                toast(
-                    """
-                :red-badge[Error]: The data was not processed
-                correctly. Please try again later.
-            """,
+                notifyToast(
+                    body="""
+                        :red-badge[Error]: The data was not processed
+                        correctly. Please try again later.
+                    """,
                     icon=":material/data_alert:",
                 )
             elif returnedData == "EmptyZipFile":
-                toast(
-                    """
-                :red-badge[Error]: The simulation server did not
-                return any readable files. Please make sure your
-                parameters do not possess any errors and try again.
-            """,
+                notifyToast(
+                    body="""
+                        :red-badge[Error]: The simulation server did not
+                        return any readable files. Please make sure your
+                        parameters do not possess any errors and try again.
+                    """,
                     icon=":material/unknown_document:",
                 )
             else:
-                toast(
-                    """
-                :red-badge[Error]: An unknown error occurred. Please
-                try again later.
-            """,
+                notifyToast(
+                    body="""
+                        :red-badge[Error]: An unknown error occurred. Please
+                        try again later.
+                    """,
                     icon=":material/error:",
                 )
 
