@@ -22,6 +22,8 @@ st.markdown(
 )
 
 st.header("Usage")
+# TODO: Update usage instructions (or just refer to manual)
+# TODO: Replace buttons with proper st.link_buttons
 
 st.markdown(
     """

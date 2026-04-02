@@ -116,7 +116,9 @@ def generateTable():
         ),
     )
 
-    useVaccinationSplit = usePresetData or session.get("modelDataAsirVaccinated") is not None
+    useVaccinationSplit = (
+        usePresetData or session.get("modelDataAsirVaccinated") is not None
+    )
     columnDetails = [
         (
             outcome,
@@ -160,16 +162,20 @@ def generateTable():
         # Set default session_state params
         session.DataCommunity = "newcastle"
         useAdvanced = session.get("showAdvanced", False)
-        session.DataAsymptomatic = [
+        session.DataAsymptomatic = (
             [
-                1 - idGet("asymptomaticChild", scenarioID, 0.35),
-                1 - idGet("asymptomaticAdult", scenarioID, 0.35),
+                [
+                    1 - idGet("asymptomaticChild", scenarioID, 0.35),
+                    1 - idGet("asymptomaticAdult", scenarioID, 0.35),
+                ]
+                for scenarioID in range(4)
             ]
-            for scenarioID in range(4)
-        ] if useAdvanced else [
+            if useAdvanced
+            else [
                 [1 - idGet("asymptomaticBoth", scenarioID, 0.35)] * 2
                 for scenarioID in range(4)
             ]
+        )
         session.DataHealthOutcomeRates = {
             outcome: {
                 scenario: idGet(
@@ -514,6 +520,7 @@ included in the table.
 Select the health burden outcome you would like to be included as a column on the table.
                 """,
             ),
+            # TODO: See if direct/indirect ratio columns are desirable
             "Vaccination Status": st.column_config.SelectboxColumn(
                 "Vaccination Status",
                 required=True,

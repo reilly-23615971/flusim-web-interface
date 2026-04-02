@@ -48,11 +48,11 @@ st.set_page_config(
     },
 )
 
-# Logging config (create log folder outside of project dir to avoid
-# watchfiles getting into an endless update loop)
-os.makedirs("../Logs", exist_ok=True)
+# Logging config
+# TODO: Double-check that no logging loops are occurring
+os.makedirs("Logs", exist_ok=True)
 logging.basicConfig(
-    filename="../Logs/interfaceAppLogs.txt",
+    filename="Logs/interfaceAppLogs.txt",
     filemode="a",
     format="%(asctime)s,%(msecs)03d %(name)s %(levelname)s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
@@ -143,7 +143,7 @@ def updateData():
     if session.simulationInProgress and not resultQueue.empty():
         returnedData = resultQueue.get()
         appLog.info(f"[updateData] Processing the following data:\n{returnedData}")
-        os.write(1, f"Received data from server\n\n".encode())
+        os.write(1, "Simulation experiment call complete\n\n".encode())
 
         # Make pending data no longer pending
         pendingData = {

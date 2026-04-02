@@ -256,31 +256,43 @@ simulation.
             schema = json.loads(parameterJSON)
             if "+vaccine" in schema.get("middle_joint"):
                 session.PendingDataForms = [
-                    AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=True),
-                    AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=False),
+                    AnalysisFile(
+                        tool="epidemic", names=scenarioNames, useCumulative=True
+                    ),
+                    AnalysisFile(
+                        tool="epidemic", names=scenarioNames, useCumulative=False
+                    ),
                     AnalysisFile(tool="asir", names=scenarioNames),
                     AnalysisFile(tool="asir", names=scenarioNames, vaccinated=True),
                 ]
             else:
                 session.PendingDataForms = [
-                    AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=True),
-                    AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=False),
+                    AnalysisFile(
+                        tool="epidemic", names=scenarioNames, useCumulative=True
+                    ),
+                    AnalysisFile(
+                        tool="epidemic", names=scenarioNames, useCumulative=False
+                    ),
                     AnalysisFile(tool="asir", names=scenarioNames),
                 ]
             session.PendingDataCommunity = session.get("community", "newcastle")
             session.PendingDataScenarioNames = scenarioNames
             session.PendingDataScenarioCount = scenarioCount
-            session.PendingDataAsymptomatic = [
+            session.PendingDataAsymptomatic = (
                 [
-                    1 - idGet("asymptomaticChild", scenarioID, 0.35),
-                    1 - idGet("asymptomaticAdult", scenarioID, 0.35),
+                    [
+                        1 - idGet("asymptomaticChild", scenarioID, 0.35),
+                        1 - idGet("asymptomaticAdult", scenarioID, 0.35),
+                    ]
+                    for scenarioID in range(scenarioCount + 1)
                 ]
-                for scenarioID in range(scenarioCount + 1)
-            ] if useAdvanced else [
-                [1 - idGet("asymptomaticBoth", scenarioID, 0.35)] * 2
-                for scenarioID in range(scenarioCount + 1)
-            ]
-            
+                if useAdvanced
+                else [
+                    [1 - idGet("asymptomaticBoth", scenarioID, 0.35)] * 2
+                    for scenarioID in range(scenarioCount + 1)
+                ]
+            )
+
             session.PendingDataHealthOutcomeRates = {
                 outcome: {
                     scenario: idGet(
@@ -386,10 +398,10 @@ async def runModel(parameterJSON: str):
                     )
                 response.raise_for_status()
             functionLog.info("[runModel] Response received! Returning data...")
-        
+
         # Process without unzipping if there's only one analysis (unused currently)
-        #if len(dataForms) == 1:
-            #return [responseData]
+        # if len(dataForms) == 1:
+        # return [responseData]
         # Unzip data and format each analysis file
         with ZipFile(BytesIO(responseData)) as analyses:
             fileNames = analyses.namelist()

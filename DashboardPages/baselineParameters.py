@@ -63,8 +63,10 @@ showAdvanced = st.toggle(
     """,
 )
 
-# Fragments to display errors and rerun on sim length change
+# Fragment to display errors
 errorChecker(0)
+
+# TODO: Buttons to download/upload simulation parameters
 
 
 # TODO: Consider having a tab for templates that load parameters for

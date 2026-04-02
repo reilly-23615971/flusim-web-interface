@@ -405,7 +405,7 @@ def scaleAsirColumn(
             deathRates = pd.DataFrame(session.DataMortalityRates).T.stack()
             dataIndexValues = pd.MultiIndex.from_frame(data[["Scenario", "Age Group"]])
             scaledColumn = data["Base Values"] * pd.Series(
-                dataIndexValues.map(deathRates), index=data.index # type: ignore
+                dataIndexValues.map(deathRates), index=data.index  # type: ignore
             ).fillna(data["Scenario"].map(session["DataHealthOutcomeRates"]["Deaths"]))
 
             baselineDeath = session.DataMortalityRates[baselineScenario]
@@ -552,7 +552,7 @@ def generateAsir(
 
     # Useful constants
     fullData = baseData.copy()
-    
+
     community = session.DataCommunity
     scenarioCount = len(scenarioNames)
 
@@ -645,6 +645,7 @@ other age groups list the age range they cover as part of their name.
 
         # Apply proportion/difference modifications
         # TODO: Either fix or disable just proportion
+        # TODO: Determine behaviour for vaccine split (% of vaccinated people?)
         # TODO: See if case matching is better here than elif chains
         if proportion and not baselineDifference:
             currentColumn /= fullData["Age Group"].map(communityAgePops[community])

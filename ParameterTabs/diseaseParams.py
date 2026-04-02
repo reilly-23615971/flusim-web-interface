@@ -836,6 +836,7 @@ group to contract the disease when interacting with infected individuals.
             )
             .properties(width="container", height=200)
         )
+        # TODO: This chart is cut off when first loaded again; fix it
         st.altair_chart(chart)
 
         # Written period lengths
