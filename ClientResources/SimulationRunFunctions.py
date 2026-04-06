@@ -43,8 +43,12 @@ functionLog = logging.getLogger(__name__)
 session = st.session_state
 
 
-# Error class for getting full responses
 class invalidSchemaError(Exception):
+    """
+    Error class for getting full responses
+    """
+
+    # TODO: Flesh out docstrings
     def __init__(self, message, response):
         self.message = message
         self.response = response
@@ -57,7 +61,8 @@ class invalidSchemaError(Exception):
 @st.dialog("Run Simulation Experiment", width="large", icon=":material/motion_play:")
 def runSimulationButton():
     """
-    Callback function for the Run Simulation button
+    Callback function for the Run Simulation button, opening a dialog window
+    before running the simulation itself.
     """
     # Disable button if it's taking a while to run
     runPending = bool(session.get("confirmRunButton"))
@@ -267,13 +272,10 @@ simulation.
             st.rerun()
 
 
-# TODO: Clean up this function so that errors are more easily read
-# and the returned types don't need as much checking
-# TODO: See if st.cache_data makes a difference here
 async def runModel(parameterJSON: str):
     """
     Asynchronous function to send JSON model parameters to the server, awaiting a
-    response containing the results of the simulation
+    response containing the results of the simulation.
 
     Parameters:
         parameterJSON (str): A string containing the JSON representation of
@@ -288,6 +290,9 @@ async def runModel(parameterJSON: str):
     """
     # TODO: Account for direct vs. indirect protection
     # (via extra asir filtered to vaccinated only)
+    # TODO: Clean up this function so that errors are more easily read
+    # and the returned types don't need as much checking
+    # TODO: See if st.cache_data makes a difference here
     try:
         schema = json.loads(parameterJSON)
 
@@ -356,7 +361,7 @@ async def runModel(parameterJSON: str):
 def runModelWrapper(parameterJSON):
     """
     Async wrapper function for runModel, allowing HTTP requests to be made
-    asynchronously without blocking Streamlit operations
+    asynchronously without blocking Streamlit operations.
 
     Parameters:
         parameterJSON (str): A string containing the JSON representation of
@@ -368,7 +373,7 @@ def runModelWrapper(parameterJSON):
     def threadRunner():
         """
         Inner function to asynchronously call the server and await results,
-        needed to avoid interrupting Streamlit UI functionality
+        needed to avoid interrupting Streamlit UI functionality.
         """
         try:
             # time.sleep(5)  # Debug for testing dashboard while running

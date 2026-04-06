@@ -133,7 +133,7 @@ st.sidebar.link_button(
 @st.fragment(run_every=1)
 def updateData():
     """
-    Fragment to regularly check if model results have been received yet
+    Fragment to regularly check if model results have been received yet.
     """
     # TODO: Rewrite this to be cleaner and more readable
     if session.simulationInProgress and not resultQueue.empty():

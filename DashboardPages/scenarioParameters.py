@@ -28,7 +28,7 @@ scenarioCount = session.get("scenarioCount", 0)
 
 def addScenario():
     """
-    Simple function to initialise an empty scenario
+    Simple function to initialise an empty scenario.
     """
     newCount = session["scenarioCount"] + 1
     session["scenarioCount"] = newCount
@@ -42,7 +42,7 @@ def addScenario():
 @st.dialog("Remove Scenario", width="large", icon=":material/delete:")
 def deleteScenario(scenarioID: int):
     """
-    Dialog function that removes a scenario if confirmed
+    Dialog function that removes a scenario if confirmed.
 
     Parameters:
         scenarioID (int): The ID representing the scenario to be deleted.

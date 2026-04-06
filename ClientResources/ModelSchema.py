@@ -1767,9 +1767,16 @@ class vaccineEfficacy(BaseModel):
         ),
     )
 
-    # Efficacy should be list for primary and single value for booster
     @model_validator(mode="after")
     def efficacyValidation(self) -> Self:
+        """
+        Function to validate parameter sets by ensuring that vaccine efficacy
+        is a list for primary vaccines and a single value for booster vaccines.
+
+        Raises:
+            ValueError: If the type of `Efficacy` is incorrect for the
+                specified `DoseType` value.
+        """
         try:
             if self.DoseType == "primary" and not isinstance(self.Efficacy, list):
                 raise ValueError(
@@ -1883,7 +1890,6 @@ class Parameters(BaseModel):
         description=("Parameters defining the efficacy of different vaccine doses."),
     )
 
-    # Wrap solo entries in list-based parameters
     @field_validator(
         "Scenario_CrossImmunity",
         "Scenario_DynamicIntervention",
@@ -1896,13 +1902,17 @@ class Parameters(BaseModel):
     )
     @classmethod
     def listify(cls, value: Any) -> Optional[list]:
+        """
+        Validation function to automatically convert single parameter
+        objects into lists.
+        """
+        # TODO: shouldn't this be list | Any not Optional[list]?
+        # Check Pydantic's validator function formatting
         if value is not None and not isinstance(value, list):
             return [value]
         else:
             return value
 
-    # Prevent duplicate entries in list-based parameters
-    # (e.g. 2 Scenario_Strain objects with the same StrainId)
     @field_validator(
         "Scenario_CrossImmunity",
         "Scenario_SeededNaturalImmunity",
@@ -1916,6 +1926,14 @@ class Parameters(BaseModel):
     def noDuplicateCategories(
         cls, value: Optional[list[Any]], info: ValidationInfo
     ) -> Optional[list[Any]]:
+        """
+        Validation function to remove duplicate parameter classes that cover
+        the same element in the simulation (e.g. two `Scenario_Strain` objects
+        with the same `StrainId`).
+
+        Raises:
+            AssertionError: If there are duplicate parameter classes.
+        """
         try:
             if value is None or info.field_name is None:
                 return value
@@ -1967,6 +1985,14 @@ class Parameters(BaseModel):
     # Ensure the right number of efficacies for primary vaccines are defined
     @model_validator(mode="after")
     def efficacyCount(self, info: ValidationInfo) -> Self:
+        """
+        Validation function to ensure that the number of doses matches
+        the number of defined efficacy values.
+
+        Raises:
+            ValueError: If the length of `Efficacy` does not match the primary
+                dose count.
+        """
         if self.Scenario_VaccineDose and self.Scenario_VaccineDoseEfficacy:
             primaryDose = next(
                 (
@@ -2082,10 +2108,13 @@ class simulationSet(BaseModel):
         title="Simulations", description=("A list of scenarios to run in this set.")
     )
 
-    # Wrap solo simulations in list
     @field_validator("simulations", mode="before")
     @classmethod
     def listify(cls, value: Any) -> Optional[list]:
+        """
+        Validation function to automatically convert single simulation
+        objects into lists.
+        """
         if value is not None and not isinstance(value, list):
             return [value]
         else:
@@ -2159,12 +2188,14 @@ class modelGuideFile(BaseModel):
         description=("A list of sets containing scenarios to run together."),
     )
 
-    # Wrap solo overrides/simulation sets in list
     @field_validator(
         "community_overrides", "override_templates", "simulation_sets", mode="before"
     )
     @classmethod
     def listify(cls, value: Any) -> Optional[list]:
+        """
+        Validation function to automatically convert single override objects into lists.
+        """
         if value is not None and not isinstance(value, list):
             return [value]
         else:

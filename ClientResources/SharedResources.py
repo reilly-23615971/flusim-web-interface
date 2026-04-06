@@ -180,9 +180,12 @@ triggerConditions = {
 
 # Simple function to get theme colours
 # Change these values if background colour changes
-def backgroundColour():
+def backgroundColour() -> str:
     """
-    Simple function to get the background colour of the current theme
+    Simple function to get the background colour of the current theme.
+
+    Returns:
+        str: The hex code representing the background colour as a string.
     """
     return "#0F1116" if st.context.theme.type == "dark" else "#FFFFFF"
 
@@ -208,12 +211,13 @@ brightCodes = (
 while len(brightCodes) < maxScenarios:
     brightCodes = brightCodes + brightCodes  # type: ignore
 
-"""
-Class for analysis file parameters
-"""
-
 
 class AnalysisFile:
+    """
+    Class for analysis file parameters
+    """
+
+    # TODO: Flesh out docstrings
     def __init__(
         self,
         tool: Literal["epidemic", "asir"],

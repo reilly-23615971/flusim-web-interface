@@ -53,7 +53,7 @@ vaccineDescriptions = {
 
 def formatData(data: bytes, settings: AnalysisFile) -> tuple[pd.DataFrame, str]:
     """
-    Wrapper function to perform the correct formatting process on csv data
+    Wrapper function to perform the correct formatting process on CSV data.
 
     Parameters:
         data (bytes): The CSV data to process.
@@ -96,7 +96,7 @@ def formatEpidemic(
 ) -> pd.DataFrame:
     """
     Function to convert raw data from the 'epidemic' Flusim analysis tool
-    into the desired DataFrame format for graphs
+    into the desired dataframe format for graphs.
 
     Parameters:
         rawCSV (bytes): The CSV output of the 'epidemic' analysis function, obtained
@@ -110,18 +110,18 @@ def formatEpidemic(
             data represents. Can be either 'Symptomatic Infections', 'Diagnosed Cases',
             'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
 
-        cumulative (bool): Set to True when the CSV contains cumulative
+        cumulative (bool): Set to `True` when the CSV contains cumulative
             data instead of individual data.
 
-        splitByAge: Set to True when the CSV data has separate
+        splitByAge: Set to `True` when the CSV data has separate
             columns for each age group.
 
     Returns:
-        formattedData (DataFrame): A pandas DataFrame containing the data, reshaped into
+        formattedData (DataFrame): A dataframe containing the data, reshaped into
             a format more easily used by Altair's charts.
 
     Raises:
-        ValueError: If scenarioNames is not a list of strings or outcome
+        ValueError: If `scenarioNames` is not a list of strings or `outcome`
             is not one of the recognised health burden outcomes.
     """
     # Validate parameters
@@ -188,22 +188,22 @@ def plotEpidemic(
 ) -> alt.LayerChart:
     """
     Function to create an Altair line graph of time-series data obtained
-    from the 'epidemic' Flusim analysis tool
+    from the 'epidemic' Flusim analysis tool.
 
     Parameters:
-        data (DataFrame): A DataFrame containing the epidemic data, processed with
+        data (DataFrame): A dataframe containing the epidemic data, processed with
             the formatEpidemic function.
 
         outcome (str): A string indicating the health outcome the epidemic
             data represents. Can be either 'Symptomatic Infections', 'Diagnosed Cases',
             'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
 
-        cumulative (bool): Boolean that is True when the DataFrame contains
+        cumulative (bool): Set to `True` when the DataFrame contains
             cumulative data instead of individual data.
 
         includedScenarios ('all' or list of str): A list of strings containing
             the names of scenarios that will be included in the table. Can
-            also be the string 'all' to indicate that all scenarios should
+            also be the string `all` to indicate that all scenarios should
             be included.
 
     Returns:
@@ -212,7 +212,7 @@ def plotEpidemic(
             without needing to hover over the line exactly.
 
     Raises:
-        ValueError: If data is not a dataframe or outcome is not one of
+        ValueError: If `data` is not a `DataFrame` or `outcome` is not one of
             the recognised health burden outcomes.
     """
     # Validate parameters
@@ -309,8 +309,8 @@ def plotEpidemic(
 def formatAsir(rawCSV: bytes, scenarioNames: list[str]) -> pd.DataFrame:
     """
     Function to convert raw data from the age-specific infection rate
-    ('asir') Flusim analysis tool into the desired DataFrame format for
-    tables and other visualisations
+    ('asir') Flusim analysis tool into the desired dataframe format for
+    tables and other visualisations.
 
     Parameters:
         rawCSV (bytes): The CSV output of the 'asir' analysis function, obtained
@@ -376,7 +376,7 @@ def scaleAsirColumn(
 ) -> tuple[pd.Series, pd.Series]:
     """
     Function to scale the values of ASIR data based on the occurrence rates
-    for a given health burden outcome
+    for a given health burden outcome.
 
     Parameters:
         data (DataFrame): The ASIR data to be scaled.
@@ -428,7 +428,8 @@ def recalculateTotals(
     data: pd.Series, baselineData: pd.Series, scenarioCount: int
 ) -> tuple[pd.Series, pd.Series]:
     """
-    Recalculates the first few total cells in ASIR data
+    Recalculates the first few total cells in ASIR data to account for
+    rounding differences.
 
     Parameters:
         data (Series): The ASIR data to have new totals calculated.
@@ -452,8 +453,6 @@ def recalculateTotals(
     return totalData, totalBaseline
 
 
-# TODO: more options
-# TODO: refactor to allow identical columns
 def generateAsir(
     baseData: pd.DataFrame,
     scenarioNames: list[str],
@@ -466,7 +465,7 @@ def generateAsir(
 ) -> tuple[pd.DataFrame, dict[str, ColumnConfig], set[str], set[str]]:
     """
     Function to create a table of health burden data obtained
-    from the 'asir' Flusim analysis tool
+    from the 'asir' Flusim analysis tool.
 
     Parameters:
         baseData (DataFrame): A DataFrame containing the asir data, processed with
@@ -487,20 +486,20 @@ def generateAsir(
 
         includedScenarios ('all' or list of str): A list of strings
             containing the names of scenarios that will be included in
-            the table. Can also be the string 'all' to indicate that all
+            the table. Can also be the string `all` to indicate that all
             scenarios should be included.
 
         includedAges ('all', False or list of str): A list of strings
             containing the names of age groups that will be included in the
-            table. Can also be the string 'all' to indicate that all age
-            groups should be included. If this is False, the age group column
+            table. Can also be the string `all` to indicate that all age
+            groups should be included. If this is `False`, the age group column
             will be omitted entirely.
 
         baseVaccinatedData (Dataframe, optional): A DataFrame containing asir data
             specifically for vaccinated individuals in the simulation.
 
     Returns:
-        formattedData (DataFrame): A pandas DataFrame containing the data,
+        formattedData (DataFrame): A dataframe containing the data,
             reshaped into a format more easily used for table construction.
 
         columnConfig (dict of str and ColumnConfig): A dictionary storing the
@@ -513,11 +512,13 @@ def generateAsir(
             each column that uses difference from baseline formatting.
 
     Raises:
-        ValueError: If scenarioNames is not a list of strings or columns
+        ValueError: If `scenarioNames` is not a list of strings or columns
             are not formatted correctly.
     """
     # Validate parameters
     # TODO: Update to account for expanded parameters
+    # TODO: more options
+    # TODO: refactor to allow identical columns
     try:
         if not scenarioNames:
             raise ValueError("scenarioNames should not be empty.")

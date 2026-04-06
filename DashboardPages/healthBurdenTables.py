@@ -40,10 +40,10 @@ ageGroups = ageWithTime + ["Total"]
 
 def getSlopeNorm(column: pd.Series) -> TwoSlopeNorm:
     """
-    Function to generate the slope norm used for table background gradients
+    Function to generate the slope norm used for table background gradients.
 
     Parameters:
-        column (Series): A Pandas series representing the column to make a slope
+        column (Series): A series representing the column to make a slope
             norm for.
 
     Returns:
@@ -68,7 +68,7 @@ def getSlopeNorm(column: pd.Series) -> TwoSlopeNorm:
 # Function to choose whether dataframe cells should have white or black text
 def selectTextColour(colour: str) -> str:
     """
-    Function to decide whether cells in a table have black or white text
+    Function to decide whether cells in a table have black or white text.
 
     Parameters:
         colour (str): A string representing a hexadecimal RGB colour.
@@ -86,7 +86,7 @@ def selectTextColour(colour: str) -> str:
 
 def generateTable():
     """
-    Callback function used to generate and format health burden tables
+    Callback function used to generate and format health burden tables.
     """
     # Throw error if no data is present
     if not usePresetData and session.get("modelDataAsirFull") is None:
@@ -271,8 +271,19 @@ def generateTable():
     }
 
     # Apply the colours to the scenario column
-    def scenarioColourString(value):
-        colour = scenarioColourDictionary[value]
+    def scenarioColourString(name) -> str:
+        """
+        Simple function to get colours for scenarios in pandas styling format.
+
+        Parameters:
+            name (str): The name of the scenario.
+
+        Returns:
+            str: A string that can be used in a pandas `Styler` config to
+                colour table cells according to the colour associated
+                with the scenario.
+        """
+        colour = scenarioColourDictionary[name]
         return f"background-color: {colour}; color: {selectTextColour(colour)}"
 
     ageStyle = ageStyle.map(scenarioColourString, subset=["Scenario"])
@@ -286,6 +297,17 @@ def generateTable():
         ageColourDictionary["Total"] = "#000000"
 
         def ageColourString(value):
+            """
+            Simple function to get colours for age groups in pandas styling format.
+
+            Parameters:
+                name (str): The name of the age group.
+
+            Returns:
+                str: A string that can be used in a pandas `Styler` config to
+                    colour table cells according to the colour associated
+                    with the age group.
+            """
             colour = ageColourDictionary[value]
             return f"background-color: {colour}; color: {selectTextColour(colour)}"
 
@@ -790,11 +812,13 @@ if tableData is not None:
         placeholder="N/A",
     )
 
-    # Button to download the CSV data used by the table
-    # TODO: Reflect changes made to the table by the user (reordered cols etc.)
-    # Or just remove this since there's a built-in download button now
     @st.fragment()
     def burdenDataDownload():
+        """
+        Fragment function to show a button that downloads the data in the table.
+        """
+        # TODO: Reflect changes made to the table by the user (reordered cols etc.)
+        # Or just remove this since there's a built-in download button now
         st.download_button(
             "Download Table Data",
             tableData.data.to_csv(index=False),  # type: ignore

@@ -50,14 +50,14 @@ session = st.session_state
 def buildVaccinationNPITab(id: int, advanced: bool = False):
     """
     Function to generate the parameters for vaccination and NPIs in a
-    specified container with scenario differentiation
+    specified container with scenario differentiation.
 
     Parameters:
         id (int): An integer that will be used to differentiate the parameters in
             different instances of the tab by adding a number to the Streamlit
             session state variables.
 
-        advanced (bool): Set to True to show more complex parameters like
+        advanced (bool): Set to `True` to show more complex parameters like
             individual vaccine dose efficacies.
     """
 
@@ -3554,9 +3554,20 @@ Total") or in each individual school (for
                     )
 
 
-def ageCast(x):
+def ageCast(x: str) -> Literal[
+    "young_infant",
+    "infant",
+    "young_child",
+    "child",
+    "adolescent",
+    "young_adult",
+    "adult",
+    "older_adult",
+    "senior",
+    "older_senior",
+]:
     """
-    Simple function to cast age strings into literals for validation
+    Simple function to cast age strings into literals for validation.
 
     Parameters:
         x (str): The string to be cast.
@@ -3581,9 +3592,16 @@ def ageCast(x):
     )
 
 
-def trigCast(x):
+def trigCast(x: str) -> Literal[
+    "none",
+    "timed",
+    "per_school_cases",
+    "community_cases",
+    "community_rate",
+    "per_primary_high_school_cases",
+]:
     """
-    Simple function to cast trigger strings into literals for validation
+    Simple function to cast trigger strings into literals for validation.
 
     Parameters:
         x (str): The string to be cast.
@@ -3607,7 +3625,7 @@ def trigCast(x):
 def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False) -> bool:
     """
     Function to populate the Pydantic model schema with the parameters in
-    this tab with scenario differentiation
+    this tab with scenario differentiation.
 
     Parameters:
         schema (Parameters): The Pydantic model (specifically an object in the
@@ -3618,11 +3636,11 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False) -> bo
             session state variables. A value of 0 means that this is the
             baseline scenario and will be treated accordingly.
 
-        advanced (bool): Set to True to show more complex parameters like
+        advanced (bool): Set to `True` to show more complex parameters like
             individual vaccine dose efficacies.
 
     Returns:
-        bool: True if vaccines were used in the scenario, permitting
+        bool: `True` if vaccines were used in the scenario, permitting
             direct vs. indirect protection calculations.
     """
     # Load reused parameters immediately to save time

@@ -1276,7 +1276,7 @@ provided by recovering from the disease will never diminish.
 def diseaseSchema(schema: Parameters, id: int = 0, advanced: bool = False):
     """
     Function to populate the Pydantic model schema with the parameters in
-    this tab with scenario differentiation
+    this tab with scenario differentiation.
 
     Parameters:
         schema (Parameters): The Pydantic model (specifically an object in the
@@ -1287,7 +1287,7 @@ def diseaseSchema(schema: Parameters, id: int = 0, advanced: bool = False):
             session state variables. A value of 0 means that this is the
             baseline scenario and will be treated accordingly.
 
-        advanced (bool): Set to True to account for more complex parameters like
+        advanced (bool): Set to `True` to account for more complex parameters like
             location-specific transmission modifiers.
     """
     # TODO: avoid adding parameters unchanged from the baseline for scenario efficiency

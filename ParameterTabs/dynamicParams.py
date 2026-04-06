@@ -25,7 +25,7 @@ session = st.session_state
 def buildDynamicTab(id: int):
     """
     Function to generate the dynamic parameters in a specified container
-    with scenario differentiation
+    with scenario differentiation.
 
     Parameters:
         id (int): An integer that will be used to differentiate the parameters in
@@ -1129,12 +1129,22 @@ effect, overwriting the normal BCC rate.
     )'''
 
 
-def paramCast(x: str):
+def paramCast(x: str) -> Literal[
+    "work_nonattendance",
+    "bcc_reduction",
+    "school_closure",
+    "seed_rate",
+    "school_closure_delay",
+    "school_closure_duration",
+]:
     """
-    Simple function to convert strings into literals for the purpose of type validation
+    Simple function to convert strings into literals for the purpose of type validation.
 
     Parameters:
-        x (str): shorthand for the key to cast
+        x (str): Shorthand for the key to cast.
+
+    Returns:
+        Literal: A literal with the corresponding value.
     """
     # TODO: Add any new dynamic parameters
     return cast(
@@ -1157,7 +1167,7 @@ def paramCast(x: str):
 def dynamicSchema(schema: Parameters, id: int = 0):
     """
     Function to populate the Pydantic model schema with the parameters in
-    this tab with scenario differentiation
+    this tab with scenario differentiation.
 
     Parameters:
         schema (Parameters): The Pydantic model (specifically an object in the

@@ -24,8 +24,6 @@ warnFormat = partial(st.warning, icon=":material/warning:")
 # Use sRGB in the colour picker for the best display/code match
 
 
-# TODO: Allow errors to link to the affected parameter
-# since containers can be dynamically opened now
 def paramError(
     label: str,
     scenarioID: int,
@@ -34,7 +32,7 @@ def paramError(
     isSevere=False,
 ):
     """
-    Function to throw an error if a condition is met
+    Function to display an error message if a condition is met.
 
     Parameters:
         label (str): A string to identify this specific error.
@@ -42,13 +40,16 @@ def paramError(
         scenarioID (int): The integer representing the scenario this error applies to.
 
         condition (callable, returns bool): The criteria that must be fulfilled
-            to throw the error, formatted as a function that returns True when
+            to display the error, formatted as a function that returns `True` when
             the criteria is met.
 
         message (str): The text to display for the error message.
 
-        isSevere (bool): Set to True for red errors that prevent running the simulation.
+        isSevere (bool): Set to `True` for red errors that prevent running
+            the simulation if present.
     """
+    # TODO: Allow errors to link to the affected parameter
+    # since containers can be dynamically opened now
     if condition():
         if isSevere:
             errorFormat(message)
@@ -69,7 +70,8 @@ def dualError(
     warnMessage: str,
 ):
     """
-    Function to throw either an error or a warning depending on certain conditions
+    Function to display an error message with two different severity levels
+    if different conditions are met.
 
     Parameters:
         label (str): A string to identify this specific error.
@@ -77,10 +79,11 @@ def dualError(
         scenarioID (int): The integer representing the scenario this error applies to.
 
         errorCon (callable, returns bool): The criteria for a red, run-blocking
-            error, formatted as a function that returns True when the criteria is met.
+            error, formatted as a function that returns `True` when the criteria
+            is met. This condition will override the condition in `warnCon`.
 
-        warnCon (callable, returns bool): The criteria for a yellow, minor error,
-            formatted as a function that returns True when the criteria is met.
+        warnCon (callable, returns bool): The criteria for a yellow, minor warning,
+            formatted as a function that returns `True` when the criteria is met.
 
         errorMessage (str): The text to display for the red error message.
 
@@ -99,15 +102,16 @@ def dualError(
 @st.fragment(run_every=1)
 def errorChecker(scenarioID: int, name: str = "Errors in Current Scenario"):
     """
-    Fragment to display errors from a specific scenario in a dropdown
+    Fragment to list errors from a specific scenario in a dropdown container.
 
     Parameters:
         scenarioID (int): The integer representing the scenario to pull errors from.
 
-        name (str): The label of the dropdown.
+        name (str): The label of the dropdown container.
 
     Returns:
-        bool: Returns True if at least one error was run-blocking and False otherwise.
+        bool: Returns `True` if at least one error was run-blocking and
+            `False` otherwise.
 
 
     """
@@ -125,9 +129,9 @@ def errorChecker(scenarioID: int, name: str = "Errors in Current Scenario"):
 
 def dayCount(count: int | float):
     """
-    Simple function to convert an integer into a string describing a number of days
+    Simple function to convert a number into a string describing a number of days.
 
     Parameters:
-        count (in or float): The number of days to return.
+        count (int or float): The number of days to return.
     """
     return "1 Day" if count == 1 else f"{count} Days"

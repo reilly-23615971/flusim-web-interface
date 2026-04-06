@@ -22,6 +22,12 @@ session = st.session_state
 
 # Function to generate graph
 def generateGraph():
+    """
+    Function to generate an infection-over-time graph with simulation data.
+
+    Raises:
+        FileNotFoundError: If there is no data to generate a graph with.
+    """
     # Throw error if no data is present
     if not usePresetData and not (session.get("modelDataEpidemicDaily") is not None):
         raise FileNotFoundError(
@@ -219,9 +225,11 @@ if chartData is not None:
     st.header("Infection Data Line Graph")
     st.altair_chart(chartData)
 
-    # Button to download the CSV data used by the chart
     @st.fragment()
     def infectionDataDownload():
+        """
+        Fragment function to show a button that downloads the data in the chart.
+        """
         chartTypeTag = "Cumulative" if chartType == "Cumulative" else "Daily"
         dataToDownload = session.get(f"modelDataEpidemic{chartTypeTag}")
         if dataToDownload is not None:

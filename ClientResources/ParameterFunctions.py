@@ -23,14 +23,14 @@ def containerSave(
     containers: set[str] = set(),
 ):
     """
-    Wrapper for saveKey that keeps specific containers open, used for
-    advanced parameters and scenario names
+    Wrapper for `saveKey` that keeps specific containers open, used for
+    advanced parameters and scenario names.
 
     Parameters:
         key (str): The string used to identify the widget.
 
         scenarioID (int or ""): The integer representing the scenario the widget
-            is part of. Defaults to "", allowing for parameters that are not
+            is part of. Defaults to `""`, allowing for parameters that are not
             associated with scenarios to be saved.
 
         containers (list of str): String used to identify each container to open.
@@ -48,21 +48,21 @@ def saveKey(
     dataframe=False,
 ):
     """
-    Function to save widget values into permanent `st.session_state` variables
+    Function to save widget values into permanent `st.session_state` variables.
 
     Parameters:
         key (str): The string used to identify the widget.
 
         scenarioID (int or ""): The integer representing the scenario the widget
-            is part of. Defaults to "", allowing for parameters that are not
+            is part of. Defaults to `""`, allowing for parameters that are not
             associated with scenarios to be saved.
 
         extra (str, optional): An additional part of the key used to distinguish
             variable-length forms.
 
-        notScenario (bool): Set to True if the widget isn't a parameter for scenarios.
+        notScenario (bool): Set to `True` if the widget isn't a parameter for scenarios.
 
-        dataframe (bool): Set to True if the widget is a dataframe that requires
+        dataframe (bool): Set to `True` if the widget is a dataframe that requires
             manual application of changes.
     """
     # TODO: See if dataframes can not reload after every change
@@ -114,24 +114,24 @@ def loadKey(
     dataframe=False,
 ):
     """
-    Function to update widgets with permanent session state vars
+    Function to update widgets with permanent session state variables.
 
     Parameters:
         key (str): The string used to identify the widget.
 
         scenarioID (int or ""): The integer representing the scenario the
-            widget is part of. Defaults to "", allowing for parameters that
+            widget is part of. Defaults to `""`, allowing for parameters that
             are not associated with scenarios to be saved.
 
-        default: the value to use if the widget is not present
+        default: The value to use if the widget is not present.
 
         extra (str, optional): An additional part of the key used to distinguish
             variable-length forms.
 
-        noZeroDefault (bool): Set to True if the widget shouldn't fall back
+        noZeroDefault (bool): Set to `True` if the widget shouldn't fall back
             on baseline values.
 
-        dataframe (bool): Set to True for dataframe widgets that load
+        dataframe (bool): Set to `True` for dataframe widgets that load
             their data differently.
     """
     keyString = f"{key}{scenarioID}{extra}"
@@ -173,7 +173,7 @@ dynamicParamList = {
 # TODO: Notify users if parameters are changed when cycle count is adjusted
 def timeScaleChange():
     """
-    Function to update the ranges of time-based parameters
+    Function to update the ranges of time-based parameters.
     """
     saveKey("cycleCount")
     newLength = session["cycleCount"]
@@ -197,7 +197,7 @@ def dynamicScaleChange(
     noSave=False,
 ):
     """
-    Function to update the ranges of dynamic parameters
+    Function to update the ranges of dynamic parameters.
 
     Parameters:
         key (str): The identifier used to distinguish the dynamic parameter
@@ -211,10 +211,10 @@ def dynamicScaleChange(
 
         condition (callable, returns bool, optional): A criteria that skips
             the range update if fulfilled, formatted as a function that
-            returns True when the criteria is met.
+            returns `True` when the criteria is met.
 
-        noSave (bool): Set to True if running this function from a different
-            page where saving the widget value would instead set it to None.
+        noSave (bool): Set to `True` if running this function from a different
+            page where saving the widget value would instead set it to `None`.
     """
     if not noSave:
         saveKey(key, scenarioID)
@@ -246,7 +246,7 @@ def idGet(key: str, scenarioID: int, defaultValue, extra: Optional[str] = None):
     """
     Simple function to get a specific session state value with a specific
     ID, checking ID 0 if the specified one doesn't exist before falling
-    back on a default
+    back on a default.
 
     Parameters:
         key (str): The string component of the session state variable to get.
@@ -271,7 +271,7 @@ def idGet(key: str, scenarioID: int, defaultValue, extra: Optional[str] = None):
 # Variable-Length Form Functions
 def hasDuplicates(df: pd.DataFrame, column: str = "Age Group"):
     """
-    Simple function to check if there are duplicates in a given DataFrame row
+    Simple function to check if there are duplicates in a given dataframe row.
 
     Parameters:
         df (DataFrame): The dataframe to check.
@@ -285,7 +285,7 @@ def hasDuplicates(df: pd.DataFrame, column: str = "Age Group"):
 def getRemainingGroups(groupSets, possibleValues):
     """
     Function to update what parameters are selectable for different
-    parts of a form, to avoid duplicates
+    parts of a form, to avoid duplicates.
 
     Parameters:
         groupSets: A dictionary with strings as keys and tuples containing
@@ -313,7 +313,7 @@ def getRemainingGroups(groupSets, possibleValues):
 
 def addFormRow(rowCounter, forceSetParams=None):
     """
-    Function to add an additional row to a specific variable-length form
+    Function to add an additional row to a specific variable-length form.
 
     Parameters:
         rowCounter: A string representing the Streamlit session state
@@ -332,7 +332,7 @@ def addFormRow(rowCounter, forceSetParams=None):
 
 def deleteFormRow(deletedRowIndex, rowCounter, inputPrefixes, minRows=0):
     """
-    Function to remove a row from a specific variable-length form
+    Function to remove a row from a specific variable-length form.
 
     Parameters:
         deletedRowIndex: An integer representing the index (first is 0) of
@@ -385,11 +385,11 @@ class Parameter:
 
     @property
     def value(self):
-        """Get the current value for this parameter"""
+        """Get the current value for this parameter."""
         return session.get(self.fullKey, self.defaultValue)
 
     def loadKey(self, noZeroDefault=False):
-        """Update the value for this parameter's widget"""
+        """Update the value for this parameter's widget."""
         if noZeroDefault:
             session[self.internalKey] = session.get(self.fullKey, self.defaultValue)
         else:
@@ -398,13 +398,13 @@ class Parameter:
             )
 
     def saveKey(self):
-        """Save the new value for this parameter set by its widget"""
+        """Save the new value for this parameter set by its widget."""
         session[self.fullKey] = session.get(self.internalKey)
         if self.scenarioID != 0:
             session["scenarioSetParams"][self.scenarioID].add(self.key)
 
     def populateSchema(self, schema):
-        """Populate a schema with this parameter's value"""
+        """Populate a schema with this parameter's value."""
         setattr(schema, self.paramName, self.value)
 
 

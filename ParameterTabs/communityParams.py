@@ -21,14 +21,14 @@ communityLog = logging.getLogger(__name__)
 def buildCommunityTab(id: int, advanced: bool = False):
     """
     Function to generate the parameters for the simulation environment in a
-    specified container with scenario differentiation
+    specified container with scenario differentiation.
 
     Parameters:
         id (int): An integer that will be used to differentiate the parameters in
             different instances of the tab by adding a number to the Streamlit
             session state variables.
 
-        advanced (bool): Set to True to show more complex parameters like
+        advanced (bool): Set to `True` to show more complex parameters like
             child supervision rate.
     """
     # Initialise session variables needed by the disease forms
@@ -219,7 +219,7 @@ The maximum size of groups within workplaces in the simulation.
 def communitySchema(schema: Parameters, id: int = 0, advanced: bool = False):
     """
     Function to populate the Pydantic model schema with the parameters in
-    this tab with scenario differentiation
+    this tab with scenario differentiation.
 
     Parameters:
         schema (Parameters): The Pydantic model (specifically an object in the
@@ -230,7 +230,7 @@ def communitySchema(schema: Parameters, id: int = 0, advanced: bool = False):
             session state variables. A value of 0 means that this is the
             baseline scenario and will be treated accordingly.
 
-        advanced (bool): Set to True to show more complex parameters like
+        advanced (bool): Set to `True` to show more complex parameters like
             child supervision rate.
     """
     try:
