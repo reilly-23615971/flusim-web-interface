@@ -6,6 +6,7 @@
 import logging
 from collections import defaultdict
 from io import BytesIO
+from itertools import chain
 from math import ceil
 from typing import Any, Literal, Optional, Sequence
 
@@ -17,12 +18,12 @@ from streamlit.elements.lib.column_types import ColumnConfig
 
 from ClientResources.SharedResources import (
     AnalysisFile,
+    ageRangeCombiner,
     ageWithTime,
     brightCodes,
     communityAgePops,
-    outcomeAdjectives,
+    # outcomeAdjectives,
     tableOutcomes,
-    vaccineAdjectives,
 )
 
 # Logging
@@ -458,8 +459,8 @@ def generateAsir(
     scenarioNames: list[str],
     ageSeparation: Literal["Combined", "By Row", "By Column"] = "Combined",
     columns: Sequence[
-        tuple[str, set[str], Literal["All", "Vaccinated", "Unvaccinated"], bool, bool]
-    ] = [("Symptomatic Infections", set(), "All", False, False)],
+        tuple[str, list[str], Literal["All", "Vaccinated", "Unvaccinated"], bool, bool]
+    ] = [("Symptomatic Infections", [], "All", False, False)],
     includedScenarios: Optional[list[str]] = None,
     includedAges: Optional[list[str]] = None,
     baseVaccinatedData: Optional[pd.DataFrame] = None,
@@ -484,13 +485,13 @@ def generateAsir(
             (include extra rows for each age group), or `By Column` (use different
             age groups for each column).
 
-        columns (sequence of tuples (str, set of str, str, bool, bool)): A list
+        columns (sequence of tuples (str, list of str, str, bool, bool)): A list
             of tuples representing the settings each column should have. The
             values in each tuple are as follows: the health burden outcome to
-            display, which age groups the column should represent, what
-            vaccination status the column should represent, whether the column
-            should be a percentage and whether the column should display the
-            difference from baseline values.
+            display, which age groups the column should represent (ignored if
+            `ageSeparation` is `Combined` or `By Row`), what vaccination status
+            the column should represent, whether the column should be a percentage and
+            whether the column should display the difference from baseline values.
 
         includedScenarios (list of str, optional): A list of strings
             containing the names of scenarios that will be included in
@@ -500,6 +501,7 @@ def generateAsir(
             containing the names of age groups that will be included in the
             table. If this is `None`, all age groups will be included. However,
             if this is an empty list, the age group column will be omitted entirely.
+            Ignored if `ageSeparation` is `Combined` or `By Column`.
 
         baseVaccinatedData (Dataframe, optional): A DataFrame containing asir data
             specifically for vaccinated individuals in the simulation.
@@ -561,14 +563,19 @@ def generateAsir(
         includedScenarios = scenarioNames
     if includedAges is None:
         includedAges = ageWithTime + ["Total"]
+
+    # Empty includedAges if not doing age rows
     if ageSeparation != "By Row":
         includedAges = []
 
     # Useful constants
     fullData = baseData.copy()
-
     community = session.DataCommunity
     scenarioCount = len(scenarioNames)
+    ageIndices = {
+        age: range(index * scenarioCount, (index * scenarioCount) + scenarioCount)
+        for index, age in enumerate(["Total"] + ageWithTime)
+    }
 
     # Generate baseline data for columns that need it
     baselineScenario = scenarioNames[0]
@@ -594,27 +601,25 @@ def generateAsir(
         vaccinatedData = None
 
     # Generate config data for Streamlit display
-    # TODO: Allow more options
     percentCols, differenceCols = set(), set()
-
     columnConfig = {}
-
+    # TODO: Reintegrate descriptions if desired (and possible for non-index)
     columnConfig["Scenario Name"] = st.column_config.TextColumn(
         pinned=True,
-        help="""
-The scenario that each row's data originates from. 'Baseline'
-refers to the scenario using the base parameters at the
-Baseline Parameters page, while additional scenarios use the
-names given to them at the Scenario Parameters page.
-    """,
+        #         help="""
+        # The scenario that each row's data originates from. 'Baseline'
+        # refers to the scenario using the base parameters at the
+        # Baseline Parameters page, while additional scenarios use the
+        # names given to them at the Scenario Parameters page.
+        #     """,
     )
     columnConfig["Age Group"] = st.column_config.TextColumn(
         pinned=True,
-        help="""
-The age range of the individuals that each row's data is derived from.
-'Total' includes the entire population of the simulation, at all ages;
-other age groups list the age range they cover as part of their name.
-    """,
+        #         help="""
+        # The age range of the individuals that each row's data is derived from.
+        # 'Total' includes the entire population of the simulation, at all ages;
+        # other age groups list the age range they cover as part of their name.
+        #     """,
     )
 
     # Prepare burden-scaled columns beforehand for efficiency
@@ -654,43 +659,53 @@ other age groups list the age range they cover as part of their name.
 
     # Generate columns
     # TODO: Column descriptions are repetitive; see if they can be rewritten
-    for outcome, vaccineStatus, proportion, baselineDifference in columns:
+    # TODO: Make column names account for age columns
     for outcome, ageGroups, vaccineStatus, proportion, baselineDifference in columns:
         currentColumn = outcomeColumns[(outcome, vaccineStatus)]
         columnBaselines = outcomeBaselines[(outcome, vaccineStatus)]
+        columnName = f"{"" if vaccineStatus == "All" else vaccineStatus} {outcome}"
+
+        # Replace values with those of summed age groups
+        if ageSeparation == "By Column":
+            if set(ageGroups) == set(ageWithTime):
+                ageGroups = ["Total"]
+            filteredColumn = currentColumn.iloc[
+                chain.from_iterable(ageIndices[age] for age in ageGroups)
+            ]  # type: ignore
+            columnSums = filteredColumn.groupby(
+                filteredColumn.index % scenarioCount
+            ).sum()
+            currentColumn = pd.concat([columnSums] * 11, ignore_index=True)
+            columnBaselines = pd.Series(columnSums[0], index=range(11 * scenarioCount))
+            columnName += f" ({ageRangeCombiner(ageGroups)})"
 
         # Apply proportion/difference modifications
         # TODO: Either fix or disable just proportion
-        # TODO: Determine behaviour for vaccine split (% of vaccinated people?)
+        # TODO: Determine behaviour for vaccine split and age groups
+        # (% of vaccinated people? Sum pops of age groups?)
         # TODO: See if case matching is better here than elif chains
         if proportion and not baselineDifference:
             currentColumn /= fullData["Age Group"].map(communityAgePops[community])
-            columnName = (
-                f"{vaccineAdjectives[vaccineStatus]}"
-                f"{outcomeAdjectives[outcome]} % of Population"
-            )
-            columnConfig[columnName] = st.column_config.Column(
+            columnName += " (%)"
+            config = '''columnConfig[columnName] = st.column_config.Column(
                 help=f"""
 The proportion of the total {vaccineDescriptions[vaccineStatus]}population
 (within a given scenario{' and age group' if includedAges else ''})
 that was {outcomeDescriptions[outcome]}, as a percentage.
             """
-            )
+            )'''
             percentCols.add(columnName)
         elif not proportion and baselineDifference:
             currentColumn = currentColumn - columnBaselines
-            columnName = (
-                f"{vaccineAdjectives[vaccineStatus]}"
-                f"{outcome} (Difference from Baseline)"
-            )
-            columnConfig[columnName] = st.column_config.Column(
+            columnName += " (Difference from Baseline)"
+            config = '''columnConfig[columnName] = st.column_config.Column(
                 help=f"""
 The difference between the number of {vaccineDescriptions[vaccineStatus]}people
 who were {outcomeDescriptions[outcome]} within a given scenario and the number
 of {vaccineDescriptions[vaccineStatus]}people who were {outcomeDescriptions[outcome]}
 within the baseline scenario{' (within a given age group)' if includedAges else ''}.
             """
-            )
+            )'''
             differenceCols.add(columnName)
         elif proportion and baselineDifference:
             currentColumn = currentColumn - columnBaselines
@@ -698,11 +713,8 @@ within the baseline scenario{' (within a given age group)' if includedAges else 
             currentColumn = (currentColumn / columnBaselines).where(
                 columnBaselines != 0, other=np.nan
             )
-            columnName = (
-                f"{vaccineAdjectives[vaccineStatus]}"
-                f"{outcome} (% Difference from Baseline)"
-            )
-            columnConfig[columnName] = st.column_config.Column(
+            columnName += " (% Difference from Baseline)"
+            config = '''columnConfig[columnName] = st.column_config.Column(
                 help=f"""
 The difference between the number of {vaccineDescriptions[vaccineStatus]}people
 who were {outcomeDescriptions[outcome]} within a given scenario and the number
@@ -710,18 +722,17 @@ of {vaccineDescriptions[vaccineStatus]}people who were {outcomeDescriptions[outc
 within the baseline scenario{' (within a given age group)' if includedAges else ''},
 as a percentage.
             """
-            )
+            )'''
             percentCols.add(columnName)
             differenceCols.add(columnName)
         else:
-            columnName = f"{vaccineAdjectives[vaccineStatus]}{outcome}"
-            columnConfig[columnName] = st.column_config.Column(
+            config = '''columnConfig[columnName] = st.column_config.Column(
                 help=f"""
 The number of {vaccineDescriptions[vaccineStatus]}people (within a given
 scenario{' and age group' if includedAges else ''}) who were
 {outcomeDescriptions[outcome]}.
             """
-            )
+            )'''
 
         # Formally create the column
         fullData[columnName] = currentColumn

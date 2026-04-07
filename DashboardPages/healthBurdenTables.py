@@ -3,6 +3,7 @@
 # Page where users can generate tables with infection data
 
 # Imports
+import os
 import logging
 import time
 from typing import Optional
@@ -97,8 +98,10 @@ def generateTable():
             )
         )
     # Ensure latest column settings are used
-    # TODO: Check that this loading is fixing the bug it's meant to
+    # TODO: Check that this loading is fixing the bug it's meant to fix
+    os.write(1, f"Debug Current Form:\n{session.get("healthColumnForm")}\n\n".encode())
     saveKey("healthColumnForm", dataframe=True)
+    os.write(1, f"Debug New Form:\n{session.get("healthColumnForm")}\n\n".encode())
 
     scenarioNames = session.get(
         "DataScenarioNames",
@@ -124,7 +127,7 @@ def generateTable():
     columnDetails = [
         (
             outcome,
-            set(ageGroups),
+            ageGroups,
             vaccineStatus if useVaccinationSplit else "All",
             "Percentage" in options,
             "Difference from Baseline" in options,
@@ -555,7 +558,6 @@ to a different Age Group Separation mode before attempting to generate a table.
     # Variable-length form for choosing columns
     # TODO: Axe the duplicate column rule
     # TODO: Either fix or prevent percentage infection >100 due to reinfection
-    # TODO: Add age separation columns
     st.subheader(
         "Select Health Burden Columns",
         help="""
@@ -582,6 +584,7 @@ included in the table.
         dataframe=True,
     )
     # TODO: Manually fill the defaults for hidden columns like Age Groups
+    # TODO: Allow manually setting column names
     healthColumnForm = st.data_editor(
         session["healthColumnForm"],
         height="content",
@@ -591,16 +594,6 @@ included in the table.
         args=["healthColumnForm"],
         kwargs={"dataframe": True},
         placeholder="Select a health burden outcome",
-        column_order=(
-            ["Health Burden Outcome"]
-            + (["Age Groups"] if ageSeparation == "By Column" else [])
-            + (
-                ["Vaccination Status"]
-                if currentDataUsesVaccines or usePresetData
-                else []
-            )
-            + ["Options"]
-        ),
         column_config={
             "Health Burden Outcome": st.column_config.SelectboxColumn(
                 "Health Burden Outcome",
@@ -621,25 +614,31 @@ treatment as a result of the disease.
 - Deaths: the number of individuals killed by the disease.
                 """,
             ),
-            "Age Groups": st.column_config.MultiselectColumn(
-                "Age Groups",
-                required=bool(ageSeparation == "By Column"),
-                # default=[] if ageSeparation == "By Column" else ageWithTime,
-                default=[],
-                options=ageWithTime,
-                color="auto",
-                help="""
+            "Age Groups": (
+                None
+                if ageSeparation != "By Column"
+                else st.column_config.MultiselectColumn(
+                    "Age Groups",
+                    required=bool(ageSeparation == "By Column"),
+                    default=[],
+                    options=ageWithTime,
+                    color="auto",
+                    help="""
 Select which age groups should be considered for health burdens in this column.
 Multiple age groups can be selected; the column will sum the health burden
 outcomes from all selected age groups.
                 """,
+                )
             ),
-            "Vaccination Status": st.column_config.SelectboxColumn(
-                "Vaccination Status",
-                required=True,
-                default="All",
-                options=["All", "Vaccinated", "Unvaccinated"],
-                help="""
+            "Vaccination Status": (
+                None
+                if not (currentDataUsesVaccines or usePresetData)
+                else st.column_config.SelectboxColumn(
+                    "Vaccination Status",
+                    required=True,
+                    default="All",
+                    options=["All", "Vaccinated", "Unvaccinated"],
+                    help="""
 Select what vaccination status should be considered for health burdens in this column.
 ### Options:
 - All: The column will include all health burden outcomes recorded in the
@@ -649,6 +648,7 @@ individuals who had already received vaccines in the simulation.
 - Unvaccinated: The column will only include health burden outcomes recorded in
 individuals who had not received vaccines in the simulation.
                 """,
+                )
             ),
             "Options": st.column_config.MultiselectColumn(
                 "Options",
