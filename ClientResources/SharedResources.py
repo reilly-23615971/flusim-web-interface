@@ -110,41 +110,41 @@ communityAgePops = {
 
 
 # Set containing health outcomes selectable for tables
-tableOutcomes = {
+tableOutcomes = (
     "Symptomatic Infections",
     "Diagnosed Cases",
-    "Hospitalisations",
-    "Deaths",
-    "ICU Visits",
     "GP Visits",
-}
+    "Hospitalisations",
+    "ICU Visits",
+    "Deaths",
+)
 
 # Dictionary getting adjective forms of health outcomes
 outcomeAdjectives = {
     "Symptomatic Infections": "Symptomatic",
     "Diagnosed Cases": "Diagnosed",
-    "Hospitalisations": "Hospitalised",
-    "Deaths": "Dead",
-    "ICU Visits": "ICU Visiting",
     "GP Visits": "GP Visiting",
+    "Hospitalisations": "Hospitalised",
+    "ICU Visits": "ICU Visiting",
+    "Deaths": "Dead",
 }
 
 # Dictionary getting session_state variables for outcome rates
 outcomeRateVariables = {
     "Diagnosed Cases": "caseRatio",
-    "Hospitalisations": "hospitalRatio",
-    "Deaths": "deathRatio",
-    "ICU Visits": "icuRatio",
     "GP Visits": "gpRatio",
+    "Hospitalisations": "hospitalRatio",
+    "ICU Visits": "icuRatio",
+    "Deaths": "deathRatio",
 }
 
 # Default values for rates
 outcomeRateDefaults = {
     "Diagnosed Cases": 0.5,
-    "Hospitalisations": 0.00316133,
-    "Deaths": 0.000115077,
-    "ICU Visits": 0.00063227,
     "GP Visits": 0.17,
+    "Hospitalisations": 0.00316133,
+    "ICU Visits": 0.00063227,
+    "Deaths": 0.000115077,
 }
 
 # Adjective forms of vaccination statuses

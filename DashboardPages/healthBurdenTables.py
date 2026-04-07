@@ -231,7 +231,7 @@ def generateTable():
         fullData,  # type: ignore
         scenarioNames,
         columnDetails,  # type: ignore
-        # ageSeparation=ageSeparation,
+        ageSeparation=ageSeparation,
         includedScenarios=scenariosUsed,
         includedAges=agesUsed,
         baseVaccinatedData=vaccinatedData,
@@ -361,6 +361,12 @@ st.html(
 )
 
 # Save relevant params as variables to avoid lookups
+disableTable = False
+tableButtonTooltip = """
+Use the data from the most recent simulation to generate a table displaying different
+health outcomes on the scenarios in the simulation, with the specific columns
+displayed depending on the parameters selected above.
+"""
 healthOutcomeRowCount = session["healthOutcomeRowCount"]
 healthOutcomeErrorContainer = st.container()
 
@@ -377,6 +383,10 @@ if not currentDataExists and not usePresetData:
     """,
         icon=":material/science_off:",
     )
+    disableTable = True
+    tableButtonTooltip = """
+No simulation experiments have been completed yet, so there is no data to tabulate.
+    """
 if currentDataExists and session.simulationInProgress:
     healthOutcomeErrorContainer.warning(
         """
@@ -439,6 +449,12 @@ specified health burden outcomes in that scenario.
         """,
                 icon=":material/tab_unselected:",
             )
+            disableTable = True
+            tableButtonTooltip = """
+No scenarios have been selected in the Table Settings menu. Please select at
+least one scenario with the Scenarios to Include in Table setting before
+attempting to generate a table.
+            """
     else:
         st.info(
             """
@@ -470,6 +486,7 @@ group in the simulation population.
     loadKey("healthOutcomeAgeSeparation", "", False, noZeroDefault=True)
     ageSeparation = st.segmented_control(
         "Age Group Separation",
+        # required=True,
         options=["Combined", "By Row", "By Column"],
         default="Combined",
         on_change=saveKey,
@@ -522,13 +539,18 @@ be derived from.
         """,
                 icon=":material/tab_unselected:",
             )
+            disableTable = True
+            tableButtonTooltip = """
+No age groups have been selected in the Table Settings menu. Please select at
+least one age group with the Age Groups to Include in Table setting or switch
+to a different Age Group Separation mode before attempting to generate a table.
+            """
     else:
         agesToUse = []
 
     # Variable-length form for choosing columns
     # TODO: Axe the duplicate column rule
     # TODO: Either fix or prevent percentage infection >100 due to reinfection
-    # TODO: Sort the dropdowns
     # TODO: Add age separation columns
     st.subheader(
         "Select Health Burden Columns",
@@ -548,12 +570,14 @@ included in the table.
         pd.DataFrame(
             {
                 "Health Burden Outcome": [None],
+                "Age Groups": [[]],
                 "Vaccination Status": ["All"],
                 "Options": [[]],
             },
         ),
         dataframe=True,
     )
+    # TODO: Manually fill the defaults for hidden columns like Age Groups
     healthColumnForm = st.data_editor(
         session["healthColumnForm"],
         height="content",
@@ -564,25 +588,53 @@ included in the table.
         kwargs={"dataframe": True},
         placeholder="Select a health burden outcome",
         column_order=(
-            None
-            if currentDataUsesVaccines or usePresetData
-            else ("Health Burden Outcome", "Options")
+            ["Health Burden Outcome"]
+            + (["Age Groups"] if ageSeparation == "By Column" else [])
+            + (
+                ["Vaccination Status"]
+                if currentDataUsesVaccines or usePresetData
+                else []
+            )
+            + ["Options"]
         ),
         column_config={
             "Health Burden Outcome": st.column_config.SelectboxColumn(
                 "Health Burden Outcome",
                 required=True,
                 options=tableOutcomes,
+                # TODO: Should we explain all the outcomes in this tooltip?
                 help="""
 Select the health burden outcome you would like to be included as a column on the table.
+### Options:
+- Symptomatic Infections: the number of individuals showing symptoms of the disease.
+- Diagnosed Cases: the number of individuals formally diagnosed with the disease.
+- GP Visits: the number of individuals who visit their general practitioner
+due to symptoms of the disease.
+- ICU Visits: the number of individuals who are admitted to an Intensive
+Care Unit (ICU) due to the disease.
+- Hospitalisations: the number of individuals who go to the hospital for
+treatment as a result of the disease.
+- Deaths: the number of individuals killed by the disease.
                 """,
             ),
-            # TODO: See if direct/indirect ratio columns are desirable
+            "Age Groups": st.column_config.MultiselectColumn(
+                "Age Groups",
+                required=bool(ageSeparation == "By Column"),
+                # default=[] if ageSeparation == "By Column" else ageWithTime,
+                default=[],
+                options=ageWithTime,
+                color="auto",
+                help="""
+Select which age groups should be considered for health burdens in this column.
+Multiple age groups can be selected; the column will sum the health burden
+outcomes from all selected age groups.
+                """,
+            ),
             "Vaccination Status": st.column_config.SelectboxColumn(
                 "Vaccination Status",
                 required=True,
                 default="All",
-                options={"All", "Vaccinated", "Unvaccinated"},
+                options=["All", "Vaccinated", "Unvaccinated"],
                 help="""
 Select what vaccination status should be considered for health burdens in this column.
 ### Options:
@@ -614,6 +666,42 @@ as the percentage increase/decrease from the baseline value.
             ),
         },
     )
+    # Display any issues with the current columns
+    if healthColumnForm["Health Burden Outcome"].count() < 1:
+        # TODO: Specify the columns in question
+        st.info(
+            """
+            At least one column must be configured using this form before a
+            table can be generated. Make sure to specify which health burden
+            outcome the column will use, as this setting is required for all
+            columns.
+        """,
+            icon=":material/tab_unselected:",
+        )
+        disableTable = True
+        tableButtonTooltip = """
+No columns have been configured in the Table Settings menu. Please
+add at least one column before attempting to generate a table.
+"""
+    elif (
+        ageSeparation == "By Column"
+        and not healthColumnForm["Age Groups"].fillna(False).all()
+    ):
+        st.error(
+            """
+            Error: At least one column configured for the table has no age
+            groups selected for it. If you attempt to generate the table now,
+            these column(s) will be empty. Please select at least one age group
+            for each column via the "Age Groups" setting.
+        """,
+            icon=":material/tab_unselected:",
+        )
+        disableTable = True
+        tableButtonTooltip = """
+Some table columns have no specified age groups. Please select at least one age group
+for each column via the Select Health Burden Columns setting or switch to a different
+Age Group Separation mode before attempting to generate a table.
+"""
 
     oldVarLengthForm = '''for i in range(healthOutcomeRowCount):
         (
@@ -817,38 +905,14 @@ magnitude of the difference.
     )
 
 # Button to generate the table itself
-# TODO: Format disabling condition to be more readable (make it a function?)
 st.button(
     label="Create Table",
     icon=":material/backup_table:",
     key="generateTable",
     type="primary",
     on_click=generateTable,
-    disabled=bool(
-        (not usePresetData and not currentDataExists)
-        or not scenariosToUse
-        or (ageSeparation == "By Row" and not agesToUse)
-        or healthColumnForm["Health Burden Outcome"].count() < 1
-    ),
-    # TODO: Make tooltip comprehensive
-    help=(
-        """
-No columns have been configured in the Table Settings menu. Please
-add at least one column before running the simulation.
-        """
-        if healthColumnForm["Health Burden Outcome"].count() < 1
-        else (
-            """
-Use the data from the last simulation to generate a table displaying different
-health outcomes on the scenarios in the simulation, with the specific columns
-displayed depending on the parameters selected above.
-            """
-            if currentDataExists
-            else """
-No simulation experiments have been completed yet, so there is no data to tabulate.
-            """
-        )
-    ),
+    disabled=disableTable,
+    help=tableButtonTooltip,
 )
 # Display the table itself
 # TODO: Make it look better; larger font and less wasted space

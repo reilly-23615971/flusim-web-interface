@@ -459,8 +459,8 @@ def generateAsir(
     columns: Sequence[
         tuple[str, Literal["All", "Vaccinated", "Unvaccinated"], bool, bool]
     ] = [("Symptomatic Infections", "All", False, False)],
+    ageSeparation: Literal["Combined", "By Row", "By Column"] = "Combined",
     includedScenarios: Optional[list[str]] = None,
-    # ageSeparation: str = "Combined",
     includedAges: Optional[list[str]] = None,
     baseVaccinatedData: Optional[pd.DataFrame] = None,
 ) -> tuple[pd.DataFrame, dict[str, ColumnConfig], set[str], set[str]]:
@@ -514,10 +514,11 @@ def generateAsir(
         ValueError: If `scenarioNames` is not a list of strings or columns
             are not formatted correctly.
     """
-    # Validate parameters
-    # TODO: Update to account for expanded parameters
     # TODO: more options
     # TODO: refactor to allow identical columns
+
+    # Validate parameters
+    # TODO: Update to account for expanded parameters
     try:
         if not scenarioNames:
             raise ValueError("scenarioNames should not be empty.")
