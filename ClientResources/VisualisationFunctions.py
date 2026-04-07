@@ -456,10 +456,10 @@ def recalculateTotals(
 def generateAsir(
     baseData: pd.DataFrame,
     scenarioNames: list[str],
-    columns: Sequence[
-        tuple[str, Literal["All", "Vaccinated", "Unvaccinated"], bool, bool]
-    ] = [("Symptomatic Infections", "All", False, False)],
     ageSeparation: Literal["Combined", "By Row", "By Column"] = "Combined",
+    columns: Sequence[
+        tuple[str, set[str], Literal["All", "Vaccinated", "Unvaccinated"], bool, bool]
+    ] = [("Symptomatic Infections", set(), "All", False, False)],
     includedScenarios: Optional[list[str]] = None,
     includedAges: Optional[list[str]] = None,
     baseVaccinatedData: Optional[pd.DataFrame] = None,
@@ -478,9 +478,16 @@ def generateAsir(
             of all scenarios in the simulation, even if not all of them will be
             included in the final table.
 
-        columns (sequence of tuples (str, str, bool, bool)): A list of tuples
-            representing the settings each column should have. The values in
-            each tuple are the health burden outcome to display, what
+        ageSeparation (str): A string indicating whether different age groups
+            should be represented with additional rows or columns. Can be either
+            `Combined` (do not separate values by age group at all), `By Row`
+            (include extra rows for each age group), or `By Column` (use different
+            age groups for each column).
+
+        columns (sequence of tuples (str, set of str, str, bool, bool)): A list
+            of tuples representing the settings each column should have. The
+            values in each tuple are as follows: the health burden outcome to
+            display, which age groups the column should represent, what
             vaccination status the column should represent, whether the column
             should be a percentage and whether the column should display the
             difference from baseline values.
@@ -534,7 +541,7 @@ def generateAsir(
         if not columns:
             raise ValueError("columns should not be empty.")
         if not isinstance(columns, list) or not all(
-            isinstance(col, tuple) and len(col) == 4 and col[0] in tableOutcomes
+            isinstance(col, tuple) and len(col) == 5 and col[0] in tableOutcomes
             for col in columns
         ):
             raise ValueError(
@@ -554,6 +561,8 @@ def generateAsir(
         includedScenarios = scenarioNames
     if includedAges is None:
         includedAges = ageWithTime + ["Total"]
+    if ageSeparation != "By Row":
+        includedAges = []
 
     # Useful constants
     fullData = baseData.copy()
@@ -609,7 +618,7 @@ other age groups list the age range they cover as part of their name.
     )
 
     # Prepare burden-scaled columns beforehand for efficiency
-    requiredOutcomes = {outcome for outcome, _, _, _ in columns}
+    requiredOutcomes = {outcome for outcome, _, _, _, _ in columns}
     outcomeColumns: dict[tuple[str, str], pd.Series[Any]] = {}
     outcomeBaselines: dict[tuple[str, str], pd.Series[Any]] = {}
     for outcome in requiredOutcomes:
@@ -646,6 +655,7 @@ other age groups list the age range they cover as part of their name.
     # Generate columns
     # TODO: Column descriptions are repetitive; see if they can be rewritten
     for outcome, vaccineStatus, proportion, baselineDifference in columns:
+    for outcome, ageGroups, vaccineStatus, proportion, baselineDifference in columns:
         currentColumn = outcomeColumns[(outcome, vaccineStatus)]
         columnBaselines = outcomeBaselines[(outcome, vaccineStatus)]
 
@@ -720,7 +730,7 @@ scenario{' and age group' if includedAges else ''}) who were
     fullData.drop("Base Values", axis=1, inplace=True)
 
     # Remove any scenarios/age groups not specified in the data
-    if includedScenarios != "all" and (set(scenarioNames) != set(includedScenarios)):
+    if set(scenarioNames) != set(includedScenarios):
         fullData = fullData[fullData["Scenario"].isin(includedScenarios)]
     if not includedAges:
         fullData = fullData[fullData["Age Group"] == "Total"]

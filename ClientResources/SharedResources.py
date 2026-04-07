@@ -19,7 +19,8 @@ sharedLog = logging.getLogger(__name__)
 usePresetParams = False
 
 # Toggle to use built-in data instead of model output
-usePresetData = False
+# TODO: Include different types of preset data
+# (e.g. vaccinated vs unvaccinated) for better testing
 
 # Toggle to save the JSON form of parameters as a file
 saveJSON = False

@@ -115,6 +115,7 @@ def generateTable():
         pd.DataFrame(
             {
                 "Health Burden Outcome": [None],
+                "Age Groups": [[]],
                 "Vaccination Status": ["All"],
                 "Options": [[]],
             },
@@ -123,12 +124,14 @@ def generateTable():
     columnDetails = [
         (
             outcome,
+            set(ageGroups),
             vaccineStatus if useVaccinationSplit else "All",
             "Percentage" in options,
             "Difference from Baseline" in options,
         )
-        for outcome, vaccineStatus, options in zip(
+        for outcome, ageGroups, vaccineStatus, options in zip(
             healthColumnForm["Health Burden Outcome"],
+            healthColumnForm["Age Groups"],
             healthColumnForm["Vaccination Status"],
             healthColumnForm["Options"],
         )
@@ -230,8 +233,8 @@ def generateTable():
     ageData, columnConfig, percSet, diffSet = generateAsir(
         fullData,  # type: ignore
         scenarioNames,
+        ageSeparation,
         columnDetails,  # type: ignore
-        ageSeparation=ageSeparation,
         includedScenarios=scenariosUsed,
         includedAges=agesUsed,
         baseVaccinatedData=vaccinatedData,
@@ -484,6 +487,7 @@ group in the simulation population.
     )'''
 
     loadKey("healthOutcomeAgeSeparation", "", False, noZeroDefault=True)
+    # TODO: Prevent no selection once Streamlit 1.56 is on Conda
     ageSeparation = st.segmented_control(
         "Age Group Separation",
         # required=True,
@@ -701,7 +705,17 @@ add at least one column before attempting to generate a table.
 Some table columns have no specified age groups. Please select at least one age group
 for each column via the Select Health Burden Columns setting or switch to a different
 Age Group Separation mode before attempting to generate a table.
-"""
+        """
+    elif healthColumnForm["Options"].isin([["Percentage"]]).any():
+        st.warning(
+            """
+            Warning: Columns that display values as percentages without also
+            displaying differences from baselines have undefined behaviour for
+            several column types. Please modify any columns which have
+            "Percentage" as the only selected item for the "Options" setting.
+        """,
+            icon=":material/construction:",
+        )
 
     oldVarLengthForm = '''for i in range(healthOutcomeRowCount):
         (
