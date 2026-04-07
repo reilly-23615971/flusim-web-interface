@@ -105,6 +105,11 @@ def generateTable():
         ["Baseline", "School Closure", "Case Isolation", "Community Contact Reduction"],
     )
 
+    useVaccinationSplit = (
+        usePresetData or session.get("modelDataAsirVaccinated") is not None
+    )
+    ageSeparation = session.get("healthOutcomeAgeSeparation", "Combined")
+
     healthColumnForm = session.get(
         "healthColumnForm",
         pd.DataFrame(
@@ -114,10 +119,6 @@ def generateTable():
                 "Options": [[]],
             },
         ),
-    )
-
-    useVaccinationSplit = (
-        usePresetData or session.get("modelDataAsirVaccinated") is not None
     )
     columnDetails = [
         (
@@ -145,11 +146,10 @@ def generateTable():
     ]"""
     # TODO: Modify settings to account for age columns
     scenariosUsed = session.get("healthOutcomeScenariosToUse", scenarioNames)
-    ageSeparation = session.get("healthOutcomeAgeSeparation", "Combined")
     agesUsed = (
         session.get("healthOutcomeAgesToUse", ageGroups)
         if ageSeparation == "By Row"
-        else False
+        else []
     )
     useColour = session.get("colourToggle")
     tableLog.info(
@@ -231,6 +231,7 @@ def generateTable():
         fullData,  # type: ignore
         scenarioNames,
         columnDetails,  # type: ignore
+        # ageSeparation=ageSeparation,
         includedScenarios=scenariosUsed,
         includedAges=agesUsed,
         baseVaccinatedData=vaccinatedData,
@@ -829,6 +830,7 @@ st.button(
         or (ageSeparation == "By Row" and not agesToUse)
         or healthColumnForm["Health Burden Outcome"].count() < 1
     ),
+    # TODO: Make tooltip comprehensive
     help=(
         """
 No columns have been configured in the Table Settings menu. Please

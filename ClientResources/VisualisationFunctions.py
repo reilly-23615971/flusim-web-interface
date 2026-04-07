@@ -459,8 +459,9 @@ def generateAsir(
     columns: Sequence[
         tuple[str, Literal["All", "Vaccinated", "Unvaccinated"], bool, bool]
     ] = [("Symptomatic Infections", "All", False, False)],
-    includedScenarios: list[str] | Literal["all"] = "all",
-    includedAges: list[str] | Literal["all", False] = "all",
+    includedScenarios: Optional[list[str]] = None,
+    # ageSeparation: str = "Combined",
+    includedAges: Optional[list[str]] = None,
     baseVaccinatedData: Optional[pd.DataFrame] = None,
 ) -> tuple[pd.DataFrame, dict[str, ColumnConfig], set[str], set[str]]:
     """
@@ -484,16 +485,14 @@ def generateAsir(
             should be a percentage and whether the column should display the
             difference from baseline values.
 
-        includedScenarios ('all' or list of str): A list of strings
+        includedScenarios (list of str, optional): A list of strings
             containing the names of scenarios that will be included in
-            the table. Can also be the string `all` to indicate that all
-            scenarios should be included.
+            the table. If this is `None`, all scenarios will be included.
 
-        includedAges ('all', False or list of str): A list of strings
+        includedAges (list of str, optional): A list of strings
             containing the names of age groups that will be included in the
-            table. Can also be the string `all` to indicate that all age
-            groups should be included. If this is `False`, the age group column
-            will be omitted entirely.
+            table. If this is `None`, all age groups will be included. However,
+            if this is an empty list, the age group column will be omitted entirely.
 
         baseVaccinatedData (Dataframe, optional): A DataFrame containing asir data
             specifically for vaccinated individuals in the simulation.
@@ -549,6 +548,11 @@ def generateAsir(
             f"while validating parameters: {e}"
         )
         raise e
+    # Convert None values for includedScenarios/Ages to refer to all values
+    if includedScenarios is None:
+        includedScenarios = scenarioNames
+    if includedAges is None:
+        includedAges = ageWithTime + ["Total"]
 
     # Useful constants
     fullData = baseData.copy()
@@ -720,12 +724,14 @@ scenario{' and age group' if includedAges else ''}) who were
     if not includedAges:
         fullData = fullData[fullData["Age Group"] == "Total"]
         fullData = fullData.drop("Age Group", axis=1)
-    elif includedAges != "all" and (set(includedAges) != set(["Total"] + ageWithTime)):
+    elif set(includedAges) != set(["Total"] + ageWithTime):
         fullData = fullData[fullData["Age Group"].isin(includedAges)]
 
     # Set index for data
     fullData.loc[:, "Scenario"] = pd.Categorical(
-        fullData["Scenario"], categories=scenarioNames, ordered=True
+        fullData["Scenario"],
+        categories=scenarioNames,
+        ordered=True,
     )
     if includedAges:
         fullData.loc[:, "Age Group"] = pd.Categorical(
@@ -739,14 +745,8 @@ scenario{' and age group' if includedAges else ''}) who were
         fullData.set_index(["Scenario", "Age Group"])
         if includedAges
         else fullData.set_index("Scenario")
-    ).reindex(
-        includedScenarios if includedScenarios != "all" else scenarioNames,
-        level="Scenario",
-    )
+    ).reindex(includedScenarios, level="Scenario")
     if includedAges:
-        fullData = fullData.reindex(
-            includedAges if includedAges != "all" else ageWithTime + ["Total"],
-            level="Age Group",
-        )
+        fullData = fullData.reindex(includedAges, level="Age Group")
 
     return fullData, columnConfig, percentCols, differenceCols
