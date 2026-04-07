@@ -585,7 +585,7 @@ def generateAsir(
 
     columnConfig = {}
 
-    columnConfig["Scenario"] = st.column_config.TextColumn(
+    columnConfig["Scenario Name"] = st.column_config.TextColumn(
         pinned=True,
         help="""
 The scenario that each row's data originates from. 'Baseline'
@@ -733,12 +733,20 @@ scenario{' and age group' if includedAges else ''}) who were
             categories=ageWithTime + ["Total"],
             ordered=True,
         )
+
+    # Order index using order of includedScenarios/includedAges
     fullData = (
         fullData.set_index(["Scenario", "Age Group"])
         if includedAges
         else fullData.set_index("Scenario")
-    ).sort_index()
+    ).reindex(
+        includedScenarios if includedScenarios != "all" else scenarioNames,
+        level="Scenario",
+    )
     if includedAges:
-        fullData = fullData.reindex(ageWithTime + ["Total"], level="Age Group")
+        fullData = fullData.reindex(
+            includedAges if includedAges != "all" else ageWithTime + ["Total"],
+            level="Age Group",
+        )
 
     return fullData, columnConfig, percentCols, differenceCols

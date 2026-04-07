@@ -143,12 +143,15 @@ def generateTable():
         )
         for colNumber in range(0, outcomeColumnCount)
     ]"""
+    # TODO: Modify settings to account for age columns
     scenariosUsed = session.get("healthOutcomeScenariosToUse", scenarioNames)
+    ageSeparation = session.get("healthOutcomeAgeSeparation", "Combined")
     agesUsed = (
-        False
-        if not session.get("healthOutcomeAgeGroupToggle")
-        else session.get("healthOutcomeAgesToUse", ageGroups)
+        session.get("healthOutcomeAgesToUse", ageGroups)
+        if ageSeparation == "By Row"
+        else False
     )
+    useColour = session.get("colourToggle")
     tableLog.info(
         f"""
         [generateTable] Formatting Asir data using the scenarios
@@ -245,7 +248,7 @@ def generateTable():
     if agesUsed:
         ageData.rename_axis(index=["Scenario Index", "Age Group Index"], inplace=True)
         ageData.insert(
-            0, "Scenario", ageData.index.get_level_values("Scenario Index").values
+            0, "Scenario Name", ageData.index.get_level_values("Scenario Index").values
         )
         ageData.insert(
             1, "Age Group", ageData.index.get_level_values("Age Group Index").values
@@ -253,81 +256,83 @@ def generateTable():
 
     else:
         ageData.rename_axis("Scenario Index", inplace=True)
-        ageData.insert(0, "Scenario", ageData.index.to_series())
+        ageData.insert(0, "Scenario Name", ageData.index.to_series())
 
-    # Initialise styler and set default cell background colour
+    # Initialise styler
     ageStyle = ageData.style
-    ageStyle.set_properties(
-        **{"background-color": "#F7F7F7"}, color="black"  # type: ignore
-    )
 
     # Colour the index cells
-
-    # Generate and map scenario colour palette
-    scenarioColourMap = brightCodes[: len(scenarioNames)]
-    scenarioColourDictionary = {
-        scenario: to_hex(scenarioColourMap[index])
-        for index, scenario in enumerate(scenarioNames)
-    }
-
-    # Apply the colours to the scenario column
-    def scenarioColourString(name) -> str:
-        """
-        Simple function to get colours for scenarios in pandas styling format.
-
-        Parameters:
-            name (str): The name of the scenario.
-
-        Returns:
-            str: A string that can be used in a pandas `Styler` config to
-                colour table cells according to the colour associated
-                with the scenario.
-        """
-        colour = scenarioColourDictionary[name]
-        return f"background-color: {colour}; color: {selectTextColour(colour)}"
-
-    ageStyle = ageStyle.map(scenarioColourString, subset=["Scenario"])
-
-    # Colour ages if present
-    if agesUsed:
-        ageColourMap = plt.get_cmap("viridis_r", 10).colors  # type: ignore
-        ageColourDictionary = {
-            age: to_hex(ageColourMap[index]) for index, age in enumerate(ageWithTime)
+    if useColour:
+        # Set default cell background colour
+        ageStyle.set_properties(
+            **{"background-color": "#F7F7F7"}, color="black"  # type: ignore
+        )
+        # Generate and map scenario colour palette
+        scenarioColourMap = brightCodes[: len(scenarioNames)]
+        scenarioColourDictionary = {
+            scenario: to_hex(scenarioColourMap[index])
+            for index, scenario in enumerate(scenarioNames)
         }
-        ageColourDictionary["Total"] = "#000000"
 
-        def ageColourString(value):
+        # Apply the colours to the scenario column
+        def scenarioColourString(name) -> str:
             """
-            Simple function to get colours for age groups in pandas styling format.
+            Simple function to get colours for scenarios in pandas styling format.
 
             Parameters:
-                name (str): The name of the age group.
+                name (str): The name of the scenario.
 
             Returns:
                 str: A string that can be used in a pandas `Styler` config to
                     colour table cells according to the colour associated
-                    with the age group.
+                    with the scenario.
             """
-            colour = ageColourDictionary[value]
+            colour = scenarioColourDictionary[name]
             return f"background-color: {colour}; color: {selectTextColour(colour)}"
 
-        ageStyle = ageStyle.map(ageColourString, subset=["Age Group"])
+        ageStyle = ageStyle.map(scenarioColourString, subset=["Scenario Name"])
 
-    # Use background gradients on difference from baseline columns
-    for column in diffSet:
-        colVals = ageData[column]
-        ageStyle = ageStyle.background_gradient(
-            "RdBu_r",
-            vmin=0,
-            vmax=1,
-            subset=[column],
-            gmap=getSlopeNorm(colVals)(colVals),  # type: ignore
-        )
-        # Set white background for NA values to make them readable
-        ageStyle = ageStyle.map(
-            lambda val: "background-color: #F7F7F7" if pd.isna(val) else "",
-            subset=[column],
-        )
+        # Colour ages if present
+        if agesUsed:
+            ageColourMap = plt.get_cmap("viridis_r", 10).colors  # type: ignore
+            ageColourDictionary = {
+                age: to_hex(ageColourMap[index])
+                for index, age in enumerate(ageWithTime)
+            }
+            ageColourDictionary["Total"] = "#000000"
+
+            def ageColourString(value):
+                """
+                Simple function to get colours for age groups in pandas styling format.
+
+                Parameters:
+                    name (str): The name of the age group.
+
+                Returns:
+                    str: A string that can be used in a pandas `Styler` config to
+                        colour table cells according to the colour associated
+                        with the age group.
+                """
+                colour = ageColourDictionary[value]
+                return f"background-color: {colour}; color: {selectTextColour(colour)}"
+
+            ageStyle = ageStyle.map(ageColourString, subset=["Age Group"])
+
+        # Use background gradients on difference from baseline columns
+        for column in diffSet:
+            colVals = ageData[column]
+            ageStyle = ageStyle.background_gradient(
+                "RdBu_r",
+                vmin=0,
+                vmax=1,
+                subset=[column],
+                gmap=getSlopeNorm(colVals)(colVals),  # type: ignore
+            )
+            # Set white background for NA values to make them readable
+            ageStyle = ageStyle.map(
+                lambda val: "background-color: #F7F7F7" if pd.isna(val) else "",
+                subset=[column],
+            )
 
     # Save the generated table
     session.HealthOutcomeTableData = ageStyle.format(formatValues)  # type: ignore
@@ -446,6 +451,7 @@ specified health burden outcomes in that scenario.
         )
         scenariosToUse = None
 
+    oldAgeToggle = '''
     loadKey("healthOutcomeAgeGroupToggle", "", False, noZeroDefault=True)
     useAgeGroupsToggle = st.toggle(
         "Separate Results by Age Group",
@@ -458,43 +464,71 @@ specified health burden outcomes in that scenario.
 Toggle whether or not the table should include separate rows for each age
 group in the simulation population.
         """,
-    )
+    )'''
 
-    loadKey("healthOutcomeAgesToUse", "", ageGroups, noZeroDefault=True)
-    agesToUse: list = st.multiselect(
-        "Age Groups to Include in Table",
-        options=ageGroups,
-        default=ageGroups,
-        key="_healthOutcomeAgesToUse",
+    loadKey("healthOutcomeAgeSeparation", "", False, noZeroDefault=True)
+    ageSeparation = st.segmented_control(
+        "Age Group Separation",
+        options=["Combined", "By Row", "By Column"],
+        default="Combined",
         on_change=saveKey,
-        args=["healthOutcomeAgesToUse", ""],  # type: ignore
-        placeholder="Please select at least 1 age group",
+        args=["healthOutcomeAgeSeparation", ""],
         kwargs={"notScenario": True},
-        disabled=not useAgeGroupsToggle,
+        key="_healthOutcomeAgeSeparation",
         help="""
-Select which age groups should be included in the table.
-You may select as many groups as you wish. Each age group
-will have its own row in the table, displaying the values
-of the specified health burden outcomes for members of the
-population in that age group (or for the entire population
-in the case of the 'Total' group).
+Select how the health burdens in different age groups should be displayed
+within the table.
+### Options:
+- Combined: Do not separate health burden data by age groups. The table will
+only display the combined health burden data for each scenario.
+- By Row: Separate different age groups in the simulation by rows. Each row
+of the table will display the health burden data for a specific age group in
+a specific simulation.
+- By Column: Separate different age groups in the simulation by columns.
+When editing the columns that will be generated in the table, you will be
+able to select which age groups the health burden data in that column will
+be derived from.
         """,
     )
-    if not agesToUse:
-        st.error(
-            """
-        Error: No age groups have been included in the table. If you
-        attempt to generate the table now, it will be empty. Please
-        select at least one age group to include with the 'Age Groups
-        to Use' setting.
-    """,
-            icon=":material/tab_unselected:",
+
+    if ageSeparation == "By Row":
+        loadKey("healthOutcomeAgesToUse", "", ageGroups, noZeroDefault=True)
+        agesToUse: list = st.multiselect(
+            "Age Groups to Include in Table",
+            options=ageGroups,
+            default=ageGroups,
+            key="_healthOutcomeAgesToUse",
+            on_change=saveKey,
+            args=["healthOutcomeAgesToUse", ""],  # type: ignore
+            placeholder="Please select at least 1 age group",
+            kwargs={"notScenario": True},
+            help="""
+    Select which age groups should be included in the table.
+    You may select as many groups as you wish. Each age group
+    will have its own row in the table, displaying the values
+    of the specified health burden outcomes for members of the
+    population in that age group (or for the entire population
+    in the case of the 'Total' group).
+            """,
         )
+        if not agesToUse:
+            st.error(
+                """
+            Error: No age groups have been included in the table. If you
+            attempt to generate the table now, it will be empty. Please
+            select at least one age group to include with the 'Age Groups
+            to Use' setting.
+        """,
+                icon=":material/tab_unselected:",
+            )
+    else:
+        agesToUse = []
 
     # Variable-length form for choosing columns
     # TODO: Axe the duplicate column rule
     # TODO: Either fix or prevent percentage infection >100 due to reinfection
     # TODO: Sort the dropdowns
+    # TODO: Add age separation columns
     st.subheader(
         "Select Health Burden Columns",
         help="""
@@ -765,7 +799,24 @@ as the percentage increase/decrease from the baseline value.
         ),
     )'''
 
+    colourToggle = st.toggle(
+        "Use Colour in Table",
+        value=False,
+        on_change=saveKey,
+        args=["colourToggle", ""],
+        kwargs={"notScenario": True},
+        key="_colourToggle",
+        help="""
+Toggle whether cells in the table should be coloured based on their value.
+When enabled, scenario names (and age group names if Age Group Separation
+is set to "By Row") will each have a unique colour, and difference from
+baseline columns will use different shades of blue/red to indicate the
+magnitude of the difference.
+        """,
+    )
+
 # Button to generate the table itself
+# TODO: Format disabling condition to be more readable (make it a function?)
 st.button(
     label="Create Table",
     icon=":material/backup_table:",
@@ -775,6 +826,7 @@ st.button(
     disabled=bool(
         (not usePresetData and not currentDataExists)
         or not scenariosToUse
+        or (ageSeparation == "By Row" and not agesToUse)
         or healthColumnForm["Health Burden Outcome"].count() < 1
     ),
     help=(
