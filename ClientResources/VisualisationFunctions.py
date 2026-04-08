@@ -16,13 +16,12 @@ import pandas as pd
 import streamlit as st
 from streamlit.elements.lib.column_types import ColumnConfig
 
-from ClientResources.SharedResources import (
+from ClientResources.SharedResources import (  # outcomeAdjectives,
     AnalysisFile,
     ageRangeCombiner,
     ageWithTime,
     brightCodes,
     communityAgePops,
-    # outcomeAdjectives,
     tableOutcomes,
 )
 
@@ -50,6 +49,7 @@ vaccineDescriptions = {
     "Vaccinated": "vaccinated ",
     "Unvaccinated": "unvaccinated ",
 }
+ageWithTotal = ["Total"] + ageWithTime
 
 
 def formatData(data: bytes, settings: AnalysisFile) -> tuple[pd.DataFrame, str]:
@@ -353,7 +353,7 @@ def formatAsir(rawCSV: bytes, scenarioNames: list[str]) -> pd.DataFrame:
     functionLog.info(
         f"Scenario names are {scenarioNames}; current index is {framedData.index}"
     )
-    framedData.columns = pd.Index(["Total"] + ageWithTime)
+    framedData.columns = pd.Index(ageWithTotal)
 
     # Scale the data by symptomatic likelihood
     asymptomaticChild, asymptomaticAdult = zip(*session.DataAsymptomatic)
@@ -523,8 +523,8 @@ def generateAsir(
         ValueError: If `scenarioNames` is not a list of strings or columns
             are not formatted correctly.
     """
-    # TODO: more options
-    # TODO: refactor to allow identical columns
+    # TODO: More options
+    # TODO: Improve efficiency (don't calculate age rows if ageSeparation isn't By Row)
 
     # Validate parameters
     # TODO: Update to account for expanded parameters
@@ -543,15 +543,14 @@ def generateAsir(
         if not columns:
             raise ValueError("columns should not be empty.")
         if not isinstance(columns, list) or not all(
-            isinstance(col, tuple) and len(col) == 5 and col[0] in tableOutcomes
+            isinstance(col, tuple)
+            and len(col) == 5
+            and col[0] in tableOutcomes
+            and set(col[1]).issubset(ageWithTotal)
+            and col[2] in {"All", "Vaccinated", "Unvaccinated"}
             for col in columns
         ):
-            raise ValueError(
-                f"""
-                columns should be a list of tuples containing strings and
-                booleans; was {columns}.
-                """
-            )
+            raise ValueError(f"columns was not correctly formatted; was {columns}.")
     except Exception as e:
         functionLog.error(
             f"[generateAsir] Encountered {type(e).__name__} "
@@ -570,11 +569,11 @@ def generateAsir(
 
     # Useful constants
     fullData = baseData.copy()
-    community = session.DataCommunity
+    agePops = communityAgePops[session.DataCommunity]
     scenarioCount = len(scenarioNames)
     ageIndices = {
         age: range(index * scenarioCount, (index * scenarioCount) + scenarioCount)
-        for index, age in enumerate(["Total"] + ageWithTime)
+        for index, age in enumerate(ageWithTotal)
     }
 
     # Generate baseline data for columns that need it
@@ -659,8 +658,8 @@ def generateAsir(
 
     # Generate columns
     for outcome, ageGroups, vaccineStatus, proportion, baselineDifference in columns:
-        currentColumn = outcomeColumns[(outcome, vaccineStatus)]
-        columnBaselines = outcomeBaselines[(outcome, vaccineStatus)]
+        currentColumn = outcomeColumns[(outcome, vaccineStatus)].copy()
+        columnBaselines = outcomeBaselines[(outcome, vaccineStatus)].copy()
         columnName = f"{"" if vaccineStatus == "All" else vaccineStatus} {outcome}"
 
         # Replace values with those of summed age groups
@@ -679,11 +678,16 @@ def generateAsir(
 
         # Apply proportion/difference modifications
         # TODO: Either fix or disable just proportion
-        # TODO: Determine behaviour for vaccine split and age groups
-        # (% of vaccinated people? Sum pops of age groups?)
-        # TODO: See if case matching is better here than elif chains
+        # TODO: See if there's a better way to handle the 2 booleans
         if proportion and not baselineDifference:
-            currentColumn /= fullData["Age Group"].map(communityAgePops[community])
+            # Get required total population
+            if ageSeparation == "By Column":
+                populationColumn: int | pd.Series = sum(
+                    agePops[age] for age in ageGroups
+                )
+            else:
+                populationColumn = fullData["Age Group"].map(agePops)
+            currentColumn /= populationColumn
             columnName += " (%)"
             config = '''columnConfig[columnName] = st.column_config.Column(
                 help=f"""
@@ -744,7 +748,7 @@ scenario{' and age group' if includedAges else ''}) who were
     if not includedAges:
         fullData = fullData[fullData["Age Group"] == "Total"]
         fullData = fullData.drop("Age Group", axis=1)
-    elif set(includedAges) != set(["Total"] + ageWithTime):
+    elif set(includedAges) != set(ageWithTotal):
         fullData = fullData[fullData["Age Group"].isin(includedAges)]
 
     # Set index for data
@@ -756,7 +760,7 @@ scenario{' and age group' if includedAges else ''}) who were
     if includedAges:
         fullData.loc[:, "Age Group"] = pd.Categorical(
             fullData["Age Group"],
-            categories=ageWithTime + ["Total"],
+            categories=ageWithTotal,
             ordered=True,
         )
 

@@ -57,11 +57,13 @@ def getSlopeNorm(column: pd.Series) -> TwoSlopeNorm:
         vcenter=0,
         vmin=(
             -1e-9
-            if minVal >= 0
-            else minVal - 1e-9 if minVal == maxVal else column.min()
+            if minVal >= 0 or pd.isna(minVal)
+            else minVal - 1e-9 if minVal == maxVal else minVal
         ),
         vmax=(
-            1e-9 if maxVal <= 0 else maxVal + 1e-9 if maxVal == minVal else column.max()
+            1e-9
+            if maxVal <= 0 or pd.isna(maxVal)
+            else maxVal + 1e-9 if maxVal == minVal else maxVal
         ),
     )
 
@@ -113,16 +115,22 @@ def generateTable():
     )
     ageSeparation = session.get("healthOutcomeAgeSeparation", "Combined")
 
-    healthColumnForm = session.get(
-        "healthColumnForm",
-        pd.DataFrame(
-            {
-                "Health Burden Outcome": [None],
-                "Age Groups": [[]],
-                "Vaccination Status": ["All"],
-                "Options": [[]],
-            },
+    healthColumnForm = replaceTableNA(
+        session.get(
+            "healthColumnForm",
+            pd.DataFrame(
+                {
+                    "Health Burden Outcome": [None],
+                    "Age Groups": [[]],
+                    "Vaccination Status": ["All"],
+                    "Options": [[]],
+                },
+            ),
         ),
+        {
+            "Age Groups": [],
+            "Vaccination Status": "All",
+        },
     )
     columnDetails = [
         (
@@ -712,15 +720,18 @@ Some table columns have no specified age groups. Please select at least one age 
 for each column via the Select Health Burden Columns setting or switch to a different
 Age Group Separation mode before attempting to generate a table.
         """
-    elif healthColumnForm["Options"].isin([["Percentage"]]).any():
+    elif (
+        session.get("showAdvanced")
+        and healthColumnForm["Options"].isin([["Percentage"]]).any()
+    ):
+        # TODO: Update this when waning immunity is toggleable
         st.warning(
             """
             Warning: Columns that display values as percentages without also
-            displaying differences from baselines have undefined behaviour for
-            several column types. Please modify any columns which have
-            "Percentage" as the only selected item for the "Options" setting.
+            displaying differences from baselines may be inaccurate if
+            reinfection is possible within the simulation.
         """,
-            icon=":material/construction:",
+            icon=":material/frame_repeat:",
         )
 
     oldVarLengthForm = '''for i in range(healthOutcomeRowCount):
