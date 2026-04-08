@@ -3622,10 +3622,10 @@ def trigCast(x: str) -> Literal[
     )
 
 
-def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False) -> bool:
+def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -> bool:
     """
-    Function to populate the Pydantic model schema with the parameters in
-    this tab with scenario differentiation.
+    Function to populate the Pydantic model schema with vaccination/NPI parameters
+    using scenario differentiation.
 
     Parameters:
         schema (Parameters): The Pydantic model (specifically an object in the

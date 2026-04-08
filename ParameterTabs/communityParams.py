@@ -16,6 +16,9 @@ from ClientResources.ParameterFunctions import idGet, loadKey, saveKey
 # Logging
 communityLog = logging.getLogger(__name__)
 
+# Store st.session_state as variable for efficiency
+session = st.session_state
+
 
 @st.fragment
 def buildCommunityTab(id: int, advanced: bool = False):
@@ -216,10 +219,10 @@ The maximum size of groups within workplaces in the simulation.
         )
 
 
-def communitySchema(schema: Parameters, id: int = 0, advanced: bool = False):
+def communitySaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
     """
-    Function to populate the Pydantic model schema with the parameters in
-    this tab with scenario differentiation.
+    Function to populate the Pydantic model schema with community parameters
+    using scenario differentiation.
 
     Parameters:
         schema (Parameters): The Pydantic model (specifically an object in the
@@ -275,3 +278,41 @@ def communitySchema(schema: Parameters, id: int = 0, advanced: bool = False):
             )
         )
         raise e
+
+
+def communityLoadSchema(schema: Parameters, scenarioID: int = 0):
+    """
+    Function to read community parameters from a schema and set the
+    dashboard's widgets to the specified values.
+
+    Parameters:
+        schema (Parameters): The Pydantic model (specifically an object in the
+            Parameters class) that the parameters will be read from.
+
+        id (int): An integer that will be used to differentiate the parameters in
+            different instances of the tab by adding a number to the Streamlit
+            session state variables. A value of 0 means that this is the
+            baseline scenario and will be treated accordingly.
+    """
+    schemaParameters = schema.Scenario_Parameter
+    if schemaParameters is None:
+        return
+    # Use dictionary to convert schema parameters into dashboard values
+    paramConvert = {
+        "prob_withdrawal": ("withdrawalWork", lambda x: x),
+        "prob_school_withdrawal": ("withdrawalSchool", lambda x: x),
+        "background_contact_count": ("bccRate", lambda x: x),
+        "diagnosis_delay": ("diagnosisDelay", lambda x: x // 2),
+        "prob_child_supervision": ("childSupervision", lambda x: x),
+        "max_class_size": ("maxClassSize", lambda x: x),
+        "max_workgroup_size": ("maxWorkGroupSize", lambda x: x),
+    }
+    # Only include non-None params that fit this tab
+    validParams = {
+        p: v
+        for p, v in vars(schemaParameters).items()
+        if v is not None and p in paramConvert.keys()
+    }
+    for parameter, value in validParams.items():
+        key, formatFunc = paramConvert[parameter]
+        session[f"{key}{scenarioID}"] = formatFunc(value)

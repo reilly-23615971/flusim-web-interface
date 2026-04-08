@@ -1164,10 +1164,10 @@ def paramCast(x: str) -> Literal[
     )
 
 
-def dynamicSchema(schema: Parameters, id: int = 0):
+def dynamicSaveSchema(schema: Parameters, id: int = 0):
     """
-    Function to populate the Pydantic model schema with the parameters in
-    this tab with scenario differentiation.
+    Function to populate the Pydantic model schema with dynamic parameters
+    using scenario differentiation.
 
     Parameters:
         schema (Parameters): The Pydantic model (specifically an object in the
@@ -1245,3 +1245,87 @@ def dynamicSchema(schema: Parameters, id: int = 0):
             )
         )
         raise e
+
+
+def dynamicLoadSchema(schema: Parameters, scenarioID: int = 0):
+    """
+    Function to read dynamic parameters from a schema and set the
+    dashboard's widgets to the specified values.
+
+    Parameters:
+        schema (Parameters): The Pydantic model (specifically an object in the
+            Parameters class) that the parameters will be read from.
+
+        id (int): An integer that will be used to differentiate the parameters in
+            different instances of the tab by adding a number to the Streamlit
+            session state variables. A value of 0 means that this is the
+            baseline scenario and will be treated accordingly.
+    """
+    dynamicChanges = schema.Scenario_DynamicIntervention
+    if dynamicChanges is None:
+        return
+    dynamicTables = {
+        "seed_rate": pd.DataFrame(
+            columns=(
+                "Day to Update Parameter",
+                "New Infection Seeding Rate",
+            )
+        ),
+        "school_closure": pd.DataFrame(
+            columns=("Day to Update Parameter", "New School Closure Compliance"),
+        ),
+        "bcc_reduction": pd.DataFrame(
+            columns=("Day to Update Parameter", "New Reduced Background Contact Count"),
+        ),
+    }
+
+    for update in dynamicChanges:
+        # Get value and append to correct dataframe
+        param, time, newValue = (
+            update.Name,
+            (update.CycleOffset / 2) + 1,
+            update.NewValue,
+        )
+        currentTable = dynamicTables[param]
+        currentTable.loc[currentTable.shape[0]] = [time, newValue]
+
+    # Set the new tables into st.session_state, if they were updated at all
+    paramConvert = {
+        "seed_rate": (
+            "seedTimeForm",
+            pd.DataFrame(
+                {
+                    "Day to Update Parameter": [None],
+                    "New Infection Seeding Rate": [idGet("seedRate", scenarioID, 0.25)],
+                },
+            ),
+        ),
+        "school_closure": (
+            "closeTimeForm",
+            pd.DataFrame(
+                {
+                    "Day to Update Parameter": [None],
+                    "New School Closure Compliance": [
+                        idGet("schoolClosureCompliance", scenarioID, 0.9)
+                    ],
+                },
+            ),
+        ),
+        "bcc_reduction": (
+            "bccTimeForm",
+            pd.DataFrame(
+                {
+                    "Day to Update Parameter": [None],
+                    "New Reduced Background Contact Count": [
+                        idGet("bccReducedRate", scenarioID, 0.2)
+                    ],
+                },
+            ),
+        ),
+    }
+    for parameter, (key, default) in paramConvert.items():
+        finalTable = dynamicTables[parameter]
+        scenarioDefault = default if scenarioID == 0 else idGet(key, 0, default)
+        session[f"{key}{scenarioID}"] = (
+            scenarioDefault if finalTable.empty else finalTable.reset_index(drop=True)
+        )

@@ -1211,15 +1211,28 @@ group who will die as a direct result of the disease.
                 in the "Vaccinations and NPIs" tab.
             """
             )
-            # TODO: Toggle to fully disable immunity waning
 
-            # Waning immunity
+            loadKey("naturalWaningToggle", id, False)
+            waningToggle = st.toggle(
+                "Enable Natural Immunity Waning",
+                value=False,
+                on_change=saveKey,
+                args=["naturalWaningToggle", id],
+                key=f"_naturalWaningToggle{id}",
+                help="""
+Toggle whether or not immunity gained from being infected by the disease will
+wane over time. If this is enabled, individuals in the simulation can be
+infected again after recovering from a previous infection.
+                """,
+            )
+
             loadKey("naturalImmunityDuration", id, 2)
             st.slider(
                 "Natural Immunity Waning Delay (Months)",
                 1,
                 36,
                 2,
+                disabled=not waningToggle,
                 on_change=saveKey,
                 args=["naturalImmunityDuration", id],  # type: ignore
                 key=f"_naturalImmunityDuration{id}",
@@ -1235,6 +1248,7 @@ diminish, where a month is 30 days.
                 "Natural Immunity After Waning (Probability)",
                 np.linspace(0.0, 1.0, 201),
                 0.5,
+                disabled=not waningToggle,
                 key=f"_naturalWanedEfficacy{id}",
                 on_change=saveKey,
                 args=["naturalWanedEfficacy", id],  # type: ignore
@@ -1254,6 +1268,7 @@ immunity is fully waned.
                 0,
                 36,
                 6,
+                disabled=not waningToggle,
                 on_change=saveKey,
                 args=["naturalWaningRate", id],  # type: ignore
                 key=f"_naturalWaningRate{id}",
@@ -1273,10 +1288,10 @@ provided by recovering from the disease will never diminish.
             )
 
 
-def diseaseSchema(schema: Parameters, id: int = 0, advanced: bool = False):
+def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
     """
-    Function to populate the Pydantic model schema with the parameters in
-    this tab with scenario differentiation.
+    Function to populate the Pydantic model schema with disease parameters
+    using scenario differentiation.
 
     Parameters:
         schema (Parameters): The Pydantic model (specifically an object in the
@@ -1335,16 +1350,6 @@ def diseaseSchema(schema: Parameters, id: int = 0, advanced: bool = False):
             scenarioParams.kappa_child_education = idGet("schoolKappa", id, 1.0)
             scenarioParams.kappa_workplace = idGet("workKappa", id, 1.0)
             scenarioParams.kappa_background = idGet("backgroundKappa", id, 1.0)
-            # Immunity Waning
-            scenarioParams.infection_waning_cycle_delay = (
-                idGet("naturalImmunityDuration", id, 2) * 60
-            )
-            scenarioParams.infection_waned_protection = idGet(
-                "naturalWanedEfficacy", id, 0.5
-            )
-            scenarioParams.infection_waning_rate_per_cycle = idGet(
-                "naturalWaningRate", id, 6
-            )
             mortAgeForm = idGet(
                 "mortAgeForm",
                 id,
@@ -1365,6 +1370,23 @@ def diseaseSchema(schema: Parameters, id: int = 0, advanced: bool = False):
             probAsymptomatic = idGet("asymptomaticBoth", id, 0.35)
             scenarioParams.prob_asymptomatic_young = probAsymptomatic
             scenarioParams.prob_asymptomatic = probAsymptomatic
+            scenarioParams.infection_waning_cycle_delay = (
+                session.get("cycleCount", 360) * 2
+            )
+
+        # Immunity Waning
+        if advanced and idGet("naturalWaningToggle", id, False):
+            scenarioParams.infection_waning_cycle_delay = (
+                idGet("naturalImmunityDuration", id, 2) * 60
+            )
+            scenarioParams.infection_waned_protection = idGet(
+                "naturalWanedEfficacy", id, 0.5
+            )
+            scenarioParams.infection_waning_rate_per_cycle = idGet(
+                "naturalWaningRate", id, 6
+            )
+        else:
+            # Set immunity delay to length of simulation, effectively disabling it
             scenarioParams.infection_waning_cycle_delay = (
                 session.get("cycleCount", 360) * 2
             )

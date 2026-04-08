@@ -20,10 +20,10 @@ from ClientResources.ModelSchema import (
     simulation,
     simulationSet,
 )
-from ParameterTabs.communityParams import communitySchema
-from ParameterTabs.diseaseParams import diseaseSchema
-from ParameterTabs.dynamicParams import dynamicSchema
-from ParameterTabs.vaccinationNPIParams import vaccineSchema
+from ParameterTabs.communityParams import communityLoadSchema, communitySaveSchema
+from ParameterTabs.diseaseParams import diseaseSaveSchema
+from ParameterTabs.dynamicParams import dynamicLoadSchema, dynamicSaveSchema
+from ParameterTabs.vaccinationNPIParams import vaccineSaveSchema
 
 # Logging
 downloadLog = logging.getLogger(__name__)
@@ -127,11 +127,11 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
     useVaccines = False
     useAdvanced = session.get("showAdvanced", False)
     for id, scenario in enumerate(scenarioParams):
-        diseaseSchema(scenario, id, useAdvanced)
-        communitySchema(scenario, id, useAdvanced)
-        useVaccines = vaccineSchema(scenario, id, useAdvanced) or useVaccines
+        diseaseSaveSchema(scenario, id, useAdvanced)
+        communitySaveSchema(scenario, id, useAdvanced)
+        useVaccines = vaccineSaveSchema(scenario, id, useAdvanced) or useVaccines
         if useAdvanced:
-            dynamicSchema(scenario, id)
+            dynamicSaveSchema(scenario, id)
 
     # Use middle joint to control options
     # TODO: Account for more conditionals
@@ -217,10 +217,42 @@ def loadConfig(file: BytesIO):
     # TODO: Load parameters from schema
 
     # Simulation engine settings
-    engineSettings = schema.community_overrides
-    if engineSettings is not None:
-        pass
+    if schema.community_overrides is not None:
         # TODO: Throw error if there isn't exactly  one community override
+        engineSettings = schema.community_overrides[0]
+        session.community = engineSettings.name
+        engineParams = engineSettings.parameters.Scenario_Parameter
+        if engineParams is not None and engineParams.start_day_of_week is not None:
+            session.startDay = (
+                "Sunday",
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+            )[engineParams.start_day_of_week]
+        commandArgs = engineSettings.parameters.Command_Argument
+        if commandArgs is not None:
+            session.runCount = commandArgs.n_runs
+            session.cycleCount = (
+                commandArgs.n_cycles // 2 if commandArgs.n_cycles is not None else None
+            )
 
+    # Baseline parameters
+    if schema.shared_overrides is not None:
+        baselineParams = schema.shared_overrides.parameters
+        communityLoadSchema(baselineParams, 0)
+        dynamicLoadSchema(baselineParams, 0)
+
+    # TODO: Debug
+    st.toast(
+        """
+        Parameter uploading is unfinished! Only baseline community and dynamic
+        params were loaded!
+        """,
+        icon=":material/construction:",
+        duration="infinite",
+    )
     st.write(schema)
     pass

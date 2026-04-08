@@ -75,6 +75,7 @@ parameterGetters = {
 
 
 # Parameter Models
+# TODO: Add dashboard-exclusive params like ICU rate
 
 
 # Set of scenario parameters set collectively for all age groups
