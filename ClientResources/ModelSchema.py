@@ -5,10 +5,18 @@
 # Imports
 import logging
 from operator import attrgetter
-from typing import Annotated, Literal, Optional, Any, cast
+from typing import Annotated, Any, Literal, Optional, cast
+
 from annotated_types import Ge, Le
+from pydantic import (
+    BaseModel,
+    Field,
+    ValidationInfo,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 from typing_extensions import Self
-from pydantic import BaseModel, ValidationInfo, Field, model_validator, field_validator
 
 # Logging
 validationLog = logging.getLogger(__name__)
@@ -1890,6 +1898,18 @@ class Parameters(BaseModel):
         description=("Parameters defining the efficacy of different vaccine doses."),
     )
 
+    @field_serializer(
+        "Scenario_SeededNaturalImmunity",
+        "Scenario_VaccineCoverage",
+        "Scenario_VaccineDoseEfficacy",
+        mode="plain",
+    )
+    def nullAgeSerialize(self, value):
+        """
+        Function to ensure that age fields where `None` is meaningful are never omitted
+        """
+        return value[0].model_dump(exclude_none=False)
+
     @field_validator(
         "Scenario_CrossImmunity",
         "Scenario_DynamicIntervention",
@@ -2200,3 +2220,59 @@ class modelGuideFile(BaseModel):
             return [value]
         else:
             return value
+
+    # TODO: Validate that community overrides cover communities in community_used
+
+    """
+    Below are field serializers used to format the parameter schema for how
+    they are used by the dashboard. This means that community_overrides is used
+    for command arguments, shared_overrides is used for the baseline scenario
+    and all other parameters are part of simulation sets; the baseline defines
+    as many parameters as possible while the others leave out unset parameters
+    so they can default to the baseline. If you are using this schema for a
+    different purpose and these serializers interfere with generating properly
+    formatted files, feel free to disable them.
+    """
+
+    @field_serializer("shared_overrides", mode="plain", when_used="json-unless-none")
+    def baselineSerialize(self, value):
+        """
+        Function that ensures the baseline scenario's parameters are all
+        included in JSON serialisations.
+        """
+        # TODO: Test these params (besides start day of week) to see which are
+        # totally unused and which can be added to the dashboard
+        # (also vaccination_trigger and friends!)
+        excludedParams = {
+            "parameters": {
+                "Scenario_Parameter": {
+                    "start_day_of_week",
+                    "kappa_adult_education",
+                    "kappa_child_care",
+                    "kappa_hospital",
+                    "withdrawal_period",
+                    "hospitalisation_rate",
+                    "max_adult_class_size",
+                    "max_neighbourgroup_size",
+                    "max_churchgroup_size",
+                    "max_class_count",
+                    "pandemic_alert",
+                    "close_childcare",
+                    "close_child_education",
+                    "vaccination_priority",
+                }
+            }
+        }
+        return value.model_dump(exclude_none=True, exclude=excludedParams)
+
+    @field_serializer(
+        "community_overrides",
+        "simulation_sets",
+        mode="plain",
+        when_used="json-unless-none",
+    )
+    def scenarioSerialize(self, value):
+        """
+        Function that ensures non-baseline parameters can default to baseline values.
+        """
+        return value[0].model_dump(exclude_unset=True)

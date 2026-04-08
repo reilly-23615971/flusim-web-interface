@@ -5,8 +5,10 @@
 # Imports
 import logging
 import time
+from io import BytesIO
 
 import streamlit as st
+from pydantic import ValidationError
 
 from ClientResources.ModelSchema import (
     Parameters,
@@ -32,13 +34,13 @@ session = st.session_state
 
 def parameterDownload():
     """
-    Function to download the JSON of the current parameter set when clicked,
-    using a popover container due to dialog not working well with download_button
+    Function to create a button that downloads the JSON of the current
+    parameter set when clicked. Uses a `st.popover` container due to
+    `st.dialog` not working well with `st.download_button`.
     """
-
     # TODO: Check if there's errors and don't allow downloading if there are
     # TODO: See if occasional page-blanking bugs can be fixed
-
+    # TODO: Popover is a bit finicky; consider trying dialog or expander again
     with st.popover(
         "Download Parameter Settings",
         icon=":material/download:",
@@ -59,7 +61,6 @@ included in this file.
                 dashboard at a later date instead of manually setting them again.
             """
             )
-
             st.download_button(
                 "Confirm",
                 createConfig(session.get("scenarioCount", 0) + 1).model_dump_json(
@@ -72,9 +73,42 @@ included in this file.
             )
 
 
+@st.dialog("Upload Parameters from File", width="large", icon=":material/upload_file:")
+def parameterUpload():
+    """
+    Dialog wrapper function to upload parameter settings from a JSON file.
+    """
+    # TODO: See if upload can be disabled while file is being processed
+    # uploadPending = bool(session.get("parameterUpload") is not None)
+    st.info(
+        body="""
+            Loading parameters from a file wil overwrite any parameters that have
+            been manually set using the dashboard, including scenario parameters
+            and simulation engine settings. Are you sure you would like to upload
+            parameters from a file?
+        """,
+        icon=":material/database_off:",
+    )
+    uploadedParameters = st.file_uploader(
+        "Upload Parameters from File",
+        type="json",
+        key="parameterUpload",
+        # disabled = uploadPending,
+        help="""
+Upload a JSON file containing parameter settings for the simulation. These
+files can be downloaded from the dashboard; they should be named
+"FlusimParameterSettings_[timestamp].json". Note that any parameters currently
+set on the dashboard (including baseline parameters, scenario parameters and
+simulation engine settings) will be replaced with the values in the uploaded file.
+        """,
+    )
+    if uploadedParameters is not None:
+        loadConfig(uploadedParameters)
+
+
 def createConfig(scenarioCount: int) -> modelGuideFile:
     """
-    Function to generate a JSON config file using the selected parameters
+    Function to generate a JSON config file using the selected parameters.
 
     Parameters:
         scenarioCount (int): The number of scenarios to define in the config.
@@ -88,6 +122,8 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
     scenarioParams = [Parameters() for _ in range(scenarioCount)]
 
     # Populate parameters with session_state values
+    # TODO: Make sure scenario parameters don't include baseline defaults
+    # (particularly with variable-length forms)
     useVaccines = False
     useAdvanced = session.get("showAdvanced", False)
     for id, scenario in enumerate(scenarioParams):
@@ -150,3 +186,41 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
             )
         ],
     )
+
+
+def loadConfig(file: BytesIO):
+    """
+    Function to read a JSON config file and set the dashboard's parameters
+    to correspond to it [in progress].
+
+    Parameters:
+        file (bytes): The JSON file containing the parameter settings.
+    """
+    # TODO: Finish me
+    try:
+        schema = modelGuideFile.model_validate_json(file.read())
+    except ValidationError as e:
+        # TODO: Refine error to state the issues with the loaded file
+        st.error(
+            body="""
+                The selected file does not contain valid
+                parameter settings. Please only upload parameter files
+                downloaded from the dashboard, and avoid editing parameter
+                files after downloading them.
+            """,
+            icon=":material/unknown_document:",
+        )
+        # TODO: Debug
+        st.header("Full Error Message")
+        st.error(e, icon=":material/breaking_news:")
+        return
+    # TODO: Load parameters from schema
+
+    # Simulation engine settings
+    engineSettings = schema.community_overrides
+    if engineSettings is not None:
+        pass
+        # TODO: Throw error if there isn't exactly  one community override
+
+    st.write(schema)
+    pass
