@@ -658,8 +658,6 @@ def generateAsir(
             outcomeBaselines[(outcome, "Unvaccinated")] = unvaccinatedBaseColumn
 
     # Generate columns
-    # TODO: Column descriptions are repetitive; see if they can be rewritten
-    # TODO: Make column names account for age columns
     for outcome, ageGroups, vaccineStatus, proportion, baselineDifference in columns:
         currentColumn = outcomeColumns[(outcome, vaccineStatus)]
         columnBaselines = outcomeBaselines[(outcome, vaccineStatus)]

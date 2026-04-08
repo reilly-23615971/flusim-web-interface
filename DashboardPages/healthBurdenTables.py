@@ -13,7 +13,7 @@ import pandas as pd
 import streamlit as st
 from matplotlib.colors import TwoSlopeNorm, to_hex
 
-from ClientResources.ParameterFunctions import idGet, loadKey, saveKey
+from ClientResources.ParameterFunctions import idGet, loadKey, replaceTableNA, saveKey
 from ClientResources.SharedResources import (
     ageTimeDict,
     ageWithTime,
@@ -150,7 +150,6 @@ def generateTable():
         )
         for colNumber in range(0, outcomeColumnCount)
     ]"""
-    # TODO: Modify settings to account for age columns
     scenariosUsed = session.get("healthOutcomeScenariosToUse", scenarioNames)
     agesUsed = (
         session.get("healthOutcomeAgesToUse", ageGroups)
@@ -583,10 +582,17 @@ included in the table.
         ),
         dataframe=True,
     )
+    baseColumnData = replaceTableNA(
+        session["healthColumnForm"],
+        {
+            "Age Groups": [],
+            "Vaccination Status": "All",
+        },
+    )
     # TODO: Manually fill the defaults for hidden columns like Age Groups
     # TODO: Allow manually setting column names
     healthColumnForm = st.data_editor(
-        session["healthColumnForm"],
+        baseColumnData,
         height="content",
         num_rows="dynamic",
         key="_healthColumnForm",
@@ -929,7 +935,6 @@ st.button(
     help=tableButtonTooltip,
 )
 # Display the table itself
-# TODO: Make it look better; larger font and less wasted space
 tableData = session.get("HealthOutcomeTableData")
 tableConfig = session.get("HealthOutcomeTableConfig")
 if tableData is not None:

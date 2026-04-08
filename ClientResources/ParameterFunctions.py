@@ -4,7 +4,7 @@
 
 # Imports
 import logging
-from typing import Callable, Literal, Optional
+from typing import Any, Callable, Literal, Optional
 
 import pandas as pd
 import streamlit as st
@@ -279,6 +279,28 @@ def hasDuplicates(df: pd.DataFrame, column: str = "Age Group"):
         column (str): The column to check.
     """
     return len(set(df[column])) != len(df[column])
+
+
+def replaceTableNA(df: pd.DataFrame, columnDict: dict[str, Any]) -> pd.DataFrame:
+    """
+    Function to fill NA values in specific dataframe columns, accounting for
+    values that don't work with pandas' built-in `fillna` function like the empty list.
+
+    Parameters:
+        df (DataFrame): The dataframe to modify.
+
+        columnDict (dict with str keys): A dictionary containing column names
+            and the value to replace NA values with.
+
+    Returns:
+        Dataframe: The dataframe with NA values replaced as needed.
+    """
+    newTable = df.copy()
+    for column, value in columnDict.items():
+        if column in newTable.columns:
+            for row in newTable.loc[newTable[column].isnull(), column].index:
+                newTable.at[row, column] = value
+    return newTable
 
 
 # All functions beyond this point are currently unused
