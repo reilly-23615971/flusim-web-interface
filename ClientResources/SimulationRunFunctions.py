@@ -221,7 +221,7 @@ simulation.
                 }
                 for outcome in outcomeRateDefaults.keys()
             }
-            oldMort = """session.PendingDataMortalityRates = {
+            """session.PendingDataMortalityRates = {
                 scenarioNames[scenarioID]: {
                     idGet("deathAgeGroup", scenarioID, None, f"-{rowID}"): idGet(
                         "deathRatio",

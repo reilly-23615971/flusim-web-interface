@@ -61,7 +61,7 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
             individual vaccine dose efficacies.
     """
 
-    oldVarLengthForm = """
+    """
     # Initialise session variables needed by the vaccination/NPI forms
     sessionParameters = {
         # Row counts
@@ -241,7 +241,7 @@ already be vaccinated against the disease at
 the beginning of the simulation.
             """,
         )
-        noErrorsProportions = '''
+        '''
         loadKey("initialVaccinated", id, 0.0)
         initialVaccinated = st.number_input(
             "Initial Vaccinated Proportion of Population (%)",
@@ -460,7 +460,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
             True,
         )
 
-        oldVarLengthForm = '''# Save relevant params as variables to avoid lookups
+        '''# Save relevant params as variables to avoid lookups
         vaccineRowCount = session[f"vacAgeRowCount{id}"]
         vacAgeRemainingGroups = session[f"vaccineRemainingAgeGroups{id}"]
         vacAgeErrorContainer = st.container()
@@ -931,7 +931,7 @@ that use the same age group as another row.
                         True,
                     )
 
-                    oldVarLengthForm = '''
+                    '''
                     # Save remaining ages to variable to avoid lookups
                     primAgeRemainingGroups = session[
                         f"primaryRemainingAgeGroups{id}-{i}"
@@ -1432,7 +1432,7 @@ immunity will not remain healthy when exposed to the disease.
                 True,
             )
 
-            oldVarLengthForm = '''# Save relevant params as variables to avoid lookups
+            '''# Save relevant params as variables to avoid lookups
             primaryWanedRowCount = session[f"primWanedRowCount{id}"]
             primWanedRemainingGroups = session[
                 f"primaryRemainingWanedGroups{id}"
@@ -2010,7 +2010,7 @@ immunity will remain healthy when exposed to the disease.
                 True,
             )
 
-            oldVarLengthForm = '''# Save relevant params as variables to avoid lookups
+            '''# Save relevant params as variables to avoid lookups
             boosterRowCount = session[f"boostAgeRowCount{id}"]
             boostAgeRemainingGroups = session[f"boosterRemainingAgeGroups{id}"]
             boostAgeErrorContainer = st.container()
@@ -2403,7 +2403,7 @@ social distancing interventions in the simulation.
                 True,
             )
 
-            oldVarLengthForm = '''
+            '''
             # Save relevant params as variables to avoid lookups
             socialRowCount = session[f"socialRowCount{id}"]
             socialRemainingGroups = session[f"socialRemainingAgeGroups{id}"]
@@ -3694,7 +3694,7 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False) -> bo
                 ):
                     if age:
                         setattr(scenarioParams, f"{age}_social_distance", comp)
-                oldVarLengthForm = """
+                """
                 for i in range(session.get(f"socialRowCount{id}", 0)):
                     setattr(
                         scenarioParams,
@@ -3782,7 +3782,7 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False) -> bo
                     for age in ageNames
                 ]
 
-                oldVarLengthForm = """
+                """
                 primAgeEfficacies = dict.fromkeys(ageNames, primBaseEfficacy)
                 for i in range(primDoseCount):
                     for j in range(session.get(f"primAgeRowCount{id}-{i}", 0)):
@@ -3844,7 +3844,7 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False) -> bo
                         )
                         if age
                     ]
-                    oldVarLengthForm = """[
+                    """[
                         vaccineEfficacy(
                             DoseType="booster",
                             Age=ageCast(session[f"boostAgeGroup{id}-{i}"]),
@@ -3965,7 +3965,7 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False) -> bo
                 if age
             ]
 
-            oldVarLengthForm = """[
+            """[
                 vaccineCoverage(
                     Age=ageCast(session[f"vacAgeGroup{id}-{i}"]),
                     Initial=idGet("vacAgeInitial", id, initialProportion, f"-{i}"),

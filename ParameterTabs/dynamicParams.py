@@ -158,7 +158,7 @@ each day of the simulation is 2 cycles.
         True,
     )
 
-    oldVarLengthForm = '''# Save relevant parameters as variables to avoid lookups
+    '''# Save relevant parameters as variables to avoid lookups
     seedRowCount = session[f"seedRowCount{id}"]
     baseSeedValue = idGet("seedRate", id, 0.25)
     seedStart, seedEnd = idGet("seedPeriod", id, (0, 29))
@@ -478,7 +478,7 @@ they are closed after the specified point in the simulation.
         True,
     )
 
-    oldVarLengthForm = '''# Save relevant parameters as variables to avoid lookups
+    '''# Save relevant parameters as variables to avoid lookups
     closeRowCount = session[f"closeRowCount{id}"]
     baseCloseValue = idGet("schoolClosureCompliance", id, 0.9)
     closeActive = idGet("schoolClosureToggle", id, False)
@@ -851,7 +851,7 @@ effect, overwriting the normal BCC rate.
         True,
     )
 
-    oldVarLengthForm = '''# Save relevant parameters as variables to avoid lookups
+    '''# Save relevant parameters as variables to avoid lookups
     bccRowCount = session[f"bccRowCount{id}"]
     baseBCCValue = idGet("bccReducedRate", id, 0.2)
     bccActive = idGet("bccToggle", id, False)
@@ -1221,7 +1221,7 @@ def dynamicSchema(schema: Parameters, id: int = 0):
                         )
                     )
 
-        oldVarLengthForm = """for prefix, default in {
+        """for prefix, default in {
             "seed": idGet("seedRate", id, 0.25),
             "close": idGet("schoolClosureCompliance", id, 0.9),
             "bcc": idGet("bccReducedRate", id, 0.2),

@@ -689,7 +689,7 @@ def generateAsir(
                 populationColumn = fullData["Age Group"].map(agePops)
             currentColumn /= populationColumn
             columnName += " (%)"
-            config = '''columnConfig[columnName] = st.column_config.Column(
+            '''columnConfig[columnName] = st.column_config.Column(
                 help=f"""
 The proportion of the total {vaccineDescriptions[vaccineStatus]}population
 (within a given scenario{' and age group' if includedAges else ''})
@@ -700,7 +700,7 @@ that was {outcomeDescriptions[outcome]}, as a percentage.
         elif not proportion and baselineDifference:
             currentColumn = currentColumn - columnBaselines
             columnName += " (Difference from Baseline)"
-            config = '''columnConfig[columnName] = st.column_config.Column(
+            '''columnConfig[columnName] = st.column_config.Column(
                 help=f"""
 The difference between the number of {vaccineDescriptions[vaccineStatus]}people
 who were {outcomeDescriptions[outcome]} within a given scenario and the number
@@ -716,7 +716,7 @@ within the baseline scenario{' (within a given age group)' if includedAges else 
                 columnBaselines != 0, other=np.nan
             )
             columnName += " (% Difference from Baseline)"
-            config = '''columnConfig[columnName] = st.column_config.Column(
+            '''columnConfig[columnName] = st.column_config.Column(
                 help=f"""
 The difference between the number of {vaccineDescriptions[vaccineStatus]}people
 who were {outcomeDescriptions[outcome]} within a given scenario and the number
@@ -727,8 +727,8 @@ as a percentage.
             )'''
             percentCols.add(columnName)
             differenceCols.add(columnName)
-        else:
-            config = '''columnConfig[columnName] = st.column_config.Column(
+        '''else:
+            columnConfig[columnName] = st.column_config.Column(
                 help=f"""
 The number of {vaccineDescriptions[vaccineStatus]}people (within a given
 scenario{' and age group' if includedAges else ''}) who were

@@ -149,7 +149,7 @@ def generateTable():
         if outcome
     ]
 
-    oldVarLengthForm = """outcomeColumnCount = session.get("healthOutcomeRowCount", 1)
+    """outcomeColumnCount = session.get("healthOutcomeRowCount", 1)
     columnDetails = [
         (
             session.get(f"healthOutcome{colNumber}", "Symptomatic Infections"),
@@ -202,7 +202,7 @@ def generateTable():
             for outcome in outcomeRateDefaults.keys()
         }
 
-        oldMort = """session.DataMortalityRates = {
+        """session.DataMortalityRates = {
             scenarioNames[scenarioID]: {
                 idGet("deathAgeGroup", scenarioID, None, f"-{rowID}"): idGet(
                     "deathRatio", scenarioID, outcomeRateDefaults["Deaths"], f"-{rowID}"

@@ -2,6 +2,10 @@
 
 disableWidgetStateDuplicationWarning = true
 
+[runner]
+
+magicEnabled = false
+
 [server]
 
 enableStaticServing = true

@@ -60,7 +60,7 @@ def buildCommunityTab(id: int, advanced: bool = False):
     )
 
     # Withdrawal and BCC
-    oldExpander = '''with st.expander("Withdrawals and Diagnosis"):
+    '''with st.expander("Withdrawals and Diagnosis"):
         # Describe what sort of parameters are here
         st.markdown(
             """
@@ -184,7 +184,7 @@ schools and childcare facilities in the simulation.
             """,
         )
 
-        unusedClassCount = '''loadKey("maxClassCount", id, 1)
+        '''loadKey("maxClassCount", id, 1)
         st.slider(
             "Number of School Class Subgroups",
             1,

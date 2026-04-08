@@ -424,7 +424,7 @@ group to contract the disease when interacting with infected individuals.
         )
 
         # Old variable-length form
-        oldVarLengthForm = '''# Save relevant params as variables to avoid lookups
+        '''# Save relevant params as variables to avoid lookups
         transRowCount = session[f"transRowCount{id}"]
         transRemainingGroups = session[f"transRemainingAgeGroups{id}"]
         transAgeContainer = st.container()
@@ -1068,7 +1068,7 @@ group who will die as a direct result of the disease.
                 True,
             )
 
-            oldVarLengthForm = '''
+            '''
             # Save relevant params as variables to avoid lookups
             deathRowCount = session[f"deathRowCount{id}"]
             deathRemainingGroups = session[f"deathRemainingAgeGroups{id}"]
@@ -1407,7 +1407,7 @@ def diseaseSchema(schema: Parameters, id: int = 0, advanced: bool = False):
             if age:
                 setattr(scenarioParams, f"{age}_trans", trans)
                 setattr(scenarioParams, f"{age}_susc", susc)
-        oldVarLengthForm = """
+        """
         for i in range(session.get(f"transRowCount{id}", 0)):
             varAgeGroup = ageCategories[session[f"transAgeGroup{id}-{i}"]]
             setattr(
