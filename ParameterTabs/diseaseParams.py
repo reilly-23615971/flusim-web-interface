@@ -1376,14 +1376,13 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
 
         # Immunity Waning
         if advanced and idGet("naturalWaningToggle", id, False):
+            wanedEfficacy = idGet("naturalWanedEfficacy", id, 0.5)
             scenarioParams.infection_waning_cycle_delay = (
                 idGet("naturalImmunityDuration", id, 2) * 60
             )
-            scenarioParams.infection_waned_protection = idGet(
-                "naturalWanedEfficacy", id, 0.5
-            )
-            scenarioParams.infection_waning_rate_per_cycle = idGet(
-                "naturalWaningRate", id, 6
+            scenarioParams.infection_waned_protection = wanedEfficacy
+            scenarioParams.infection_waning_rate_per_cycle = (1.0 - wanedEfficacy) / (
+                idGet("naturalWaningRate", id, 6) * 60
             )
         else:
             # Set immunity delay to length of simulation, effectively disabling it
@@ -1458,3 +1457,251 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
             )
         )
         raise e
+
+
+def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
+    """
+    Function to read disease parameters from a schema and set the
+    dashboard's widgets to the specified values.
+
+    Parameters:
+        schema (Parameters): The Pydantic model (specifically an object in the
+            Parameters class) that the parameters will be read from.
+
+        id (int): An integer that will be used to differentiate the parameters in
+            different instances of the tab by adding a number to the Streamlit
+            session state variables. A value of 0 means that this is the
+            baseline scenario and will be treated accordingly.
+
+    Raises:
+        ValidationError: If some but not all of the parameters needed to
+            define natural immunity waning/infection seeding/disease life
+            cycle periods are included in a baseline schema.
+    """
+    # Strain Parameters
+    schemaStrain = schema.Scenario_Strain
+    if schemaStrain is not None:
+        session[f"beta{scenarioID}"] = schemaStrain[0].Beta
+
+    # Global Age Parameters
+    schemaAge = schema.Scenario_ParameterWithAgePrefix
+    if schemaAge is not None:
+        session[f"deathRatio{scenarioID}"] = schemaAge.mort
+
+    # General Scenario Parameters
+    schemaParameters = schema.Scenario_Parameter
+    if schemaParameters is not None:
+        paramDict = {p: v for p, v in vars(schemaParameters).items() if v is not None}
+
+        # Use dictionary to convert schema parameters into dashboard values
+        paramConvert = {
+            "seed_rate": ("seedRate", lambda x: x),
+            "beta_asymptomatic": ("betaAsymptomatic", lambda x: x),
+            "beta_post_symptomatic": ("betaPostSymptomatic", lambda x: x),
+            "kappa_household": ("householdKappa", lambda x: x),
+            "kappa_child_education": ("schoolKappa", lambda x: x),
+            "kappa_workplace": ("workKappa", lambda x: x),
+            "kappa_background": ("backgroundKappa", lambda x: x),
+            "prob_asymptomatic": ("asymptomaticAdult", lambda x: x),
+            "prob_asymptomatic_young": ("asymptomaticChild", lambda x: x),
+            "prob_diagnosis": ("caseRatio", lambda x: x),
+            "prob_gp": ("gpRatio", lambda x: x),
+            "prob_hospitalisation": ("hospitalRatio", lambda x: x),
+            "prob_icu": ("icuRatio", lambda x: x),
+            "infection_waning_cycle_delay": (
+                "naturalImmunityDuration",
+                lambda x: x // 60,
+            ),
+            # "infection_waned_protection": ("naturalWanedEfficacy", lambda x: x),
+            # "infection_waning_rate_per_cycle": ("naturalWaningRate", lambda x: x),
+        }
+        simpleParams = {p: v for p, v in paramConvert.items() if p in paramDict}
+        for parameter, (key, formatFunc) in simpleParams.items():
+            session[f"{key}{scenarioID}"] = formatFunc(paramDict[parameter])
+
+        # Advanced parameter differences
+        if "prob_asymptomatic" in paramDict:
+            session[f"asymptomaticBoth{scenarioID}"] = (
+                schemaParameters.prob_asymptomatic
+            )
+        if (
+            paramDict.get("infection_waning_cycle_delay", 99999)
+            < session.get("cycleCount", 360) * 2
+        ):
+            session[f"naturalWaningToggle{scenarioID}"] = True
+
+        # Period definitions
+        # TODO: Handle baseline validation errors better
+        if {
+            "infection_waned_protection",
+            "infection_waning_rate_per_cycle",
+        }.intersection(paramDict):
+            # Waning immunity (if not disabled)
+            # Ensure baseline has all values
+            wanedEfficacy = schemaParameters.infection_waned_protection
+            waningRate = schemaParameters.infection_waning_rate_per_cycle
+            if None in {wanedEfficacy, waningRate} and scenarioID == 0:
+                raise ValidationError(
+                    "Waning efficacy parameters were only partially "
+                    "defined for the baseline scenario"
+                )
+
+            # Use baseline values to plug None gaps
+            baseWanedEfficacy = idGet("naturalWanedEfficacy", 0, 0.5)
+            baseWaningDuration = idGet("naturalWaningRate", 0, 6)
+            if wanedEfficacy is None:
+                wanedEfficacy = baseWanedEfficacy
+            if waningRate is None:
+                waningRate = (1.0 - baseWanedEfficacy) / (baseWaningDuration * 60)
+
+            # Calculate efficacy waning duration
+            # TODO: Double-check that conversion method doesn't cause
+            # rounding errors or anything of the sort
+            session[f"naturalWanedEfficacy{scenarioID}"] = wanedEfficacy
+            session[f"naturalWaningRate{scenarioID}"] = int(
+                (1.0 - wanedEfficacy) / (waningRate * 60)
+            )
+
+        if {"seeding_start_cycle", "seeding_duration"}.intersection(paramDict):
+            # Seeding period
+            # Ensure baseline has all values
+            seedStart = schemaParameters.seeding_start_cycle
+            seedLength = schemaParameters.seeding_duration
+            if None in {seedStart, seedLength} and scenarioID == 0:
+                raise ValidationError(
+                    "Infection seeding period parameters were only partially "
+                    "defined for the baseline scenario"
+                )
+
+            # Use baseline values to plug None gaps
+            basePeriodStart, basePeriodEnd = idGet("seedPeriod", 0, (1, 30))
+            if seedStart is None:
+                seedStart = (basePeriodStart - 1) * 2
+            if seedLength is None:
+                seedLength = (basePeriodEnd - basePeriodStart + 1) * 2
+
+            # Calculate seeding period
+            # TODO: Double-check that conversion method doesn't cause
+            # rounding errors or anything of the sort
+            seedPeriodStart = (seedStart // 2) + 1
+            seedPeriodEnd = (seedStart + seedLength) // 2
+            session[f"seedPeriod{scenarioID}"] = seedPeriodStart, seedPeriodEnd
+
+        if {
+            "transmissibility_delay",
+            "symptom_latency",
+            "generation_time",
+            "infection_duration",
+        }.intersection(paramDict):
+            # Disease life cycle periods
+            # Ensure baseline has all values
+            transmissibilityDelay = schemaParameters.transmissibility_delay
+            symptomLatency = schemaParameters.symptom_latency
+            generationTime = schemaParameters.generation_time
+            infectionDuration = schemaParameters.infection_duration
+            if (
+                None
+                in {
+                    transmissibilityDelay,
+                    symptomLatency,
+                    generationTime,
+                    infectionDuration,
+                }
+                and scenarioID == 0
+            ):
+                raise ValidationError(
+                    "Disease life cycle parameters were only partially "
+                    "defined for the baseline scenario"
+                )
+
+            # Use baseline values to plug None gaps
+            baseLatency = idGet("latencyPeriod", 0, 0.5)
+            basePreSymptom = idGet("preSymptomPeriod", 0, 1.0)
+            baseSymptom = idGet("symptomPeriod", 0, 2.0)
+            basePostSymptom = idGet("postSymptomPeriod", 0, 2.5)
+            if transmissibilityDelay is None:
+                transmissibilityDelay = baseLatency * 2
+            if symptomLatency is None:
+                symptomLatency = (baseLatency + basePreSymptom) * 2
+            if generationTime is None:
+                generationTime = (baseLatency + basePreSymptom + baseSymptom) * 2
+            if infectionDuration is None:
+                infectionDuration = (
+                    baseLatency + basePreSymptom + baseSymptom + basePostSymptom
+                ) * 2
+
+            # TODO: Double-check that conversion method doesn't cause
+            # rounding errors or anything of the sort
+            session[f"latencyPeriod{scenarioID}"] = transmissibilityDelay / 2
+            session[f"preSymptomPeriod{scenarioID}"] = (
+                symptomLatency - transmissibilityDelay
+            ) / 2
+            session[f"symptomPeriod{scenarioID}"] = (
+                generationTime - symptomLatency
+            ) / 2
+            session[f"postSymptomPeriod{scenarioID}"] = (
+                infectionDuration - generationTime
+            ) / 2
+
+        # Tables
+        transParams = {
+            p.removesuffix("_trans"): v
+            for p, v in paramDict.items()
+            if p.endswith("_trans")
+        }
+        suscParams = {
+            p.removesuffix("_susc"): v
+            for p, v in paramDict.items()
+            if p.endswith("_susc")
+        }
+        if transParams or suscParams:
+            # Age-specific transmission
+            # TODO: See if redundancy can be removed
+            transTable = pd.DataFrame(
+                columns=("Age Group", "Infectiousness", "Susceptibility")
+            )
+            transAges = set(transParams.keys()) | set(suscParams.keys())
+            for age in transAges:
+                transValue = transParams.get(age, 1.0)
+                suscValue = suscParams.get(age, 1.0)
+                transTable.loc[transTable.shape[0]] = [age, transValue, suscValue]
+            transDefault = pd.DataFrame(
+                {
+                    "Age Group": [None],
+                    "Infectiousness": [1.0],
+                    "Susceptibility": [1.0],
+                },
+            )
+            scenarioDefault = (
+                transDefault
+                if scenarioID == 0
+                else idGet("transAgeForm", 0, transDefault)
+            )
+            session[f"transAgeForm{scenarioID}"] = (
+                scenarioDefault
+                if transTable.empty
+                else transTable.reset_index(drop=True)
+            )
+
+        mortParams = {
+            p.removesuffix("_mort"): v
+            for p, v in paramDict.items()
+            if p.endswith("_mort")
+        }
+        if mortParams:
+            # Age-specific mortality
+            mortTable = pd.DataFrame(columns=("Age Group", "Mortality Rate"))
+            for param, value in mortParams.items():
+                mortTable.loc[mortTable.shape[0]] = [param, value]
+            mortDefault = pd.DataFrame(
+                {
+                    "Age Group": [None],
+                    "Mortality Rate": [idGet("deathRatio", scenarioID, 0.000115077)],
+                },
+            )
+            scenarioDefault = (
+                mortDefault if scenarioID == 0 else idGet("mortAgeForm", 0, mortDefault)
+            )
+            session[f"mortAgeForm{scenarioID}"] = (
+                scenarioDefault if mortTable.empty else mortTable.reset_index(drop=True)
+            )

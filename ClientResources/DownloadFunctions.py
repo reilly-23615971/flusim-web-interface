@@ -21,7 +21,7 @@ from ClientResources.ModelSchema import (
     simulationSet,
 )
 from ParameterTabs.communityParams import communityLoadSchema, communitySaveSchema
-from ParameterTabs.diseaseParams import diseaseSaveSchema
+from ParameterTabs.diseaseParams import diseaseLoadSchema, diseaseSaveSchema
 from ParameterTabs.dynamicParams import dynamicLoadSchema, dynamicSaveSchema
 from ParameterTabs.vaccinationNPIParams import vaccineSaveSchema
 
@@ -240,8 +240,10 @@ def loadConfig(file: BytesIO):
             )
 
     # Baseline parameters
+    # TODO: Improve robustness of LoadSchema functions with invalid data
     if schema.shared_overrides is not None:
         baselineParams = schema.shared_overrides.parameters
+        diseaseLoadSchema(baselineParams, 0)
         communityLoadSchema(baselineParams, 0)
         dynamicLoadSchema(baselineParams, 0)
 

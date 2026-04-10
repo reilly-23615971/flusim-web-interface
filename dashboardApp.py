@@ -13,6 +13,7 @@ import pandas as pd
 import streamlit as st
 
 # Reload streamlit_notify if it fails the first time
+# TODO: it keeps happening
 try:
     import streamlit_notify as stn
 except ImportError:
