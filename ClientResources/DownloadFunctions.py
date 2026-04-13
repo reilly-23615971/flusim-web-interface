@@ -5,9 +5,11 @@
 # Imports
 import logging
 import time
+from copy import deepcopy
 from io import BytesIO
 
 import streamlit as st
+import streamlit_notify as stn  # type: ignore
 from pydantic import ValidationError
 
 from ClientResources.ModelSchema import (
@@ -20,10 +22,28 @@ from ClientResources.ModelSchema import (
     simulation,
     simulationSet,
 )
-from ParameterTabs.communityParams import communityLoadSchema, communitySaveSchema
-from ParameterTabs.diseaseParams import diseaseLoadSchema, diseaseSaveSchema
-from ParameterTabs.dynamicParams import dynamicLoadSchema, dynamicSaveSchema
-from ParameterTabs.vaccinationNPIParams import vaccineLoadSchema, vaccineSaveSchema
+from ClientResources.ParameterFunctions import idGet, updateParamFromSchema
+from ClientResources.SharedResources import communityPopulation
+from ParameterTabs.communityParams import (
+    buildCommunityTab,
+    communityLoadSchema,
+    communitySaveSchema,
+)
+from ParameterTabs.diseaseParams import (
+    buildDiseaseTab,
+    diseaseLoadSchema,
+    diseaseSaveSchema,
+)
+from ParameterTabs.dynamicParams import (
+    buildDynamicTab,
+    dynamicLoadSchema,
+    dynamicSaveSchema,
+)
+from ParameterTabs.vaccinationNPIParams import (
+    buildVaccinationNPITab,
+    vaccineLoadSchema,
+    vaccineSaveSchema,
+)
 
 # Logging
 downloadLog = logging.getLogger(__name__)
@@ -79,7 +99,7 @@ def parameterUpload():
     Dialog wrapper function to upload parameter settings from a JSON file.
     """
     # TODO: See if upload can be disabled while file is being processed
-    # uploadPending = bool(session.get("parameterUpload") is not None)
+    uploadPending = bool(session.get("parameterUpload") is not None)
     st.info(
         body="""
             Loading parameters from a file wil overwrite any parameters that have
@@ -93,7 +113,7 @@ def parameterUpload():
         "Upload Parameters from File",
         type="json",
         key="parameterUpload",
-        # disabled = uploadPending,
+        disabled=uploadPending,
         help="""
 Upload a JSON file containing parameter settings for the simulation. These
 files can be downloaded from the dashboard; they should be named
@@ -200,7 +220,7 @@ def loadConfig(file: BytesIO):
     try:
         schema = modelGuideFile.model_validate_json(file.read())
     except ValidationError as e:
-        # TODO: Refine error to state the issues with the loaded file
+        # TODO: Process the full message to show the issues with the loaded file
         st.error(
             body="""
                 The selected file does not contain valid
@@ -210,49 +230,192 @@ def loadConfig(file: BytesIO):
             """,
             icon=":material/unknown_document:",
         )
-        # TODO: Debug
         st.header("Full Error Message")
         st.error(e, icon=":material/breaking_news:")
         return
-    # TODO: Load parameters from schema
+
+    # TODO: Save a backup to ensure no changes are left unfinished
+    backupSession = deepcopy(dict(session))
 
     # Simulation engine settings
-    if schema.community_overrides is not None:
-        # TODO: Throw error if there isn't exactly  one community override
-        engineSettings = schema.community_overrides[0]
-        session.community = engineSettings.name
-        engineParams = engineSettings.parameters.Scenario_Parameter
-        if engineParams is not None and engineParams.start_day_of_week is not None:
-            session.startDay = (
-                "Sunday",
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-            )[engineParams.start_day_of_week]
-        commandArgs = engineSettings.parameters.Command_Argument
-        if commandArgs is not None:
-            session.runCount = commandArgs.n_runs
-            session.cycleCount = (
-                commandArgs.n_cycles // 2 if commandArgs.n_cycles is not None else None
+    # TODO: More error checks for parameter values allowed by the
+    # simulation engine but not the dashboard
+    try:
+        if len(schema.community_used) > 1:
+            raise ValidationError(
+                """
+                The selected parameter schema includes multiple
+                communities in `community_used`. The dashboard currently only
+                supports simulating a single community at a time; please
+                remove any excess communities from the JSON file.
+                """
             )
+        if schema.community_used[0] not in communityPopulation:
+            raise ValidationError(
+                f"""
+                The selected parameter schema uses the community
+                "{schema.community_used[0]}". The dashboard currently only
+                supports `newcastle` and `cairns` as communities; please
+                change the value in the JSON file's `community_used` field to
+                one of these.
+                """
+            )
+        if schema.community_overrides:
+            if len(schema.community_overrides) > 1:
+                raise ValidationError(
+                    """
+                    The selected parameter schema includes multiple
+                    `community_overrides` sections. The dashboard currently only
+                    supports simulating a single community at a time; please
+                    remove any excess community override sections from the JSON file.
+                    """
+                )
+            engineSettings = schema.community_overrides[0]
+            session.community = engineSettings.name
 
-    # Baseline parameters
-    # TODO: Improve robustness of LoadSchema functions with invalid data
-    if schema.shared_overrides is not None:
-        baselineParams = schema.shared_overrides.parameters
-        diseaseLoadSchema(baselineParams, 0)
-        communityLoadSchema(baselineParams, 0)
-        vaccineLoadSchema(baselineParams, 0)
-        dynamicLoadSchema(baselineParams, 0)
+            engineParams = engineSettings.parameters.Scenario_Parameter
+            if engineParams is not None and engineParams.start_day_of_week is not None:
+                session.startDay = (
+                    "Sunday",
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                )[engineParams.start_day_of_week]
+            commandArgs = engineSettings.parameters.Command_Argument
+            if commandArgs is not None:
+                session.runCount = commandArgs.n_runs
+                session.cycleCount = (
+                    commandArgs.n_cycles // 2
+                    if commandArgs.n_cycles is not None
+                    else None
+                )
 
-    # TODO: Debug
-    st.toast(
-        "Parameter uploading is unfinished! Only baseline params were loaded!",
-        icon=":material/construction:",
-        duration="infinite",
+        # Baseline parameters
+        # TODO: Catch errors
+        # TODO: Improve robustness of LoadSchema functions with invalid data
+        if schema.shared_overrides is not None:
+            baselineParams = schema.shared_overrides.parameters
+            diseaseLoadSchema(baselineParams, 0)
+            communityLoadSchema(baselineParams, 0)
+            vaccineLoadSchema(baselineParams, 0)
+            dynamicLoadSchema(baselineParams, 0)
+
+        # Scenario parameters
+        if len(schema.simulation_sets) > 1:
+            raise ValidationError(
+                """
+                    The selected parameter schema includes multiple
+                    `simulation_sets` objects. Parameter files for the dashboard
+                    put all scenarios in a single set, such that there should
+                    be only one `simulation_sets` object. Please modify the
+                    JSON file so that there is only one `simulation_sets` object.
+                    """
+            )
+        simulationList = schema.simulation_sets[0].simulations
+        scenarioCount = session.get("scenarioCount", 0)
+        # Delete current scenarios in order to start fresh
+        while scenarioCount > 0:
+            deleteScenario(scenarioCount)
+            scenarioCount = session.get("scenarioCount", 0)
+        # Populate new scenarios
+        for scenarioID, scenario in enumerate(simulationList):
+            addScenario()
+            updateParamFromSchema("scenarioName", scenario.name, scenarioID)
+            if scenario.override_setting:
+                scenarioParams = scenario.override_setting.parameters
+                diseaseLoadSchema(scenarioParams, scenarioID)
+                communityLoadSchema(scenarioParams, scenarioID)
+                vaccineLoadSchema(scenarioParams, scenarioID)
+                dynamicLoadSchema(scenarioParams, scenarioID)
+        # Load tabs briefly to initialise errors
+        placeholderContainer = st.empty()
+        for testID in range(scenarioCount + 1):
+            # TODO: Find a less hacky way to load errors
+            with placeholderContainer.popover(
+                "Loading parameters...", icon="spinner", disabled=True
+            ):
+                buildDiseaseTab(testID, True)
+                buildCommunityTab(testID, True)
+                buildVaccinationNPITab(testID, True)
+                buildDynamicTab(testID)
+
+    except ValidationError as e:
+        # TODO: See if it's possible/worthwhile to give
+        # different errors different icons
+        st.error(body=e, icon=":material/error:")
+
+        # Restore session state
+        # TODO: Make sure this can't overrule simulation results or other changes
+        # that may occur between starting the upload process and an error occurring
+        session.clear()
+        session.update(backupSession)
+        return
+
+    stn.toast(
+        "Parameters successfully uploaded!",
+        icon=":material/download_done:",
+        duration="short",
     )
-    st.write(schema)
-    pass
+    st.rerun()
+
+
+# Scenario management functions
+def addScenario():
+    """
+    Simple function to initialise an empty scenario.
+    """
+    newCount = session["scenarioCount"] + 1
+    session["scenarioCount"] = newCount
+    session[f"scenarioName{newCount}"] = f"Scenario #{newCount}"
+    session["scenarioSetParams"][newCount] = set()
+    session["scenarioSetParamsExtra"][newCount] = set()
+    session["activeErrors"][newCount] = {}
+
+
+def deleteScenario(scenarioID: int):
+    """
+    Function that removes a scenario from the dashboard, shifting up other
+    scenario values if necessary.
+
+    Parameters:
+        scenarioID (int): The ID representing the scenario to be deleted.
+    """
+    # Get set of saved params
+    scenarioCount = session.get("scenarioCount", 0)
+    savedParams = session["scenarioSetParams"]
+    savedExtraParams = session["scenarioSetParamsExtra"]
+
+    # Shift existing values down
+    for s in range(scenarioID, scenarioCount):
+        paramsToConsider = savedParams[s] | savedParams[s + 1]
+        for param in paramsToConsider:
+            newValue = idGet(param, s + 1, None)
+            if newValue is None:
+                del session[f"{param}{s}"]
+            else:
+                session[f"{param}{s}"] = newValue
+        extraParamsToConsider = savedExtraParams[s] | savedExtraParams[s + 1]
+        for param, extra in extraParamsToConsider:
+            newValue = idGet(param, s + 1, None, extra=extra)
+            if newValue is None:
+                del session[f"{param}{s}{extra}"]
+            else:
+                session[f"{param}{s}{extra}"] = newValue
+        session["scenarioSetParams"][s] = savedParams[s + 1]
+        session["scenarioSetParamsExtra"][s] = savedExtraParams[s + 1]
+        session["activeErrors"][s] = session["activeErrors"][s + 1]
+
+    # Delete duplicated end scenario params
+    for param in savedParams[scenarioCount]:
+        del session[f"{param}{scenarioCount}"]
+    for param, extra in savedExtraParams[scenarioCount]:
+        del session[f"{param}{scenarioCount}{extra}"]
+    del session["scenarioSetParams"][scenarioCount]
+    del session["scenarioSetParamsExtra"][scenarioCount]
+    del session["activeErrors"][scenarioCount]
+
+    # Update scenario count
+    session["scenarioCount"] -= 1

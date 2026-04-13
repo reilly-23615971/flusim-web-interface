@@ -7,9 +7,13 @@ import logging
 
 import streamlit as st
 
-from ClientResources.DownloadFunctions import parameterDownload
+from ClientResources.DownloadFunctions import (
+    addScenario,
+    deleteScenario,
+    parameterDownload,
+)
 from ClientResources.InterfaceFunctions import errorChecker
-from ClientResources.ParameterFunctions import containerSave, idGet, loadKey
+from ClientResources.ParameterFunctions import containerSave, loadKey
 from ClientResources.SharedResources import maxScenarios
 from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.diseaseParams import buildDiseaseTab
@@ -26,23 +30,10 @@ session = st.session_state
 scenarioCount = session.get("scenarioCount", 0)
 
 
-def addScenario():
-    """
-    Simple function to initialise an empty scenario.
-    """
-    newCount = session["scenarioCount"] + 1
-    session["scenarioCount"] = newCount
-    session[f"scenarioName{newCount}"] = f"Scenario #{newCount}"
-    session["scenarioSetParams"][newCount] = set()
-    session["scenarioSetParamsExtra"][newCount] = set()
-    session["activeErrors"][newCount] = {}
-
-
-# Function to delete a scenario from the page
 @st.dialog("Remove Scenario", width="large", icon=":material/delete:")
-def deleteScenario(scenarioID: int):
+def deleteScenarioDialog(scenarioID: int):
     """
-    Dialog function that removes a scenario if confirmed.
+    Dialog function that removes a scenario from the dashboard if confirmed.
 
     Parameters:
         scenarioID (int): The ID representing the scenario to be deleted.
@@ -62,41 +53,7 @@ def deleteScenario(scenarioID: int):
         icon="spinner" if deletePending else None,
         disabled=deletePending,
     ):
-        # Get set of saved params
-        savedParams = session["scenarioSetParams"]
-        savedExtraParams = session["scenarioSetParamsExtra"]
-
-        # Shift existing values down
-        for s in range(scenarioID, scenarioCount):
-            paramsToConsider = savedParams[s] | savedParams[s + 1]
-            for param in paramsToConsider:
-                newValue = idGet(param, s + 1, None)
-                if newValue is None:
-                    del session[f"{param}{s}"]
-                else:
-                    session[f"{param}{s}"] = newValue
-            extraParamsToConsider = savedExtraParams[s] | savedExtraParams[s + 1]
-            for param, extra in extraParamsToConsider:
-                newValue = idGet(param, s + 1, None, extra=extra)
-                if newValue is None:
-                    del session[f"{param}{s}{extra}"]
-                else:
-                    session[f"{param}{s}{extra}"] = newValue
-            session["scenarioSetParams"][s] = savedParams[s + 1]
-            session["scenarioSetParamsExtra"][s] = savedExtraParams[s + 1]
-            session["activeErrors"][s] = session["activeErrors"][s + 1]
-
-        # Delete duplicated end scenario params
-        for param in savedParams[scenarioCount]:
-            del session[f"{param}{scenarioCount}"]
-        for param, extra in savedExtraParams[scenarioCount]:
-            del session[f"{param}{scenarioCount}{extra}"]
-        del session["scenarioSetParams"][scenarioCount]
-        del session["scenarioSetParamsExtra"][scenarioCount]
-        del session["activeErrors"][scenarioCount]
-
-        # Update scenario count
-        session["scenarioCount"] -= 1
+        deleteScenario(scenarioID)
         st.rerun()
 
 
