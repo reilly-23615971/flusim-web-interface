@@ -1389,6 +1389,7 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
             )
         else:
             # Set immunity delay to length of simulation, effectively disabling it
+            # TODO: See if omitting waning params outright has the same effect
             scenarioParams.infection_waning_cycle_delay = (
                 session.get("cycleCount", 360) * 2
             )
@@ -1527,11 +1528,27 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             updateParamFromSchema(
                 "asymptomaticBoth", schemaParameters.prob_asymptomatic, scenarioID
             )
-        if (
+        """if (
             paramDict.get("infection_waning_cycle_delay", 99999)
             < session.get("cycleCount", 360) * 2
         ):
-            updateParamFromSchema("naturalWaningToggle", True, scenarioID)
+            updateParamFromSchema("naturalWaningToggle", True, scenarioID)"""
+        # TODO: Ensure this holds up for scenarios that default to baseline
+        updateParamFromSchema(
+            "naturalWaningToggle",
+            bool(
+                paramDict.get(
+                    "infection_waning_cycle_delay",
+                    (
+                        idGet("naturalImmunityDuration", 0, 2) * 60
+                        if scenarioID
+                        else 99999
+                    ),
+                )
+                < session.get("cycleCount", 360) * 2
+            ),
+            scenarioID,
+        )
 
         # Period definitions
         # TODO: Handle baseline validation errors better

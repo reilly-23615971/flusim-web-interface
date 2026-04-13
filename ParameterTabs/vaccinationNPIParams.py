@@ -3390,6 +3390,7 @@ effect, overwriting the normal BCC rate.
             )
 
             # Display values based on what is used by the triggers
+            # TODO: Account for NPI toggles being off
             interventionTriggers = [
                 schoolClosureTrigger,  # type: ignore
                 withdrawalIncreaseTrigger,  # type: ignore
@@ -4116,7 +4117,8 @@ def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -
                     bccPeriod[1] - bccPeriod[0] + 1
                 ) * 2
         # Other NPIs
-        scenarioParams.social_distance_compliance = socialCompliance
+        if socialDistanceToggle:
+            scenarioParams.social_distance_compliance = socialCompliance
         scenarioParams.diagnosed_case_isolation = idGet("caseIsolation", id, False)
 
         # Save the updated parameters
@@ -4146,8 +4148,14 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             session state variables. A value of 0 means that this is the
             baseline scenario and will be treated accordingly.
     """
-    # Keep track of whether any vaccine-related parameters have shown up
-    useVaccines = False
+    # Keep track of whether any toggle-controlled parameters have shown up
+    useVaccines, useBoosters, useSocialDistancing = False, False, False
+    useNPIs = {
+        "schoolClosure": False,
+        "withdrawalIncrease": False,
+        "reducedGroup": False,
+        "bcc": False,
+    }
 
     # Ordering dictionary to ensure global values are checked first
     ageOrder = {
@@ -4171,7 +4179,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
         # if you need a better way to check if SD is disabled
         compliance = schemaAge.social_distance
         if compliance is not None and compliance > 0.0:
-            updateParamFromSchema("socialDistancingToggle", True, scenarioID)
+            useSocialDistancing = True
         updateParamFromSchema("socialDistancingCompliance", compliance, scenarioID)
 
     # Vaccine Coverage Parameters
@@ -4257,8 +4265,14 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             )
             waningDelay = primaryDose.WaningDelay
             updateParamFromSchema("primaryDuration", waningDelay // 60, scenarioID)
-            if waningDelay < session.get("cycleCount", 360) * 2:
-                updateParamFromSchema("vaccineWaningToggle", True, scenarioID)
+            # TODO: Ensure waning delay toggle is calculated correctly
+            """if waningDelay < session.get("cycleCount", 360) * 2:
+                updateParamFromSchema("vaccineWaningToggle", True, scenarioID)"""
+            updateParamFromSchema(
+                "vaccineWaningToggle",
+                bool(waningDelay < session.get("cycleCount", 360) * 2),
+                scenarioID,
+            )
             # Efficacy needs to be logged so that waning rate per cycle
             # can be calculated
             primaryRatePerCycle = primaryDose.WaningRatePerCycle
@@ -4269,7 +4283,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
         # Booster Vaccines
         if any(dose.DoseType == "booster" for dose in schemaDose):
             boosterDose = [dose for dose in schemaDose if dose.DoseType == "booster"][0]
-            updateParamFromSchema("boosterToggle", True, scenarioID)
+            useBoosters = True
             boosterDoseCount = boosterDose.Count
             updateParamFromSchema("boosterDoseCount", boosterDoseCount, scenarioID)
             updateParamFromSchema(
@@ -4457,7 +4471,6 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             "case_trigger_threshold": "caseTotalThreshold",
             "rate_trigger_threshold": "rateStartThreshold",
             "rate_relaxation_threshold": "rateRelaxThreshold",
-            "vaccine_doses": "initialDoseReserve",
             "vaccination_first_dose_rate": "firstDoseRate",
             "school_closure_compliance": "schoolClosureCompliance",
             "increased_withdrawal": "withdrawalIncreaseAdult",
@@ -4487,74 +4500,74 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             "per_school_cases": "Cases per School",
         }
         for npi, prefix in npiPrefixes.items():
-            if {
-                f"{npi}_trigger",
-                f"{npi}_relaxation",
-                f"{npi}_delay",
-                f"{npi}_duration",
-            }.intersection(paramDict):
-                updateParamFromSchema(f"{prefix}Toggle", True, scenarioID)
-                startTrigger = paramDict.get(f"{npi}_trigger")
-                # Relaxation is always = start on dashboard, so don't look for it
-                # relaxTrigger = paramDict.get(f"{npi}_relaxation")
-                npiDelay = paramDict.get(f"{npi}_delay")
-                npiDuration = paramDict.get(f"{npi}_duration")
+            # Relaxation always matches start on dashboard, so don't look for it
+            startTrigger = paramDict.get(f"{npi}_trigger", "none")
+            npiDelay = paramDict.get(f"{npi}_delay", 0)
+            npiDuration = paramDict.get(f"{npi}_duration", 0)
+            if startTrigger != "none":
+                useNPIs[prefix] = True
 
                 # Triggers
                 if npiDelay == 0 and npiDuration > session.get("cycleCount", 360) * 2:
                     updateParamFromSchema(f"{prefix}Trigger", "Always", scenarioID)
-                elif startTrigger is not None:
+                elif startTrigger != "none":
                     updateParamFromSchema(
                         f"{prefix}Trigger", triggerDict[startTrigger], scenarioID
                     )
 
-                if ((npiDelay is None) ^ (npiDuration is None)) and scenarioID == 0:
-                    raise ValidationError(
-                        "NPI period parameters were only partially "
-                        f"defined for the NPI {npi} in the baseline scenario"
-                    )
-                elif npiDelay is not None or npiDuration is not None:
-                    # Use baseline values to plug None gaps
-                    basePeriodStart, basePeriodEnd = idGet(
-                        f"{prefix}Period", 0, (1, 60)
-                    )
-                    if npiDelay is None:
-                        npiDelay = (basePeriodStart - 1) * 2
-                    if npiDuration is None:
-                        npiDuration = (basePeriodEnd - basePeriodStart + 1) * 2
+                # Periods
+                # Use baseline values to plug None gaps
+                basePeriodStart, basePeriodEnd = idGet(f"{prefix}Period", 0, (1, 60))
+                if npiDelay is None:
+                    npiDelay = (basePeriodStart - 1) * 2
+                if npiDuration is None:
+                    npiDuration = (basePeriodEnd - basePeriodStart + 1) * 2
 
-                    # Calculate NPI period
-                    npiPeriodStart = (npiDelay // 2) + 1
-                    npiPeriodEnd = (npiDelay + npiDuration) // 2
-                    updateParamFromSchema(
-                        f"{prefix}Period", (npiPeriodStart, npiPeriodEnd), scenarioID
-                    )
+                # Calculate NPI period
+                npiPeriodStart = (npiDelay // 2) + 1
+                npiPeriodEnd = (npiDelay + npiDuration) // 2
+                updateParamFromSchema(
+                    f"{prefix}Period", (npiPeriodStart, npiPeriodEnd), scenarioID
+                )
 
-        # Toggles
+        # Miscellaneous toggles
         if {
             "vaccination_first_dose_rate",
             "vaccine_doses",
         }.intersection(paramDict):
-            useVaccines = True
+            limitedDoses = bool(
+                paramDict.get("vaccine_doses", 9999999)
+                < communityPopulation[session.get("community", "newcastle")]
+            )
+            updateParamFromSchema(
+                "limitDosesToggle",
+                limitedDoses,
+                scenarioID,
+            )
+            if limitedDoses:
+                updateParamFromSchema(
+                    "initialDoseReserve",
+                    paramDict.get("vaccine_doses"),
+                    scenarioID,
+                )
+            """useVaccines = True
             if (
                 paramDict.get("vaccine_doses", 9999999)
                 < communityPopulation[session.get("community", "newcastle")]
             ):
-                updateParamFromSchema("limitDosesToggle", True, scenarioID)
-        if useVaccines:
-            updateParamFromSchema("vaccineToggle", True, scenarioID)
-        if "social_distance_compliance" in paramDict:
-            updateParamFromSchema("socialDistancingToggle", True, scenarioID)
-        # TODO: Rename the session keys for these so that they can be handled
-        # in the period loop instead of separately
-        if "school_closure_compliance" in paramDict:
-            updateParamFromSchema("schoolClosureToggle", True, scenarioID)
+                updateParamFromSchema("limitDosesToggle", True, scenarioID)"""
+        useSocialDistancing = useSocialDistancing or bool(
+            paramDict.get("social_distance_compliance", 0.0) > 0.0
+        )
+        # TODO: Make sure these aren't necessary
+        """if "school_closure_compliance" in paramDict:
+            useNPIs["schoolClosure"] = True
         if "increased_withdrawal" in paramDict:
-            updateParamFromSchema("withdrawalIncreaseToggle", True, scenarioID)
+            useNPIs["withdrawalIncrease"] = True
         if "reduced_workgroup_size" in paramDict:
-            updateParamFromSchema("reducedGroupToggle", True, scenarioID)
+            useNPIs["reducedGroup"] = True
         if "bcc_reduction" in paramDict:
-            updateParamFromSchema("bccToggle", True, scenarioID)
+            useNPIs["bcc"] = True"""
 
         # Social Distancing Table
         distanceParams = {
@@ -4563,7 +4576,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             if p.endswith("_social_distance")
         }
         if distanceParams:
-            updateParamFromSchema("socialDistancingToggle", True, scenarioID)
+            useSocialDistancing = True
             distanceTable = pd.DataFrame(
                 columns=("Age Group", "Social Distancing Compliance")
             )
@@ -4584,3 +4597,12 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
                     },
                 ),
             )
+
+        # Final Toggles
+        # TODO: Ensure that toggles being disabled is distinguishable from
+        # parameters being unchanged from baselines
+        updateParamFromSchema("vaccineToggle", useVaccines, scenarioID)
+        updateParamFromSchema("boosterToggle", useBoosters, scenarioID)
+        updateParamFromSchema("socialDistancingToggle", useSocialDistancing, scenarioID)
+        for prefix, value in useNPIs.items():
+            updateParamFromSchema(f"{prefix}Toggle", value, scenarioID)

@@ -102,9 +102,7 @@ community data to simulate each of the following {scenarioCount + 1} scenarios:
         severeErrorsFound = (
             errorChecker(
                 id,
-                f"""
-                    Errors in {session[f'scenarioName{id}'] if id > 0 else 'Baseline'}
-                """,
+                f"Errors in {session[f'scenarioName{id}'] if id > 0 else 'Baseline'}",
             )
             or severeErrorsFound
         )

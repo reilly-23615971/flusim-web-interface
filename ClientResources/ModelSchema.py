@@ -7,7 +7,7 @@ import logging
 from operator import attrgetter
 from typing import Annotated, Any, Literal, Optional, cast
 
-from annotated_types import Ge, Le
+from annotated_types import Ge, Le, Len
 from pydantic import (
     BaseModel,
     Field,
@@ -2025,9 +2025,8 @@ class Parameters(BaseModel):
     class Config:
         validate_assignment = True
 
-    # Ensure the right number of efficacies for primary vaccines are defined
     @model_validator(mode="after")
-    def efficacyCount(self, info: ValidationInfo) -> Self:
+    def efficacyCount(self) -> Self:
         """
         Validation function to ensure that the number of doses matches
         the number of defined efficacy values.
@@ -2190,7 +2189,7 @@ class modelGuideFile(BaseModel):
             )
         ),
     )
-    community_used: list[str] = Field(
+    community_used: Annotated[list[str], Len(min_length=1)] = Field(
         title="Communities Used",
         default=["newcastle"],
         description=(
@@ -2244,7 +2243,29 @@ class modelGuideFile(BaseModel):
         else:
             return value
 
-    # TODO: Validate that community overrides cover communities in community_used
+    @model_validator(mode="after")
+    def communityMatch(self) -> Self:
+        """
+        Validation function to ensure communities in `community_overrides` are
+        ones present in `community_used`.
+
+        Raises:
+            ValueError: If `community_overrides` includes communities not in
+                `community_used`.
+        """
+        validCommunities = self.community_used
+        if self.community_overrides:
+            for override in self.community_overrides:
+                if override.name not in validCommunities:
+                    raise ValueError(
+                        """
+                        `community_overrides` includes communities not present in
+                        `community_used`. Ensure the `name` property of each
+                        override in `community_overrides` matches a community
+                        in `community_used`.
+                        """
+                    )
+        return self
 
     """
     Below are field serializers used to format the parameter schema for how

@@ -303,6 +303,7 @@ def replaceTableNA(df: pd.DataFrame, columnDict: dict[str, Any]) -> pd.DataFrame
     return newTable
 
 
+# Schema loading functions
 def updateParamFromSchema(
     key: str,
     value: Any,
@@ -324,7 +325,7 @@ def updateParamFromSchema(
         extra (str, optional): An additional part of the key used to distinguish
             variable-length forms.
     """
-    session[f"{key}{scenarioID}"] = value
+    session[f"{key}{scenarioID}{extra if extra else ""}"] = value
     if scenarioID:
         if extra:
             session["scenarioSetParamsExtra"][scenarioID].add((key, extra))
