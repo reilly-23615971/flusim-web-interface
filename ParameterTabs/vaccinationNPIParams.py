@@ -226,6 +226,7 @@ receive the first dose of the vaccine each day,
 assuming there are enough doses available.
             """,
         )
+
         # TODO: Change to numeric input/proportion/regular slider
         loadKey("initialVaccinated", id, 0.0)
         initialVaccinated = st.select_slider(
@@ -2321,6 +2322,55 @@ immunity will remain healthy when exposed to the disease.
         """
         )
 
+        # Case Isolation
+        loadKey("caseIsolation", id, False)
+        st.toggle(
+            "Enable Case Isolation",
+            value=False,
+            on_change=saveKey,
+            args=["caseIsolation", id],  # type: ignore
+            key=f"_caseIsolation{id}",
+            help="""
+Toggle whether or not individuals who have been
+diagnosed as cases of the disease will be
+forced to isolate at home.
+            """,
+        )
+
+        # Class Dismissal (if advanced parameters are enabled)
+        if advanced:
+            loadKey("classDismissal", id, False)
+            classDismissal = st.toggle(
+                "Enable Class Dismissal",
+                value=False,
+                on_change=saveKey,
+                args=["classDismissal", id],  # type: ignore
+                key=f"_classDismissal{id}",
+                help="""
+Toggle whether or not school classes should be
+dismissed when the daily case rate is high enough.
+
+Note that the rate that must be reached before
+class dismissal begins to occur is shared with
+any other NPIs that are set to use case rates
+as their trigger threshold.
+                """,
+            )
+            if classDismissal:
+                # TODO: Update links to go directly to the desired location
+                st.info(
+                    """
+                Due to the design of the *Flusim* model, the case
+                rate thresholds used by class dismissal must be
+                defined globally for all NPIs. You may configure
+                these thresholds using the "Intervention Trigger
+                Thresholds" parameters at the bottom of this page
+                (click [this link](#thresholdTriggerCondition) to
+                go there directly).
+            """,
+                    icon=":material/info:",
+                )
+
         # Social distancing
         loadKey("socialDistancingToggle", id, False)
         useSocialDistancingToggle = st.toggle(
@@ -2566,55 +2616,6 @@ social distancing interventions in the simulation.
                 """
                 ),
             )'''
-
-        # Case Isolation
-        loadKey("caseIsolation", id, False)
-        st.toggle(
-            "Enable Case Isolation",
-            value=False,
-            on_change=saveKey,
-            args=["caseIsolation", id],  # type: ignore
-            key=f"_caseIsolation{id}",
-            help="""
-Toggle whether or not individuals who have been
-diagnosed as cases of the disease will be
-forced to isolate at home.
-            """,
-        )
-
-        # Class Dismissal (if advanced parameters are enabled)
-        if advanced:
-            loadKey("classDismissal", id, False)
-            classDismissal = st.toggle(
-                "Enable Class Dismissal",
-                value=False,
-                on_change=saveKey,
-                args=["classDismissal", id],  # type: ignore
-                key=f"_classDismissal{id}",
-                help="""
-Toggle whether or not school classes should be
-dismissed when the daily case rate is high enough.
-
-Note that the rate that must be reached before
-class dismissal begins to occur is shared with
-any other NPIs that are set to use case rates
-as their trigger threshold.
-                """,
-            )
-            if classDismissal:
-                # TODO: Update links to go directly to the desired location
-                st.info(
-                    """
-                Due to the design of the *Flusim* model, the case
-                rate thresholds used by class dismissal must be
-                defined globally for all NPIs. You may configure
-                these thresholds using the "Intervention Trigger
-                Thresholds" parameters at the bottom of this page
-                (click [this link](#thresholdTriggerCondition) to
-                go there directly).
-            """,
-                    icon=":material/info:",
-                )
 
     # School Closure
     st.html('<span id = "schoolClosureTriggerCondition"></span>')
@@ -3510,6 +3511,10 @@ per day goes below this value.
                         False,
                     )
 
+                # Divider if both are present
+                if usesRates and usesTotals:
+                    st.divider()
+
                 # Case totals
                 if usesTotals:
                     # Display links to NPIs that use totals
@@ -4311,9 +4316,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             pd.DataFrame(columns=("Age Group", "Initial Dose Efficacy"))
             for i in range(primaryDoseCount)
         ]
-        primarySingleTable = pd.DataFrame(
-            columns=("Age Group", "Initial Dose Efficacy")
-        )
+        primarySingleTable = pd.DataFrame(columns=("Age Group", "Vaccine Efficacy"))
         primaryWanedTable = pd.DataFrame(
             columns=("Age Group", "Dose Efficacy After Waning")
         )

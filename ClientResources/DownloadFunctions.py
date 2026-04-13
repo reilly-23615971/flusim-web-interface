@@ -52,6 +52,30 @@ downloadLog = logging.getLogger(__name__)
 session = st.session_state
 
 
+def uploadDownloadBar():
+    """
+    Wrapper to create buttons for downloading and uploading parameters
+    """
+    download, upload = st.columns(2)
+    with download:
+        parameterDownload()
+    with upload:
+        st.button(
+            label="Upload Parameters from File",
+            width="stretch",
+            on_click=parameterUpload,
+            key="_uploadParamsButton",
+            icon=":material/upload_file:",
+            help="""
+Upload a JSON file containing parameter settings for the simulation. These
+files can be downloaded from the dashboard; they should be named
+"FlusimParameterSettings_[timestamp].json". Note that any parameters currently
+set on the dashboard (including baseline parameters, scenario parameters and
+simulation engine settings) will be replaced with the values in the uploaded file.
+            """,
+        )
+
+
 def parameterDownload():
     """
     Function to create a button that downloads the JSON of the current
@@ -64,6 +88,7 @@ def parameterDownload():
     with st.popover(
         "Download Parameter Settings",
         icon=":material/download:",
+        width="stretch",
         key="parameterDownloadContainer",
         on_change="rerun",
         help="""
@@ -109,6 +134,14 @@ def parameterUpload():
         """,
         icon=":material/database_off:",
     )
+    if session.simulationInProgress:
+        st.warning(
+            """
+            Uploading new parameters from a file will not affect the simulation
+            that is currently running.
+        """,
+            icon=":material/av_timer:",
+        )
     uploadedParameters = st.file_uploader(
         "Upload Parameters from File",
         type="json",
@@ -322,14 +355,15 @@ def loadConfig(file: BytesIO):
             scenarioCount = session.get("scenarioCount", 0)
         # Populate new scenarios
         for scenarioID, scenario in enumerate(simulationList):
-            addScenario()
-            updateParamFromSchema("scenarioName", scenario.name, scenarioID)
-            if scenario.override_setting:
-                scenarioParams = scenario.override_setting.parameters
-                diseaseLoadSchema(scenarioParams, scenarioID)
-                communityLoadSchema(scenarioParams, scenarioID)
-                vaccineLoadSchema(scenarioParams, scenarioID)
-                dynamicLoadSchema(scenarioParams, scenarioID)
+            if scenarioID != 0:
+                addScenario()
+                updateParamFromSchema("scenarioName", scenario.name, scenarioID)
+                if scenario.override_setting:
+                    scenarioParams = scenario.override_setting.parameters
+                    diseaseLoadSchema(scenarioParams, scenarioID)
+                    communityLoadSchema(scenarioParams, scenarioID)
+                    vaccineLoadSchema(scenarioParams, scenarioID)
+                    dynamicLoadSchema(scenarioParams, scenarioID)
         # Load tabs briefly to initialise errors
         placeholderContainer = st.empty()
         for testID in range(scenarioCount + 1):

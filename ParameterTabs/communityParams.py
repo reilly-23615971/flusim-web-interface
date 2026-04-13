@@ -141,6 +141,7 @@ interactions outside of locations simulated by the model.
     )
 
     if advanced:
+        st.divider()
         # Other Community Parameters
         st.subheader("Advanced Community Settings")
 

@@ -10,7 +10,7 @@ import streamlit as st
 from ClientResources.DownloadFunctions import (
     addScenario,
     deleteScenario,
-    parameterDownload,
+    uploadDownloadBar,
 )
 from ClientResources.InterfaceFunctions import errorChecker
 from ClientResources.ParameterFunctions import containerSave, loadKey
@@ -137,8 +137,10 @@ compliance or dynamic parameter updates.
     """,
 )
 
-# TODO: Buttons to upload simulation parameters
-parameterDownload()
+# Buttons to upload simulation parameters
+uploadDownloadBar()
+
+st.divider()
 
 for id in range(1, scenarioCount + 1):
     # TODO: Consider changing expanders to popovers or tabs

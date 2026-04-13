@@ -596,59 +596,6 @@ group to contract the disease when interacting with infected individuals.
         """
         )
 
-        # Asymptomatic params (age-separated if advanced params are enabled)
-        # TODO: See if other slider options are more percent-friendly
-        # TODO: Parity between simple and advanced parameter inputs
-        if advanced:
-            loadKey("asymptomaticChild", id, 0.35)
-            st.select_slider(
-                "Probability of Young (0-24) Asymptomatic Case",
-                np.linspace(0.0, 1.0, 201),
-                0.35,
-                format_func=lambda x: f"{100 * x:0.3g}%",
-                on_change=saveKey,
-                args=["asymptomaticChild", id],  # type: ignore
-                key=f"_asymptomaticChild{id}",
-                help="""
-The probability that an infected young person
-(defined as 0-24 years old) in the simulation will
-be asymptomatic (i.e. they never show any symptoms
-of the disease despite being infectious).
-                """,
-            )
-            loadKey("asymptomaticAdult", id, 0.35)
-            st.select_slider(
-                "Probability of Adult (24+) Asymptomatic Case",
-                np.linspace(0.0, 1.0, 201),
-                0.35,
-                format_func=lambda x: f"{100 * x:0.3g}%",
-                on_change=saveKey,
-                args=["asymptomaticAdult", id],  # type: ignore
-                key=f"_asymptomaticAdult{id}",
-                help="""
-The probability that an infected adult (defined as
-24+ years old) in the simulation will be
-asymptomatic (i.e. they never show any symptoms of
-the disease despite being infectious).
-                """,
-            )
-        else:
-            loadKey("asymptomaticBoth", id, 0.35)
-            st.select_slider(
-                "Probability of Asymptomatic Case",
-                np.linspace(0.0, 1.0, 201),
-                0.35,
-                format_func=lambda x: f"{100 * x:0.3g}%",
-                on_change=saveKey,
-                args=["asymptomaticBoth", id],  # type: ignore
-                key=f"_asymptomaticBoth{id}",
-                help="""
-The probability that an infected individual in the
-simulation will be asymptomatic (i.e. they never
-show any symptoms of the disease despite being infectious).
-                """,
-            )
-
         # Duration Parameters
         st.markdown(
             """
@@ -880,6 +827,61 @@ infected individual is capable of spreading the
 disease to others.
             """,
         )
+
+        # Asymptomatic params (age-separated if advanced params are enabled)
+        # TODO: See if other slider options are more percent-friendly
+        # TODO: Parity between simple and advanced parameter inputs
+        st.divider()
+        st.subheader("Asymptomatic Likelihood")
+        if advanced:
+            loadKey("asymptomaticChild", id, 0.35)
+            st.select_slider(
+                "Probability of Young (0-24) Asymptomatic Case",
+                np.linspace(0.0, 1.0, 201),
+                0.35,
+                format_func=lambda x: f"{100 * x:0.3g}%",
+                on_change=saveKey,
+                args=["asymptomaticChild", id],  # type: ignore
+                key=f"_asymptomaticChild{id}",
+                help="""
+The probability that an infected young person
+(defined as 0-24 years old) in the simulation will
+be asymptomatic (i.e. they never show any symptoms
+of the disease despite being infectious).
+                """,
+            )
+            loadKey("asymptomaticAdult", id, 0.35)
+            st.select_slider(
+                "Probability of Adult (24+) Asymptomatic Case",
+                np.linspace(0.0, 1.0, 201),
+                0.35,
+                format_func=lambda x: f"{100 * x:0.3g}%",
+                on_change=saveKey,
+                args=["asymptomaticAdult", id],  # type: ignore
+                key=f"_asymptomaticAdult{id}",
+                help="""
+The probability that an infected adult (defined as
+24+ years old) in the simulation will be
+asymptomatic (i.e. they never show any symptoms of
+the disease despite being infectious).
+                """,
+            )
+        else:
+            loadKey("asymptomaticBoth", id, 0.35)
+            st.select_slider(
+                "Probability of Asymptomatic Case",
+                np.linspace(0.0, 1.0, 201),
+                0.35,
+                format_func=lambda x: f"{100 * x:0.3g}%",
+                on_change=saveKey,
+                args=["asymptomaticBoth", id],  # type: ignore
+                key=f"_asymptomaticBoth{id}",
+                help="""
+The probability that an infected individual in the
+simulation will be asymptomatic (i.e. they never
+show any symptoms of the disease despite being infectious).
+                """,
+            )
 
     # Health Burden Outcome Parameters
     with st.expander(

@@ -8,6 +8,7 @@ import logging
 import streamlit as st
 
 # from streamlit_push_notifications import send_push, send_alert
+from ClientResources.DownloadFunctions import uploadDownloadBar
 from ClientResources.InterfaceFunctions import dayCount
 from ClientResources.ParameterFunctions import loadKey, saveKey, timeScaleChange
 from ClientResources.SharedResources import communityPopulation
@@ -108,6 +109,9 @@ st.select_slider(
 The day of the week that the first day of the simulation will be.
     """,
 )
+
+# Buttons to upload simulation parameters
+uploadDownloadBar()
 
 # Button to run the simulation
 # TODO: Check if server is available and grey out button if not

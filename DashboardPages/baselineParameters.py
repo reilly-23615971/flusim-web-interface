@@ -7,7 +7,7 @@ import logging
 
 import streamlit as st
 
-from ClientResources.DownloadFunctions import parameterDownload
+from ClientResources.DownloadFunctions import uploadDownloadBar
 from ClientResources.InterfaceFunctions import errorChecker
 from ClientResources.ParameterFunctions import containerSave, loadKey
 from ParameterTabs.communityParams import buildCommunityTab
@@ -69,8 +69,8 @@ dynamic parameter updates.
 # Fragment to display errors
 errorChecker(0)
 
-# TODO: Buttons to upload simulation parameters
-parameterDownload()
+# Buttons to upload simulation parameters
+uploadDownloadBar()
 
 
 # TODO: Consider having a tab for templates that load parameters for
