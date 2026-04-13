@@ -11,7 +11,12 @@ from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import dayCount
 from ClientResources.ModelSchema import Parameters, scenarioParameters
-from ClientResources.ParameterFunctions import idGet, loadKey, saveKey
+from ClientResources.ParameterFunctions import (
+    idGet,
+    loadKey,
+    saveKey,
+    updateParamFromSchema,
+)
 
 # Logging
 communityLog = logging.getLogger(__name__)
@@ -139,6 +144,7 @@ interactions outside of locations simulated by the model.
         # Other Community Parameters
         st.subheader("Advanced Community Settings")
 
+        # TODO: Allow half-days here
         loadKey("diagnosisDelay", id, 1)
         st.select_slider(
             "Case Diagnosis Delay (Days)",
@@ -315,4 +321,4 @@ def communityLoadSchema(schema: Parameters, scenarioID: int = 0):
     }
     for parameter, value in validParams.items():
         key, formatFunc = paramConvert[parameter]
-        session[f"{key}{scenarioID}"] = formatFunc(value)
+        updateParamFromSchema(key, formatFunc(value), scenarioID)

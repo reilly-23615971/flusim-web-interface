@@ -24,6 +24,8 @@ from ClientResources.ParameterFunctions import (
     idGet,
     loadKey,
     saveKey,
+    updateParamFromSchema,
+    updateTableFromSchema,
 )
 from ClientResources.SharedResources import ageTimeDict, backgroundColour
 
@@ -836,6 +838,7 @@ recovered/no longer infectious.
         st.altair_chart(chart)
 
         # Written period lengths
+        # TODO: Round these so there's no more 14.0
         st.markdown(
             """
             With the parameters defined above, the following time
@@ -1408,6 +1411,8 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
         # Health Burden Outcomes
         scenarioParams.prob_diagnosis = idGet("caseRatio", id, 0.5)
         scenarioParams.prob_hospitalisation = idGet("hospitalRatio", id, 0.00316133)
+        scenarioParams.prob_gp = idGet("gpRatio", id, 0.17)
+        scenarioParams.prob_icu = idGet("icuRatio", id, 0.00063227)
         # Age-Specific Parameters
         transAgeForm = idGet(
             "transAgeForm",
@@ -1481,12 +1486,12 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
     # Strain Parameters
     schemaStrain = schema.Scenario_Strain
     if schemaStrain is not None:
-        session[f"beta{scenarioID}"] = schemaStrain[0].Beta
+        updateParamFromSchema("beta", schemaStrain[0].Beta, scenarioID)
 
     # Global Age Parameters
     schemaAge = schema.Scenario_ParameterWithAgePrefix
     if schemaAge is not None:
-        session[f"deathRatio{scenarioID}"] = schemaAge.mort
+        updateParamFromSchema("deathRatio", schemaAge.mort, scenarioID)
 
     # General Scenario Parameters
     schemaParameters = schema.Scenario_Parameter
@@ -1512,23 +1517,21 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                 "naturalImmunityDuration",
                 lambda x: x // 60,
             ),
-            # "infection_waned_protection": ("naturalWanedEfficacy", lambda x: x),
-            # "infection_waning_rate_per_cycle": ("naturalWaningRate", lambda x: x),
         }
         simpleParams = {p: v for p, v in paramConvert.items() if p in paramDict}
         for parameter, (key, formatFunc) in simpleParams.items():
-            session[f"{key}{scenarioID}"] = formatFunc(paramDict[parameter])
+            updateParamFromSchema(key, formatFunc(paramDict[parameter]), scenarioID)
 
         # Advanced parameter differences
         if "prob_asymptomatic" in paramDict:
-            session[f"asymptomaticBoth{scenarioID}"] = (
-                schemaParameters.prob_asymptomatic
+            updateParamFromSchema(
+                "asymptomaticBoth", schemaParameters.prob_asymptomatic, scenarioID
             )
         if (
             paramDict.get("infection_waning_cycle_delay", 99999)
             < session.get("cycleCount", 360) * 2
         ):
-            session[f"naturalWaningToggle{scenarioID}"] = True
+            updateParamFromSchema("naturalWaningToggle", True, scenarioID)
 
         # Period definitions
         # TODO: Handle baseline validation errors better
@@ -1557,9 +1560,11 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             # Calculate efficacy waning duration
             # TODO: Double-check that conversion method doesn't cause
             # rounding errors or anything of the sort
-            session[f"naturalWanedEfficacy{scenarioID}"] = wanedEfficacy
-            session[f"naturalWaningRate{scenarioID}"] = int(
-                (1.0 - wanedEfficacy) / (waningRate * 60)
+            updateParamFromSchema("naturalWaningEfficacy", wanedEfficacy, scenarioID)
+            updateParamFromSchema(
+                "naturalWaningRate",
+                int((1.0 - wanedEfficacy) / (waningRate * 60)),
+                scenarioID,
             )
 
         if {"seeding_start_cycle", "seeding_duration"}.intersection(paramDict):
@@ -1585,7 +1590,9 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             # rounding errors or anything of the sort
             seedPeriodStart = (seedStart // 2) + 1
             seedPeriodEnd = (seedStart + seedLength) // 2
-            session[f"seedPeriod{scenarioID}"] = seedPeriodStart, seedPeriodEnd
+            updateParamFromSchema(
+                "seedPeriod", (seedPeriodStart, seedPeriodEnd), scenarioID
+            )
 
         if {
             "transmissibility_delay",
@@ -1632,16 +1639,24 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
 
             # TODO: Double-check that conversion method doesn't cause
             # rounding errors or anything of the sort
-            session[f"latencyPeriod{scenarioID}"] = transmissibilityDelay / 2
-            session[f"preSymptomPeriod{scenarioID}"] = (
-                symptomLatency - transmissibilityDelay
-            ) / 2
-            session[f"symptomPeriod{scenarioID}"] = (
-                generationTime - symptomLatency
-            ) / 2
-            session[f"postSymptomPeriod{scenarioID}"] = (
-                infectionDuration - generationTime
-            ) / 2
+            updateParamFromSchema(
+                "latencyPeriod", transmissibilityDelay / 2, scenarioID
+            )
+            updateParamFromSchema(
+                "preSymptomPeriod",
+                (symptomLatency - transmissibilityDelay) / 2,
+                scenarioID,
+            )
+            updateParamFromSchema(
+                "symptomPeriod",
+                (generationTime - symptomLatency) / 2,
+                scenarioID,
+            )
+            updateParamFromSchema(
+                "postSymptomPeriod",
+                (infectionDuration - generationTime) / 2,
+                scenarioID,
+            )
 
         # Tables
         transParams = {
@@ -1656,31 +1671,28 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
         }
         if transParams or suscParams:
             # Age-specific transmission
-            # TODO: See if redundancy can be removed
             transTable = pd.DataFrame(
                 columns=("Age Group", "Infectiousness", "Susceptibility")
             )
-            transAges = set(transParams.keys()) | set(suscParams.keys())
+            transAges = sorted(
+                set(transParams.keys()) | set(suscParams.keys()),
+                key=lambda x: list(ageTimeDict).index(x),
+            )
             for age in transAges:
                 transValue = transParams.get(age, 1.0)
                 suscValue = suscParams.get(age, 1.0)
                 transTable.loc[transTable.shape[0]] = [age, transValue, suscValue]
-            transDefault = pd.DataFrame(
-                {
-                    "Age Group": [None],
-                    "Infectiousness": [1.0],
-                    "Susceptibility": [1.0],
-                },
-            )
-            scenarioDefault = (
-                transDefault
-                if scenarioID == 0
-                else idGet("transAgeForm", 0, transDefault)
-            )
-            session[f"transAgeForm{scenarioID}"] = (
-                scenarioDefault
-                if transTable.empty
-                else transTable.reset_index(drop=True)
+            updateTableFromSchema(
+                "transAgeForm",
+                transTable,
+                scenarioID,
+                pd.DataFrame(
+                    {
+                        "Age Group": [None],
+                        "Infectiousness": [1.0],
+                        "Susceptibility": [1.0],
+                    },
+                ),
             )
 
         mortParams = {
@@ -1693,15 +1705,16 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             mortTable = pd.DataFrame(columns=("Age Group", "Mortality Rate"))
             for param, value in mortParams.items():
                 mortTable.loc[mortTable.shape[0]] = [param, value]
-            mortDefault = pd.DataFrame(
-                {
-                    "Age Group": [None],
-                    "Mortality Rate": [idGet("deathRatio", scenarioID, 0.000115077)],
-                },
-            )
-            scenarioDefault = (
-                mortDefault if scenarioID == 0 else idGet("mortAgeForm", 0, mortDefault)
-            )
-            session[f"mortAgeForm{scenarioID}"] = (
-                scenarioDefault if mortTable.empty else mortTable.reset_index(drop=True)
+            updateTableFromSchema(
+                "mortAgeForm",
+                mortTable,
+                scenarioID,
+                pd.DataFrame(
+                    {
+                        "Age Group": [None],
+                        "Mortality Rate": [
+                            idGet("deathRatio", scenarioID, 0.000115077)
+                        ],
+                    },
+                ),
             )

@@ -303,6 +303,74 @@ def replaceTableNA(df: pd.DataFrame, columnDict: dict[str, Any]) -> pd.DataFrame
     return newTable
 
 
+def updateParamFromSchema(
+    key: str,
+    value: Any,
+    scenarioID: int,
+    extra: Optional[str] = None,
+):
+    """
+    Wrapper function to ensure scenario parameters loaded from a schema are
+    added to sets for deletion
+
+    Parameters:
+        key (str): The string used to identify the parameter.
+
+        value (any): The new value from the schema.
+
+        scenarioID (int): The integer representing the scenario the parameter
+            is part of.
+
+        extra (str, optional): An additional part of the key used to distinguish
+            variable-length forms.
+    """
+    session[f"{key}{scenarioID}"] = value
+    if scenarioID:
+        if extra:
+            session["scenarioSetParamsExtra"][scenarioID].add((key, extra))
+        else:
+            session["scenarioSetParams"][scenarioID].add(key)
+
+
+def updateTableFromSchema(
+    key: str,
+    newTable: pd.DataFrame,
+    scenarioID: int,
+    defaultTable: pd.DataFrame,
+    extra: Optional[str] = None,
+):
+    """
+    Function to update tables in the dashboard using one constructed from a
+    schema, accounting for the default table style and baseline inheritance.
+
+    Parameters:
+        key (str): The string used to identify the table.
+
+        newTable (DataFrame): The new table data from the schema.
+
+        scenarioID (int): The integer representing the scenario the table is part of.
+
+        defaultTable (DataFrame): The table to load if neither `newTable` nor
+            the baseline scenario have any data to utilise.
+
+        extra (str, optional): An additional part of the key used to distinguish
+            variable-length forms.
+    """
+    scenarioDefault = (
+        defaultTable if scenarioID == 0 else idGet(key, 0, defaultTable, extra)
+    )
+    session[f"{key}{scenarioID}{extra if extra else ""}"] = (
+        scenarioDefault if newTable.empty else newTable.reset_index(drop=True)
+    )
+    # Add to scenario parameters for ease of deletion
+    # TODO: Should they be added even if unchanged from default?
+    if not newTable.empty and scenarioID:
+        if extra:
+            session["scenarioSetParamsExtra"][scenarioID].add((key, extra))
+        else:
+            session["scenarioSetParams"][scenarioID].add(key)
+
+
 # All functions beyond this point are currently unused
 def getRemainingGroups(groupSets, possibleValues):
     """

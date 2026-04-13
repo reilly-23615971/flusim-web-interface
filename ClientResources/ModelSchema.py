@@ -75,7 +75,7 @@ parameterGetters = {
 
 
 # Parameter Models
-# TODO: Add dashboard-exclusive params like ICU rate
+# TODO: More validation to ensure the dashboard can use this
 
 
 # Set of scenario parameters set collectively for all age groups
@@ -1933,7 +1933,7 @@ class Parameters(BaseModel):
         """
         Function to ensure that age fields where `None` is meaningful are never omitted
         """
-        return value[0].model_dump(exclude_none=False)
+        return [item.model_dump(exclude_none=False) for item in value]
 
     @field_validator(
         "Scenario_CrossImmunity",
@@ -1951,8 +1951,6 @@ class Parameters(BaseModel):
         Validation function to automatically convert single parameter
         objects into lists.
         """
-        # TODO: shouldn't this be list | Any not Optional[list]?
-        # Check Pydantic's validator function formatting
         if value is not None and not isinstance(value, list):
             return [value]
         else:
@@ -2284,6 +2282,12 @@ class modelGuideFile(BaseModel):
                     "pandemic_alert",
                     "close_childcare",
                     "close_child_education",
+                    "close_adult_education",
+                    "prob_work_nonattendance",
+                    "work_nonattendance_trigger",
+                    "work_nonattendance_relaxation",
+                    "work_nonattendance_delay",
+                    "work_nonattendance_duration",
                     "vaccination_priority",
                 }
             }

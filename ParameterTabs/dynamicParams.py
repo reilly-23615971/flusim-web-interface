@@ -12,7 +12,13 @@ from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import paramError
 from ClientResources.ModelSchema import Parameters, dynamicIntervention
-from ClientResources.ParameterFunctions import hasDuplicates, idGet, loadKey, saveKey
+from ClientResources.ParameterFunctions import (
+    hasDuplicates,
+    idGet,
+    loadKey,
+    saveKey,
+    updateTableFromSchema,
+)
 
 # Logging
 dynamicLog = logging.getLogger(__name__)
@@ -1324,8 +1330,4 @@ def dynamicLoadSchema(schema: Parameters, scenarioID: int = 0):
         ),
     }
     for parameter, (key, default) in paramConvert.items():
-        finalTable = dynamicTables[parameter]
-        scenarioDefault = default if scenarioID == 0 else idGet(key, 0, default)
-        session[f"{key}{scenarioID}"] = (
-            scenarioDefault if finalTable.empty else finalTable.reset_index(drop=True)
-        )
+        updateTableFromSchema(key, dynamicTables[parameter], scenarioID, default)

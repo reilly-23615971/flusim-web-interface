@@ -23,7 +23,7 @@ from ClientResources.ModelSchema import (
 from ParameterTabs.communityParams import communityLoadSchema, communitySaveSchema
 from ParameterTabs.diseaseParams import diseaseLoadSchema, diseaseSaveSchema
 from ParameterTabs.dynamicParams import dynamicLoadSchema, dynamicSaveSchema
-from ParameterTabs.vaccinationNPIParams import vaccineSaveSchema
+from ParameterTabs.vaccinationNPIParams import vaccineLoadSchema, vaccineSaveSchema
 
 # Logging
 downloadLog = logging.getLogger(__name__)
@@ -245,14 +245,12 @@ def loadConfig(file: BytesIO):
         baselineParams = schema.shared_overrides.parameters
         diseaseLoadSchema(baselineParams, 0)
         communityLoadSchema(baselineParams, 0)
+        vaccineLoadSchema(baselineParams, 0)
         dynamicLoadSchema(baselineParams, 0)
 
     # TODO: Debug
     st.toast(
-        """
-        Parameter uploading is unfinished! Only baseline community and dynamic
-        params were loaded!
-        """,
+        "Parameter uploading is unfinished! Only baseline params were loaded!",
         icon=":material/construction:",
         duration="infinite",
     )
