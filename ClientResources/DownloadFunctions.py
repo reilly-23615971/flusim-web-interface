@@ -123,7 +123,6 @@ def parameterUpload():
     """
     Dialog wrapper function to upload parameter settings from a JSON file.
     """
-    # TODO: See if upload can be disabled while file is being processed
     uploadPending = bool(session.get("parameterUpload") is not None)
     st.info(
         body="""
@@ -249,7 +248,6 @@ def loadConfig(file: BytesIO):
     Parameters:
         file (bytes): The JSON file containing the parameter settings.
     """
-    # TODO: Finish me
     try:
         schema = modelGuideFile.model_validate_json(file.read())
     except ValidationError as e:
@@ -267,7 +265,7 @@ def loadConfig(file: BytesIO):
         st.error(e, icon=":material/breaking_news:")
         return
 
-    # TODO: Save a backup to ensure no changes are left unfinished
+    # Save a backup of st.session_state to ensure changes aren't left unfinished
     backupSession = deepcopy(dict(session))
 
     # Simulation engine settings
@@ -327,7 +325,6 @@ def loadConfig(file: BytesIO):
                 )
 
         # Baseline parameters
-        # TODO: Catch errors
         # TODO: Improve robustness of LoadSchema functions with invalid data
         if schema.shared_overrides is not None:
             baselineParams = schema.shared_overrides.parameters
@@ -367,7 +364,7 @@ def loadConfig(file: BytesIO):
         # Load tabs briefly to initialise errors
         placeholderContainer = st.empty()
         for testID in range(scenarioCount + 1):
-            # TODO: Find a less hacky way to load errors
+            # TODO: Find a less hacky way to initialise errors
             with placeholderContainer.popover(
                 "Loading parameters...", icon="spinner", disabled=True
             ):

@@ -4305,8 +4305,6 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
     schemaEfficacy = schema.Scenario_VaccineDoseEfficacy
     if schemaEfficacy is not None:
         useVaccines = True
-        # TODO: Make sure that single table vaccines (advanced param stuff)
-        # is accounted for
 
         # Primary Vaccines
         primaryEfficacySchema = [
@@ -4488,7 +4486,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             if parameter in paramDict:
                 updateParamFromSchema(key, paramDict[parameter], scenarioID)
 
-        # TODO: NPI periods
+        # NPI periods
         npiPrefixes = {
             "school_closure": "schoolClosure",
             "withdrawal_increase": "withdrawalIncrease",

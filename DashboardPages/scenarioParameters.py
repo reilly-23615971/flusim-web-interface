@@ -143,8 +143,7 @@ uploadDownloadBar()
 st.divider()
 
 for id in range(1, scenarioCount + 1):
-    # TODO: Consider changing expanders to popovers or tabs
-    # to avoid the nested expander issue
+    # TODO: Consider using tabs to avoid the nested expander issue
     containerScenarioName = session.get(f"scenarioName{id}", f"Scenario #{id}")
     with st.expander(
         f"#{id}: {containerScenarioName}",

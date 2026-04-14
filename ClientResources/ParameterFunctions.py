@@ -364,8 +364,7 @@ def updateTableFromSchema(
         scenarioDefault if newTable.empty else newTable.reset_index(drop=True)
     )
     # Add to scenario parameters for ease of deletion
-    # TODO: Should they be added even if unchanged from default?
-    if not newTable.empty and scenarioID:
+    if scenarioID:
         if extra:
             session["scenarioSetParamsExtra"][scenarioID].add((key, extra))
         else:

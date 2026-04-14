@@ -211,7 +211,6 @@ def generateTable():
             }
             for scenarioID in range(4)
         }"""
-        # TODO: Fix null getting added here when age tables are unchanged
         session.DataMortalityRates = {
             scenarioNames[scenarioID]: {
                 age: idGet("deathRatio", scenarioID, 0.000115077) for age in ageWithTime
@@ -597,7 +596,6 @@ included in the table.
             "Vaccination Status": "All",
         },
     )
-    # TODO: Manually fill the defaults for hidden columns like Age Groups
     # TODO: Allow manually setting column names
     healthColumnForm = st.data_editor(
         baseColumnData,
@@ -721,17 +719,30 @@ for each column via the Select Health Burden Columns setting or switch to a diff
 Age Group Separation mode before attempting to generate a table.
         """
     elif (
-        session.get("showAdvanced")
+        session.get("showAdvanced", False)
+        and any(
+            idGet("naturalWaningToggle", i, False)
+            or (
+                idGet("vaccineToggle", i, False)
+                and (
+                    idGet("vaccineWaningToggle", i, False)
+                    or idGet("boosterToggle", i, False)
+                )
+            )
+            for i in range(session.get("scenarioCount", 0) + 1)
+        )
         and healthColumnForm["Options"].isin([["Percentage"]]).any()
     ):
-        # TODO: Update this when waning immunity is toggleable
+        # TODO: Ensure this reflects the sim data's parameters and not
+        # the current parameters since they may differ
         st.warning(
             """
             Warning: Columns that display values as percentages without also
             displaying differences from baselines may be inaccurate if
-            reinfection is possible within the simulation.
+            reinfection is possible within the simulation. Avoid using columns
+            with percentage in tables when the simulation enables immunity waning.
         """,
-            icon=":material/frame_repeat:",
+            icon=":material/heap_snapshot_multiple:",
         )
 
     oldVarLengthForm = '''for i in range(healthOutcomeRowCount):

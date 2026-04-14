@@ -68,7 +68,6 @@ def runSimulationButton():
     runPending = bool(session.get("confirmRunButton"))
 
     # List scenarios
-    # TODO: Contain in dropdown if too long
     scenarioCount = session.get("scenarioCount", 0)
     if scenarioCount == 0:
         st.markdown(
@@ -235,7 +234,6 @@ simulation.
                 scenarioID: idGet("deathRatio", scenarioID, 0.000115077)
                 for scenarioID in range(scenarioCount + 1)
             }
-            # TODO: Fix null getting added here when age tables are unchanged
             session.PendingDataMortalityRates = {
                 scenarioNames[scenarioID]: {
                     age: pendingDeaths[scenarioID] for age in ageWithTime
@@ -288,8 +286,6 @@ async def runModel(parameterJSON: str):
             was encountered when running the model, alongside the error itself
             as an Exception subclass.
     """
-    # TODO: Account for direct vs. indirect protection
-    # (via extra asir filtered to vaccinated only)
     # TODO: Clean up this function so that errors are more easily read
     # and the returned types don't need as much checking
     # TODO: See if st.cache_data makes a difference here

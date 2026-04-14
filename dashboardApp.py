@@ -45,7 +45,6 @@ st.set_page_config(
 )
 
 # Logging config
-# TODO: Double-check that no logging loops are occurring
 os.makedirs("Logs", exist_ok=True)
 logging.basicConfig(
     filename="Logs/interfaceAppLogs.txt",
@@ -126,6 +125,8 @@ stn.notify(remove=True)
 flusimPages = st.navigation(pages)
 flusimPages.run()
 
+# TODO: Consider rendering user manual with 1.56's st.iframe instead of
+# just opening the PDF in a new tab
 st.sidebar.link_button(
     "User Manual", "/app/static/UserManual.pdf", icon=":material/quick_reference:"
 )
