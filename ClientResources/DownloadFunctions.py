@@ -273,7 +273,7 @@ def loadConfig(file: BytesIO):
     # simulation engine but not the dashboard
     try:
         if len(schema.community_used) > 1:
-            raise ValidationError(
+            raise AssertionError(
                 """
                 The selected parameter schema includes multiple
                 communities in `community_used`. The dashboard currently only
@@ -282,7 +282,7 @@ def loadConfig(file: BytesIO):
                 """
             )
         if schema.community_used[0] not in communityPopulation:
-            raise ValidationError(
+            raise AssertionError(
                 f"""
                 The selected parameter schema uses the community
                 "{schema.community_used[0]}". The dashboard currently only
@@ -293,7 +293,7 @@ def loadConfig(file: BytesIO):
             )
         if schema.community_overrides:
             if len(schema.community_overrides) > 1:
-                raise ValidationError(
+                raise AssertionError(
                     """
                     The selected parameter schema includes multiple
                     `community_overrides` sections. The dashboard currently only
@@ -335,7 +335,7 @@ def loadConfig(file: BytesIO):
 
         # Scenario parameters
         if len(schema.simulation_sets) > 1:
-            raise ValidationError(
+            raise AssertionError(
                 """
                     The selected parameter schema includes multiple
                     `simulation_sets` objects. Parameter files for the dashboard

@@ -1560,7 +1560,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             wanedEfficacy = schemaParameters.infection_waned_protection
             waningRate = schemaParameters.infection_waning_rate_per_cycle
             if None in {wanedEfficacy, waningRate} and scenarioID == 0:
-                raise ValidationError(
+                raise AssertionError(
                     "Waning efficacy parameters were only partially "
                     "defined for the baseline scenario"
                 )
@@ -1589,7 +1589,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             seedStart = schemaParameters.seeding_start_cycle
             seedLength = schemaParameters.seeding_duration
             if None in {seedStart, seedLength} and scenarioID == 0:
-                raise ValidationError(
+                raise AssertionError(
                     "Infection seeding period parameters were only partially "
                     "defined for the baseline scenario"
                 )
@@ -1632,7 +1632,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                 }
                 and scenarioID == 0
             ):
-                raise ValidationError(
+                raise AssertionError(
                     "Disease life cycle parameters were only partially "
                     "defined for the baseline scenario"
                 )

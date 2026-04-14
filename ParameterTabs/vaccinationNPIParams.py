@@ -803,7 +803,7 @@ where a month is 30 days.
                 loadKey("primaryWaningRate", id, 12)
                 st.slider(
                     "Vaccine Waning Duration (Months)",
-                    0,
+                    1,
                     36,
                     12,
                     disabled=not useVaccinesToggle,
@@ -3678,7 +3678,7 @@ def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -
         bool: `True` if vaccines were used in the scenario, permitting
             direct vs. indirect protection calculations.
     """
-    # TODO: Account for waning toggles
+    # TODO: Make code clearer (split up advanced section if needed)
 
     # Load reused parameters immediately to save time
     vaccineToggle = idGet("vaccineToggle", id, False)
@@ -3901,6 +3901,7 @@ def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -
                 schema.Scenario_VaccineDoseEfficacy = efficacyParams
 
                 # Scenario Vaccine Dose
+                primWaningDuration = idGet("primaryWaningRate", id, 12) * 60
                 doseParams = [
                     vaccineDose(
                         DoseType="primary",
@@ -3911,8 +3912,11 @@ def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -
                             if waningToggle
                             else simLength
                         ),
-                        WaningRatePerCycle=(primBaseEfficacy[-1] - primWanedEfficacy)
-                        / (idGet("primaryWaningRate", id, 12) * 60),
+                        WaningRatePerCycle=(
+                            (primBaseEfficacy[-1] - primWanedEfficacy) / primWaningDuration
+                            if waningToggle and primWaningDuration
+                            else 0.0
+                        ),
                     )
                 ]
                 if boosterToggle:
@@ -3977,7 +3981,7 @@ def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -
                         Count=primDoseCount,
                         DoseSpacingCycles=idGet("primaryDelay", id, 3) * 60,
                         WaningDelay=simLength,
-                        WaningRatePerCycle=0.01,
+                        WaningRatePerCycle=0.0,
                     )
                 ]
 
@@ -4207,9 +4211,11 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             baseTarget = baseCoverage.Target
             updateParamFromSchema("targetVaccinated", baseTarget, scenarioID)
         elif scenarioID == 0:
-            raise ValidationError(
-                "Schema does not include general vaccine coverage "
-                "proportions for the baseline scenario"
+            raise AssertionError(
+                """
+                Schema does not include general vaccine coverage
+                proportions for the baseline scenario
+                """
             )
         else:
             baseInitial = idGet("initialVaccinated", 0, 0.0)
@@ -4270,17 +4276,10 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             )
             waningDelay = primaryDose.WaningDelay
             updateParamFromSchema("primaryDuration", waningDelay // 60, scenarioID)
-            # TODO: Ensure waning delay toggle is calculated correctly
-            """if waningDelay < session.get("cycleCount", 360) * 2:
-                updateParamFromSchema("vaccineWaningToggle", True, scenarioID)"""
-            updateParamFromSchema(
-                "vaccineWaningToggle",
-                bool(waningDelay < session.get("cycleCount", 360) * 2),
-                scenarioID,
-            )
             # Efficacy needs to be logged so that waning rate per cycle
             # can be calculated
             primaryRatePerCycle = primaryDose.WaningRatePerCycle
+            updateParamFromSchema("vaccineWaningToggle", bool(primaryRatePerCycle), scenarioID)
 
             # TODO: See if waning-free default rate per cycle being 0.01 will
             # interfere with what value is loaded for waning duration
@@ -4332,7 +4331,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             baseWaned = baseEfficacy.WanedEfficacy
             updateParamFromSchema("primaryWanedEfficacy", baseWaned, scenarioID)
         elif scenarioID == 0:
-            raise ValidationError(
+            raise AssertionError(
                 "Schema does not include general primary vaccine efficacy "
                 "proportions for the baseline scenario"
             )
@@ -4419,8 +4418,8 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             updateParamFromSchema("boosterBaseEfficacy", baseBoostFull, scenarioID)
             baseBoostWaned = baseBoostEfficacy.WanedEfficacy
             updateParamFromSchema("boosterWanedEfficacy", baseBoostWaned, scenarioID)
-        elif scenarioID == 0:
-            raise ValidationError(
+        elif useBoosters and scenarioID == 0:
+            raise AssertionError(
                 "Schema does not include general booster vaccine efficacy "
                 "proportions for the baseline scenario"
             )
@@ -4432,7 +4431,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
         for boost in boosterEfficacySchema:
             age, base, waned = boost.Age, boost.Efficacy, boost.WanedEfficacy
             if age is not None:
-                boosterEfficacyTable.loc[boosterEfficacyTable.shape[0]] = [
+                boosterEfficacyTable.loc[boosterEfficacyTable.shape[0]] = [  # type: ignore
                     age,
                     base,
                     waned,
@@ -4452,16 +4451,18 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
         )
 
     # Come back to waning duration since it needs both efficacy and dose
-    updateParamFromSchema(
-        "primaryWaningRate",
-        (baseFull[-1] - baseWaned) // (primaryRatePerCycle * 60),
-        scenarioID,
-    )
-    updateParamFromSchema(
-        "boosterWaningRate",
-        (baseBoostFull - baseBoostWaned) // (boosterRatePerCycle * 60),  # type: ignore
-        scenarioID,
-    )
+    if primaryRatePerCycle:
+        updateParamFromSchema(
+            "primaryWaningRate",
+            (baseFull[-1] - baseWaned) // (primaryRatePerCycle * 60),
+            scenarioID,
+        )
+    if boosterRatePerCycle:
+        updateParamFromSchema(
+            "boosterWaningRate",
+            (baseBoostFull - baseBoostWaned) // (boosterRatePerCycle * 60),  # type: ignore
+            scenarioID,
+        )
 
     # General Scenario Parameters
     schemaParameters = schema.Scenario_Parameter
@@ -4477,7 +4478,6 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             "increased_withdrawal": "withdrawalIncreaseAdult",
             "increased_withdrawal_child": "withdrawalIncreaseChild",
             "reduced_workgroup_size": "reducedGroupSize",
-            "bcc_reduction": "bccRate",
             "social_distance_compliance": "socialDistancingCompliance",
             "diagnosed_case_isolation": "caseIsolation",
         }
@@ -4485,6 +4485,13 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
         for parameter, key in simpleParams.items():
             if parameter in paramDict:
                 updateParamFromSchema(key, paramDict[parameter], scenarioID)
+
+        # BCC Reduction
+        updateParamFromSchema(
+            "bccReducedRate", 
+            paramDict.get("bcc_reduction", 0.05) * idGet("bccRate", scenarioID, 4.0), 
+            scenarioID
+        )
 
         # NPI periods
         npiPrefixes = {
