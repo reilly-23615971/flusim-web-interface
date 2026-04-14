@@ -85,7 +85,7 @@ def buildDiseaseTab(id: int, advanced: bool = False):
     # Seeding Parameters
     simLength = session.get("cycleCount", 360)
     with st.expander(
-        "Infection Seeding", key=f"infectionSeedingContainer{id}", on_change="rerun"
+        "Infection Seeding",  # key=f"infectionSeedingContainer{id}", on_change="rerun"
     ):
         # Describe what sort of parameters are here
         st.markdown(
@@ -141,7 +141,7 @@ the value on Day 45 will be changed to affect it on Day 30 instead.
 
     # Transmission Parameters
     with st.expander(
-        "Disease Transmission", key=f"transmissionContainer{id}", on_change="rerun"
+        "Disease Transmission",  # key=f"transmissionContainer{id}", on_change="rerun"
     ):
         # Describe what sort of parameters are here
         st.markdown(
@@ -582,8 +582,6 @@ group to contract the disease when interacting with infected individuals.
         )'''
 
     # Life Cycle Parameters
-    # TODO: Note that the rerun thing makes the life cycle graph sized wrong;
-    # implement it properly with expander.open next time
     with st.expander(
         "Disease Life Cycle",  # key=f"lifeCycleContainer{id}", on_change="rerun"
     ):
@@ -635,7 +633,7 @@ group to contract the disease when interacting with infected individuals.
             max_value=14.0,
             value=0.5,
             step=0.5,
-            format="%f Days",
+            format="%f Day(s)",
             on_change=saveKey,
             args=["latencyPeriod", id],  # type: ignore
             key=f"_latencyPeriod{id}",
@@ -654,7 +652,7 @@ individual becoming infectious themselves.
             max_value=14.0,
             value=1.0,
             step=0.5,
-            format="%f Days",
+            format="%f Day(s)",
             key=f"_preSymptomPeriod{id}",
             on_change=saveKey,
             args=["preSymptomPeriod", id],  # type: ignore
@@ -674,7 +672,7 @@ beginning to show symptoms.
             max_value=14.0,
             value=2.0,
             step=0.5,
-            format="%f Days",
+            format="%f Day(s)",
             on_change=saveKey,
             args=["symptomPeriod", id],  # type: ignore
             key=f"_symptomPeriod{id}",
@@ -692,7 +690,7 @@ infected individual will show symptoms of the disease.
             max_value=14.0,
             value=2.5,
             step=0.5,
-            format="%f Days",
+            format="%f Day(s)",
             key=f"_postSymptomPeriod{id}",
             on_change=saveKey,
             args=["postSymptomPeriod", id],  # type: ignore
@@ -754,7 +752,7 @@ recovered/no longer infectious.
         data["tooltip"] = data["Life Stage"] + ": " + data["Length (Days)"].astype(str)
         chart = (
             alt.Chart(data, title="Current Disease Life Cycle")
-            .mark_bar(stroke=backgroundColour(), strokeWidth=1)
+            .mark_bar(size=30, stroke=backgroundColour(), strokeWidth=1)
             .encode(
                 x=alt.X(
                     "start:Q",
@@ -779,9 +777,8 @@ recovered/no longer infectious.
                 ),
                 tooltip=["Life Stage", "Length (Days)"],
             )
-            .properties(width="container", height=200)
+            .properties(width="container", height=205)
         )
-        # TODO: This chart is cut off when first loaded again; fix it
         st.altair_chart(chart)
 
         # Written period lengths
@@ -886,8 +883,8 @@ show any symptoms of the disease despite being infectious).
     # Health Burden Outcome Parameters
     with st.expander(
         "Health Burden Outcomes",
-        key=f"healthBurdenContainer{id}",
-        on_change="rerun",
+        # key=f"healthBurdenContainer{id}",
+        # on_change="rerun",
     ):
         # Describe what sort of parameters are here
         st.markdown(
@@ -1198,7 +1195,7 @@ group who will die as a direct result of the disease.
     # Waning Immunity Parameters (if advanced parameters are enabled)
     if advanced:
         with st.expander(
-            "Immunity Waning", key=f"naturalWaningContainer{id}", on_change="rerun"
+            "Immunity Waning",  # key=f"naturalWaningContainer{id}", on_change="rerun"
         ):
             # Describe what sort of parameters are here
             st.markdown(

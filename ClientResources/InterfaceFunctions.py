@@ -134,4 +134,4 @@ def dayCount(count: int | float):
     Parameters:
         count (int or float): The number of days to return.
     """
-    return "1 Day" if count == 1 else f"{count} Days"
+    return "1 Day" if count == 1 else f"{count:g} Days"
