@@ -10,6 +10,7 @@ from typing import Callable
 
 import numpy as np
 import streamlit as st
+from pydantic import ValidationError
 
 from ClientResources.ParameterFunctions import containerSave
 
@@ -53,6 +54,8 @@ def paramError(
     """
     # TODO: Allow errors to link to the affected parameter
     # since containers can be dynamically opened now
+    # TODO: Consider reworking errors so that you don't need to open
+    # their tab to generate them
     if condition():
         if isSevere:
             errorFormat(message)
@@ -128,6 +131,18 @@ def errorChecker(scenarioID: int, name: str = "Errors in Current Scenario"):
                 else:
                     warnFormat(message)
     return severeErrorsFound
+
+
+def validationErrorFormatting(e: ValidationError):
+    """
+    Function to convert ValidationErrors raised by Pydantic into user-readable
+    error messages.
+    """
+    for error in e.errors():
+        # TODO: Use Pydantic's method of subbing in custom messages
+        # See https://pydantic.dev/docs/validation/latest/errors/errors/
+        # TODO: Use error type to determine icon to use
+        st.error(f"Error: {error["msg"]}", icon=":material/error:")
 
 
 def dayCount(count: int | float):

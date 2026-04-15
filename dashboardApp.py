@@ -73,6 +73,9 @@ sessionParameters = {
 for parameter, default in sessionParameters.items():
     session[parameter] = session.get(parameter, default)
 
+# TODO: See if an extra cookie package like streamlit-cookie-controller
+# can preserve parameters between refreshed pages
+
 # Define partial function for toasts
 notifyToast = partial(stn.toast, duration="infinite")
 

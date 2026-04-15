@@ -13,7 +13,7 @@ import streamlit as st
 import streamlit_notify as stn  # type: ignore
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import uniqueName
+from ClientResources.InterfaceFunctions import uniqueName, validationErrorFormatting
 from ClientResources.ModelSchema import (
     Parameters,
     commandArgument,
@@ -88,7 +88,7 @@ def parameterDownload():
     # TODO: See if occasional page-blanking bugs can be fixed
     # TODO: Popover is a bit finicky; consider trying dialog or expander again
     with st.popover(
-        "Download Parameter Settings",
+        "Download Parameters to File",
         icon=":material/download:",
         width="stretch",
         key="parameterDownloadContainer",
@@ -254,17 +254,7 @@ def loadConfig(file: BytesIO):
         schema = modelGuideFile.model_validate_json(file.read())
     except ValidationError as e:
         # TODO: Process the full message to show the issues with the loaded file
-        st.error(
-            body="""
-                The selected file does not contain valid
-                parameter settings. Please only upload parameter files
-                downloaded from the dashboard, and avoid editing parameter
-                files after downloading them.
-            """,
-            icon=":material/unknown_document:",
-        )
-        st.header("Full Error Message")
-        st.error(e, icon=":material/breaking_news:")
+        validationErrorFormatting(e)
         return
 
     # Save a backup of st.session_state to ensure changes aren't left unfinished
@@ -469,6 +459,8 @@ def deleteScenario(scenarioID: int, openTab: Optional[str] = None):
     session["scenarioCount"] -= 1
 
     # Open the scenario taking the deleted one's place
+    # TODO: If programmatic anchor tags are possible,
+    # move user to the top of the tab container
     if openTab is not None:
         if scenarioCount > 1:
             openCount = scenarioID if scenarioID < scenarioCount else scenarioCount - 1

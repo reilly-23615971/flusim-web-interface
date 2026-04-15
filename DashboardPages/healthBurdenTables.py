@@ -565,6 +565,23 @@ to a different Age Group Separation mode before attempting to generate a table.
     else:
         agesToUse = []
 
+    # Toggle coloured table cells
+    colourToggle = st.toggle(
+        "Use Colour in Table",
+        value=False,
+        on_change=saveKey,
+        args=["colourToggle", ""],
+        kwargs={"notScenario": True},
+        key="_colourToggle",
+        help="""
+Toggle whether cells in the table should be coloured based on their value.
+When enabled, scenario names (and age group names if Age Group Separation
+is set to "By Row") will each have a unique colour, and difference from
+baseline columns will use different shades of blue/red to indicate the
+magnitude of the difference.
+        """,
+    )
+
     # Variable-length form for choosing columns
     # TODO: Axe the duplicate column rule
     # TODO: Either fix or prevent percentage infection >100 due to reinfection
@@ -933,22 +950,6 @@ Age Group Separation mode before attempting to generate a table.
         """
         ),
     )'''
-
-    colourToggle = st.toggle(
-        "Use Colour in Table",
-        value=False,
-        on_change=saveKey,
-        args=["colourToggle", ""],
-        kwargs={"notScenario": True},
-        key="_colourToggle",
-        help="""
-Toggle whether cells in the table should be coloured based on their value.
-When enabled, scenario names (and age group names if Age Group Separation
-is set to "By Row") will each have a unique colour, and difference from
-baseline columns will use different shades of blue/red to indicate the
-magnitude of the difference.
-        """,
-    )
 
 # Button to generate the table itself
 st.button(

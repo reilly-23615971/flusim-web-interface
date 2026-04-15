@@ -49,6 +49,12 @@ st.markdown(
 """
 )
 
+# Buttons to upload simulation parameters
+uploadDownloadBar()
+
+# Fragment to display errors
+errorChecker(0, "Errors in Baseline Scenario")
+
 # Advanced parameters toggle
 loadKey("showAdvanced", default=False, noZeroDefault=True)
 containersToOpen: set[str] = {"paramTabs0"}
@@ -65,13 +71,6 @@ of the simulation environment, such as age-specific NPI compliance or
 dynamic parameter updates.
     """,
 )
-
-# Fragment to display errors
-errorChecker(0)
-
-# Buttons to upload simulation parameters
-uploadDownloadBar()
-
 
 # TODO: Consider having a tab for templates that load parameters for
 # specific stuff (e.g. influenza, NPI presets)

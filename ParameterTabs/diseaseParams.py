@@ -722,7 +722,7 @@ recovered/no longer infectious.
                 to be greater than 0.
             """,
             f"""
-                Error: The disease life cycle used by the {
+                Warning: The disease life cycle used by the {
                     'baseline scenario' if id == 0
                     else f'scenario named "{session[f'scenarioName{id}']}"'
                 } has its symptomatic period set to have a length of 0 days.
@@ -750,6 +750,7 @@ recovered/no longer infectious.
         data["end"] = data["Length (Days)"].cumsum()
         data["start"] = data["end"].shift(fill_value=0)
         data["tooltip"] = data["Life Stage"] + ": " + data["Length (Days)"].astype(str)
+        # TODO: Like other graphs, only include existing bars in legend
         chart = (
             alt.Chart(data, title="Current Disease Life Cycle")
             .mark_bar(size=30, stroke=backgroundColour(), strokeWidth=1)
