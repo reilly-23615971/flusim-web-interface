@@ -38,7 +38,7 @@ def buildDynamicTab(id: int):
             different instances of the tab by adding a number to the Streamlit
             session state variables.
     """
-    # Initialise session variables needed by the disease forms
+    # Initialise session variables needed by the pathogen forms
     # sessionParameters = {
     # f"seedRowCount{id}": 0,
     # f"closeRowCount{id}": 0,
@@ -67,7 +67,7 @@ def buildDynamicTab(id: int):
         be used to simulate the spike in cases following a border
         opening, while changing school closure compliance can
         simulate changing policies or increased public awareness of
-        the disease.
+        the pathogen.
 
         The parameters that support dynamic value changes are as
         follows:
@@ -77,7 +77,8 @@ def buildDynamicTab(id: int):
         - Reduced Background Contact Count
 
         The initial value for Infection Seeding Rate can be changed
-        in the "Infection Seeding" section of the "Disease" tab.
+        in the "Infection Seeding" section of
+        :primary-badge[:material/coronavirus: Pathogen].
         The other two parameters can have their initial values
         changed in the "Vaccinations and NPIs" tab. School Closure
         Compliance is in the "School Closure" section, while

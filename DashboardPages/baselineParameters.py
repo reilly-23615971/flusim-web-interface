@@ -83,7 +83,7 @@ dynamic parameter updates.
 if showAdvanced:
     (diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
         [
-            ":material/coronavirus: Disease",
+            ":material/coronavirus: Pathogen",
             ":material/groups: Community",
             ":material/vaccines: Vaccination and NPIs",
             ":material/manage_history: Dynamic",
@@ -94,7 +94,7 @@ if showAdvanced:
 else:
     (diseaseTab, communityTab, interventionTab) = st.tabs(
         [
-            ":material/coronavirus: Disease",
+            ":material/coronavirus: Pathogen",
             ":material/groups: Community",
             ":material/vaccines: Vaccination and NPIs",
         ],

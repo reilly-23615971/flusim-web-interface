@@ -636,15 +636,15 @@ included in the table.
                 help="""
 Select the health burden outcome you would like to be included as a column on the table.
 ### Options:
-- Symptomatic Infections: the number of individuals showing symptoms of the disease.
-- Diagnosed Cases: the number of individuals formally diagnosed with the disease.
+- Symptomatic Infections: the number of individuals showing symptoms of the pathogen.
+- Diagnosed Cases: the number of individuals formally diagnosed with the pathogen.
 - GP Visits: the number of individuals who visit their general practitioner
-due to symptoms of the disease.
+due to symptoms of the pathogen.
 - ICU Visits: the number of individuals who are admitted to an Intensive
-Care Unit (ICU) due to the disease.
+Care Unit (ICU) due to the pathogen.
 - Hospitalisations: the number of individuals who go to the hospital for
-treatment as a result of the disease.
-- Deaths: the number of individuals killed by the disease.
+treatment as a result of the pathogen.
+- Deaths: the number of individuals killed by the pathogen.
                 """,
             ),
             "Age Groups": (
@@ -800,19 +800,19 @@ Age Group Separation mode before attempting to generate a table.
 
                 ### Options:
                 - Symptomatic Infections: the number of individuals infected with
-                the disease in the simulation.
+                the pathogen in the simulation.
                 - Diagnosed Cases: the number of individuals formally diagnosed
-                with the disease in the simulation.
+                with the pathogen in the simulation.
                 - Hospitalisations: the number of individuals who go to
-                the hospital for treatment as a result of the disease
+                the hospital for treatment as a result of the pathogen
                 in the simulation.
                 - Deaths: the number of individuals killed by the
-                disease in the simulation.
+                pathogen in the simulation.
                 - ICU Visits: the number of individuals who are
                 admitted to an Intensive Care Unit (ICU) as a result of
-                the disease in the simulation.
+                the pathogen in the simulation.
                 - GP Visits: the number of individuals who visit their
-                general practitioner due to symptoms of the disease in
+                general practitioner due to symptoms of the pathogen in
                 the simulation.
             """,
             )

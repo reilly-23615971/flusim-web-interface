@@ -39,7 +39,7 @@ def buildCommunityTab(id: int, advanced: bool = False):
         advanced (bool): Set to `True` to show more complex parameters like
             child supervision rate.
     """
-    # Initialise session variables needed by the disease forms
+    # Initialise session variables needed by the pathogen forms
     # sessionParameters = {f"deathRowCount{id}": 0}
     # for parameter, default in sessionParameters.items():
     # st.session_state[parameter] = st.session_state.get(parameter, default)
@@ -62,7 +62,7 @@ def buildCommunityTab(id: int, advanced: bool = False):
         This tab contains parameters relating to the community that
         is simulated by the model, including the likelihood of
         different health burden outcomes, how individuals react to
-        the disease, and the size of groups that individuals form
+        the pathogen, and the size of groups that individuals form
         in different locations.
     """
     )
@@ -73,7 +73,7 @@ def buildCommunityTab(id: int, advanced: bool = False):
         st.markdown(
             """
             These parameters control how individuals in the
-            community will react to symptoms of the disease,
+            community will react to symptoms of the pathogen,
             including how likely they are to withdraw from
             work/school and how long it takes until they have their
             infection officially diagnosed as a case.
@@ -81,7 +81,7 @@ def buildCommunityTab(id: int, advanced: bool = False):
             Note that this section does not contain parameters
             related to social distancing and other programs
             implemented by the government to reduce the spread of
-            the disease. These interventions can be configured
+            the pathogen. These interventions can be configured
             using the parameters in the "Vaccinations and NPIs" tab.
         """
         )'''
@@ -157,7 +157,7 @@ interactions outside of locations simulated by the model.
             key=f"_diagnosisDelay{id}",
             help="""
 The number of days after an individual begins
-showing symptoms of the disease before their
+showing symptoms of the pathogen before their
 infection can be formally diagnosed as a confirmed case.
             """,
         )

@@ -34,14 +34,14 @@ session = st.session_state
 
 # Dictionaries for generating column tooltips
 outcomeDescriptions = {
-    "Symptomatic Infections": "showing symptoms of the disease",
-    "Diagnosed Cases": "formally diagnosed as cases of the disease",
-    "Hospitalisations": "sent to a hospital due to the disease",
-    "Deaths": "killed as a direct result of the disease",
-    "ICU Visits": "committed to a hospital's Intensive Care Unit due to the disease",
+    "Symptomatic Infections": "showing symptoms of the pathogen",
+    "Diagnosed Cases": "formally diagnosed as cases of the pathogen",
+    "Hospitalisations": "sent to a hospital due to the pathogen",
+    "Deaths": "killed as a direct result of the pathogen",
+    "ICU Visits": "committed to a hospital's Intensive Care Unit due to the pathogen",
     "GP Visits": (
         "prompted to visit their general practitioner "
-        "after noticing the symptoms of the disease"
+        "after noticing the symptoms of the pathogen"
     ),
 }
 vaccineDescriptions = {

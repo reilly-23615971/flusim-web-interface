@@ -39,7 +39,7 @@ session = st.session_state
 @st.fragment
 def buildDiseaseTab(id: int, advanced: bool = False):
     """
-    Function to generate the parameters for the disease in a specified
+    Function to generate the parameters for the pathogen in a specified
     container with scenario differentiation
 
     Parameters:
@@ -50,7 +50,7 @@ def buildDiseaseTab(id: int, advanced: bool = False):
         advanced (bool): Set to True to show more complex parameters like
             location-specific transmission modifiers.
     """
-    # Initialise session variables needed by the disease forms
+    # Initialise session variables needed by the pathogen forms
     # sessionParameters = {
     #   f"transRowCount{id}": 0,
     #   f"seedPeriodError{id}": 0,
@@ -72,12 +72,12 @@ def buildDiseaseTab(id: int, advanced: bool = False):
     # getRemainingGroups(ageGroupSets, ageCategories.keys())
 
     # Tab Content
-    st.header("Disease-Related Parameters")
+    st.header("Pathogen-Related Parameters")
     st.markdown(
         """
-        This tab contains parameters relating to the disease itself, including
+        This tab contains parameters relating to the pathogen itself, including
         the rate of infectious individuals entering the modelled community, the
-        rate at which the disease spreads and how long infection lasts before
+        rate at which the pathogen spreads and how long infection lasts before
         recovery.
     """
     )
@@ -141,13 +141,13 @@ the value on Day 45 will be changed to affect it on Day 30 instead.
 
     # Transmission Parameters
     with st.expander(
-        "Disease Transmission",  # key=f"transmissionContainer{id}", on_change="rerun"
+        "Infection Transmission",  # key=f"transmissionContainer{id}", on_change="rerun"
     ):
         # Describe what sort of parameters are here
         st.markdown(
             """
             These parameters control the likelihood that the
-            disease will spread when an infected individual
+            pathogen will spread when an infected individual
             interacts with others.
 
             The probability that an interaction between an infected
@@ -164,7 +164,7 @@ the value on Day 45 will be changed to affect it on Day 30 instead.
 
             In this formula:
             - $\\beta$ (beta) is the basic transmission parameter
-            for the disease
+            for the pathogen
             - $sym(I_i)$ is a parameter based on whether or not the
             infected individual has shown symptoms
             - $inf(I_i)$ is the infectiousness parameter for the
@@ -196,10 +196,10 @@ the value on Day 45 will be changed to affect it on Day 30 instead.
 The value of the basic transmission parameter
 $\\beta$, the base constant used to calculate the
 probability of an individual being infected with
-the disease upon interacting with an infected
+the pathogen upon interacting with an infected
 individual. The higher this value is, the more
 likely it is for uninfected individuals to contract
-the disease in any interaction with infected individuals.
+the pathogen in any interaction with infected individuals.
             """,
         )
         leftCol, rightCol = st.columns(2)
@@ -218,13 +218,13 @@ the disease in any interaction with infected individuals.
 The value of the transmissibility modifier
 $sym(I_i)$ when the infected individual in an
 interaction ($I_i$) is asymptomatic (i.e. has not
-shown any symptoms of the disease despite being
+shown any symptoms of the pathogen despite being
 infectious). This applies to both individuals who
-are too early in the disease's lifespan to show
+are too early in the pathogen's lifespan to show
 symptoms as well as individuals who never show
 symptoms throughout their infectious period. The
 lower this value is, the less likely it is for
-uninfected individuals to contract the disease when
+uninfected individuals to contract the pathogen when
 interacting with asymptomatic individuals.
             """,
         )
@@ -243,10 +243,10 @@ interacting with asymptomatic individuals.
 The value of the transmissibility modifier
 $sym(I_i)$ when the infected individual in an
 interaction ($I_i$) is post-symptomatic (i.e.
-previously showed symptoms of the disease, but no
+previously showed symptoms of the pathogen, but no
 longer does). The lower this value is, the less
 likely it is for uninfected individuals to contract
-the disease when interacting with post-symptomatic
+the pathogen when interacting with post-symptomatic
 individuals.
             """,
         )
@@ -268,7 +268,7 @@ The value of the transmissibility modifier
 $\\kappa$ when an interaction takes place in a
 school. The higher this value is, the more
 likely it is for uninfected individuals to contract
-the disease when interacting with infected
+the pathogen when interacting with infected
 individuals in schools.
                 """,
             )
@@ -288,7 +288,7 @@ The value of the transmissibility modifier
 $\\kappa$ when an interaction takes place in a
 workplace. The higher this value is, the more
 likely it is for uninfected individuals to contract
-the disease when interacting with infected
+the pathogen when interacting with infected
 individuals in workplaces.
                     """,
             )
@@ -308,7 +308,7 @@ The value of the transmissibility modifier
 $\\kappa$ when an interaction takes place in a
 household. The higher this value is, the more
 likely it is for uninfected individuals to contract
-the disease when interacting with infected
+the pathogen when interacting with infected
 individuals in households.
                     """,
             )
@@ -329,7 +329,7 @@ $\\kappa$ when an interaction takes place during the
 model's background phase (i.e. outside of simulated
 locations). The higher this value is, the more
 likely it is for uninfected individuals to contract
-the disease during the background phase.
+the pathogen during the background phase.
                     """,
             )
 
@@ -388,7 +388,7 @@ interactions involving individuals in that age group.
 The value of the infectiousness parameter $inf(I_i)$ when the infected
 individual in an interaction ($I_i$) is a member of this age group. The lower
 this value is, the less likely it is for uninfected individuals to contract
-the disease when interacting with infected individuals in this age group.
+the pathogen when interacting with infected individuals in this age group.
                     """,
                 ),
                 "Susceptibility": st.column_config.NumberColumn(
@@ -400,7 +400,7 @@ the disease when interacting with infected individuals in this age group.
 The value of the susceptibility parameter $susc(I_s)$ when the uninfected
 individual in an interaction ($I_s$) is a member of this age group. The lower
 this value is, the less likely it is for uninfected individuals in this age
-group to contract the disease when interacting with infected individuals.
+group to contract the pathogen when interacting with infected individuals.
                     """,
                 ),
             },
@@ -419,7 +419,7 @@ group to contract the disease when interacting with infected individuals.
 
                 Please remove or change any rows of the Age-Specific
                 Infectiousness/Susceptibility form in
-                :primary-badge[:material/coronavirus: Disease]
+                :primary-badge[:material/coronavirus: Pathogen]
                 that use the same age group as another row.
             """,
             True,
@@ -503,7 +503,7 @@ group to contract the disease when interacting with infected individuals.
                     interaction ($I_i$) is a member of this age
                     group. The lower this value is, the less likely
                     it is for uninfected individuals to contract
-                    the disease when interacting with infected
+                    the pathogen when interacting with infected
                     individuals in this age group.
                 """,
                 )
@@ -524,7 +524,7 @@ group to contract the disease when interacting with infected individuals.
                     an interaction ($I_s$) is a member of this age
                     group. The lower this value is, the less likely
                     it is for uninfected individuals in this age
-                    group to contract the disease when interacting
+                    group to contract the pathogen when interacting
                     with infected individuals.
                 """,
                 )
@@ -583,12 +583,12 @@ group to contract the disease when interacting with infected individuals.
 
     # Life Cycle Parameters
     with st.expander(
-        "Disease Life Cycle",  # key=f"lifeCycleContainer{id}", on_change="rerun"
+        "Infection Life Cycle",  # key=f"lifeCycleContainer{id}", on_change="rerun"
     ):
         # Describe what sort of parameters are here
         st.markdown(
             """
-            These parameters control the disease's life cycle,
+            These parameters control the pathogen's life cycle,
             including how long individuals are infectious for and
             the likelihood of developing symptoms.
         """
@@ -597,32 +597,32 @@ group to contract the disease when interacting with infected individuals.
         # Duration Parameters
         st.markdown(
             """
-            ### Disease Life Stages
+            ### Infection Life Stages
 
-            Diseases in the simulation have 5 distinct stages in
+            Pathogens in the simulation have 5 distinct stages in
             their life cycle:
 
-            1. Latent: The disease is still developing in the body
+            1. Latent: The pathogen is still developing in the body
             of the infected individual; they do not yet show
             symptoms and are not infectious.
-            2. Pre-Symptomatic: The disease has developed further
-            and the infected individual can now spread the disease
+            2. Pre-Symptomatic: The pathogen has developed further
+            and the infected individual can now spread the pathogen
             to others, but they still do not show any symptoms.
-            3. Symptomatic: The disease is now showing symptoms in
+            3. Symptomatic: The pathogen is now showing symptoms in
             the infected individual, and thus can now be diagnosed.
             4. Post-Symptomatic: The infected individual's
             condition has improved enough that they no longer show
-            symptoms of the disease, but they are still infectious.
+            symptoms of the pathogen, but they are still infectious.
             5. Recovered: The individual is no longer infectious
-            and has gained an immunity to the disease.
+            and has gained an immunity to the pathogen.
 
             If an infected individual is asymptomatic, their
             infection will not progress into the symptomatic stage;
             they will remain in the pre-symptomatic stage without
-            symptoms for the disease's entire duration.
+            symptoms for the pathogen's entire duration.
 
             The following parameters configure the length of each
-            stage in the disease's life cycle.
+            stage in the pathogen's life cycle.
         """
         )
         loadKey("latencyPeriod", id, 0.5)
@@ -638,9 +638,9 @@ group to contract the disease when interacting with infected individuals.
             args=["latencyPeriod", id],  # type: ignore
             key=f"_latencyPeriod{id}",
             help="""
-The length in days of the disease's latency period,
+The length in days of the pathogen's latency period,
 i.e. the length of time between an individual
-initially being infected by the disease and said
+initially being infected by the pathogen and said
 individual becoming infectious themselves.
             """,
         )
@@ -657,10 +657,10 @@ individual becoming infectious themselves.
             on_change=saveKey,
             args=["preSymptomPeriod", id],  # type: ignore
             help="""
-The length in days of the disease's pre-symptomatic
+The length in days of the pathogen's pre-symptomatic
 period, i.e. the length of time between an
 infected individual becoming capable of infecting
-others with the disease and said individual
+others with the pathogen and said individual
 beginning to show symptoms.
             """,
         )
@@ -677,9 +677,9 @@ beginning to show symptoms.
             args=["symptomPeriod", id],  # type: ignore
             key=f"_symptomPeriod{id}",
             help="""
-The length in days of the disease's symptomatic
+The length in days of the pathogen's symptomatic
 period, i.e. the length of time during which an
-infected individual will show symptoms of the disease.
+infected individual will show symptoms of the pathogen.
             """,
         )
         loadKey("postSymptomPeriod", id, 2.5)
@@ -695,10 +695,10 @@ infected individual will show symptoms of the disease.
             on_change=saveKey,
             args=["postSymptomPeriod", id],  # type: ignore
             help="""
-The length in days of the disease's
+The length in days of the pathogen's
 post-symptomatic period, i.e. the length of time
 between an individual ceasing to show symptoms of
-the disease and said individual being fully
+the pathogen and said individual being fully
 recovered/no longer infectious.
             """,
         )
@@ -708,28 +708,28 @@ recovered/no longer infectious.
             lambda: preSymptomPeriod + symptomPeriod + postSymptomPeriod == 0,
             lambda: symptomPeriod == 0,
             f"""
-                Error: The disease life cycle used by the {
+                Error: The infection life cycle used by the {
                     'baseline scenario' if id == 0
                     else f'scenario named "{session[f'scenarioName{id}']}"'
                 } has pre-symptomatic, symptomatic and post-symptomatic
                 periods all set to have a length of 0 days. As such,
-                there is no point where the disease is infectious, and
+                there is no point where the pathogen is infectious, and
                 it cannot spread.
 
                 Please increase either Pre-Symptomatic Period Length,
                 Symptomatic Period Length or Post-Symptomatic Period
-                Length in :primary-badge[:material/coronavirus: Disease]
+                Length in :primary-badge[:material/coronavirus: Pathogen]
                 to be greater than 0.
             """,
             f"""
-                Warning: The disease life cycle used by the {
+                Warning: The infection life cycle used by the {
                     'baseline scenario' if id == 0
                     else f'scenario named "{session[f'scenarioName{id}']}"'
                 } has its symptomatic period set to have a length of 0 days.
-                As such, there is no point where the disease shows symptoms.
+                As such, there is no point where the pathogen shows symptoms.
 
                 Please increase Symptomatic Period Length in
-                :primary-badge[:material/coronavirus: Disease]
+                :primary-badge[:material/coronavirus: Pathogen]
                 to be greater than 0.
             """,
         )
@@ -752,7 +752,7 @@ recovered/no longer infectious.
         data["tooltip"] = data["Life Stage"] + ": " + data["Length (Days)"].astype(str)
         # TODO: Like other graphs, only include existing bars in legend
         chart = (
-            alt.Chart(data, title="Current Disease Life Cycle")
+            alt.Chart(data, title="Current Infection Life Cycle")
             .mark_bar(size=30, stroke=backgroundColour(), strokeWidth=1)
             .encode(
                 x=alt.X(
@@ -799,9 +799,9 @@ recovered/no longer infectious.
                 latencyPeriod + preSymptomPeriod + symptomPeriod + postSymptomPeriod
             ),
             help="""
-The length in days of the disease's total lifespan,
+The length in days of the pathogen's total lifespan,
 i.e. the length of time between an individual
-initially being infected by the disease and said
+initially being infected by the pathogen and said
 individual being fully recovered/no longer infectious.
             """,
         )
@@ -809,9 +809,9 @@ individual being fully recovered/no longer infectious.
             "Incubation Period",
             dayCount(latencyPeriod + preSymptomPeriod),
             help="""
-The length in days of the disease's incubation
+The length in days of the pathogen's incubation
 period, i.e. the length of time between an
-individual initially being infected by the disease
+individual initially being infected by the pathogen
 and said individual beginning to show symptoms.
             """,
         )
@@ -819,10 +819,10 @@ and said individual beginning to show symptoms.
             "Infectious Period",
             dayCount(preSymptomPeriod + symptomPeriod + postSymptomPeriod),
             help="""
-The length in days of the disease's infectious
+The length in days of the pathogen's infectious
 period, i.e. the length of time during which an
 infected individual is capable of spreading the
-disease to others.
+pathogen to others.
             """,
         )
 
@@ -845,7 +845,7 @@ disease to others.
 The probability that an infected young person
 (defined as 0-24 years old) in the simulation will
 be asymptomatic (i.e. they never show any symptoms
-of the disease despite being infectious).
+of the pathogen despite being infectious).
                 """,
             )
             loadKey("asymptomaticAdult", id, 0.35)
@@ -861,7 +861,7 @@ of the disease despite being infectious).
 The probability that an infected adult (defined as
 24+ years old) in the simulation will be
 asymptomatic (i.e. they never show any symptoms of
-the disease despite being infectious).
+the pathogen despite being infectious).
                 """,
             )
         else:
@@ -877,7 +877,7 @@ the disease despite being infectious).
                 help="""
 The probability that an infected individual in the
 simulation will be asymptomatic (i.e. they never
-show any symptoms of the disease despite being infectious).
+show any symptoms of the pathogen despite being infectious).
                 """,
             )
 
@@ -892,7 +892,7 @@ show any symptoms of the disease despite being infectious).
             """
             These parameters control how likely different health
             burden outcomes (such as hospitalisation and death) are
-            to occur as a result of the disease. These parameters
+            to occur as a result of the pathogen. These parameters
             are primarily used in the simulation's post-processing
             phase; most of these outcomes are not simulated
             directly, but the probabilities defined here are used
@@ -926,7 +926,7 @@ show any symptoms of the disease despite being infectious).
             help="""
 The proportion of infected, symptomatic
 individuals who will be formally diagnosed as a
-confirmed case of the disease.
+confirmed case of the pathogen.
             """,
         )
         loadKey("gpRatio", id, 0.17)
@@ -943,7 +943,7 @@ confirmed case of the disease.
             help="""
 The proportion of infected, symptomatic
 individuals who will visit their general practitioner
-(GP) as a result of the disease.
+(GP) as a result of the pathogen.
             """,
         )
         loadKey("hospitalRatio", id, 0.00316133)
@@ -960,7 +960,7 @@ individuals who will visit their general practitioner
             help="""
 The proportion of infected, symptomatic
 individuals who will be admitted to a hospital as a
-result of the disease.
+result of the pathogen.
             """,
         )
         loadKey("icuRatio", id, 0.00063227)
@@ -977,7 +977,7 @@ result of the disease.
             help="""
 The proportion of infected, symptomatic
 individuals who will be admitted to a hospital's
-intensive care unit (ICU) as a result of the disease.
+intensive care unit (ICU) as a result of the pathogen.
             """,
         )
         loadKey("deathRatio", id, 0.000115077)
@@ -993,7 +993,7 @@ intensive care unit (ICU) as a result of the disease.
             args=["deathRatio", id],
             help="""
 The base proportion of infected, symptomatic
-individuals who will die as a direct result of the disease.
+individuals who will die as a direct result of the pathogen.
             """,
         )
 
@@ -1047,7 +1047,7 @@ overriding the base proportion.
                         format="%0.5e",
                         help="""
 The proportion of infected, symptomatic individuals in this age
-group who will die as a direct result of the disease.
+group who will die as a direct result of the pathogen.
                         """,
                     ),
                 },
@@ -1065,7 +1065,7 @@ group who will die as a direct result of the disease.
 
                     Please remove or change any rows of the Age-Specific
                     Mortality Rate form in
-                    :primary-badge[:material/coronavirus: Disease]
+                    :primary-badge[:material/coronavirus: Pathogen]
                     that use the same age group as another row.
                 """,
                 True,
@@ -1142,7 +1142,7 @@ group who will die as a direct result of the disease.
                         help="""
                         The probability that an infected, symptomatic
                         individual in this age group will die as a
-                        direct result of the disease.
+                        direct result of the pathogen.
                     """,
                     )
                 # Delete button column
@@ -1201,15 +1201,15 @@ group who will die as a direct result of the disease.
             # Describe what sort of parameters are here
             st.markdown(
                 """
-                These parameters control how immunity to the disease
+                These parameters control how immunity to the pathogen
                 conferred by having been infected by it in the past
                 will become less effective over time. Note that
                 individuals in the simulation are assumed to be
-                completely immune to the disease immediately after
+                completely immune to the pathogen immediately after
                 recovering from it; the efficacy before waning is 100%.
 
                 Note that these parameters do not affect immunity to
-                the disease that is obtained from vaccination. This
+                the pathogen that is obtained from vaccination. This
                 type of immunity can be configured using the parameters
                 in the "Vaccinations and NPIs" tab.
             """
@@ -1223,7 +1223,7 @@ group who will die as a direct result of the disease.
                 args=["naturalWaningToggle", id],
                 key=f"_naturalWaningToggle{id}",
                 help="""
-Toggle whether or not immunity gained from being infected by the disease will
+Toggle whether or not immunity gained from being infected by the pathogen will
 wane over time. If this is enabled, individuals in the simulation can be
 infected again after recovering from a previous infection.
                 """,
@@ -1241,7 +1241,7 @@ infected again after recovering from a previous infection.
                 key=f"_naturalImmunityDuration{id}",
                 help="""
 The number of months after an individual fully
-recovers from the disease before the immunity
+recovers from the pathogen before the immunity
 conferred by having been infected begins to
 diminish, where a month is 30 days.
                 """,
@@ -1258,10 +1258,10 @@ diminish, where a month is 30 days.
                 format_func=lambda x: f"{100 * x:0.3g}%",
                 help="""
 The final efficacy value that an individual's
-natural immunity after recovering from the disease
+natural immunity after recovering from the pathogen
 will approach as it begins to diminish, represented
 as the probability that the individual will remain
-healthy when exposed to the disease after their
+healthy when exposed to the pathogen after their
 immunity is fully waned.
                 """,
             )
@@ -1277,7 +1277,7 @@ immunity is fully waned.
                 key=f"_naturalWaningRate{id}",
                 help="""
 The number of months after the immunity from having
-fully recovered from the disease begins waning
+fully recovered from the pathogen begins waning
 before the efficacy of the immunity stabilises,
 where a month is 30 days. Natural immunity in the
 *Flusim* simulation will wane at a linear rate, so
@@ -1286,14 +1286,14 @@ immunity level to decrease from 100% immunity to
 the final immunity probability defined above.
 
 If this parameter is set to 0, the immunity
-provided by recovering from the disease will never diminish.
+provided by recovering from the pathogen will never diminish.
                 """,
             )
 
 
 def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
     """
-    Function to populate the Pydantic model schema with disease parameters
+    Function to populate the Pydantic model schema with pathogen parameters
     using scenario differentiation.
 
     Parameters:
@@ -1467,7 +1467,7 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
 
 def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
     """
-    Function to read disease parameters from a schema and set the
+    Function to read pathogen parameters from a schema and set the
     dashboard's widgets to the specified values.
 
     Parameters:
@@ -1481,7 +1481,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
 
     Raises:
         ValidationError: If some but not all of the parameters needed to
-            define natural immunity waning/infection seeding/disease life
+            define natural immunity waning/infection seeding/infection life
             cycle periods are included in a baseline schema.
     """
     # Strain Parameters
@@ -1617,7 +1617,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             "generation_time",
             "infection_duration",
         }.intersection(paramDict):
-            # Disease life cycle periods
+            # Infection life cycle periods
             # Ensure baseline has all values
             transmissibilityDelay = schemaParameters.transmissibility_delay
             symptomLatency = schemaParameters.symptom_latency
@@ -1634,7 +1634,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                 and scenarioID == 0
             ):
                 raise AssertionError(
-                    "Disease life cycle parameters were only partially "
+                    "Infection life cycle parameters were only partially "
                     "defined for the baseline scenario"
                 )
 

@@ -13,6 +13,7 @@ from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import paramError
 from ClientResources.ModelSchema import (
+    EfficacyValue,
     Parameters,
     ageScenarioParameters,
     scenarioParameters,
@@ -145,7 +146,7 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
         key=f"_vaccineToggle{id}",
         help="""
 Toggle whether or not individuals in the simulation
-will be vaccinated against the disease, overriding
+will be vaccinated against the pathogen, overriding
 all other vaccine-related parameters.
         """,
     )
@@ -240,7 +241,7 @@ assuming there are enough doses available.
             disabled=not useVaccinesToggle,
             help="""
 The percentage of the population that will
-already be vaccinated against the disease at
+already be vaccinated against the pathogen at
 the beginning of the simulation.
             """,
         )
@@ -258,7 +259,7 @@ the beginning of the simulation.
             disabled=not useVaccinesToggle,
             help="""
                 The percentage of the population that will
-                already be vaccinated against the disease at
+                already be vaccinated against the pathogen at
                 the beginning of the simulation.
             """,
         )
@@ -393,7 +394,7 @@ overriding the base proportions.
                     format="percent",
                     help="""
 The percentage of individuals in this age group that will already be
-vaccinated against the disease at the beginning of the simulation.
+vaccinated against the pathogen at the beginning of the simulation.
                     """,
                 ),
                 "Target Vaccinated Proportion": st.column_config.NumberColumn(
@@ -540,7 +541,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
                     help="""
                         The percentage of individuals in this
                         age group that will already be
-                        vaccinated against the disease at the
+                        vaccinated against the pathogen at the
                         beginning of the simulation.
                     """,
                 )
@@ -725,7 +726,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
             individuals within the simulation. Each vaccine in
             the schedule can have its own efficacy values set,
             since in many cases multiple doses are required to
-            achieve maximum immunity to the disease.
+            achieve maximum immunity to the pathogen.
         """
         )
 
@@ -743,7 +744,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
             help="""
 The number of times each individual in the
 simulation will be administered a vaccine for
-the disease, excluding booster vaccines.
+the pathogen, excluding booster vaccines.
 
 Note that since efficacy is defined separately
 for each vaccine dose in the schedule,
@@ -863,7 +864,7 @@ never diminish.
 The {"initial " if waningToggle else ""}efficacy of this vaccine dose,
 represented as the probability that an
 individual that has received the
-dose will remain healthy when exposed to the disease.
+dose will remain healthy when exposed to the pathogen.
                         """,
                     )
 
@@ -936,7 +937,7 @@ for this vaccine dose, overriding the base value.
                                 help=f"""
 The {"initial " if waningToggle else ""}efficacy of this vaccine dose for
 this age group, represented as the probability that a vaccinated individual in
-this age group will remain healthy when exposed to the disease.
+this age group will remain healthy when exposed to the pathogen.
                                 """,
                             ),
                         },
@@ -1051,7 +1052,7 @@ that use the same age group as another row.
                                     represented as the probability that
                                     a recently vaccinated individual in
                                     this age group will remain healthy
-                                    when exposed to the disease.
+                                    when exposed to the pathogen.
                                 """,
                             )
 
@@ -1160,7 +1161,7 @@ that use the same age group as another row.
                                         else 'the scenario base value of'
                                     } {100 * wanedAgeEfficacy:0.3g}%.
                                     As such, the immunity to the
-                                    disease conferred by the vaccine
+                                    pathogen conferred by the vaccine
                                     will get stronger over time instead
                                     of weaker for individuals in the
                                     "{age}" age group.
@@ -1221,7 +1222,7 @@ that use the same age group as another row.
                                         else 'the scenario base value of'
                                     } {100 * wanedAgeEfficacy:0.3g}%.
                                     As such, the immunity to the
-                                    disease conferred by the vaccine
+                                    pathogen conferred by the vaccine
                                     will get stronger over time instead
                                     of weaker for individuals in the
                                     "{age}" age group.
@@ -1289,7 +1290,7 @@ The final efficacy value that the vaccine
 schedule will approach as the immunity it
 provides begins to diminish, represented as the
 probability that an individual with completely
-waned immunity will remain healthy when exposed to the disease.
+waned immunity will remain healthy when exposed to the pathogen.
                     """,
                 )
                 # Last efficacy value is all that's cared about
@@ -1313,7 +1314,7 @@ waned immunity will remain healthy when exposed to the disease.
                         } is {100 * finalInitialEfficacy:0.3g}%, but the
                         efficacy after waning is {100 * primaryWanedEfficacy:0.3g}%.
                         As such, a vaccinated person's immunity to the
-                        disease will get stronger over time instead of weaker.
+                        pathogen will get stronger over time instead of weaker.
 
                         Please make one of the following changes:
 
@@ -1388,7 +1389,7 @@ immunity waning defined for it, overriding the base value.
 The final efficacy value that the vaccine schedule will approach for this
 age group as the immunity it provides begins to diminish, represented as
 the probability that an individual in this age group with completely waned
-immunity will not remain healthy when exposed to the disease.
+immunity will not remain healthy when exposed to the pathogen.
                             """,
                         ),
                     },
@@ -1448,7 +1449,7 @@ immunity will not remain healthy when exposed to the disease.
                             else f'scenario named "{session[f'scenarioName{id}']}"'
                         } contains rows where the initial vaccine efficacy is
                         greater than the efficacy after immunity waning. As such, the
-                        immunity to the disease conferred by the vaccine will get
+                        immunity to the pathogen conferred by the vaccine will get
                         stronger over time instead of weaker for the age groups
                         specified by these rows.
 
@@ -1547,7 +1548,7 @@ immunity will not remain healthy when exposed to the disease.
                             probability that an individual in this
                             age group with completely waned
                             immunity will not remain healthy when
-                            exposed to the disease.
+                            exposed to the pathogen.
                         """,
                     )
                 # Delete button column
@@ -1619,7 +1620,7 @@ immunity will not remain healthy when exposed to the disease.
 The efficacy of each vaccine dose,
 represented as the probability that an
 individual that has recently received a
-dose will remain healthy when exposed to the disease.
+dose will remain healthy when exposed to the pathogen.
                 """,
             )
 
@@ -1680,7 +1681,7 @@ for it, overriding the base value.
                         help="""
 The efficacy of each vaccine dose for this age group, represented as the
 probability that a recently vaccinated individual in this age group will
-remain healthy when exposed to the disease.
+remain healthy when exposed to the pathogen.
                         """,
                     ),
                 },
@@ -1721,7 +1722,7 @@ remain healthy when exposed to the disease.
                 values. Booster vaccines are primarily used with
                 diseases like COVID-19, meningococcal disease and
                 diphtheria to preserve an individual's immunity to
-                the disease as it wanes over time.
+                the pathogen as it wanes over time.
             """
             )
 
@@ -1828,7 +1829,7 @@ where a month is 30 days.
 The initial efficacy of each booster vaccine,
 represented as the probability that an
 individual that has recently received the
-booster will remain healthy when exposed to the disease.
+booster will remain healthy when exposed to the pathogen.
                 """,
             )
             loadKey("boosterWanedEfficacy", id, 0.6)
@@ -1846,7 +1847,7 @@ The final efficacy value that the booster
 vaccine will approach as the immunity it
 provides begins to diminish, represented as the
 probability that an individual with completely
-waned immunity will remain healthy when exposed to the disease.
+waned immunity will remain healthy when exposed to the pathogen.
                 """,
             )
 
@@ -1867,7 +1868,7 @@ waned immunity will remain healthy when exposed to the disease.
                     } is {100 * boosterBaseEfficacy:0.3g}%, but the
                     efficacy after waning is {100 * boosterWanedEfficacy:0.3g}%.
                     As such, a vaccinated person's immunity to the
-                    disease will get stronger over time instead of weaker.
+                    pathogen will get stronger over time instead of weaker.
 
                     Please make one of the following changes:
 
@@ -1967,7 +1968,7 @@ for it, overriding the base efficacy value for booster vaccines.
                         help="""
 The initial efficacy of each booster vaccine for this age group, represented
 as the probability that a recently vaccinated individual in this age group
-will remain healthy when exposed to the disease.
+will remain healthy when exposed to the pathogen.
                         """,
                     ),
                     "Booster Efficacy After Waning": st.column_config.NumberColumn(
@@ -1981,7 +1982,7 @@ will remain healthy when exposed to the disease.
 The final efficacy value that the booster vaccine will approach for this age
 group as the immunity it provides begins to diminish, represented as the
 probability that an individual in this age group with completely waned
-immunity will remain healthy when exposed to the disease.
+immunity will remain healthy when exposed to the pathogen.
                         """,
                     ),
                 },
@@ -2020,7 +2021,7 @@ immunity will remain healthy when exposed to the disease.
                         else f'scenario named "{session[f'scenarioName{id}']}"'
                     } contains rows where the initial vaccine efficacy is
                     greater than the efficacy after immunity waning. As such, the
-                    immunity to the disease conferred by the booster will get
+                    immunity to the pathogen conferred by the booster will get
                     stronger over time instead of weaker for the age groups
                     specified by these rows.
 
@@ -2123,7 +2124,7 @@ immunity will remain healthy when exposed to the disease.
                             as the probability that a recently
                             vaccinated individual in this age group
                             will remain healthy when exposed to the
-                            disease.
+                            pathogen.
                         """,
                     )
                 # Waned efficacy column
@@ -2146,7 +2147,7 @@ immunity will remain healthy when exposed to the disease.
                             probability that an individual in this
                             age group with completely waned
                             immunity will remain healthy when
-                            exposed to the disease.
+                            exposed to the pathogen.
                         """,
                     )
                 # Delete button column
@@ -2235,7 +2236,7 @@ immunity will remain healthy when exposed to the disease.
                         vaccine efficacy after immunity waning for
                         said age group in this scenario is set to
                         {100 * currentWaned:0.3g}%. As such, the
-                        immunity to the disease conferred by the
+                        immunity to the pathogen conferred by the
                         booster will get stronger over time instead
                         of weaker for individuals in the "{age}"
                         age group.
@@ -2273,7 +2274,7 @@ immunity will remain healthy when exposed to the disease.
                         vaccine efficacy after immunity waning for
                         said age group in this scenario is set to
                         {100 * currentWaned:0.3g}%. As such, the
-                        immunity to the disease conferred by the
+                        immunity to the pathogen conferred by the
                         booster will get stronger over time instead
                         of weaker for individuals in the "{age}"
                         age group.
@@ -2332,7 +2333,7 @@ immunity will remain healthy when exposed to the disease.
             key=f"_caseIsolation{id}",
             help="""
 Toggle whether or not individuals who have been
-diagnosed as cases of the disease will be
+diagnosed as cases of the pathogen will be
 forced to isolate at home.
             """,
         )
@@ -2625,7 +2626,7 @@ social distancing interventions in the simulation.
         st.markdown(
             """
             These parameters control if and when schools will
-            close as a result of the disease.
+            close as a result of the pathogen.
         """
         )
         loadKey("schoolClosureToggle", id, False)
@@ -3913,7 +3914,8 @@ def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -
                             else simLength
                         ),
                         WaningRatePerCycle=(
-                            (primBaseEfficacy[-1] - primWanedEfficacy) / primWaningDuration
+                            (primBaseEfficacy[-1] - primWanedEfficacy)
+                            / primWaningDuration
                             if waningToggle and primWaningDuration
                             else 0.0
                         ),
@@ -4279,7 +4281,9 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             # Efficacy needs to be logged so that waning rate per cycle
             # can be calculated
             primaryRatePerCycle = primaryDose.WaningRatePerCycle
-            updateParamFromSchema("vaccineWaningToggle", bool(primaryRatePerCycle), scenarioID)
+            updateParamFromSchema(
+                "vaccineWaningToggle", bool(primaryRatePerCycle), scenarioID
+            )
 
             # TODO: See if waning-free default rate per cycle being 0.01 will
             # interfere with what value is loaded for waning duration
@@ -4414,7 +4418,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
         boosterEfficacySchema.sort(key=lambda x: ageOrder.get(x.Age, 99))
         if len(boosterEfficacySchema) > 0 and boosterEfficacySchema[0].Age is None:
             baseBoostEfficacy = boosterEfficacySchema.pop(0)
-            baseBoostFull = baseBoostEfficacy.Efficacy
+            baseBoostFull: EfficacyValue = baseBoostEfficacy.Efficacy  # type: ignore
             updateParamFromSchema("boosterBaseEfficacy", baseBoostFull, scenarioID)
             baseBoostWaned = baseBoostEfficacy.WanedEfficacy
             updateParamFromSchema("boosterWanedEfficacy", baseBoostWaned, scenarioID)
@@ -4431,7 +4435,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
         for boost in boosterEfficacySchema:
             age, base, waned = boost.Age, boost.Efficacy, boost.WanedEfficacy
             if age is not None:
-                boosterEfficacyTable.loc[boosterEfficacyTable.shape[0]] = [  # type: ignore
+                boosterEfficacyTable.loc[boosterEfficacyTable.shape[0]] = [
                     age,
                     base,
                     waned,
@@ -4460,7 +4464,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
     if boosterRatePerCycle:
         updateParamFromSchema(
             "boosterWaningRate",
-            (baseBoostFull - baseBoostWaned) // (boosterRatePerCycle * 60),  # type: ignore
+            (baseBoostFull - baseBoostWaned) // (boosterRatePerCycle * 60),
             scenarioID,
         )
 
@@ -4488,9 +4492,9 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
 
         # BCC Reduction
         updateParamFromSchema(
-            "bccReducedRate", 
-            paramDict.get("bcc_reduction", 0.05) * idGet("bccRate", scenarioID, 4.0), 
-            scenarioID
+            "bccReducedRate",
+            paramDict.get("bcc_reduction", 0.05) * idGet("bccRate", scenarioID, 4.0),
+            scenarioID,
         )
 
         # NPI periods
