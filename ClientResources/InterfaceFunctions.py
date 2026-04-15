@@ -4,11 +4,14 @@
 
 # Imports
 import logging
+import re
 from functools import partial
 from typing import Callable
 
 import numpy as np
 import streamlit as st
+
+from ClientResources.ParameterFunctions import containerSave
 
 # Logging
 functionLog = logging.getLogger(__name__)
@@ -135,3 +138,82 @@ def dayCount(count: int | float):
         count (int or float): The number of days to return.
     """
     return "1 Day" if count == 1 else f"{count:g} Days"
+
+
+def saveName(
+    key: str,
+    scenarioID: int,
+    errorContainer,
+    containers: set[str] = set(),
+    specialContainers: dict[str, str] = {},
+):
+    """
+    Wrapper for `containerSave` that stops empty or duplicate names being saved.
+
+    Parameters:
+        key (str): The string used to identify the name-setting widget.
+
+        scenarioID (int or ""): The integer representing the scenario the widget
+            is naming. Defaults to `""`, allowing for parameters that are not
+            associated with scenarios to be saved.
+
+        errorContainer: The container in which to display the error message.
+
+        containers (set of str): String used to identify each container to open.
+
+        specialContainers (dict of str): String used to identify containers
+            that must be set to specific values (i.e. scenario tabs whose
+            names change). Including `{id}` or `{value}` in one of the values
+            for these will replace them with the value of `scenarioID` or the
+            value of the widget that is being saved, respectively.
+    """
+    newName = session.get(f"_{key}{scenarioID}")
+    scenarioCount = session.scenarioCount
+    currentNames = {
+        session.get(f"{key}{i}") for i in range(1, scenarioCount + 1) if i != scenarioID
+    }
+    if newName == "":
+        errorContainer.error(
+            """
+            Please enter a name.
+            """,
+            icon=":material/remove_selection:",
+        )
+    elif newName in currentNames:
+        errorContainer.error(
+            """
+            The selected name is already the name of a different scenario.
+            Please enter a different name.
+            """,
+            icon=":material/tab_close_inactive:",
+        )
+    else:
+        containerSave(key, scenarioID, containers, specialContainers)
+
+
+def uniqueName(currentName: str, names: set[str]):
+    """
+    Function to add a suffix to a string to make it unique compared to a set
+
+    Parameters:
+        currentName (str): The string to make unique.
+
+        names (set of str): The other strings to compare with.
+    """
+    if currentName not in names:
+        return currentName
+
+    # Check if suffix is already present and increment if so
+    match = re.match(r"^(.*?)(?: (\d+))?$", currentName)
+    if match is not None:
+        base, num = match.groups()
+        n = int(num) if num else 2
+    else:
+        base = currentName
+        n = 2
+
+    candidate = f"{base} {n}"
+    while candidate in names:
+        n += 1
+        candidate = f"{base} {n}"
+    return candidate

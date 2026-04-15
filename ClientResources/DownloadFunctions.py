@@ -7,11 +7,13 @@ import logging
 import time
 from copy import deepcopy
 from io import BytesIO
+from typing import Optional
 
 import streamlit as st
 import streamlit_notify as stn  # type: ignore
 from pydantic import ValidationError
 
+from ClientResources.InterfaceFunctions import uniqueName
 from ClientResources.ModelSchema import (
     Parameters,
     commandArgument,
@@ -394,25 +396,40 @@ def loadConfig(file: BytesIO):
 
 
 # Scenario management functions
-def addScenario():
+def addScenario(openTab: Optional[str] = None):
     """
     Simple function to initialise an empty scenario.
+
+    Parameters:
+        openTab (str, optional): The scenario's tab, to be opened immediately.
     """
     newCount = session["scenarioCount"] + 1
     session["scenarioCount"] = newCount
-    session[f"scenarioName{newCount}"] = f"Scenario #{newCount}"
     session["scenarioSetParams"][newCount] = set()
     session["scenarioSetParamsExtra"][newCount] = set()
     session["activeErrors"][newCount] = {}
 
+    # Ensure new name is unique
+    newName = uniqueName(
+        "New Scenario",
+        {session.get(f"scenarioName{i}", "New Scenario") for i in range(1, newCount)},
+    )
+    session[f"scenarioName{newCount}"] = newName
+    if openTab is not None:
+        session[openTab] = f"**#{newCount}** {newName}"
+        session.tabReloader = not session.get("tabReloader", False)
+        stn.toast("Scenario added!", icon=":material/add:")
 
-def deleteScenario(scenarioID: int):
+
+def deleteScenario(scenarioID: int, openTab: Optional[str] = None):
     """
     Function that removes a scenario from the dashboard, shifting up other
     scenario values if necessary.
 
     Parameters:
         scenarioID (int): The ID representing the scenario to be deleted.
+
+        openTab (str, optional): The scenario's tab, to open the next scenario.
     """
     # Get set of saved params
     scenarioCount = session.get("scenarioCount", 0)
@@ -421,7 +438,7 @@ def deleteScenario(scenarioID: int):
 
     # Shift existing values down
     for s in range(scenarioID, scenarioCount):
-        paramsToConsider = savedParams[s] | savedParams[s + 1]
+        paramsToConsider = savedParams[s] | savedParams[s + 1] | {"scenarioName"}
         for param in paramsToConsider:
             newValue = idGet(param, s + 1, None)
             if newValue is None:
@@ -440,7 +457,7 @@ def deleteScenario(scenarioID: int):
         session["activeErrors"][s] = session["activeErrors"][s + 1]
 
     # Delete duplicated end scenario params
-    for param in savedParams[scenarioCount]:
+    for param in savedParams[scenarioCount] | {"scenarioName"}:
         del session[f"{param}{scenarioCount}"]
     for param, extra in savedExtraParams[scenarioCount]:
         del session[f"{param}{scenarioCount}{extra}"]
@@ -450,3 +467,11 @@ def deleteScenario(scenarioID: int):
 
     # Update scenario count
     session["scenarioCount"] -= 1
+
+    # Open the scenario taking the deleted one's place
+    if openTab is not None:
+        if scenarioCount > 1:
+            openCount = scenarioID if scenarioID < scenarioCount else scenarioCount - 1
+            session[openTab] = f"**#{openCount}** {session[f"scenarioName{openCount}"]}"
+            session.tabReloader = not session.get("tabReloader", False)
+        stn.toast("Scenario removed!", icon=":material/delete:")

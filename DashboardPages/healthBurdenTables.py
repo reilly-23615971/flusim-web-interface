@@ -521,6 +521,10 @@ able to select which age groups the health burden data in that column will
 be derived from.
         """,
     )
+    # TODO: Replace this line with the required parameter when
+    # Streamlit 1.56 is available on base Conda
+    if ageSeparation is None:
+        ageSeparation = "Combined"
 
     if ageSeparation == "By Row":
         loadKey("healthOutcomeAgesToUse", "", ageGroups, noZeroDefault=True)

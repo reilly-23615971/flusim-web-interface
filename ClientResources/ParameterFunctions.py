@@ -21,6 +21,7 @@ def containerSave(
     key: str,
     scenarioID: int | Literal[""] = "",
     containers: set[str] = set(),
+    specialContainers: dict[str, str] = {},
 ):
     """
     Wrapper for `saveKey` that keeps specific containers open, used for
@@ -33,11 +34,21 @@ def containerSave(
             is part of. Defaults to `""`, allowing for parameters that are not
             associated with scenarios to be saved.
 
-        containers (list of str): String used to identify each container to open.
+        containers (set of str): String used to identify each container to open.
+
+        specialContainers (dict of str): String used to identify containers
+            that must be set to specific values (i.e. scenario tabs whose
+            names change). Including `{id}` or `{value}` in one of the values
+            for these will replace them with the value of `scenarioID` or the
+            value of the widget that is being saved, respectively.
     """
     saveKey(key, scenarioID)
     for container in containers:
         session[container] = session.get(container)
+    for container, value in specialContainers.items():
+        session[container] = value.format(
+            id=scenarioID, value=session.get(f"{key}{scenarioID}")
+        )
 
 
 def saveKey(
