@@ -304,21 +304,53 @@ async def runModel(parameterJSON: str):
         ) as session:
             functionLog.info("[runModel] Sending post request to run sim...")
             async with session.post("runModel", json=schema) as response:
-                responseData = await response.read()
-                if response.status == 422:
+                responseData = await response.json()
+                simulationID = responseData["simulationID"]
+
+            # Poll the server until simulation is complete
+            simRunning = True
+            fileData: bytes = b""
+            while simRunning:
+                await asyncio.sleep(2)  # TODO: Tweak poll interval
+                async with session.post(f"runModel/status/{simulationID}") as response:
+                    # TODO: Modify if progress is sent too
                     responseText = await response.text()
-                    raise invalidSchemaError(
-                        "The parameter schema did not comply with the Pydantic model",
-                        responseText,
+                    functionLog.info(
+                        f"[runModel] Sim {simulationID} status: {responseText}..."
                     )
-                response.raise_for_status()
-            functionLog.info("[runModel] Response received! Returning data...")
+                    if response.status == 422:
+                        raise invalidSchemaError(
+                            """
+The parameter schema did not comply with the Pydantic model
+                            """,
+                            responseText,
+                        )
+                    response.raise_for_status()
+                    # TODO: Return if status is "error" or similar; make case match
+                    match responseText:
+                        case "completed":
+                            # Download the analysis files
+                            async with session.post(
+                                f"runModel/download/{simulationID}"
+                            ) as response:
+                                fileData = await response.read()
+                            functionLog.info(
+                                f"[runModel] Sim {simulationID} data ready!"
+                            )
+                            simRunning = False
+                        case "error":
+                            # TODO: Better error handling
+                            raise Exception(
+                                f"An error occurred in the simulation: {responseText}"
+                            )
+                        # TODO: Update progress bars using status
 
         # Process without unzipping if there's only one analysis (unused currently)
         # if len(dataForms) == 1:
         # return [responseData]
+
         # Unzip data and format each analysis file
-        with ZipFile(BytesIO(responseData)) as analyses:
+        with ZipFile(BytesIO(fileData)) as analyses:
             fileNames = analyses.namelist()
             # for file in fileNames:
             #     functionLog.info(f"File Data: {analyses.read(file).decode()}")
