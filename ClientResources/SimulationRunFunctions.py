@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 import threading
+import time
 from datetime import datetime
 from io import BytesIO
 from zipfile import ZipFile
@@ -270,6 +271,138 @@ simulation.
             st.rerun()
 
 
+async def runModelStart(parameterJSON: str):
+    """
+    Asynchronous function to prompt the server to begin running a simulation.
+
+    Parameters:
+        parameterJSON (str): A string containing the JSON representation of
+            the simulation experiment to run.
+
+    Returns:
+        str: The ID used to obtain information on the simulation.
+    """
+    # TODO: Ensure wrapper handles errors
+
+    # Send POST request to server with parameters
+    schema = json.loads(parameterJSON)
+    functionLog.info(
+        f"[runModelStart] Initialising session with base url {serverUrl}..."
+    )
+    async with ClientSession(
+        raise_for_status=False,
+        base_url=serverUrl,
+        # timeout=ClientTimeout(total=30),
+    ) as session:
+        functionLog.info("[runModelStart] Sending post request to run sim...")
+        async with session.post("runModel", json=schema) as response:
+            responseData = await response.json()
+            if response.status == 422:
+                # TODO: Unwrap Pydantic errors instead of
+                # making a new class for them
+                raise invalidSchemaError(
+                    """
+The parameter schema did not comply with the Pydantic model
+                    """,
+                    response.text(),
+                )
+            response.raise_for_status()
+            simulationID = responseData["simulationID"]
+        functionLog.info(f"[runModelStart] Sim ID: {simulationID}")
+        return simulationID
+
+
+async def runModelStatus(simulationID: str):
+    """
+    Asynchronous function to get the status of a simulation.
+
+    Parameters:
+        simulationID (str): The ID distinguishing this simulation experiment.
+
+    Returns:
+        str: The status of the simulation.
+    """
+    # TODO: Ensure wrapper handles errors
+
+    # Send GET request to server with ID
+    async with ClientSession(
+        raise_for_status=False,
+        base_url=serverUrl,
+        # timeout=ClientTimeout(total=30),
+    ) as session:
+        functionLog.info(f"[runModelStatus] Checking status of sim {simulationID}...")
+        async with session.get(f"runModel/status/{simulationID}") as response:
+            statusResponse = await response.json()
+            response.raise_for_status()
+            # TODO: Modify if progress is sent too
+            if statusResponse.get("error"):
+                functionLog.error(
+                    f"""
+[runModelStatus] Error getting sim {simulationID} status: {statusResponse["error"]}
+                            """
+                )
+                # TODO: Better error handling
+                raise Exception(statusResponse["error"])
+            simStatus = statusResponse.get("status", None)
+            if simStatus is None:
+                raise Exception("Server did not return a valid status")
+            return simStatus
+
+
+async def runModelDownload(simulationID: str):
+    """
+    Asynchronous function to download the results from a complete simulation.
+
+    Parameters:
+        simulationID (str): The ID distinguishing this simulation experiment.
+
+    Returns:
+        str: The status of the simulation.
+    """
+    # TODO: Ensure wrapper handles errors
+
+    # Send POST request to server with parameters
+    functionLog.info(
+        f"[runModelDownload] Downloading analysis data for sim {simulationID}..."
+    )
+    async with ClientSession(
+        raise_for_status=False,
+        base_url=serverUrl,
+        # timeout=ClientTimeout(total=30),
+    ) as session:
+        # Download the analysis files
+        async with session.get(f"runModel/download/{simulationID}") as response:
+            fileData = await response.read()
+
+            # Unzip data and format each analysis file
+            with ZipFile(BytesIO(fileData)) as analyses:
+                fileNames = analyses.namelist()
+                # for file in fileNames:
+                #     functionLog.info(f"File Data: {analyses.read(file).decode()}")
+                if len(fileNames) == 0:
+                    functionLog.error(
+                        "[runModelDownload] Server returned no readable files"
+                    )
+                    # return "EmptyZipFile"
+                    raise FileNotFoundError()
+                try:
+                    return tuple(analyses.read(file) for file in fileNames)
+                except ValueError as e:
+                    functionLog.error(
+                        f"[runModelDownload] Server returned malformed files: {e}"
+                    )
+                    # return ("ValueError", e)
+                    raise e
+                except Exception as e:
+                    functionLog.error(
+                        f"""
+[runModelDownload] Server returned unspecified malformed files: {e}
+                        """
+                    )
+                    # return ("UncaughtFormatError", e)
+                    raise e
+
+
 async def runModel(parameterJSON: str):
     """
     Asynchronous function to send JSON model parameters to the server, awaiting a
@@ -327,14 +460,16 @@ The parameter schema did not comply with the Pydantic model
                     # TODO: Modify if progress is sent too
                     if statusResponse.get("error"):
                         functionLog.error(
-                            f"[runModel] Error getting sim {simulationID} status: {statusResponse["error"]}"
+                            f"""
+[runModel] Error getting sim {simulationID} status: {statusResponse["error"]}
+                            """
                         )
                         # TODO: Better error handling
                         raise Exception(statusResponse["error"])
                     simStatus = statusResponse.get("status")
-                    '''functionLog.info(
+                    """functionLog.info(
                         f"[runModel] Sim {simulationID} status: {simStatus}..."
-                    )'''
+                    )"""
                     match simStatus:
                         case "completed":
                             # Download the analysis files
@@ -348,9 +483,8 @@ The parameter schema did not comply with the Pydantic model
                             simRunning = False
                         case "error":
                             # TODO: Better error handling
-                            raise Exception(
-                                f"An error occurred in the simulation."
-                            )
+                            raise Exception("An error occurred in the simulation.")
+                        # case _:
                         # TODO: Update progress bars using status
 
         # Process without unzipping if there's only one analysis (unused currently)
@@ -412,14 +546,75 @@ def runModelWrapper(parameterJSON):
         needed to avoid interrupting Streamlit UI functionality.
         """
         try:
+            # Split up test
+            simulationID = asyncio.run(runModelStart(parameterJSON))
+            while True:
+                # asyncio.sleep(2)  # TODO: Tweak poll interval
+                time.sleep(2)
+                simStatus = asyncio.run(runModelStatus(simulationID))
+                match simStatus:
+                    case "completed":
+                        # Download the analysis files
+                        simData = asyncio.run(runModelDownload(simulationID))
+                        resultQueue.put(simData)
+                    case "error":
+                        # TODO: Better error handling
+                        raise Exception("An error occurred in the simulation.")
+                """case _:
+                        # Status patterns:
+                        # start
+                        # configGenerated
+                        # allSimulationsComplete
+                        # analysisComplete#
+                        # completed
+                        # error
+                        # TODO: Generate progress using # of sims/analyses
+                        progressDict = {
+                            "start": (0, "Initialising parameters..."),
+                            "configGenerated": (5, "Running simulations..."),
+                            "allSimulationsComplete": (5, "Running simulations..."),
+                            "analysisComplete#": (5, "Running simulations..."),
+                            "analysisComplete#": (5, "Running simulations..."),
+                            "analysisComplete#": (5, "Running simulations..."),
+                            "analysisComplete#": (5, "Running simulations..."),
+                        }
+                    # TODO: Update progress bars using status"""
             # time.sleep(5)  # Debug for testing dashboard while running
             formattedData = asyncio.run(runModel(parameterJSON))
             if formattedData:
                 resultQueue.put(formattedData)  # type: ignore
+        # TODO: Tidy up the errors
+        except ClientConnectorError as e:
+            functionLog.error(f"[runModel] Couldn't connect to server: {e}")
+            resultQueue.put(("ClientConnectorError", e))
+        except ClientResponseError as e:
+            functionLog.error(f"[runModel] Server returned status {e.status}: {e}")
+            if e.status in {500, "500"}:
+                resultQueue.put(("ClientResponseError500", e))
+            else:
+                resultQueue.put(("ClientResponseError", e))
+        except invalidSchemaError as e:
+            functionLog.error(f"[runModel] Parameter schema was invalid: {e}")
+            resultQueue.put(("InvalidSchemaError", e))
         except Exception as e:
-            functionLog.info(f"[runner] Encountered {type(e).__name__}: {e}")
-            functionLog.error(f"[runner] Encountered {type(e).__name__}: {e}")
-            raise e
+            functionLog.error(f"[runModel] Encountered {type(e).__name__}: {e}")
+            resultQueue.put(("UncaughtError", e))
+
+        """except ClientConnectorError as e:
+        functionLog.error(f"[runModel] Couldn't connect to server: {e}")
+        return ("ClientConnectorError", e)
+    except ClientResponseError as e:
+        functionLog.error(f"[runModel] Server returned status {e.status}: {e}")
+        if e.status in {500, "500"}:
+            return ("ClientResponseError500", e)
+        else:
+            return ("ClientResponseError", e)
+    except invalidSchemaError as e:
+        functionLog.error(f"[runModel] Parameter schema was invalid: {e}")
+        return ("InvalidSchemaError", e)
+    except Exception as e:
+        functionLog.error(f"[runModel] Encountered {type(e).__name__}: {e}")
+        return ("UncaughtError", e)"""
 
     session.simulationInProgress = True
     runModelThread = threading.Thread(target=threadRunner)
