@@ -14,7 +14,7 @@ from zipfile import ZipFile
 
 import pandas as pd
 import streamlit as st
-from aiohttp import ClientConnectorError, ClientResponseError, ClientSession
+from aiohttp import ClientConnectorError, ClientResponseError, ClientSession, WSMsgType
 from streamlit_notify import toast  # type: ignore
 
 from ClientResources.DownloadFunctions import createConfig
@@ -273,7 +273,7 @@ simulation.
             st.rerun()
 
 
-async def runModelStart(parameterJSON: str):
+async def runModelStart(parameterJSON: str) -> str:
     """
     Asynchronous function to prompt the server to begin running a simulation.
 
@@ -310,7 +310,7 @@ The parameter schema did not comply with the Pydantic model
         return simulationID
 
 
-async def runModelStatus(simulationID: str):
+async def runModelStatus(simulationID: str) -> str:
     """
     Asynchronous function to get the status of a simulation.
 
@@ -341,6 +341,51 @@ async def runModelStatus(simulationID: str):
             if simStatus is None:
                 raise Exception("Server did not return a valid status")
             return simStatus
+
+
+async def runModelStatusSockets(simulationID):
+    """
+    Async function to get status updates from the server via a websocket
+    """
+    progressDict = {
+        "start": (2, "Initialising parameters..."),
+        "configGenerated": (5, "Running simulations..."),
+        "allSimulationsComplete": (75, "Extracting cumulative infections..."),
+        "analysisComplete0": (80, "Extracting daily infections..."),
+        "analysisComplete1": (85, "Extracting age-based infections..."),
+        "analysisComplete2": (90, "Extracting vaccine-based infections..."),
+        "analysisComplete3": (95, "Compiling results..."),
+    }
+    async with ClientSession(raise_for_status=False, base_url=serverUrl) as session:
+        async with session.ws_connect(f"/runModel/simStatus/{simulationID}") as ws:
+            async for msg in ws:
+                if msg.type == WSMsgType.TEXT:
+                    data = json.loads(msg.data)
+                    simStatus = data.get("status")
+                    match simStatus:
+                        case "completed":
+                            # Download the analysis files
+                            simData = asyncio.run(runModelDownload(simulationID))
+                            resultQueue.put(simData)
+                            currentProgress.append(100)
+                            statusQueue.append("Simulation complete!")
+                            # TODO: Add final complete status item to status queue
+                            return
+                        case "error":
+                            # TODO: Better error handling;
+                            # see if errors can be added to the status queue
+                            currentProgress.append(-1)
+                            statusQueue.append("Experiment halted due to error")
+                            raise Exception("An error occurred in the simulation.")
+                        case _:
+                            progress, status = progressDict[simStatus]
+                            currentProgress.append(progress)
+                            if status not in statusQueue:
+                                statusQueue.append(status)
+                elif msg.type == WSMsgType.ERROR:
+                    currentProgress.append(-1)
+                    statusQueue.append("Error: Server websocket had issues")
+                    raise Exception(f"WebSocket error: {ws.exception()}")
 
 
 async def runModelDownload(simulationID: str):
@@ -538,7 +583,7 @@ def runModelWrapper(parameterJSON):
         try:
             # TODO: Generate progress using # of sims/analyses
             # TODO: Include client side processing like formatAsir in this progress
-            progressDict = {
+            """progressDict = {
                 "start": (2, "Initialising parameters..."),
                 "configGenerated": (5, "Running simulations..."),
                 "allSimulationsComplete": (75, "Extracting cumulative infections..."),
@@ -546,10 +591,13 @@ def runModelWrapper(parameterJSON):
                 "analysisComplete1": (85, "Extracting age-based infections..."),
                 "analysisComplete2": (90, "Extracting vaccine-based infections..."),
                 "analysisComplete3": (95, "Compiling results..."),
-            }
+            }"""
             # Get simulation ID
             simulationID = asyncio.run(runModelStart(parameterJSON))
-            while True:
+
+            # Open the websocket
+            asyncio.run(runModelStatusSockets(simulationID))
+            """while True:
                 # asyncio.sleep(2)  # TODO: Tweak poll interval
                 time.sleep(2)
                 simStatus = asyncio.run(runModelStatus(simulationID))
@@ -572,7 +620,8 @@ def runModelWrapper(parameterJSON):
                         progress, status = progressDict[simStatus]
                         currentProgress.append(progress)
                         if status not in statusQueue:
-                            statusQueue.append(status)
+                            statusQueue.append(status)"""
+
             """formattedData = asyncio.run(runModel(parameterJSON))
             if formattedData:
                 resultQueue.put(formattedData)  # type: ignore"""
