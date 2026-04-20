@@ -305,32 +305,40 @@ async def runModel(parameterJSON: str):
             functionLog.info("[runModel] Sending post request to run sim...")
             async with session.post("runModel", json=schema) as response:
                 responseData = await response.json()
+                if response.status == 422:
+                    raise invalidSchemaError(
+                        """
+The parameter schema did not comply with the Pydantic model
+                        """,
+                        response.text(),
+                    )
+                response.raise_for_status()
                 simulationID = responseData["simulationID"]
+            functionLog.info(f"[runModel] Sim ID: {simulationID}")
 
             # Poll the server until simulation is complete
             simRunning = True
             fileData: bytes = b""
             while simRunning:
                 await asyncio.sleep(2)  # TODO: Tweak poll interval
-                async with session.post(f"runModel/status/{simulationID}") as response:
-                    # TODO: Modify if progress is sent too
-                    responseText = await response.text()
-                    functionLog.info(
-                        f"[runModel] Sim {simulationID} status: {responseText}..."
-                    )
-                    if response.status == 422:
-                        raise invalidSchemaError(
-                            """
-The parameter schema did not comply with the Pydantic model
-                            """,
-                            responseText,
-                        )
+                async with session.get(f"runModel/status/{simulationID}") as response:
+                    statusResponse = await response.json()
                     response.raise_for_status()
-                    # TODO: Return if status is "error" or similar; make case match
-                    match responseText:
+                    # TODO: Modify if progress is sent too
+                    if statusResponse.get("error"):
+                        functionLog.error(
+                            f"[runModel] Error getting sim {simulationID} status: {statusResponse["error"]}"
+                        )
+                        # TODO: Better error handling
+                        raise Exception(statusResponse["error"])
+                    simStatus = statusResponse.get("status")
+                    '''functionLog.info(
+                        f"[runModel] Sim {simulationID} status: {simStatus}..."
+                    )'''
+                    match simStatus:
                         case "completed":
                             # Download the analysis files
-                            async with session.post(
+                            async with session.get(
                                 f"runModel/download/{simulationID}"
                             ) as response:
                                 fileData = await response.read()
@@ -341,7 +349,7 @@ The parameter schema did not comply with the Pydantic model
                         case "error":
                             # TODO: Better error handling
                             raise Exception(
-                                f"An error occurred in the simulation: {responseText}"
+                                f"An error occurred in the simulation."
                             )
                         # TODO: Update progress bars using status
 
