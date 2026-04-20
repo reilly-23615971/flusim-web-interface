@@ -36,7 +36,7 @@ maxScenarios = 30
 clientUrl = "http://localhost:8501/"
 serverUrl = "http://127.0.0.1:8000/"
 # Queue used to store CSV data from completed server requests
-resultQueue = Queue[tuple]()
+resultQueue = Queue[list | tuple]()
 
 # Dictionary holding ordinal strings for variable-length forms
 ordinals = {

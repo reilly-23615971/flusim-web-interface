@@ -386,7 +386,7 @@ async def runModelDownload(simulationID: str):
                     # return "EmptyZipFile"
                     raise FileNotFoundError()
                 try:
-                    return tuple(analyses.read(file) for file in fileNames)
+                    return [analyses.read(file) for file in fileNames]
                 except ValueError as e:
                     functionLog.error(
                         f"[runModelDownload] Server returned malformed files: {e}"
@@ -557,6 +557,7 @@ def runModelWrapper(parameterJSON):
                         # Download the analysis files
                         simData = asyncio.run(runModelDownload(simulationID))
                         resultQueue.put(simData)
+                        return
                     case "error":
                         # TODO: Better error handling
                         raise Exception("An error occurred in the simulation.")
