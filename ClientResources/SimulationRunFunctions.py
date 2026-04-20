@@ -365,8 +365,8 @@ async def runModelStatusSockets(simulationID):
                     match simStatus:
                         case "completed":
                             # Download the analysis files
-                            simData = asyncio.run(runModelDownload(simulationID))
-                            resultQueue.put(simData)
+                            simData = await runModelDownload(simulationID)
+                            resultQueue.put(simData) # type: ignore
                             currentProgress.append(100)
                             statusQueue.append("Simulation complete!")
                             # TODO: Add final complete status item to status queue
@@ -388,7 +388,7 @@ async def runModelStatusSockets(simulationID):
                     raise Exception(f"WebSocket error: {ws.exception()}")
 
 
-async def runModelDownload(simulationID: str):
+async def runModelDownload(simulationID: str) -> list[bytes]:
     """
     Asynchronous function to download the results from a complete simulation.
 
@@ -396,7 +396,7 @@ async def runModelDownload(simulationID: str):
         simulationID (str): The ID distinguishing this simulation experiment.
 
     Returns:
-        str: The status of the simulation.
+        list: The analysis files, unzipped and stored as byte data.
     """
     # TODO: Ensure wrapper handles errors
 
