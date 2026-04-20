@@ -6,7 +6,7 @@
 import streamlit as st
 
 # Create page
-st.title("Flusim Disease Model Dashboard")
+st.title("Flusim Infection Model Dashboard")
 
 st.markdown(
     """
@@ -14,7 +14,8 @@ st.markdown(
     at the University of Western Australia, implements a high-performance
     agent-based simulation model to simulate the spread of infectious disease
     in a population. This model has been used to aid in deciding effective
-    policy for diseases such as influenza [[1](https://doi.org/10.1586/eri.10.136)]
+    policy for respiratory viruses such as influenza
+    [[1](https://doi.org/10.1586/eri.10.136)]
     and COVID-19 [[2](https://doi.org/10.1101/2022.03.09.22272170)]. This website
     allows users to easily run the model with specific parameters and visualise
     the results.
@@ -22,6 +23,8 @@ st.markdown(
 )
 
 st.header("Usage")
+# TODO: Update usage instructions (or just refer to manual)
+# TODO: Replace buttons with proper st.link_buttons
 
 st.markdown(
     """
@@ -92,17 +95,17 @@ st.markdown(
     moves to different locations over the course of the simulation. Individuals
     are assigned demographics such as age and pregnancy status; these affect
     which locations they go to, what interventions apply to them and how
-    susceptible they are to the disease.
+    susceptible they are to the pathogen.
 
-    When an individual is infected by the disease, the current stage of their
+    When an individual is infected by the pathogen, the current stage of their
     infection is tracked alongside them. As the simulation progresses, the
     individual will go from dormant to infectious and symptomatic before
-    eventually recovering. Individuals who have recovered from the disease
+    eventually recovering. Individuals who have recovered from the pathogen
     gain an immunity to being reinfected.
 
     When an infectious individual is in a given location, there is a chance
     that non-immune uninfected individuals in the same location will catch the
-    disease. This probability is dependent on the location as well as the
+    pathogen. This probability is dependent on the location as well as the
     demographics of both the infected and healthy individuals in the interaction.
     In addition to these interactions, each individual will interact with other
     randomly selected individuals in each step of the simulation. These

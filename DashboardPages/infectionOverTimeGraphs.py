@@ -9,7 +9,7 @@ from typing import Optional
 
 import streamlit as st
 
-from ClientResources.InterfaceFunctions import loadKey, saveKey
+from ClientResources.ParameterFunctions import loadKey, saveKey
 from ClientResources.SharedResources import usePresetData
 from ClientResources.VisualisationFunctions import formatEpidemic, plotEpidemic
 
@@ -22,6 +22,12 @@ session = st.session_state
 
 # Function to generate graph
 def generateGraph():
+    """
+    Function to generate an infection-over-time graph with simulation data.
+
+    Raises:
+        FileNotFoundError: If there is no data to generate a graph with.
+    """
     # Throw error if no data is present
     if not usePresetData and not (session.get("modelDataEpidemicDaily") is not None):
         raise FileNotFoundError(
@@ -134,14 +140,14 @@ with graphSettings:
         kwargs={"notScenario": True},
         placeholder="Please select a data format",
         help="""
-            Select what kind of data should be displayed in the graph.
+Select what kind of data should be displayed in the graph.
 
-            ### Options:
-            - Cumulative: the chart will plot the total number of
-            infections that have cumulatively occurred at each point of
-            the simulation.
-            - Daily Rate: the chart will plot the number of infections
-            that occur in each day of the simulation.
+### Options:
+- Cumulative: the chart will plot the total number of
+infections that have cumulatively occurred at each point of
+the simulation.
+- Daily Rate: the chart will plot the number of infections
+that occur in each day of the simulation.
         """,
     )
 
@@ -202,14 +208,14 @@ st.button(
     disabled=((not usePresetData and not currentDataExists) or not scenariosToUse),
     help=(
         """
-        Use the data from the last simulation to generate a graph
-        displaying the infections in the simulation, formatted using
-        the settings selected above.
-    """
+Use the data from the last simulation to generate a graph
+displaying the infections in the simulation, formatted using
+the settings selected above.
+        """
         if currentDataExists
         else """
-        No simulations have completed yet, so there is no data to plot.
-    """
+No simulations have completed yet, so there is no data to plot.
+        """
     ),
 )
 
@@ -219,9 +225,11 @@ if chartData is not None:
     st.header("Infection Data Line Graph")
     st.altair_chart(chartData)
 
-    # Button to download the CSV data used by the chart
     @st.fragment()
     def infectionDataDownload():
+        """
+        Fragment function to show a button that downloads the data in the chart.
+        """
         chartTypeTag = "Cumulative" if chartType == "Cumulative" else "Daily"
         dataToDownload = session.get(f"modelDataEpidemic{chartTypeTag}")
         if dataToDownload is not None:
@@ -235,11 +243,11 @@ if chartData is not None:
                 key="infectionDataDownload",
                 icon=":material/download:",
                 help="""
-                    Download the infection data from the most recent
-                    simulation (the data used by the above graph) as a CSV
-                    file. Note that all scenarios are included in the
-                    returned file, even if not all were selected for the
-                    graph.
+Download the infection data from the most recent
+simulation (the data used by the above graph) as a CSV
+file. Note that all scenarios are included in the
+returned file, even if not all were selected for the
+graph.
                 """,
             )
         elif usePresetData:
@@ -262,11 +270,11 @@ if chartData is not None:
                 key="infectionDataDownload",
                 icon=":material/download:",
                 help="""
-                    Download the infection data from the most recent
-                    simulation (the data used by the above graph) as a CSV
-                    file. Note that all scenarios are included in the
-                    returned file, even if not all were selected for the
-                    graph.
+Download the infection data from the most recent
+simulation (the data used by the above graph) as a CSV
+file. Note that all scenarios are included in the
+returned file, even if not all were selected for the
+graph.
                 """,
             )
         else:

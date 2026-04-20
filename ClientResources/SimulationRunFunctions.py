@@ -21,17 +21,9 @@ from aiohttp import (
 )
 from streamlit_notify import toast  # type: ignore
 
-from ClientResources.InterfaceFunctions import errorChecker, idGet
-from ClientResources.ModelSchema import (
-    Parameters,
-    commandArgument,
-    communityOverride,
-    modelGuideFile,
-    overrideParams,
-    scenarioParameters,
-    simulation,
-    simulationSet,
-)
+from ClientResources.DownloadFunctions import createConfig
+from ClientResources.InterfaceFunctions import errorChecker
+from ClientResources.ParameterFunctions import idGet
 from ClientResources.SharedResources import (
     AnalysisFile,
     ageTimeDict,
@@ -43,13 +35,6 @@ from ClientResources.SharedResources import (
     serverUrl,
     usePresetParams,
 )
-from ClientResources.VisualisationFunctions import formatData
-from ParameterTabs.communityParams import communitySchema
-
-# from ParameterTabs.basicParams import basicSchema
-from ParameterTabs.diseaseParams import diseaseSchema
-from ParameterTabs.dynamicParams import dynamicSchema
-from ParameterTabs.vaccinationNPIParams import vaccineSchema
 
 # Logging
 functionLog = logging.getLogger(__name__)
@@ -58,8 +43,12 @@ functionLog = logging.getLogger(__name__)
 session = st.session_state
 
 
-# Error class for getting full responses
 class invalidSchemaError(Exception):
+    """
+    Error class for getting full responses
+    """
+
+    # TODO: Flesh out docstrings
     def __init__(self, message, response):
         self.message = message
         self.response = response
@@ -69,83 +58,16 @@ class invalidSchemaError(Exception):
         return f"{self.message} (Full Response: {self.response})"
 
 
-def createConfig(scenarioCount: int):
-    """
-    Function to generate a JSON config file using the selected parameters
-
-    Parameters:
-        scenarioCount (int): The number of scenarios to define in the config.
-    """
-    # Set up schema objects
-    scenarioParams = [Parameters() for _ in range(scenarioCount)]
-
-    # Populate parameters with session_state values
-    useAdvanced = session.get("showAdvanced", False)
-    for id, scenario in enumerate(scenarioParams):
-        # basicSchema(scenario, id)
-        diseaseSchema(scenario, id, useAdvanced)
-        communitySchema(scenario, id, useAdvanced)
-        vaccineSchema(scenario, id, useAdvanced)
-        if useAdvanced:
-            dynamicSchema(scenario, id)
-
-    # Create config object with non-scenario parameters as overrides
-    return modelGuideFile(
-        name="Flusim Dashboard Simulation",
-        description=str(session.sessionID),
-        output_folder="./results/",
-        middle_joint="-usingEpidemic",
-        community_used=[session.get("community", "newcastle")],
-        community_overrides=[
-            communityOverride(
-                name=session.get("community", "newcastle"),
-                parameters=Parameters(
-                    Command_Argument=commandArgument(
-                        n_runs=session.get("runCount", 24),
-                        n_cycles=session.get("cycleCount", 360) * 2,
-                    ),
-                    Scenario_Parameter=scenarioParameters(
-                        start_day_of_week=(
-                            "Sunday",
-                            "Monday",
-                            "Tuesday",
-                            "Wednesday",
-                            "Thursday",
-                            "Friday",
-                            "Saturday",
-                        ).index(session.get("startDay", "Monday"))
-                    ),
-                ),
-            )
-        ],
-        shared_overrides=overrideParams(parameters=scenarioParams[0]),
-        simulation_sets=[
-            simulationSet(
-                name="Dashboard Simulation Set",
-                version=session.sessionID,
-                simulations=[simulation(name="Baseline")]
-                + [
-                    simulation(
-                        name=session[f"scenarioName{i}"],
-                        override_setting=overrideParams(parameters=scenarioParams[i]),
-                    )
-                    for i in range(1, scenarioCount)
-                ],
-            )
-        ],
-    )
-
-
 @st.dialog("Run Simulation Experiment", width="large", icon=":material/motion_play:")
 def runSimulationButton():
     """
-    Callback function for the Run Simulation button
+    Callback function for the Run Simulation button, opening a dialog window
+    before running the simulation itself.
     """
     # Disable button if it's taking a while to run
     runPending = bool(session.get("confirmRunButton"))
 
     # List scenarios
-    # TODO: Contain in dropdown if too long
     scenarioCount = session.get("scenarioCount", 0)
     if scenarioCount == 0:
         st.markdown(
@@ -176,11 +98,12 @@ community data to simulate each of the following {scenarioCount + 1} scenarios:
     # TODO: Hide scenario errors that are copies of baseline errors
     severeErrorsFound = False
     for id in range(scenarioCount + 1):
-        severeErrorsFound = severeErrorsFound or errorChecker(
-            id,
-            f"""Errors in {
-                session[f'scenarioName{id}'] if id > 0 else 'Baseline'
-            }""",
+        severeErrorsFound = (
+            errorChecker(
+                id,
+                f"Errors in {session[f'scenarioName{id}'] if id > 0 else 'Baseline'}",
+            )
+            or severeErrorsFound
         )
     if severeErrorsFound:
         st.error(
@@ -191,8 +114,7 @@ community data to simulate each of the following {scenarioCount + 1} scenarios:
             icon=":material/error:",
         )
     else:
-        # TODO: Display estimated simulation run time
-        # TODO: Make warning display for the chart one too
+        # TODO: Ensure any visualisations show this chart warning
         if session.get("ChartGenerated"):
             st.warning(
                 """
@@ -203,6 +125,7 @@ simulation.
         """,
                 icon=":material/bar_chart_off:",
             )
+            # TODO: Display estimated simulation run time
         st.markdown(
             """
             Are you sure you want to begin running simulations with the
@@ -245,16 +168,47 @@ simulation.
 
             # Save current parameter values that'll be used for
             # visualisation when the user has potentially changed them
+            useAdvanced = session.get("showAdvanced", False)
+            schema = json.loads(parameterJSON)
+            if "+vaccine" in schema.get("middle_joint"):
+                session.PendingDataForms = [
+                    AnalysisFile(
+                        tool="epidemic", names=scenarioNames, useCumulative=True
+                    ),
+                    AnalysisFile(
+                        tool="epidemic", names=scenarioNames, useCumulative=False
+                    ),
+                    AnalysisFile(tool="asir", names=scenarioNames),
+                    AnalysisFile(tool="asir", names=scenarioNames, vaccinated=True),
+                ]
+            else:
+                session.PendingDataForms = [
+                    AnalysisFile(
+                        tool="epidemic", names=scenarioNames, useCumulative=True
+                    ),
+                    AnalysisFile(
+                        tool="epidemic", names=scenarioNames, useCumulative=False
+                    ),
+                    AnalysisFile(tool="asir", names=scenarioNames),
+                ]
             session.PendingDataCommunity = session.get("community", "newcastle")
             session.PendingDataScenarioNames = scenarioNames
             session.PendingDataScenarioCount = scenarioCount
-            session.PendingDataAsymptomatic = [
+            session.PendingDataAsymptomatic = (
                 [
-                    1 - idGet("asymptomaticChild", scenarioID, 0.35),
-                    1 - idGet("asymptomaticAdult", scenarioID, 0.35),
+                    [
+                        1 - idGet("asymptomaticChild", scenarioID, 0.35),
+                        1 - idGet("asymptomaticAdult", scenarioID, 0.35),
+                    ]
+                    for scenarioID in range(scenarioCount + 1)
                 ]
-                for scenarioID in range(scenarioCount + 1)
-            ]
+                if useAdvanced
+                else [
+                    [1 - idGet("asymptomaticBoth", scenarioID, 0.35)] * 2
+                    for scenarioID in range(scenarioCount + 1)
+                ]
+            )
+
             session.PendingDataHealthOutcomeRates = {
                 outcome: {
                     scenario: idGet(
@@ -264,7 +218,7 @@ simulation.
                 }
                 for outcome in outcomeRateDefaults.keys()
             }
-            oldMort = """session.PendingDataMortalityRates = {
+            """session.PendingDataMortalityRates = {
                 scenarioNames[scenarioID]: {
                     idGet("deathAgeGroup", scenarioID, None, f"-{rowID}"): idGet(
                         "deathRatio",
@@ -280,7 +234,6 @@ simulation.
                 scenarioID: idGet("deathRatio", scenarioID, 0.000115077)
                 for scenarioID in range(scenarioCount + 1)
             }
-            # TODO: Fix null getting added here when age tables are unchanged
             session.PendingDataMortalityRates = {
                 scenarioNames[scenarioID]: {
                     age: pendingDeaths[scenarioID] for age in ageWithTime
@@ -296,6 +249,7 @@ simulation.
                             },
                         ),
                     )
+                    .dropna()
                     .replace({"Age Group": ageTimeDict})
                     .set_index("Age Group")["Mortality Rate"]
                     .to_dict()
@@ -304,7 +258,9 @@ simulation.
             }
 
             # Make the model call
-            runModelWrapper(scenarioNames, parameterJSON)
+            runModelWrapper(parameterJSON)
+
+            # TODO: Remember streamlit_push_notifications
 
             # Generate popup to let the user know it's pending
             toast(
@@ -314,36 +270,27 @@ simulation.
             st.rerun()
 
 
-# TODO: Clean up this function so that errors are more easily read
-# and the returned types don't need as much checking
-# TODO: See if st.cache_data makes a difference here
-async def runModel(scenarioNames: list[str], parameterJSON: str):
+async def runModel(parameterJSON: str):
     """
     Asynchronous function to send JSON model parameters to the server, awaiting a
-    response containing the results of the simulation
+    response containing the results of the simulation.
 
     Parameters:
-        scenarioNames (list of str): A list of names to assign to each scenario.
-
         parameterJSON (str): A string containing the JSON representation of
             the simulation experiment to run.
 
     Returns:
-        list: A list containing tuples for each analysis performed on the
-            data. Each tuple contains the byte data of the analysed CSV
-            results alongside a string to identify the type
-            of analysis it represents.
+        list: A list containing the byte data of the analysed CSV results.
 
         tuple: A string identifying what kind of error
             was encountered when running the model, alongside the error itself
             as an Exception subclass.
     """
+    # TODO: Clean up this function so that errors are more easily read
+    # and the returned types don't need as much checking
+    # TODO: See if st.cache_data makes a difference here
     try:
-        dataForms = [
-            AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=True),
-            AnalysisFile(tool="epidemic", names=scenarioNames, useCumulative=False),
-            AnalysisFile(tool="asir", names=scenarioNames),
-        ]
+        schema = json.loads(parameterJSON)
 
         # Send POST request to server with parameters
         functionLog.info(
@@ -355,10 +302,8 @@ async def runModel(scenarioNames: list[str], parameterJSON: str):
             base_url=serverUrl,
             timeout=ClientTimeout(total=7200),
         ) as session:
-            functionLog.info("[runModel] Sending post request...")
-            async with session.post(
-                "runModel", json=json.loads(parameterJSON)
-            ) as response:
+            functionLog.info("[runModel] Sending post request to run sim...")
+            async with session.post("runModel", json=schema) as response:
                 responseData = await response.read()
                 if response.status == 422:
                     responseText = await response.text()
@@ -369,33 +314,25 @@ async def runModel(scenarioNames: list[str], parameterJSON: str):
                 response.raise_for_status()
             functionLog.info("[runModel] Response received! Returning data...")
 
-        # Convert CSV statistics into DataFrame(s)
-        functionLog.info(
-            f"[runModel] Preparing to process {len(dataForms)} analyses..."
-        )
-        # Process without unzipping if there's only one analysis
-        if len(dataForms) == 1:
-            return [formatData(responseData, dataForms[0])]
+        # Process without unzipping if there's only one analysis (unused currently)
+        # if len(dataForms) == 1:
+        # return [responseData]
         # Unzip data and format each analysis file
         with ZipFile(BytesIO(responseData)) as analyses:
             fileNames = analyses.namelist()
-            for file in fileNames:
-                functionLog.info(f"File Data: {analyses.read(file).decode()}")
+            # for file in fileNames:
+            #     functionLog.info(f"File Data: {analyses.read(file).decode()}")
             if len(fileNames) == 0:
                 functionLog.error("[runModel] Server returned no readable files")
                 return "EmptyZipFile"
-
             try:
-                processedData = [
-                    formatData(analyses.read(file), dataForms[index])
-                    for index, file in enumerate(fileNames)
-                ]
+                processedData = [analyses.read(file) for file in fileNames]
             except ValueError as e:
                 functionLog.error(f"[runModel] Server returned malformed files: {e}")
                 return ("ValueError", e)
             except Exception as e:
                 functionLog.error(
-                    "[runModel] Server returned " f"unspecified malformed files: {e}"
+                    f"[runModel] Server returned unspecified malformed files: {e}"
                 )
                 return ("UncaughtFormatError", e)
         return processedData
@@ -417,14 +354,12 @@ async def runModel(scenarioNames: list[str], parameterJSON: str):
         return ("UncaughtError", e)
 
 
-def runModelWrapper(scenarioNames, parameterJSON):
+def runModelWrapper(parameterJSON):
     """
     Async wrapper function for runModel, allowing HTTP requests to be made
-    asynchronously without blocking Streamlit operations
+    asynchronously without blocking Streamlit operations.
 
     Parameters:
-        scenarioNames (list of str): A list of names to assign to each scenario.
-
         parameterJSON (str): A string containing the JSON representation of
             the simulation experiment to run.
     """
@@ -434,11 +369,11 @@ def runModelWrapper(scenarioNames, parameterJSON):
     def threadRunner():
         """
         Inner function to asynchronously call the server and await results,
-        needed to avoid interrupting Streamlit UI functionality
+        needed to avoid interrupting Streamlit UI functionality.
         """
         try:
             # time.sleep(5)  # Debug for testing dashboard while running
-            formattedData = asyncio.run(runModel(scenarioNames, parameterJSON))
+            formattedData = asyncio.run(runModel(parameterJSON))
             if formattedData:
                 resultQueue.put(formattedData)  # type: ignore
         except Exception as e:

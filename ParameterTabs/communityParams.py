@@ -9,28 +9,37 @@ import numpy as np
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import dayCount, idGet, loadKey, saveKey
+from ClientResources.InterfaceFunctions import dayCount
 from ClientResources.ModelSchema import Parameters, scenarioParameters
+from ClientResources.ParameterFunctions import (
+    idGet,
+    loadKey,
+    saveKey,
+    updateParamFromSchema,
+)
 
 # Logging
 communityLog = logging.getLogger(__name__)
+
+# Store st.session_state as variable for efficiency
+session = st.session_state
 
 
 @st.fragment
 def buildCommunityTab(id: int, advanced: bool = False):
     """
     Function to generate the parameters for the simulation environment in a
-    specified container with scenario differentiation
+    specified container with scenario differentiation.
 
     Parameters:
         id (int): An integer that will be used to differentiate the parameters in
             different instances of the tab by adding a number to the Streamlit
             session state variables.
 
-        advanced (bool): Set to True to show more complex parameters like
+        advanced (bool): Set to `True` to show more complex parameters like
             child supervision rate.
     """
-    # Initialise session variables needed by the disease forms
+    # Initialise session variables needed by the pathogen forms
     # sessionParameters = {f"deathRowCount{id}": 0}
     # for parameter, default in sessionParameters.items():
     # st.session_state[parameter] = st.session_state.get(parameter, default)
@@ -53,18 +62,18 @@ def buildCommunityTab(id: int, advanced: bool = False):
         This tab contains parameters relating to the community that
         is simulated by the model, including the likelihood of
         different health burden outcomes, how individuals react to
-        the disease, and the size of groups that individuals form
+        the pathogen, and the size of groups that individuals form
         in different locations.
     """
     )
 
     # Withdrawal and BCC
-    oldExpander = '''with st.expander("Withdrawals and Diagnosis"):
+    '''with st.expander("Withdrawals and Diagnosis"):
         # Describe what sort of parameters are here
         st.markdown(
             """
             These parameters control how individuals in the
-            community will react to symptoms of the disease,
+            community will react to symptoms of the pathogen,
             including how likely they are to withdraw from
             work/school and how long it takes until they have their
             infection officially diagnosed as a case.
@@ -72,7 +81,7 @@ def buildCommunityTab(id: int, advanced: bool = False):
             Note that this section does not contain parameters
             related to social distancing and other programs
             implemented by the government to reduce the spread of
-            the disease. These interventions can be configured
+            the pathogen. These interventions can be configured
             using the parameters in the "Vaccinations and NPIs" tab.
         """
         )'''
@@ -89,9 +98,9 @@ def buildCommunityTab(id: int, advanced: bool = False):
         args=["withdrawalWork", id],  # type: ignore
         key=f"_withdrawalWork{id}",
         help="""
-            The probability of an infected individual in the
-            simulation voluntarily withdrawing from work after
-            becoming symptomatic.
+The probability of an infected individual in the
+simulation voluntarily withdrawing from work after
+becoming symptomatic.
         """,
     )
     loadKey("withdrawalSchool", id, 0.9)
@@ -104,9 +113,9 @@ def buildCommunityTab(id: int, advanced: bool = False):
         args=["withdrawalSchool", id],  # type: ignore
         key=f"_withdrawalSchool{id}",
         help="""
-            The probability of an infected individual in the
-            simulation voluntarily withdrawing from school
-            after becoming symptomatic.
+The probability of an infected individual in the
+simulation voluntarily withdrawing from school
+after becoming symptomatic.
         """,
     )
     loadKey("bccRate", id, 4.0)
@@ -124,18 +133,19 @@ def buildCommunityTab(id: int, advanced: bool = False):
         on_change=saveKey,
         args=["bccRate", id],  # type: ignore
         help="""
-            The average number of other people each individual
-            will interact with in the background phase of each
-            day in the simulation. These interactions emulate
-            interactions outside of locations simulated by the
-            model.
+The average number of other people each individual
+will interact with in the background phase of each
+day in the simulation. These interactions emulate
+interactions outside of locations simulated by the model.
         """,
     )
 
     if advanced:
+        st.divider()
         # Other Community Parameters
         st.subheader("Advanced Community Settings")
 
+        # TODO: Allow half-days here
         loadKey("diagnosisDelay", id, 1)
         st.select_slider(
             "Case Diagnosis Delay (Days)",
@@ -146,10 +156,9 @@ def buildCommunityTab(id: int, advanced: bool = False):
             format_func=dayCount,
             key=f"_diagnosisDelay{id}",
             help="""
-                The number of days after an individual begins
-                showing symptoms of the disease before their
-                infection can be formally diagnosed as a confirmed
-                case.
+The number of days after an individual begins
+showing symptoms of the pathogen before their
+infection can be formally diagnosed as a confirmed case.
             """,
         )
 
@@ -163,9 +172,9 @@ def buildCommunityTab(id: int, advanced: bool = False):
             args=["childSupervision", id],  # type: ignore
             format_func=lambda x: f"{100 * x:0.3g}%",
             help="""
-                The probability that an adult in the simulation
-                will remain at their household if there is at least
-                one child present and no other adults are at home.
+The probability that an adult in the simulation
+will remain at their household if there is at least
+one child present and no other adults are at home.
             """,
         )
 
@@ -180,12 +189,12 @@ def buildCommunityTab(id: int, advanced: bool = False):
             on_change=saveKey,
             args=["maxClassSize", id],  # type: ignore
             help="""
-                The maximum size of school classes within
-                schools and childcare facilities in the simulation.
+The maximum size of school classes within
+schools and childcare facilities in the simulation.
             """,
         )
 
-        unusedClassCount = '''loadKey("maxClassCount", id, 1)
+        '''loadKey("maxClassCount", id, 1)
         st.slider(
             "Number of School Class Subgroups",
             1,
@@ -195,11 +204,11 @@ def buildCommunityTab(id: int, advanced: bool = False):
             args=["maxClassCount", id],  # type: ignore
             key=f"_maxClassCount{id}",
             help="""
-                The maximum number of subgroups that may exist
-                within a single school class in the simulation.
-                Subgroups are defined as sets of individuals that
-                regularly interact with each other but not with the
-                rest of the class.
+The maximum number of subgroups that may exist
+within a single school class in the simulation.
+Subgroups are defined as sets of individuals that
+regularly interact with each other but not with the
+rest of the class.
             """,
         )'''
         loadKey("maxWorkGroupSize", id, 10)
@@ -212,16 +221,15 @@ def buildCommunityTab(id: int, advanced: bool = False):
             on_change=saveKey,
             args=["maxWorkGroupSize", id],  # type: ignore
             help="""
-                The maximum size of groups within workplaces in the
-                simulation.
+The maximum size of groups within workplaces in the simulation.
             """,
         )
 
 
-def communitySchema(schema: Parameters, id: int = 0, advanced: bool = False):
+def communitySaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
     """
-    Function to populate the Pydantic model schema with the parameters in
-    this tab with scenario differentiation
+    Function to populate the Pydantic model schema with community parameters
+    using scenario differentiation.
 
     Parameters:
         schema (Parameters): The Pydantic model (specifically an object in the
@@ -232,7 +240,7 @@ def communitySchema(schema: Parameters, id: int = 0, advanced: bool = False):
             session state variables. A value of 0 means that this is the
             baseline scenario and will be treated accordingly.
 
-        advanced (bool): Set to True to show more complex parameters like
+        advanced (bool): Set to `True` to show more complex parameters like
             child supervision rate.
     """
     try:
@@ -277,3 +285,41 @@ def communitySchema(schema: Parameters, id: int = 0, advanced: bool = False):
             )
         )
         raise e
+
+
+def communityLoadSchema(schema: Parameters, scenarioID: int = 0):
+    """
+    Function to read community parameters from a schema and set the
+    dashboard's widgets to the specified values.
+
+    Parameters:
+        schema (Parameters): The Pydantic model (specifically an object in the
+            Parameters class) that the parameters will be read from.
+
+        id (int): An integer that will be used to differentiate the parameters in
+            different instances of the tab by adding a number to the Streamlit
+            session state variables. A value of 0 means that this is the
+            baseline scenario and will be treated accordingly.
+    """
+    schemaParameters = schema.Scenario_Parameter
+    if schemaParameters is None:
+        return
+    # Use dictionary to convert schema parameters into dashboard values
+    paramConvert = {
+        "prob_withdrawal": ("withdrawalWork", lambda x: x),
+        "prob_school_withdrawal": ("withdrawalSchool", lambda x: x),
+        "background_contact_count": ("bccRate", lambda x: x),
+        "diagnosis_delay": ("diagnosisDelay", lambda x: x // 2),
+        "prob_child_supervision": ("childSupervision", lambda x: x),
+        "max_class_size": ("maxClassSize", lambda x: x),
+        "max_workgroup_size": ("maxWorkGroupSize", lambda x: x),
+    }
+    # Only include non-None params that fit this tab
+    validParams = {
+        p: v
+        for p, v in vars(schemaParameters).items()
+        if v is not None and p in paramConvert.keys()
+    }
+    for parameter, value in validParams.items():
+        key, formatFunc = paramConvert[parameter]
+        updateParamFromSchema(key, formatFunc(value), scenarioID)

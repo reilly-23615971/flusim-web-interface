@@ -5,10 +5,18 @@
 # Imports
 import logging
 from operator import attrgetter
-from typing import Annotated, Literal, Optional, Any, cast
-from annotated_types import Ge, Le
+from typing import Annotated, Any, Literal, Optional, cast
+
+from annotated_types import Ge, Le, Len
+from pydantic import (
+    BaseModel,
+    Field,
+    ValidationInfo,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 from typing_extensions import Self
-from pydantic import BaseModel, ValidationInfo, Field, model_validator, field_validator
 
 # Logging
 validationLog = logging.getLogger(__name__)
@@ -42,6 +50,11 @@ type Proportion = Annotated[float, Ge(0), Le(1)]
 type Probability = Annotated[float, Ge(0), Le(1)]
 type EfficacyValue = Annotated[float, Ge(0), Le(1)]
 
+# Vaccination priority is defined in advance for type checking purposes
+vaccinePriorityDefault: list[
+    Literal["elderly", "healthcare", "essential_workers", "other"]
+] = ["elderly", "healthcare", "essential_workers", "other"]
+
 # Validation constants
 parameterCategories = {
     "Scenario_CrossImmunity": ["FromStrainId", "ToStrainId"],
@@ -62,6 +75,7 @@ parameterGetters = {
 
 
 # Parameter Models
+# TODO: More validation to ensure the dashboard can use this
 
 
 # Set of scenario parameters set collectively for all age groups
@@ -75,7 +89,7 @@ class ageScenarioParameters(BaseModel):
                 "The probability of transmission for all age groups will "
                 "be multiplied by this value; the higher this is, the more "
                 "likely it is that infected individuals will spread the "
-                "disease to others."
+                "pathogen to others."
             )
         ),
     )
@@ -88,7 +102,7 @@ class ageScenarioParameters(BaseModel):
                 "The probability of transmission for all age groups will "
                 "be multiplied by this value; the higher this is, the more "
                 "likely it is that uninfected individuals will catch the "
-                "disease from others."
+                "pathogen from others."
             )
         ),
     )
@@ -105,9 +119,7 @@ class ageScenarioParameters(BaseModel):
     mort: Optional[Probability] = Field(
         title="Mortality",
         default=None,
-        description=(
-            ("The probability of dying from " "the disease for all age groups.")
-        ),
+        description="The probability of dying from the infection for all age groups.",
     )
 
     class Config:
@@ -341,6 +353,18 @@ class scenarioParameters(BaseModel):
             )
         ),
     )
+    prob_icu: Optional[Probability] = Field(
+        title="ICU Visit Probability",
+        default=0.0005,
+        description=(
+            (
+                "The probability of an infected individual visiting a hospital's "
+                "Intensive Care Unit as a result of the pathogen. This parameter "
+                "is not used in the simulation itself, but is included to aid in "
+                "dashboard functions."
+            )
+        ),
+    )
     prob_diagnosis: Optional[Probability] = Field(
         title="Diagnosis Probability",
         default=0.5,
@@ -348,6 +372,18 @@ class scenarioParameters(BaseModel):
             (
                 "The probability of an infected individual being formally "
                 "diagnosed as a case after becoming symptomatic."
+            )
+        ),
+    )
+    prob_gp: Optional[Probability] = Field(
+        title="GP Visit Probability",
+        default=0.17,
+        description=(
+            (
+                "The probability of an infected individual visiting a general "
+                "practitioner regarding symptoms of the pathogen. This parameter "
+                "is not used in the simulation itself, but is included to aid in "
+                "dashboard functions."
             )
         ),
     )
@@ -580,7 +616,7 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The number of cycles before an individual who has recovered from "
-                "an infection will begin to lose their immunity to the disease."
+                "an infection will begin to lose their immunity to the pathogen."
             )
         ),
     )
@@ -591,7 +627,7 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The proportion of immune individuals who will lose their "
-                "immunity to the disease each cycle, once immunity waning "
+                "immunity to the pathogen each cycle, once immunity waning "
                 "has begun."
             )
         ),
@@ -940,7 +976,7 @@ class scenarioParameters(BaseModel):
     vaccination_priority: Optional[
         list[Literal["elderly", "healthcare", "essential_workers", "other"]]
     ] = Field(
-        default=["elderly", "healthcare", "essential_workers", "other"],
+        default=vaccinePriorityDefault,
         title="Vaccination Priority",
         description=(
             (
@@ -1027,7 +1063,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the infected individual is less than 6 "
                 "months old. The higher this is, the more likely it is "
-                "that infected young infants will spread the disease to "
+                "that infected young infants will spread the pathogen to "
                 "others."
             )
         ),
@@ -1041,7 +1077,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the infected individual is 7-24 months "
                 "old. The higher this is, the more likely it is that "
-                "infected infants will spread the disease to others."
+                "infected infants will spread the pathogen to others."
             )
         ),
     )
@@ -1054,7 +1090,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the infected individual is 3-5 years old. "
                 "The higher this is, the more likely it is that infected "
-                "young children will spread the disease to others."
+                "young children will spread the pathogen to others."
             )
         ),
     )
@@ -1067,7 +1103,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the infected individual is 6-12 years "
                 "old. The higher this is, the more likely it is that "
-                "infected children will spread the disease to others."
+                "infected children will spread the pathogen to others."
             )
         ),
     )
@@ -1080,7 +1116,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the infected individual is 13-17 years "
                 "old. The higher this is, the more likely it is that "
-                "infected adolescents will spread the disease to others."
+                "infected adolescents will spread the pathogen to others."
             )
         ),
     )
@@ -1093,7 +1129,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the infected individual is 18-24 years "
                 "old. The higher this is, the more likely it is that "
-                "infected young adults will spread the disease to others."
+                "infected young adults will spread the pathogen to others."
             )
         ),
     )
@@ -1106,7 +1142,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the infected individual is 25-44 years "
                 "old. The higher this is, the more likely it is that "
-                "infected adults will spread the disease to others."
+                "infected adults will spread the pathogen to others."
             )
         ),
     )
@@ -1119,7 +1155,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the infected individual is 45-64 years "
                 "old. The higher this is, the more likely it is that "
-                "infected older adults will spread the disease to others."
+                "infected older adults will spread the pathogen to others."
             )
         ),
     )
@@ -1132,7 +1168,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the infected individual is 65-79 years "
                 "old. The higher this is, the more likely it is that "
-                "infected seniors will spread the disease to others."
+                "infected seniors will spread the pathogen to others."
             )
         ),
     )
@@ -1145,7 +1181,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the infected individual is over 80 years "
                 "old. The higher this is, the more likely it is that "
-                "infected older seniors will spread the disease to others."
+                "infected older seniors will spread the pathogen to others."
             )
         ),
     )
@@ -1160,7 +1196,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the uninfected individual is less than 6 "
                 "months old. The higher this is, the more likely it is "
-                "that uninfected young infants will catch the disease from "
+                "that uninfected young infants will catch the pathogen from "
                 "others."
             )
         ),
@@ -1174,7 +1210,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the uninfected individual is 7-24 months "
                 "old. The higher this is, the more likely it is that "
-                "uninfected infants will catch the disease from others."
+                "uninfected infants will catch the pathogen from others."
             )
         ),
     )
@@ -1187,7 +1223,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the uninfected individual is 3-5 years "
                 "old. The higher this is, the more likely it is that "
-                "uninfected young children will catch the disease from "
+                "uninfected young children will catch the pathogen from "
                 "others."
             )
         ),
@@ -1201,7 +1237,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the uninfected individual is 6-12 years "
                 "old. The higher this is, the more likely it is that "
-                "uninfected children will catch the disease from others."
+                "uninfected children will catch the pathogen from others."
             )
         ),
     )
@@ -1214,7 +1250,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the uninfected individual is 13-17 years "
                 "old. The higher this is, the more likely it is that "
-                "uninfected adolescents will catch the disease from others."
+                "uninfected adolescents will catch the pathogen from others."
             )
         ),
     )
@@ -1227,7 +1263,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the uninfected individual is 18-24 years "
                 "old. The higher this is, the more likely it is that "
-                "uninfected young adults will catch the disease from "
+                "uninfected young adults will catch the pathogen from "
                 "others."
             )
         ),
@@ -1241,7 +1277,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the uninfected individual is 25-44 years "
                 "old. The higher this is, the more likely it is that "
-                "uninfected adults will catch the disease from others."
+                "uninfected adults will catch the pathogen from others."
             )
         ),
     )
@@ -1254,7 +1290,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the uninfected individual is 45-64 years "
                 "old. The higher this is, the more likely it is that "
-                "uninfected older adults will catch the disease from "
+                "uninfected older adults will catch the pathogen from "
                 "others."
             )
         ),
@@ -1268,7 +1304,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the uninfected individual is 65-79 years "
                 "old. The higher this is, the more likely it is that "
-                "uninfected seniors will catch the disease from others."
+                "uninfected seniors will catch the pathogen from others."
             )
         ),
     )
@@ -1281,7 +1317,7 @@ class scenarioParameters(BaseModel):
                 "The probability of transmission will be multiplied by "
                 "this value when the uninfected individual is over 80 "
                 "years old. The higher this is, the more likely it is that "
-                "uninfected older seniors will catch the disease from "
+                "uninfected older seniors will catch the pathogen from "
                 "others."
             )
         ),
@@ -1396,7 +1432,7 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The probability that an individual who is less than 6 "
-                "months old will die as a result of the disease."
+                "months old will die as a result of the pathogen."
             )
         ),
     )
@@ -1406,7 +1442,7 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The probability that an individual who is 7-24 months old "
-                "will die as a result of the disease."
+                "will die as a result of the pathogen."
             )
         ),
     )
@@ -1416,7 +1452,7 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The probability that an individual who is 3-5 years old "
-                "will die as a result of the disease."
+                "will die as a result of the pathogen."
             )
         ),
     )
@@ -1426,7 +1462,7 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The probability that an individual who is 6-12 years old "
-                "will die as a result of the disease."
+                "will die as a result of the pathogen."
             )
         ),
     )
@@ -1436,7 +1472,7 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The probability that an individual who is 13-17 years old "
-                "will die as a result of the disease."
+                "will die as a result of the pathogen."
             )
         ),
     )
@@ -1446,7 +1482,7 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The probability that an individual who is 18-24 years old "
-                "will die as a result of the disease."
+                "will die as a result of the pathogen."
             )
         ),
     )
@@ -1456,7 +1492,7 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The probability that an individual who is 25-44 years old "
-                "will die as a result of the disease."
+                "will die as a result of the pathogen."
             )
         ),
     )
@@ -1466,7 +1502,7 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The probability that an individual who is 45-64 years old "
-                "will die as a result of the disease."
+                "will die as a result of the pathogen."
             )
         ),
     )
@@ -1476,7 +1512,7 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The probability that an individual who is 65-79 years old "
-                "will die as a result of the disease."
+                "will die as a result of the pathogen."
             )
         ),
     )
@@ -1486,7 +1522,7 @@ class scenarioParameters(BaseModel):
         description=(
             (
                 "The probability that an individual who is over 80 years "
-                "old will die as a result of the disease."
+                "old will die as a result of the pathogen."
             )
         ),
     )
@@ -1715,7 +1751,7 @@ class vaccineDose(BaseModel):
         description=(
             (
                 "The number of cycles before an individual who has received this "
-                "vaccine dose will begin to lose their immunity to the disease."
+                "vaccine dose will begin to lose their immunity to the pathogen."
             )
         ),
     )
@@ -1724,7 +1760,7 @@ class vaccineDose(BaseModel):
         description=(
             (
                 "The proportion of vaccinated individuals who will lose their "
-                "immunity to the disease each cycle, once immunity waning "
+                "immunity to the pathogen each cycle, once immunity waning "
                 "has begun."
             )
         ),
@@ -1762,9 +1798,16 @@ class vaccineEfficacy(BaseModel):
         ),
     )
 
-    # Efficacy should be list for primary and single value for booster
     @model_validator(mode="after")
     def efficacyValidation(self) -> Self:
+        """
+        Function to validate parameter sets by ensuring that vaccine efficacy
+        is a list for primary vaccines and a single value for booster vaccines.
+
+        Raises:
+            ValueError: If the type of `Efficacy` is incorrect for the
+                specified `DoseType` value.
+        """
         try:
             if self.DoseType == "primary" and not isinstance(self.Efficacy, list):
                 raise ValueError(
@@ -1841,7 +1884,7 @@ class Parameters(BaseModel):
         description=(
             (
                 "Parameters controlling how individuals naturally gain immunity "
-                "to the disease without requiring infection or vaccination."
+                "to the pathogen without requiring infection or vaccination."
             )
         ),
     )
@@ -1878,7 +1921,18 @@ class Parameters(BaseModel):
         description=("Parameters defining the efficacy of different vaccine doses."),
     )
 
-    # Wrap solo entries in list-based parameters
+    @field_serializer(
+        "Scenario_SeededNaturalImmunity",
+        "Scenario_VaccineCoverage",
+        "Scenario_VaccineDoseEfficacy",
+        mode="plain",
+    )
+    def nullAgeSerialize(self, value):
+        """
+        Function to ensure that age fields where `None` is meaningful are never omitted
+        """
+        return [item.model_dump(exclude_none=False) for item in value]
+
     @field_validator(
         "Scenario_CrossImmunity",
         "Scenario_DynamicIntervention",
@@ -1891,13 +1945,15 @@ class Parameters(BaseModel):
     )
     @classmethod
     def listify(cls, value: Any) -> Optional[list]:
+        """
+        Validation function to automatically convert single parameter
+        objects into lists.
+        """
         if value is not None and not isinstance(value, list):
             return [value]
         else:
             return value
 
-    # Prevent duplicate entries in list-based parameters
-    # (e.g. 2 Scenario_Strain objects with the same StrainId)
     @field_validator(
         "Scenario_CrossImmunity",
         "Scenario_SeededNaturalImmunity",
@@ -1911,6 +1967,14 @@ class Parameters(BaseModel):
     def noDuplicateCategories(
         cls, value: Optional[list[Any]], info: ValidationInfo
     ) -> Optional[list[Any]]:
+        """
+        Validation function to remove duplicate parameter classes that cover
+        the same element in the simulation (e.g. two `Scenario_Strain` objects
+        with the same `StrainId`).
+
+        Raises:
+            AssertionError: If there are duplicate parameter classes.
+        """
         try:
             if value is None or info.field_name is None:
                 return value
@@ -1930,7 +1994,7 @@ class Parameters(BaseModel):
                     or info.field_name == "Scenario_VaccineDoseEfficacy"
                 ):
                     clearValues = [
-                        (first, "All Ages" if second is None else second)
+                        first + ("All Ages" if second is None else second)
                         for first, second in duplicateValues
                     ]
                 else:
@@ -1959,9 +2023,16 @@ class Parameters(BaseModel):
     class Config:
         validate_assignment = True
 
-    # Ensure the right number of efficacies for primary vaccines are defined
     @model_validator(mode="after")
-    def efficacyCount(self, info: ValidationInfo) -> Self:
+    def efficacyCount(self) -> Self:
+        """
+        Validation function to ensure that the number of doses matches
+        the number of defined efficacy values.
+
+        Raises:
+            ValueError: If the length of `Efficacy` does not match the primary
+                dose count.
+        """
         if self.Scenario_VaccineDose and self.Scenario_VaccineDoseEfficacy:
             primaryDose = next(
                 (
@@ -2077,10 +2148,13 @@ class simulationSet(BaseModel):
         title="Simulations", description=("A list of scenarios to run in this set.")
     )
 
-    # Wrap solo simulations in list
     @field_validator("simulations", mode="before")
     @classmethod
     def listify(cls, value: Any) -> Optional[list]:
+        """
+        Validation function to automatically convert single simulation
+        objects into lists.
+        """
         if value is not None and not isinstance(value, list):
             return [value]
         else:
@@ -2113,7 +2187,7 @@ class modelGuideFile(BaseModel):
             )
         ),
     )
-    community_used: list[str] = Field(
+    community_used: Annotated[list[str], Len(min_length=1)] = Field(
         title="Communities Used",
         default=["newcastle"],
         description=(
@@ -2154,13 +2228,99 @@ class modelGuideFile(BaseModel):
         description=("A list of sets containing scenarios to run together."),
     )
 
-    # Wrap solo overrides/simulation sets in list
     @field_validator(
         "community_overrides", "override_templates", "simulation_sets", mode="before"
     )
     @classmethod
     def listify(cls, value: Any) -> Optional[list]:
+        """
+        Validation function to automatically convert single override objects into lists.
+        """
         if value is not None and not isinstance(value, list):
             return [value]
         else:
             return value
+
+    @model_validator(mode="after")
+    def communityMatch(self) -> Self:
+        """
+        Validation function to ensure communities in `community_overrides` are
+        ones present in `community_used`.
+
+        Raises:
+            ValueError: If `community_overrides` includes communities not in
+                `community_used`.
+        """
+        validCommunities = self.community_used
+        if self.community_overrides:
+            for override in self.community_overrides:
+                if override.name not in validCommunities:
+                    raise ValueError(
+                        """
+                        `community_overrides` includes communities not present in
+                        `community_used`. Ensure the `name` property of each
+                        override in `community_overrides` matches a community
+                        in `community_used`.
+                        """
+                    )
+        return self
+
+    """
+    Below are field serializers used to format the parameter schema for how
+    they are used by the dashboard. This means that community_overrides is used
+    for command arguments, shared_overrides is used for the baseline scenario
+    and all other parameters are part of simulation sets; the baseline defines
+    as many parameters as possible while the others leave out unset parameters
+    so they can default to the baseline. If you are using this schema for a
+    different purpose and these serializers interfere with generating properly
+    formatted files, feel free to disable them.
+    """
+
+    @field_serializer("shared_overrides", mode="plain", when_used="json-unless-none")
+    def baselineSerialize(self, value):
+        """
+        Function that ensures the baseline scenario's parameters are all
+        included in JSON serialisations.
+        """
+        # TODO: Test these params (besides start day of week) to see which are
+        # totally unused and which can be added to the dashboard
+        # (also vaccination_trigger and friends!)
+        excludedParams = {
+            "parameters": {
+                "Scenario_Parameter": {
+                    "start_day_of_week",
+                    "kappa_adult_education",
+                    "kappa_child_care",
+                    "kappa_hospital",
+                    "withdrawal_period",
+                    "hospitalisation_rate",
+                    "max_adult_class_size",
+                    "max_neighbourgroup_size",
+                    "max_churchgroup_size",
+                    "max_class_count",
+                    "pandemic_alert",
+                    "close_childcare",
+                    "close_child_education",
+                    "close_adult_education",
+                    "prob_work_nonattendance",
+                    "work_nonattendance_trigger",
+                    "work_nonattendance_relaxation",
+                    "work_nonattendance_delay",
+                    "work_nonattendance_duration",
+                    "vaccination_priority",
+                }
+            }
+        }
+        return value.model_dump(exclude_none=True, exclude=excludedParams)
+
+    @field_serializer(
+        "community_overrides",
+        "simulation_sets",
+        mode="plain",
+        when_used="json-unless-none",
+    )
+    def scenarioSerialize(self, value):
+        """
+        Function that ensures non-baseline parameters can default to baseline values.
+        """
+        return [item.model_dump(exclude_unset=True) for item in value]

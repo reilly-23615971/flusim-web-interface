@@ -7,13 +7,16 @@ import logging
 
 import streamlit as st
 
-from ClientResources.InterfaceFunctions import containerSave, errorChecker, loadKey
+from ClientResources.DownloadFunctions import uploadDownloadBar
+from ClientResources.InterfaceFunctions import errorChecker
+from ClientResources.ParameterFunctions import containerSave, loadKey
 from ParameterTabs.communityParams import buildCommunityTab
-
-# from streamlit_push_notifications import send_push, send_alert
 from ParameterTabs.diseaseParams import buildDiseaseTab
 from ParameterTabs.dynamicParams import buildDynamicTab
 from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
+
+# from streamlit_push_notifications import send_push, send_alert
+
 
 # Logging
 baselineLog = logging.getLogger(__name__)
@@ -46,6 +49,12 @@ st.markdown(
 """
 )
 
+# Buttons to upload simulation parameters
+uploadDownloadBar()
+
+# Fragment to display errors
+errorChecker(0, "Errors in Baseline Scenario")
+
 # Advanced parameters toggle
 loadKey("showAdvanced", default=False, noZeroDefault=True)
 containersToOpen: set[str] = {"paramTabs0"}
@@ -57,15 +66,11 @@ showAdvanced = st.toggle(
     args=["showAdvanced"],
     kwargs={"containers": containersToOpen},
     help="""
-        Toggle whether to display parameters that control more fine-grain
-        aspects of the simulation environment, such as age-specific NPI
-        compliance or dynamic parameter updates.
+Toggle whether to display parameters that control more fine-grain aspects
+of the simulation environment, such as age-specific NPI compliance or
+dynamic parameter updates.
     """,
 )
-
-# Fragments to display errors and rerun on sim length change
-errorChecker(0)
-
 
 # TODO: Consider having a tab for templates that load parameters for
 # specific stuff (e.g. influenza, NPI presets)
@@ -78,7 +83,7 @@ errorChecker(0)
 if showAdvanced:
     (diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
         [
-            ":material/coronavirus: Disease",
+            ":material/coronavirus: Pathogen",
             ":material/groups: Community",
             ":material/vaccines: Vaccination and NPIs",
             ":material/manage_history: Dynamic",
@@ -89,7 +94,7 @@ if showAdvanced:
 else:
     (diseaseTab, communityTab, interventionTab) = st.tabs(
         [
-            ":material/coronavirus: Disease",
+            ":material/coronavirus: Pathogen",
             ":material/groups: Community",
             ":material/vaccines: Vaccination and NPIs",
         ],

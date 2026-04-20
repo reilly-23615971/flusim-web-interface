@@ -11,21 +11,24 @@ import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import (
-    dynamicScaleChange,
-    hasDuplicates,
-    idGet,
-    loadKey,
-    paramError,
-    saveKey,
-)
+from ClientResources.InterfaceFunctions import paramError
 from ClientResources.ModelSchema import (
+    EfficacyValue,
     Parameters,
     ageScenarioParameters,
     scenarioParameters,
     vaccineCoverage,
     vaccineDose,
     vaccineEfficacy,
+)
+from ClientResources.ParameterFunctions import (
+    dynamicScaleChange,
+    hasDuplicates,
+    idGet,
+    loadKey,
+    saveKey,
+    updateParamFromSchema,
+    updateTableFromSchema,
 )
 from ClientResources.SharedResources import (
     ageTimeDict,
@@ -50,18 +53,18 @@ session = st.session_state
 def buildVaccinationNPITab(id: int, advanced: bool = False):
     """
     Function to generate the parameters for vaccination and NPIs in a
-    specified container with scenario differentiation
+    specified container with scenario differentiation.
 
     Parameters:
         id (int): An integer that will be used to differentiate the parameters in
             different instances of the tab by adding a number to the Streamlit
             session state variables.
 
-        advanced (bool): Set to True to show more complex parameters like
+        advanced (bool): Set to `True` to show more complex parameters like
             individual vaccine dose efficacies.
     """
 
-    oldVarLengthForm = """
+    """
     # Initialise session variables needed by the vaccination/NPI forms
     sessionParameters = {
         # Row counts
@@ -142,9 +145,9 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
         args=["vaccineToggle", id],  # type: ignore
         key=f"_vaccineToggle{id}",
         help="""
-            Toggle whether or not individuals in the simulation
-            will be vaccinated against the disease, overriding
-            all other vaccine-related parameters.
+Toggle whether or not individuals in the simulation
+will be vaccinated against the pathogen, overriding
+all other vaccine-related parameters.
         """,
     )
 
@@ -175,12 +178,11 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
                 on_change=saveKey,
                 args=["limitDosesToggle", id],  # type: ignore
                 help="""
-                    Toggle whether the total number of vaccine
-                    first doses that can be administered across the
-                    whole simulation should be limited to a
-                    specific value, putting an upper limit on the
-                    number of vaccinated individuals in the
-                    simulation.
+Toggle whether the total number of vaccine
+first doses that can be administered across the
+whole simulation should be limited to a
+specific value, putting an upper limit on the
+number of vaccinated individuals in the simulation.
                 """,
             )
             # TODO: Consider hiding when doses aren't limited
@@ -195,18 +197,18 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
                 args=["initialDoseReserve", id],  # type: ignore
                 placeholder="Enter a whole number of doses",
                 help="""
-                    The total number of vaccine first doses that
-                    will be available to administer to unvaccinated
-                    individuals throughout the simulation. Once all
-                    first doses have been administered, any
-                    remaining unvaccinated individuals in the
-                    simulation will never be vaccinated.
-                    Individuals who have already received the first
-                    dose of the vaccine will still receive future
-                    doses regardless of the remaining dose count.
+The total number of vaccine first doses that
+will be available to administer to unvaccinated
+individuals throughout the simulation. Once all
+first doses have been administered, any
+remaining unvaccinated individuals in the
+simulation will never be vaccinated.
+Individuals who have already received the first
+dose of the vaccine will still receive future
+doses regardless of the remaining dose count.
 
-                    This parameter is ignored if "Enable Limited
-                    Number of Vaccine Doses" has been toggled off.
+This parameter is ignored if "Enable Limited
+Number of Vaccine Doses" has been toggled off.
                 """,
             )
         loadKey("firstDoseRate", id, 300)
@@ -220,12 +222,13 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
             args=["firstDoseRate", id],  # type: ignore
             disabled=not useVaccinesToggle,
             help="""
-                The number of unvaccinated individuals who will
-                receive the first dose of the vaccine each day,
-                assuming there are enough doses available.
+The number of unvaccinated individuals who will
+receive the first dose of the vaccine each day,
+assuming there are enough doses available.
             """,
         )
-        # TODO: Change to numeric input/proportion/more precise slider
+
+        # TODO: Change to numeric input/proportion/regular slider
         loadKey("initialVaccinated", id, 0.0)
         initialVaccinated = st.select_slider(
             "Initial Vaccinated Proportion of Population",
@@ -237,12 +240,12 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
             args=["initialVaccinated", id],  # type: ignore
             disabled=not useVaccinesToggle,
             help="""
-                The percentage of the population that will
-                already be vaccinated against the disease at
-                the beginning of the simulation.
+The percentage of the population that will
+already be vaccinated against the pathogen at
+the beginning of the simulation.
             """,
         )
-        noErrorsProportions = '''
+        '''
         loadKey("initialVaccinated", id, 0.0)
         initialVaccinated = st.number_input(
             "Initial Vaccinated Proportion of Population (%)",
@@ -256,7 +259,7 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
             disabled=not useVaccinesToggle,
             help="""
                 The percentage of the population that will
-                already be vaccinated against the disease at
+                already be vaccinated against the pathogen at
                 the beginning of the simulation.
             """,
         )
@@ -292,12 +295,11 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
             args=["targetVaccinated", id],  # type: ignore
             disabled=not useVaccinesToggle,
             help="""
-                The percentage of the population that will be
-                targeted by the vaccine schedule in the
-                simulation. The actual proportion of the
-                population that is vaccinated may be lower if
-                there are an insufficient number of doses
-                available.
+The percentage of the population that will be
+targeted by the vaccine schedule in the
+simulation. The actual proportion of the
+population that is vaccinated may be lower if
+there are an insufficient number of doses available.
             """,
         )
 
@@ -392,7 +394,7 @@ overriding the base proportions.
                     format="percent",
                     help="""
 The percentage of individuals in this age group that will already be
-vaccinated against the disease at the beginning of the simulation.
+vaccinated against the pathogen at the beginning of the simulation.
                     """,
                 ),
                 "Target Vaccinated Proportion": st.column_config.NumberColumn(
@@ -462,7 +464,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
             True,
         )
 
-        oldVarLengthForm = '''# Save relevant params as variables to avoid lookups
+        '''# Save relevant params as variables to avoid lookups
         vaccineRowCount = session[f"vacAgeRowCount{id}"]
         vacAgeRemainingGroups = session[f"vaccineRemainingAgeGroups{id}"]
         vacAgeErrorContainer = st.container()
@@ -539,7 +541,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
                     help="""
                         The percentage of individuals in this
                         age group that will already be
-                        vaccinated against the disease at the
+                        vaccinated against the pathogen at the
                         beginning of the simulation.
                     """,
                 )
@@ -724,7 +726,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
             individuals within the simulation. Each vaccine in
             the schedule can have its own efficacy values set,
             since in many cases multiple doses are required to
-            achieve maximum immunity to the disease.
+            achieve maximum immunity to the pathogen.
         """
         )
 
@@ -740,14 +742,14 @@ are vaccinated may be lower if there are an insufficient number of doses availab
             args=["primaryDoseCount", id],  # type: ignore
             disabled=not useVaccinesToggle,
             help="""
-                The number of times each individual in the
-                simulation will be administered a vaccine for
-                the disease, excluding booster vaccines.
+The number of times each individual in the
+simulation will be administered a vaccine for
+the pathogen, excluding booster vaccines.
 
-                Note that since efficacy is defined separately
-                for each vaccine dose in the schedule,
-                modifying this value will change the number of
-                sections used for specifying efficacy below.
+Note that since efficacy is defined separately
+for each vaccine dose in the schedule,
+modifying this value will change the number of
+sections used for specifying efficacy below.
             """,
         )
         loadKey("primaryDelay", id, 3)
@@ -761,56 +763,69 @@ are vaccinated may be lower if there are an insufficient number of doses availab
             args=["primaryDelay", id],  # type: ignore
             key=f"_primaryDelay{id}",
             help="""
-                The number of months after an individual
-                receives a vaccine dose before they are able to
-                receive another, where a month is 30 days.
+The number of months after an individual
+receives a vaccine dose before they are able to
+receive another, where a month is 30 days.
             """,
         )
         # Waning parameters (only if advanced parameters are enabled)
         if advanced:
-            loadKey("primaryDuration", id, 6)
-            st.slider(
-                "Vaccine Immunity Waning Delay (Months)",
-                1,
-                36,
-                6,
-                disabled=not useVaccinesToggle,
+            loadKey("vaccineWaningToggle", id, False)
+            waningToggle = st.toggle(
+                "Enable Vaccine Immunity Waning",
+                value=False,
                 on_change=saveKey,
-                args=["primaryDuration", id],  # type: ignore
-                key=f"_primaryDuration{id}",
+                args=["vaccineWaningToggle", id],
+                key=f"_vaccineWaningToggle{id}",
                 help="""
-                    The number of months after an individual
-                    receives a vaccine dose before the immunity
-                    conferred by this vaccine begins to diminish,
-                    where a month is 30 days.
+Toggle whether or not immunity gained from being vaccinated will
+wane over time. If this is enabled, individuals in the simulation can be
+infected if it has been a sufficiently long time since they were vaccinated.
                 """,
             )
-            # TODO: Allow fully disabling vaccine waning
-            loadKey("primaryWaningRate", id, 12)
-            st.slider(
-                "Vaccine Waning Duration (Months)",
-                0,
-                36,
-                12,
-                disabled=not useVaccinesToggle,
-                on_change=saveKey,
-                args=["primaryWaningRate", id],  # type: ignore
-                key=f"_primaryWaningRate{id}",
-                help="""
-                    The number of months after the immunity from a
-                    vaccine dose begins waning before the efficacy
-                    of the vaccine stabilises, where a month is 30
-                    days. Vaccine-conferred immunity in the
-                    *Flusim* simulation will wane at a linear rate,
-                    so this parameter represents how long it takes
-                    for the vaccine's efficacy to decrease from the
-                    final dose's initial value to its final value.
+            if waningToggle:
+                loadKey("primaryDuration", id, 6)
+                st.slider(
+                    "Vaccine Immunity Waning Delay (Months)",
+                    1,
+                    36,
+                    6,
+                    disabled=not useVaccinesToggle,
+                    on_change=saveKey,
+                    args=["primaryDuration", id],  # type: ignore
+                    key=f"_primaryDuration{id}",
+                    help="""
+The number of months after an individual
+receives a vaccine dose before the immunity
+conferred by this vaccine begins to diminish,
+where a month is 30 days.
+                    """,
+                )
+                loadKey("primaryWaningRate", id, 12)
+                st.slider(
+                    "Vaccine Waning Duration (Months)",
+                    1,
+                    36,
+                    12,
+                    disabled=not useVaccinesToggle,
+                    on_change=saveKey,
+                    args=["primaryWaningRate", id],  # type: ignore
+                    key=f"_primaryWaningRate{id}",
+                    help="""
+The number of months after the immunity from a
+vaccine dose begins waning before the efficacy
+of the vaccine stabilises, where a month is 30
+days. Vaccine-conferred immunity in the
+*Flusim* simulation will wane at a linear rate,
+so this parameter represents how long it takes
+for the vaccine's efficacy to decrease from the
+final dose's initial value to its final value.
 
-                    If this parameter is set to 0, the immunity
-                    provided by the main vaccine schedule will
-                    never diminish.
-                """,
-            )
+If this parameter is set to 0, the immunity
+provided by the main vaccine schedule will
+never diminish.
+                    """,
+                )
 
             # Store age-based efficacy values for error checking
             # primaryInitialEfficacy = 0.5
@@ -818,11 +833,11 @@ are vaccinated may be lower if there are an insufficient number of doses availab
 
             # Modifiable-length field for each primary dose
             st.markdown(
-                """
-                ### Individual Dose Efficacies
+                f"""
+                ### {"Individual " if waningToggle else ""}Dose Efficacies
 
-                Here you can set the initial efficacy of each
-                vaccine dose in the schedule separately. Note that
+                Here you can set the {"initial " if waningToggle else ""}efficacy
+                of each vaccine dose in the schedule separately. Note that
                 changing the "Number of Vaccine Doses" parameter
                 will affect how many sections are present here.
             """
@@ -833,7 +848,11 @@ are vaccinated may be lower if there are an insufficient number of doses availab
                     st.markdown(f"#### {ordinals[i+1]} Vaccine Dose")
                     loadKey("primaryBaseEfficacy", id, 0.5, f"-{i}")
                     baseDoseEfficacy = st.select_slider(
-                        "Initial Dose Efficacy (Probability)",
+                        (
+                            "Initial Dose Efficacy (Probability)"
+                            if waningToggle
+                            else "Dose Efficacy (Probability)"
+                        ),
                         np.linspace(0.0, 1.0, 201),
                         0.5,
                         format_func=lambda x: f"{100 * x:0.3g}%",
@@ -841,22 +860,25 @@ are vaccinated may be lower if there are an insufficient number of doses availab
                         on_change=saveKey,
                         args=["primaryBaseEfficacy", id, f"-{i}"],  # type: ignore
                         key=f"_primaryBaseEfficacy{id}-{i}",
-                        help="""
-                            The initial efficacy of this vaccine dose,
-                            represented as the probability that an
-                            individual that has recently received the
-                            dose will remain healthy when exposed
-                            to the disease.
+                        help=f"""
+The {"initial " if waningToggle else ""}efficacy of this vaccine dose,
+represented as the probability that an
+individual that has received the
+dose will remain healthy when exposed to the pathogen.
                         """,
                     )
 
                     # Age-Specific Primary Efficacy Field
                     st.markdown(
-                        "##### Age-Specific Initial Efficacy",
-                        help="""
-This section allows unique initial efficacy values for this dose to be defined
-for individual age groups in the simulation, overriding the global initial
-efficacy value for this dose defined above.
+                        (
+                            "##### Age-Specific Initial Efficacy"
+                            if waningToggle
+                            else "##### Age-Specific Efficacy"
+                        ),
+                        help=f"""
+This section allows unique {"initial " if waningToggle else ""}efficacy values
+for this dose to be defined for individual age groups in the simulation,
+overriding the global efficacy value for this dose defined above.
                         """,
                     )
                     if useVaccinesToggle:
@@ -895,22 +917,27 @@ efficacy value for this dose defined above.
                                 required=True,
                                 options=ageTimeDict.keys(),
                                 format_func=lambda x: ageTimeDict[x],  # type: ignore
-                                help="""
-An age group that will have a specific initial efficacy value defined
+                                help=f"""
+An age group that will have a specific
+{"initial " if waningToggle else ""}efficacy value defined
 for this vaccine dose, overriding the base value.
                                 """,
                             ),
                             "Initial Dose Efficacy": st.column_config.NumberColumn(
-                                "Initial Dose Efficacy (Probability)",
+                                (
+                                    "Initial Dose Efficacy (Probability)"
+                                    if waningToggle
+                                    else "Dose Efficacy (Probability)"
+                                ),
                                 required=True,
                                 default=baseDoseEfficacy,
                                 min_value=0.0,
                                 max_value=1.0,
                                 format="percent",
-                                help="""
-The initial efficacy of this vaccine dose for this age group, represented as
-the probability that a recently vaccinated individual in this age group will
-remain healthy when exposed to the disease.
+                                help=f"""
+The {"initial " if waningToggle else ""}efficacy of this vaccine dose for
+this age group, represented as the probability that a vaccinated individual in
+this age group will remain healthy when exposed to the pathogen.
                                 """,
                             ),
                         },
@@ -920,21 +947,21 @@ remain healthy when exposed to the disease.
                         id,
                         lambda: hasDuplicates(vacInitialEfficacyAgeForm),
                         f"""
-Error: The age-specific initial efficacy form used for the
-{ordinals[i+1].lower()} vaccine dose by the
+Error: The age-specific {"initial" if waningToggle else "dose"} efficacy
+form used for the {ordinals[i+1].lower()} vaccine dose by the
 {'baseline scenario' if id == 0 else f'scenario named "{session[f'scenarioName{id}']}"'}
 contains duplicate age group rows. Each age group should only be used in a
 single row of the form.
 
-Please remove or change any rows of the Age-Specific Initial Efficacy form
-in the {ordinals[i+1]} Vaccine Dose section of
-:primary-badge[:material/vaccines: Vaccinations and NPIs]
+Please remove or change any rows of the Age-Specific
+{"Initial " if waningToggle else ""}Efficacy form in the {ordinals[i+1]}
+Vaccine Dose section of :primary-badge[:material/vaccines: Vaccinations and NPIs]
 that use the same age group as another row.
                         """,
                         True,
                     )
 
-                    oldVarLengthForm = '''
+                    '''
                     # Save remaining ages to variable to avoid lookups
                     primAgeRemainingGroups = session[
                         f"primaryRemainingAgeGroups{id}-{i}"
@@ -1025,7 +1052,7 @@ that use the same age group as another row.
                                     represented as the probability that
                                     a recently vaccinated individual in
                                     this age group will remain healthy
-                                    when exposed to the disease.
+                                    when exposed to the pathogen.
                                 """,
                             )
 
@@ -1134,7 +1161,7 @@ that use the same age group as another row.
                                         else 'the scenario base value of'
                                     } {100 * wanedAgeEfficacy:0.3g}%.
                                     As such, the immunity to the
-                                    disease conferred by the vaccine
+                                    pathogen conferred by the vaccine
                                     will get stronger over time instead
                                     of weaker for individuals in the
                                     "{age}" age group.
@@ -1195,7 +1222,7 @@ that use the same age group as another row.
                                         else 'the scenario base value of'
                                     } {100 * wanedAgeEfficacy:0.3g}%.
                                     As such, the immunity to the
-                                    disease conferred by the vaccine
+                                    pathogen conferred by the vaccine
                                     will get stronger over time instead
                                     of weaker for individuals in the
                                     "{age}" age group.
@@ -1247,196 +1274,196 @@ that use the same age group as another row.
                             session[f"agePrimEfficacyError{id}"] = 0'''
 
             # Efficacy After Waning
-            loadKey("primaryWanedEfficacy", id, 0.0)
-            primaryWanedEfficacy = st.select_slider(
-                "Dose Efficacy After Immunity Waning (Probability)",
-                np.linspace(0.0, 1.0, 201),
-                0.0,
-                format_func=lambda x: f"{100 * x:0.3g}%",
-                disabled=not useVaccinesToggle,
-                on_change=saveKey,
-                args=["primaryWanedEfficacy", id],  # type: ignore
-                key=f"_primaryWanedEfficacy{id}",
-                help="""
-                    The final efficacy value that the vaccine
-                    schedule will approach as the immunity it
-                    provides begins to diminish, represented as the
-                    probability that an individual with completely
-                    waned immunity will remain healthy when exposed
-                    to the disease.
-                """,
-            )
-            # Last efficacy value is all that's cared about
-            # for error checking purposes
-            finalDose = primaryDoseCount - 1
-            finalInitialEfficacy = idGet(
-                "primaryBaseEfficacy", id, 0.5, f"-{finalDose}"
-            )
-            paramError(
-                "wanedEfficacyAboveInitial",
-                id,
-                lambda: useVaccinesToggle
-                and primaryWanedEfficacy > finalInitialEfficacy,
-                f"""
-                    Error: The initial vaccine efficacy for
-                    the final vaccine dose in the {
-                        'baseline scenario' if id == 0
-                        else f'scenario named "{
-                            session[f'scenarioName{id}']
-                        }"'
-                    } is {100 * finalInitialEfficacy:0.3g}%, but the
-                    efficacy after waning is {100 * primaryWanedEfficacy:0.3g}%.
-                    As such, a vaccinated person's immunity to the
-                    disease will get stronger over time instead of weaker.
+            if waningToggle:
+                loadKey("primaryWanedEfficacy", id, 0.0)
+                primaryWanedEfficacy = st.select_slider(
+                    "Dose Efficacy After Immunity Waning (Probability)",
+                    np.linspace(0.0, 1.0, 201),
+                    0.0,
+                    format_func=lambda x: f"{100 * x:0.3g}%",
+                    disabled=not useVaccinesToggle,
+                    on_change=saveKey,
+                    args=["primaryWanedEfficacy", id],  # type: ignore
+                    key=f"_primaryWanedEfficacy{id}",
+                    help="""
+The final efficacy value that the vaccine
+schedule will approach as the immunity it
+provides begins to diminish, represented as the
+probability that an individual with completely
+waned immunity will remain healthy when exposed to the pathogen.
+                    """,
+                )
+                # Last efficacy value is all that's cared about
+                # for error checking purposes
+                finalDose = primaryDoseCount - 1
+                finalInitialEfficacy = idGet(
+                    "primaryBaseEfficacy", id, 0.5, f"-{finalDose}"
+                )
+                paramError(
+                    "wanedEfficacyAboveInitial",
+                    id,
+                    lambda: useVaccinesToggle
+                    and primaryWanedEfficacy > finalInitialEfficacy,
+                    f"""
+                        Error: The initial vaccine efficacy for
+                        the final vaccine dose in the {
+                            'baseline scenario' if id == 0
+                            else f'scenario named "{
+                                session[f'scenarioName{id}']
+                            }"'
+                        } is {100 * finalInitialEfficacy:0.3g}%, but the
+                        efficacy after waning is {100 * primaryWanedEfficacy:0.3g}%.
+                        As such, a vaccinated person's immunity to the
+                        pathogen will get stronger over time instead of weaker.
 
-                    Please make one of the following changes:
+                        Please make one of the following changes:
 
-                    - Increase Initial Dose Efficacy for the final dose in
-                    :primary-badge[:material/vaccines: Vaccination and NPIs]
-                    to be greater than {100 * primaryWanedEfficacy:0.3g}%.
-                    - Decrease Dose Efficacy After Immunity Waning in
-                    :primary-badge[:material/vaccines: Vaccination and NPIs]
-                    to be lower than {100 * finalInitialEfficacy:0.3g}%.
-                """,
-                True,
-            )
+                        - Increase Initial Dose Efficacy for the final dose in
+                        :primary-badge[:material/vaccines: Vaccination and NPIs]
+                        to be greater than {100 * primaryWanedEfficacy:0.3g}%.
+                        - Decrease Dose Efficacy After Immunity Waning in
+                        :primary-badge[:material/vaccines: Vaccination and NPIs]
+                        to be lower than {100 * finalInitialEfficacy:0.3g}%.
+                    """,
+                    True,
+                )
 
-            # Store age-based waned efficacy values for error checks
-            # primAgeWaneds = {}
+                # Store age-based waned efficacy values for error checks
+                # primAgeWaneds = {}
 
-            # Age-Specific Waned Efficacy Field
-            st.markdown(
-                "#### Age-Specific Efficacy After Immunity Waning",
-                help="""
+                # Age-Specific Waned Efficacy Field
+                st.markdown(
+                    "#### Age-Specific Efficacy After Immunity Waning",
+                    help="""
 This table allows for unique final efficacy values after immunity waning
 to be defined for individual age groups in the simulation, overriding
 the global waned efficacy defined above.
-                """,
-            )
-            if useVaccinesToggle:
-                st.markdown("Double-click a cell in this table to edit its value.")
-            loadKey(
-                "vacWaneAgeForm",
-                id,
-                pd.DataFrame(
-                    {
-                        "Age Group": [None],
-                        "Dose Efficacy After Waning": [primaryWanedEfficacy],
-                    },
-                ),
-                dataframe=True,
-            )
-            vacWaneAgeForm = st.data_editor(
-                session[f"vacWaneAgeForm{id}"],
-                height="content",
-                num_rows="dynamic",
-                key=f"_vacWaneAgeForm{id}",
-                on_change=saveKey,
-                args=["vacWaneAgeForm", id],
-                kwargs={"dataframe": True},
-                disabled=not useVaccinesToggle,
-                placeholder=(
-                    "Enter a value"
-                    if useVaccinesToggle
-                    else "Enable vaccines to edit this parameter"
-                ),
-                column_config={
-                    "Age Group": st.column_config.SelectboxColumn(
-                        "Age Group",
-                        required=True,
-                        options=ageTimeDict.keys(),
-                        format_func=lambda x: ageTimeDict[x],  # type: ignore
-                        help="""
+                    """,
+                )
+                if useVaccinesToggle:
+                    st.markdown("Double-click a cell in this table to edit its value.")
+                loadKey(
+                    "vacWaneAgeForm",
+                    id,
+                    pd.DataFrame(
+                        {
+                            "Age Group": [None],
+                            "Dose Efficacy After Waning": [primaryWanedEfficacy],
+                        },
+                    ),
+                    dataframe=True,
+                )
+                vacWaneAgeForm = st.data_editor(
+                    session[f"vacWaneAgeForm{id}"],
+                    height="content",
+                    num_rows="dynamic",
+                    key=f"_vacWaneAgeForm{id}",
+                    on_change=saveKey,
+                    args=["vacWaneAgeForm", id],
+                    kwargs={"dataframe": True},
+                    disabled=not useVaccinesToggle,
+                    placeholder=(
+                        "Enter a value"
+                        if useVaccinesToggle
+                        else "Enable vaccines to edit this parameter"
+                    ),
+                    column_config={
+                        "Age Group": st.column_config.SelectboxColumn(
+                            "Age Group",
+                            required=True,
+                            options=ageTimeDict.keys(),
+                            format_func=lambda x: ageTimeDict[x],  # type: ignore
+                            help="""
 An age group that will have a specific final efficacy value after
 immunity waning defined for it, overriding the base value.
-                        """,
-                    ),
-                    "Dose Efficacy After Waning": st.column_config.NumberColumn(
-                        "Dose Efficacy After Immunity Waning (Probability)",
-                        required=True,
-                        default=primaryWanedEfficacy,
-                        min_value=0.0,
-                        max_value=1.0,
-                        format="percent",
-                        help="""
+                            """,
+                        ),
+                        "Dose Efficacy After Waning": st.column_config.NumberColumn(
+                            "Dose Efficacy After Immunity Waning (Probability)",
+                            required=True,
+                            default=primaryWanedEfficacy,
+                            min_value=0.0,
+                            max_value=1.0,
+                            format="percent",
+                            help="""
 The final efficacy value that the vaccine schedule will approach for this
 age group as the immunity it provides begins to diminish, represented as
 the probability that an individual in this age group with completely waned
-immunity will not remain healthy when exposed to the disease.
-                        """,
-                    ),
-                },
-            )
-            paramError(
-                "vacWaneAgeFormDuplicates",
-                id,
-                lambda: hasDuplicates(vacWaneAgeForm),
-                f"""
-                    Error: The age-specific efficacy after
-                    immunity waning form used by the {
-                        'baseline scenario' if id == 0
-                        else f'scenario named "{session[f'scenarioName{id}']}"'
-                    } contains duplicate age group rows. Each age group
-                    should only be used in a single row of the form.
-
-                    Please remove or change any rows of the Age-Specific
-                    Efficacy After Immunity Waning form in the Vaccine Properties
-                    section of :primary-badge[:material/vaccines: Vaccinations and NPIs]
-                    that use the same age group as another row.
-                """,
-                True,
-            )
-            # TODO: Have these errors highlight specific ages
-            finalInitialEfficacyAgeForm = idGet(
-                "vacInitialEfficacyAgeForm",
-                id,
-                pd.DataFrame(
-                    {
-                        "Age Group": [None],
-                        "Initial Dose Efficacy": [
-                            idGet("primaryBaseEfficacy", id, 0.5, f"-{finalDose}")
-                        ],
+immunity will not remain healthy when exposed to the pathogen.
+                            """,
+                        ),
                     },
-                ),
-                f"-{finalDose}",
-            )
-            combinedEfficacy = pd.merge(
-                finalInitialEfficacyAgeForm,
-                vacWaneAgeForm,
-                how="inner",
-                on="Age Group",
-            )
-            # TODO: make data_editor error messages name the row
-            # (and not break on dupes)
-            paramError(
-                "ageWanedEfficiencyAboveInitial",
-                id,
-                lambda: np.any(
-                    combinedEfficacy["Initial Dose Efficacy"]
-                    < combinedEfficacy["Dose Efficacy After Waning"]
-                ),  # type: ignore
-                f"""
-                    Error: The vaccine age-specific
-                    efficacy forms used for the final vaccine dose by the {
-                        'baseline scenario' if id == 0
-                        else f'scenario named "{session[f'scenarioName{id}']}"'
-                    } contains rows where the initial vaccine efficacy is
-                    greater than the efficacy after immunity waning. As such, the
-                    immunity to the disease conferred by the vaccine will get
-                    stronger over time instead of weaker for the age groups
-                    specified by these rows.
+                )
+                paramError(
+                    "vacWaneAgeFormDuplicates",
+                    id,
+                    lambda: hasDuplicates(vacWaneAgeForm),
+                    f"""
+                        Error: The age-specific efficacy after
+                        immunity waning form used by the {
+                            'baseline scenario' if id == 0
+                            else f'scenario named "{session[f'scenarioName{id}']}"'
+                        } contains duplicate age group rows. Each age group
+                        should only be used in a single row of the form.
 
-                    Please modify the Age-Specific Initial Efficacy form
-                    for the final vaccine dose alongside the Age-Specific
-                    Efficacy After Immunity Waning form
-                    in :primary-badge[:material/vaccines: Vaccination and NPIs]
-                    such that no age group has its initial efficacy lower
-                    than its waned efficacy.
-                """,
-                True,
-            )
+                        Please remove or change any rows of the Age-Specific Efficacy
+                        After Immunity Waning form in the Vaccine Properties section
+                        of :primary-badge[:material/vaccines: Vaccinations and NPIs]
+                        that use the same age group as another row.
+                    """,
+                    True,
+                )
+                # TODO: Have these errors highlight specific ages
+                finalInitialEfficacyAgeForm = idGet(
+                    "vacInitialEfficacyAgeForm",
+                    id,
+                    pd.DataFrame(
+                        {
+                            "Age Group": [None],
+                            "Initial Dose Efficacy": [
+                                idGet("primaryBaseEfficacy", id, 0.5, f"-{finalDose}")
+                            ],
+                        },
+                    ),
+                    f"-{finalDose}",
+                )
+                combinedEfficacy = pd.merge(
+                    finalInitialEfficacyAgeForm,
+                    vacWaneAgeForm,
+                    how="inner",
+                    on="Age Group",
+                )
+                # TODO: make data_editor error messages name the row
+                # (and not break on dupes)
+                paramError(
+                    "ageWanedEfficiencyAboveInitial",
+                    id,
+                    lambda: np.any(
+                        combinedEfficacy["Initial Dose Efficacy"]
+                        < combinedEfficacy["Dose Efficacy After Waning"]
+                    ),  # type: ignore
+                    f"""
+                        Error: The vaccine age-specific
+                        efficacy forms used for the final vaccine dose by the {
+                            'baseline scenario' if id == 0
+                            else f'scenario named "{session[f'scenarioName{id}']}"'
+                        } contains rows where the initial vaccine efficacy is
+                        greater than the efficacy after immunity waning. As such, the
+                        immunity to the pathogen conferred by the vaccine will get
+                        stronger over time instead of weaker for the age groups
+                        specified by these rows.
 
-            oldVarLengthForm = '''# Save relevant params as variables to avoid lookups
+                        Please modify the Age-Specific Initial Efficacy form
+                        for the final vaccine dose alongside the Age-Specific
+                        Efficacy After Immunity Waning form
+                        in :primary-badge[:material/vaccines: Vaccination and NPIs]
+                        such that no age group has its initial efficacy lower
+                        than its waned efficacy.
+                    """,
+                    True,
+                )
+
+            '''# Save relevant params as variables to avoid lookups
             primaryWanedRowCount = session[f"primWanedRowCount{id}"]
             primWanedRemainingGroups = session[
                 f"primaryRemainingWanedGroups{id}"
@@ -1521,7 +1548,7 @@ immunity will not remain healthy when exposed to the disease.
                             probability that an individual in this
                             age group with completely waned
                             immunity will not remain healthy when
-                            exposed to the disease.
+                            exposed to the pathogen.
                         """,
                     )
                 # Delete button column
@@ -1590,11 +1617,10 @@ immunity will not remain healthy when exposed to the disease.
                 args=["primarySingleEfficacy", id],
                 key=f"_primarySingleEfficacy{id}",
                 help="""
-                    The efficacy of each vaccine dose,
-                    represented as the probability that an
-                    individual that has recently received a
-                    dose will remain healthy when exposed
-                    to the disease.
+The efficacy of each vaccine dose,
+represented as the probability that an
+individual that has recently received a
+dose will remain healthy when exposed to the pathogen.
                 """,
             )
 
@@ -1655,7 +1681,7 @@ for it, overriding the base value.
                         help="""
 The efficacy of each vaccine dose for this age group, represented as the
 probability that a recently vaccinated individual in this age group will
-remain healthy when exposed to the disease.
+remain healthy when exposed to the pathogen.
                         """,
                     ),
                 },
@@ -1696,7 +1722,7 @@ remain healthy when exposed to the disease.
                 values. Booster vaccines are primarily used with
                 diseases like COVID-19, meningococcal disease and
                 diphtheria to preserve an individual's immunity to
-                the disease as it wanes over time.
+                the pathogen as it wanes over time.
             """
             )
 
@@ -1710,9 +1736,8 @@ remain healthy when exposed to the disease.
                 args=["boosterToggle", id],  # type: ignore
                 disabled=not useVaccinesToggle,
                 help="""
-                    Toggle whether or not booster vaccines are
-                    administered in the simulation, overriding
-                    other booster-related parameters.
+Toggle whether or not booster vaccines are
+administered in the simulation, overriding other booster-related parameters.
                 """,
             )
             loadKey("boosterDoseCount", id, 3)
@@ -1726,9 +1751,8 @@ remain healthy when exposed to the disease.
                 on_change=saveKey,
                 args=["boosterDoseCount", id],  # type: ignore
                 help="""
-                    The number of times each individual in the
-                    simulation will be administered a booster
-                    vaccine.
+The number of times each individual in the
+simulation will be administered a booster vaccine.
                 """,
             )
             loadKey("boosterDelay", id, 3)
@@ -1744,9 +1768,9 @@ remain healthy when exposed to the disease.
                 args=["boosterDelay", id],  # type: ignore
                 key=f"_boosterDelay{id}",
                 help="""
-                    The number of months after an individual receives
-                    one booster vaccine dose before they are able
-                    to receive another, where a month is 30 days.
+The number of months after an individual receives
+one booster vaccine dose before they are able
+to receive another, where a month is 30 days.
                 """,
             )
             loadKey("boosterDuration", id, 4)
@@ -1760,10 +1784,10 @@ remain healthy when exposed to the disease.
                 args=["boosterDuration", id],  # type: ignore
                 key=f"_boosterDuration{id}",
                 help="""
-                    The number of months after an individual receives
-                    a booster vaccine dose before the immunity
-                    conferred by this vaccine begins to diminish,
-                    where a month is 30 days.
+The number of months after an individual receives
+a booster vaccine dose before the immunity
+conferred by this vaccine begins to diminish,
+where a month is 30 days.
                 """,
             )
             paramError(
@@ -1802,11 +1826,10 @@ remain healthy when exposed to the disease.
                 args=["boosterBaseEfficacy", id],  # type: ignore
                 format_func=lambda x: f"{100 * x:0.3g}%",
                 help="""
-                    The initial efficacy of each booster vaccine,
-                    represented as the probability that an
-                    individual that has recently received the
-                    booster will remain healthy when exposed to the
-                    disease.
+The initial efficacy of each booster vaccine,
+represented as the probability that an
+individual that has recently received the
+booster will remain healthy when exposed to the pathogen.
                 """,
             )
             loadKey("boosterWanedEfficacy", id, 0.6)
@@ -1820,12 +1843,11 @@ remain healthy when exposed to the disease.
                 args=["boosterWanedEfficacy", id],  # type: ignore
                 format_func=lambda x: f"{100 * x:0.3g}%",
                 help="""
-                    The final efficacy value that the booster
-                    vaccine will approach as the immunity it
-                    provides begins to diminish, represented as the
-                    probability that an individual with completely
-                    waned immunity will remain healthy when exposed
-                    to the disease.
+The final efficacy value that the booster
+vaccine will approach as the immunity it
+provides begins to diminish, represented as the
+probability that an individual with completely
+waned immunity will remain healthy when exposed to the pathogen.
                 """,
             )
 
@@ -1846,7 +1868,7 @@ remain healthy when exposed to the disease.
                     } is {100 * boosterBaseEfficacy:0.3g}%, but the
                     efficacy after waning is {100 * boosterWanedEfficacy:0.3g}%.
                     As such, a vaccinated person's immunity to the
-                    disease will get stronger over time instead of weaker.
+                    pathogen will get stronger over time instead of weaker.
 
                     Please make one of the following changes:
 
@@ -1871,18 +1893,17 @@ remain healthy when exposed to the disease.
                 args=["boosterWaningRate", id],  # type: ignore
                 key=f"_boosterWaningRate{id}",
                 help="""
-                    The number of months after the immunity from a
-                    booster vaccine begins waning before the
-                    efficacy of the vaccine stabilises, where a
-                    month is 30 days. Vaccine-conferred immunity in
-                    the *Flusim* simulation will wane at a linear
-                    rate, so this parameter represents how long it
-                    takes for the vaccine's efficacy to decrease
-                    from its initial value to its final value.
+The number of months after the immunity from a
+booster vaccine begins waning before the
+efficacy of the vaccine stabilises, where a
+month is 30 days. Vaccine-conferred immunity in
+the *Flusim* simulation will wane at a linear
+rate, so this parameter represents how long it
+takes for the vaccine's efficacy to decrease
+from its initial value to its final value.
 
-                    If this parameter is set to 0, the immunity
-                    provided by booster vaccines will never
-                    diminish.
+If this parameter is set to 0, the immunity
+provided by booster vaccines will never diminish.
                 """,
             )
 
@@ -1947,7 +1968,7 @@ for it, overriding the base efficacy value for booster vaccines.
                         help="""
 The initial efficacy of each booster vaccine for this age group, represented
 as the probability that a recently vaccinated individual in this age group
-will remain healthy when exposed to the disease.
+will remain healthy when exposed to the pathogen.
                         """,
                     ),
                     "Booster Efficacy After Waning": st.column_config.NumberColumn(
@@ -1961,7 +1982,7 @@ will remain healthy when exposed to the disease.
 The final efficacy value that the booster vaccine will approach for this age
 group as the immunity it provides begins to diminish, represented as the
 probability that an individual in this age group with completely waned
-immunity will remain healthy when exposed to the disease.
+immunity will remain healthy when exposed to the pathogen.
                         """,
                     ),
                 },
@@ -2000,7 +2021,7 @@ immunity will remain healthy when exposed to the disease.
                         else f'scenario named "{session[f'scenarioName{id}']}"'
                     } contains rows where the initial vaccine efficacy is
                     greater than the efficacy after immunity waning. As such, the
-                    immunity to the disease conferred by the booster will get
+                    immunity to the pathogen conferred by the booster will get
                     stronger over time instead of weaker for the age groups
                     specified by these rows.
 
@@ -2020,7 +2041,7 @@ immunity will remain healthy when exposed to the disease.
                 True,
             )
 
-            oldVarLengthForm = '''# Save relevant params as variables to avoid lookups
+            '''# Save relevant params as variables to avoid lookups
             boosterRowCount = session[f"boostAgeRowCount{id}"]
             boostAgeRemainingGroups = session[f"boosterRemainingAgeGroups{id}"]
             boostAgeErrorContainer = st.container()
@@ -2103,7 +2124,7 @@ immunity will remain healthy when exposed to the disease.
                             as the probability that a recently
                             vaccinated individual in this age group
                             will remain healthy when exposed to the
-                            disease.
+                            pathogen.
                         """,
                     )
                 # Waned efficacy column
@@ -2126,7 +2147,7 @@ immunity will remain healthy when exposed to the disease.
                             probability that an individual in this
                             age group with completely waned
                             immunity will remain healthy when
-                            exposed to the disease.
+                            exposed to the pathogen.
                         """,
                     )
                 # Delete button column
@@ -2215,7 +2236,7 @@ immunity will remain healthy when exposed to the disease.
                         vaccine efficacy after immunity waning for
                         said age group in this scenario is set to
                         {100 * currentWaned:0.3g}%. As such, the
-                        immunity to the disease conferred by the
+                        immunity to the pathogen conferred by the
                         booster will get stronger over time instead
                         of weaker for individuals in the "{age}"
                         age group.
@@ -2253,7 +2274,7 @@ immunity will remain healthy when exposed to the disease.
                         vaccine efficacy after immunity waning for
                         said age group in this scenario is set to
                         {100 * currentWaned:0.3g}%. As such, the
-                        immunity to the disease conferred by the
+                        immunity to the pathogen conferred by the
                         booster will get stronger over time instead
                         of weaker for individuals in the "{age}"
                         age group.
@@ -2291,9 +2312,7 @@ immunity will remain healthy when exposed to the disease.
 
     # General NPIs
     st.html('<span id = "generalTriggerCondition"></span>')
-    with st.expander(
-        "General NPI Properties", key=f"npiContainer{id}", on_change="rerun"
-    ):
+    with st.expander("Social Distancing", key=f"npiContainer{id}", on_change="rerun"):
         st.markdown(
             """
             These parameters control the implementation of
@@ -2304,6 +2323,55 @@ immunity will remain healthy when exposed to the disease.
         """
         )
 
+        # Case Isolation
+        loadKey("caseIsolation", id, False)
+        st.toggle(
+            "Enable Case Isolation",
+            value=False,
+            on_change=saveKey,
+            args=["caseIsolation", id],  # type: ignore
+            key=f"_caseIsolation{id}",
+            help="""
+Toggle whether or not individuals who have been
+diagnosed as cases of the pathogen will be
+forced to isolate at home.
+            """,
+        )
+
+        # Class Dismissal (if advanced parameters are enabled)
+        if advanced:
+            loadKey("classDismissal", id, False)
+            classDismissal = st.toggle(
+                "Enable Class Dismissal",
+                value=False,
+                on_change=saveKey,
+                args=["classDismissal", id],  # type: ignore
+                key=f"_classDismissal{id}",
+                help="""
+Toggle whether or not school classes should be
+dismissed when the daily case rate is high enough.
+
+Note that the rate that must be reached before
+class dismissal begins to occur is shared with
+any other NPIs that are set to use case rates
+as their trigger threshold.
+                """,
+            )
+            if classDismissal:
+                # TODO: Update links to go directly to the desired location
+                st.info(
+                    """
+                Due to the design of the *Flusim* model, the case
+                rate thresholds used by class dismissal must be
+                defined globally for all NPIs. You may configure
+                these thresholds using the "Intervention Trigger
+                Thresholds" parameters at the bottom of this page
+                (click [this link](#thresholdTriggerCondition) to
+                go there directly).
+            """,
+                    icon=":material/info:",
+                )
+
         # Social distancing
         loadKey("socialDistancingToggle", id, False)
         useSocialDistancingToggle = st.toggle(
@@ -2313,10 +2381,9 @@ immunity will remain healthy when exposed to the disease.
             args=["socialDistancingToggle", id],  # type: ignore
             key=f"_socialDistancingToggle{id}",
             help="""
-                Toggle whether or not social distancing
-                interventions are implemented in the
-                simulation, overriding other social distancing
-                parameters.
+Toggle whether or not social distancing
+interventions are implemented in the
+simulation, overriding other social distancing parameters.
             """,
         )
         loadKey("socialDistancingCompliance", id, 0.9)
@@ -2330,9 +2397,8 @@ immunity will remain healthy when exposed to the disease.
             args=["socialDistancingCompliance", id],  # type: ignore
             key=f"_socialDistancingCompliance{id}",
             help="""
-                The probability that an individual will comply
-                with social distancing interventions in the
-                simulation.
+The probability that an individual will comply
+with social distancing interventions in the simulation.
             """,
         )
         # Age-specific social distancing compliance (if advanced params enabled)
@@ -2417,7 +2483,7 @@ social distancing interventions in the simulation.
                 True,
             )
 
-            oldVarLengthForm = '''
+            '''
             # Save relevant params as variables to avoid lookups
             socialRowCount = session[f"socialRowCount{id}"]
             socialRemainingGroups = session[f"socialRemainingAgeGroups{id}"]
@@ -2552,55 +2618,6 @@ social distancing interventions in the simulation.
                 ),
             )'''
 
-        # Case Isolation
-        loadKey("caseIsolation", id, False)
-        st.toggle(
-            "Enable Case Isolation",
-            value=False,
-            on_change=saveKey,
-            args=["caseIsolation", id],  # type: ignore
-            key=f"_caseIsolation{id}",
-            help="""
-                Toggle whether or not individuals who have been
-                diagnosed as cases of the disease will be
-                forced to isolate at home.
-            """,
-        )
-
-        # Class Dismissal (if advanced parameters are enabled)
-        if advanced:
-            loadKey("classDismissal", id, False)
-            classDismissal = st.toggle(
-                "Enable Class Dismissal",
-                value=False,
-                on_change=saveKey,
-                args=["classDismissal", id],  # type: ignore
-                key=f"_classDismissal{id}",
-                help="""
-                    Toggle whether or not school classes should be
-                    dismissed when the daily case rate is high enough.
-
-                    Note that the rate that must be reached before
-                    class dismissal begins to occur is shared with
-                    any other NPIs that are set to use case rates
-                    as their trigger threshold.
-                """,
-            )
-            if classDismissal:
-                # TODO: Update links to go directly to the desired location
-                st.info(
-                    """
-                Due to the design of the *Flusim* model, the case
-                rate thresholds used by class dismissal must be
-                defined globally for all NPIs. You may configure
-                these thresholds using the "Intervention Trigger
-                Thresholds" parameters at the bottom of this page
-                (click [this link](#thresholdTriggerCondition) to
-                go there directly).
-            """,
-                    icon=":material/info:",
-                )
-
     # School Closure
     st.html('<span id = "schoolClosureTriggerCondition"></span>')
     with st.expander(
@@ -2609,7 +2626,7 @@ social distancing interventions in the simulation.
         st.markdown(
             """
             These parameters control if and when schools will
-            close as a result of the disease.
+            close as a result of the pathogen.
         """
         )
         loadKey("schoolClosureToggle", id, False)
@@ -2620,10 +2637,9 @@ social distancing interventions in the simulation.
             args=["schoolClosureToggle", id],  # type: ignore
             key=f"_schoolClosureToggle{id}",
             help="""
-                Toggle whether or not school closure
-                interventions are implemented in the
-                simulation, overriding other school closure
-                parameters.
+Toggle whether or not school closure
+interventions are implemented in the
+simulation, overriding other school closure parameters.
             """,
         )
 
@@ -2639,37 +2655,37 @@ social distancing interventions in the simulation.
                     args=["schoolClosureTrigger", id],  # type: ignore
                     disabled=not useSchoolClosureToggle,
                     help="""
-                        The type of condition that must be
-                        satisfied before schools will start being
-                        closed in the simulation. Additional
-                        options for configuring the exact trigger
-                        condition will appear after selecting one
-                        of these options.
+The type of condition that must be
+satisfied before schools will start being
+closed in the simulation. Additional
+options for configuring the exact trigger
+condition will appear after selecting one
+of these options.
 
-                        ##### Options:
-                        - Always: Schools will be closed throughout
-                        the entire simulation.
-                        - Timed: Schools will be closed within a
-                        specific time period defined using a start
-                        and end threshold.
-                        - Community Case Rate: Schools will begin
-                        to close if the rate of newly diagnosed
-                        cases per day exceeds a specific threshold,
-                        and will begin to reopen if the rate drops
-                        below a different threshold afterwards.
-                        This trigger rate allows schools to close
-                        and reopen multiple times if the case rate
-                        varies between the two thresholds.
-                        - Community Case Total: Schools will begin
-                        to close after the number of diagnosed
-                        cases in the community exceeds a specific
-                        threshold, and will remain closed for the
-                        rest of the simulation.
-                        - Cases per School: Schools will close
-                        individually when the number of cases
-                        diagnosed within them reaches a certain
-                        threshold, and will remain closed for the
-                        rest of the simulation.
+##### Options:
+- Always: Schools will be closed throughout
+the entire simulation.
+- Timed: Schools will be closed within a
+specific time period defined using a start
+and end threshold.
+- Community Case Rate: Schools will begin
+to close if the rate of newly diagnosed
+cases per day exceeds a specific threshold,
+and will begin to reopen if the rate drops
+below a different threshold afterwards.
+This trigger rate allows schools to close
+and reopen multiple times if the case rate
+varies between the two thresholds.
+- Community Case Total: Schools will begin
+to close after the number of diagnosed
+cases in the community exceeds a specific
+threshold, and will remain closed for the
+rest of the simulation.
+- Cases per School: Schools will close
+individually when the number of cases
+diagnosed within them reaches a certain
+threshold, and will remain closed for the
+rest of the simulation.
                     """,
                 )
                 # Show additional parameters based on trigger value
@@ -2687,22 +2703,20 @@ social distancing interventions in the simulation.
                         args=["schoolClosurePeriod", "closeTimeForm", id],
                         disabled=not useSchoolClosureToggle,
                         help="""
-                            The time period during which schools
-                            will be closed in the simulation. The
-                            first value is the day on which schools
-                            will initially close (where Day 1 is
-                            the first day of the simulation), and
-                            the second value is the day on which
-                            schools will reopen.
+The time period during which schools
+will be closed in the simulation. The
+first value is the day on which schools
+will initially close (where Day 1 is
+the first day of the simulation), and
+the second value is the day on which schools will reopen.
 
-                            Note that if you modify this value, the update
-                            points for school closure compliance defined in
-                            :primary-badge[:material/manage_history: Dynamic]
-                            may have their values altered. For instance, if
-                            you go from school closures ending on Day 60 to
-                            Day 30, an update point set to affect the value
-                            on Day 45 will be changed to affect it on
-                            Day 30 instead.
+Note that if you modify this value, the update
+points for school closure compliance defined in
+:primary-badge[:material/manage_history: Dynamic]
+may have their values altered. For instance, if
+you go from school closures ending on Day 60 to
+Day 30, an update point set to affect the value
+on Day 45 will be changed to affect it on Day 30 instead.
                         """,
                     )
 
@@ -2753,9 +2767,8 @@ social distancing interventions in the simulation.
             args=["schoolClosureCompliance", id],
             key=f"_schoolClosureCompliance{id}",
             help="""
-                The probability that an individual will
-                withdraw from schools when they are closed in
-                the simulation.
+The probability that an individual will
+withdraw from schools when they are closed in the simulation.
             """,
         )
 
@@ -2785,10 +2798,10 @@ social distancing interventions in the simulation.
             args=["withdrawalIncreaseToggle", id],  # type: ignore
             key=f"_withdrawalIncreaseToggle{id}",
             help="""
-                Toggle whether or not withdrawal increasing
-                interventions are implemented in the
-                simulation, overriding other withdrawal
-                increase parameters.
+Toggle whether or not withdrawal increasing
+interventions are implemented in the
+simulation, overriding other withdrawal
+increase parameters.
             """,
         )
 
@@ -2804,34 +2817,34 @@ social distancing interventions in the simulation.
                     args=["withdrawalIncreaseTrigger", id],  # type: ignore
                     disabled=not useWithdrawalIncreaseToggle,
                     help="""
-                        The type of condition that must be
-                        satisfied before the rate of withdrawal
-                        will start increasing in the simulation.
-                        Additional options for configuring the
-                        exact trigger condition will appear after
-                        selecting one of these options.
+The type of condition that must be
+satisfied before the rate of withdrawal
+will start increasing in the simulation.
+Additional options for configuring the
+exact trigger condition will appear after
+selecting one of these options.
 
-                        ##### Options:
-                        - Always: Withdrawal rates will be
-                        increased throughout the entire simulation.
-                        - Timed: Withdrawal rates will be increased
-                        within a specific time period defined using
-                        a start and end threshold.
-                        - Community Case Rate: Withdrawal rates
-                        will begin increasing if the rate of newly
-                        diagnosed cases per day exceeds a specific
-                        threshold, and will revert to normal if the
-                        rate drops below a different threshold
-                        afterwards. This trigger rate allows
-                        withdrawal rates to increase and decrease
-                        multiple times if the case rate varies
-                        between the two thresholds.
-                        - Community Case Total: Withdrawal rates
-                        will begin increasing after the number of
-                        diagnosed cases in the community exceeds a
-                        specific threshold, and will remain at this
-                        elevated rate for the rest of the
-                        simulation.
+##### Options:
+- Always: Withdrawal rates will be
+increased throughout the entire simulation.
+- Timed: Withdrawal rates will be increased
+within a specific time period defined using
+a start and end threshold.
+- Community Case Rate: Withdrawal rates
+will begin increasing if the rate of newly
+diagnosed cases per day exceeds a specific
+threshold, and will revert to normal if the
+rate drops below a different threshold
+afterwards. This trigger rate allows
+withdrawal rates to increase and decrease
+multiple times if the case rate varies
+between the two thresholds.
+- Community Case Total: Withdrawal rates
+will begin increasing after the number of
+diagnosed cases in the community exceeds a
+specific threshold, and will remain at this
+elevated rate for the rest of the
+simulation.
                     """,
                 )
                 # Show additional parameters based on trigger value
@@ -2849,14 +2862,14 @@ social distancing interventions in the simulation.
                         on_change=saveKey,
                         args=["withdrawalIncreasePeriod", id],  # type: ignore
                         help="""
-                            The time period during which withdrawal
-                            rates will be increased in the
-                            simulation. The first value is the day
-                            on which withdrawal rates will first
-                            increase (where Day 1 is the first day
-                            of the simulation), and the second
-                            value is the day on which withdrawal
-                            rates will return to normal.
+The time period during which withdrawal
+rates will be increased in the
+simulation. The first value is the day
+on which withdrawal rates will first
+increase (where Day 1 is the first day
+of the simulation), and the second
+value is the day on which withdrawal
+rates will return to normal.
                         """,
                     )
 
@@ -2903,11 +2916,11 @@ social distancing interventions in the simulation.
             args=["withdrawalIncreaseAdult", id],  # type: ignore
             key=f"_withdrawalIncreaseAdult{id}",
             help="""
-                The probability of an infected adult
-                withdrawing from work after becoming
-                symptomatic while a withdrawal increasing
-                intervention is in effect, overwriting the
-                normal withdrawal rate.
+The probability of an infected adult
+withdrawing from work after becoming
+symptomatic while a withdrawal increasing
+intervention is in effect, overwriting the
+normal withdrawal rate.
             """,
         )
         loadKey("withdrawalIncreaseChild", id, 1.0)
@@ -2921,11 +2934,11 @@ social distancing interventions in the simulation.
             args=["withdrawalIncreaseChild", id],  # type: ignore
             key=f"_withdrawalIncreaseChild{id}",
             help="""
-                The probability of an infected child
-                withdrawing from school after becoming
-                symptomatic while a withdrawal increasing
-                intervention is in effect, overwriting the
-                normal withdrawal rate.
+The probability of an infected child
+withdrawing from school after becoming
+symptomatic while a withdrawal increasing
+intervention is in effect, overwriting the
+normal withdrawal rate.
             """,
         )
 
@@ -3012,10 +3025,10 @@ social distancing interventions in the simulation.
             args=["reducedGroupToggle", id],  # type: ignore
             key=f"_reducedGroupToggle{id}",
             help="""
-                Toggle whether or not group size reduction
-                interventions are implemented in the
-                simulation, overriding other group size
-                reduction parameters.
+Toggle whether or not group size reduction
+interventions are implemented in the
+simulation, overriding other group size
+reduction parameters.
             """,
         )
 
@@ -3031,33 +3044,33 @@ social distancing interventions in the simulation.
                     args=["reducedGroupTrigger", id],  # type: ignore
                     disabled=not useReducedGroupToggle,
                     help="""
-                        The type of condition that must be
-                        satisfied before the size of work groups
-                        will start decreasing in the simulation.
-                        Additional options for configuring the
-                        exact trigger condition will appear after
-                        selecting one of these options.
+The type of condition that must be
+satisfied before the size of work groups
+will start decreasing in the simulation.
+Additional options for configuring the
+exact trigger condition will appear after
+selecting one of these options.
 
-                        ##### Options:
-                        - Always: Work group sizes will be
-                        decreased throughout the entire simulation.
-                        - Timed: Work group sizes will be decreased
-                        within a specific time period defined using
-                        a start and end threshold.
-                        - Community Case Rate: Work groups will
-                        begin shrinking if the rate of newly
-                        diagnosed cases per day exceeds a specific
-                        threshold, and will revert to normal size
-                        if the rate drops below a different
-                        threshold afterwards. This trigger rate
-                        allows group sizes to increase and decrease
-                        multiple times if the case rate varies
-                        between the two thresholds.
-                        - Community Case Total: Work groups will
-                        begin shrinking after the number of
-                        diagnosed cases in the community exceeds a
-                        specific threshold, and will remain at this
-                        reduced size for the rest of the simulation.
+##### Options:
+- Always: Work group sizes will be
+decreased throughout the entire simulation.
+- Timed: Work group sizes will be decreased
+within a specific time period defined using
+a start and end threshold.
+- Community Case Rate: Work groups will
+begin shrinking if the rate of newly
+diagnosed cases per day exceeds a specific
+threshold, and will revert to normal size
+if the rate drops below a different
+threshold afterwards. This trigger rate
+allows group sizes to increase and decrease
+multiple times if the case rate varies
+between the two thresholds.
+- Community Case Total: Work groups will
+begin shrinking after the number of
+diagnosed cases in the community exceeds a
+specific threshold, and will remain at this
+reduced size for the rest of the simulation.
                     """,
                 )
                 # Show additional parameters based on trigger value
@@ -3075,14 +3088,14 @@ social distancing interventions in the simulation.
                         on_change=saveKey,
                         args=["reducedGroupPeriod", id],  # type: ignore
                         help="""
-                            The time period during which work
-                            group sizes will be smaller in the
-                            simulation. The first value is the day
-                            on which work groups will first shrink
-                            (where Day 1 is the first day of the
-                            simulation), and the second value is
-                            the day on which work groups will
-                            return to normal.
+The time period during which work
+group sizes will be smaller in the
+simulation. The first value is the day
+on which work groups will first shrink
+(where Day 1 is the first day of the
+simulation), and the second value is
+the day on which work groups will
+return to normal.
                         """,
                     )
 
@@ -3129,9 +3142,9 @@ social distancing interventions in the simulation.
             args=["reducedGroupSize", id],  # type: ignore
             key=f"_reducedGroupSize{id}",
             help="""
-                The maximum size of work groups while a reduced
-                group size intervention is in effect,
-                overwriting the normal maximum.
+The maximum size of work groups while a reduced
+group size intervention is in effect,
+overwriting the normal maximum.
             """,
         )
 
@@ -3191,10 +3204,9 @@ social distancing interventions in the simulation.
             args=["bccToggle", id],
             key=f"_bccToggle{id}",
             help="""
-                Toggle whether or not background contact count
-                reduction interventions are implemented in the
-                simulation, overriding other BCC reduction
-                parameters.
+Toggle whether or not background contact count
+reduction interventions are implemented in the
+simulation, overriding other BCC reduction parameters.
             """,
         )
 
@@ -3210,34 +3222,34 @@ social distancing interventions in the simulation.
                     args=["bccTrigger", id],  # type: ignore
                     disabled=not useBCCToggle,
                     help="""
-                        The type of condition that must be
-                        satisfied before background contact count
-                        will start decreasing in the simulation.
-                        Additional options for configuring the
-                        exact trigger condition will appear after
-                        selecting one of these options.
+The type of condition that must be
+satisfied before background contact count
+will start decreasing in the simulation.
+Additional options for configuring the
+exact trigger condition will appear after
+selecting one of these options.
 
-                        ##### Options:
-                        - Always: Background contact count will be
-                        reduced throughout the entire simulation.
-                        - Timed: Background contact count will be
-                        reduced within a specific time period
-                        defined using a start and end threshold.
-                        - Community Case Rate: Background contact
-                        count will be reduced if the rate of newly
-                        diagnosed cases per day exceeds a specific
-                        threshold, and will revert to normal levels
-                        if the rate drops below a different
-                        threshold afterwards. This trigger rate
-                        allows BCC levels to increase and decrease
-                        multiple times if the case rate varies
-                        between the two thresholds.
-                        - Community Case Total: Background contact
-                        count will be reduced after the number of
-                        diagnosed cases in the community exceeds a
-                        specific threshold, and will remain at this
-                        reduced level for the rest of the
-                        simulation.
+##### Options:
+- Always: Background contact count will be
+reduced throughout the entire simulation.
+- Timed: Background contact count will be
+reduced within a specific time period
+defined using a start and end threshold.
+- Community Case Rate: Background contact
+count will be reduced if the rate of newly
+diagnosed cases per day exceeds a specific
+threshold, and will revert to normal levels
+if the rate drops below a different
+threshold afterwards. This trigger rate
+allows BCC levels to increase and decrease
+multiple times if the case rate varies
+between the two thresholds.
+- Community Case Total: Background contact
+count will be reduced after the number of
+diagnosed cases in the community exceeds a
+specific threshold, and will remain at this
+reduced level for the rest of the
+simulation.
                     """,
                 )
                 # Show additional parameters based on trigger value
@@ -3255,14 +3267,13 @@ social distancing interventions in the simulation.
                         on_change=dynamicScaleChange,
                         args=["bccPeriod", "bccTimeForm", id],  # type: ignore
                         help="""
-                            The time period during which background
-                            contact count (BCC) will be reduced in
-                            the simulation. The first value is the
-                            day on which BCC will first be reduced
-                            (where Day 1 is the first day of the
-                            simulation), and the second value is
-                            the day on which BCC will return to
-                            normal.
+The time period during which background
+contact count (BCC) will be reduced in
+the simulation. The first value is the
+day on which BCC will first be reduced
+(where Day 1 is the first day of the
+simulation), and the second value is
+the day on which BCC will return to normal.
                         """,
                     )
 
@@ -3312,12 +3323,12 @@ social distancing interventions in the simulation.
             args=["bccReducedRate", id],
             key=f"_bccReducedRate{id}",
             help="""
-                The average number of other people each
-                individual will interact with in the background
-                phase of each day in the simulation (emulating
-                interactions outside of simulated locations)
-                while a BCC reduction intervention is in
-                effect, overwriting the normal BCC rate.
+The average number of other people each
+individual will interact with in the background
+phase of each day in the simulation (emulating
+interactions outside of simulated locations)
+while a BCC reduction intervention is in
+effect, overwriting the normal BCC rate.
             """,
         )
 
@@ -3381,6 +3392,7 @@ social distancing interventions in the simulation.
             )
 
             # Display values based on what is used by the triggers
+            # TODO: Account for NPI toggles being off
             interventionTriggers = [
                 schoolClosureTrigger,  # type: ignore
                 withdrawalIncreaseTrigger,  # type: ignore
@@ -3445,11 +3457,10 @@ social distancing interventions in the simulation.
                         on_change=saveKey,
                         args=["rateStartThreshold", id],  # type: ignore
                         help="""
-                            Any interventions set to trigger using the
-                            "Community Case Rate" condition will begin
-                            taking effect in the simulation once the
-                            number of newly diagnosed cases per day
-                            exceeds this value.
+Any interventions set to trigger using the
+"Community Case Rate" condition will begin
+taking effect in the simulation once the
+number of newly diagnosed cases per day exceeds this value.
                         """,
                     )
                     loadKey("rateRelaxThreshold", id, 5)
@@ -3462,11 +3473,11 @@ social distancing interventions in the simulation.
                         on_change=saveKey,
                         args=["rateRelaxThreshold", id],  # type: ignore
                         help="""
-                            Any active interventions set to trigger
-                            using the "Community Case Rate" condition
-                            will stop taking effect in the simulation
-                            once the number of newly diagnosed cases
-                            per day goes below this value.
+Any active interventions set to trigger
+using the "Community Case Rate" condition
+will stop taking effect in the simulation
+once the number of newly diagnosed cases
+per day goes below this value.
                         """,
                     )
 
@@ -3501,6 +3512,10 @@ social distancing interventions in the simulation.
                         False,
                     )
 
+                # Divider if both are present
+                if usesRates and usesTotals:
+                    st.divider()
+
                 # Case totals
                 if usesTotals:
                     # Display links to NPIs that use totals
@@ -3531,13 +3546,13 @@ social distancing interventions in the simulation.
                         args=["caseTotalThreshold", id],  # type: ignore
                         placeholder="Enter a whole number of cases",
                         help="""
-                            Any interventions set to trigger using the
-                            "Community Case Total" or "Cases per School"
-                            conditions will begin taking effect in the
-                            simulation once the total number of diagnosed
-                            cases in the community (for "Community Case
-                            Total") or in each individual school (for
-                            "Cases per School") exceeds this value.
+Any interventions set to trigger using the
+"Community Case Total" or "Cases per School"
+conditions will begin taking effect in the
+simulation once the total number of diagnosed
+cases in the community (for "Community Case
+Total") or in each individual school (for
+"Cases per School") exceeds this value.
                         """,
                     )
 
@@ -3575,9 +3590,20 @@ social distancing interventions in the simulation.
                     )
 
 
-def ageCast(x):
+def ageCast(x: str) -> Literal[
+    "young_infant",
+    "infant",
+    "young_child",
+    "child",
+    "adolescent",
+    "young_adult",
+    "adult",
+    "older_adult",
+    "senior",
+    "older_senior",
+]:
     """
-    Simple function to cast age strings into literals for validation
+    Simple function to cast age strings into literals for validation.
 
     Parameters:
         x (str): The string to be cast.
@@ -3602,9 +3628,16 @@ def ageCast(x):
     )
 
 
-def trigCast(x):
+def trigCast(x: str) -> Literal[
+    "none",
+    "timed",
+    "per_school_cases",
+    "community_cases",
+    "community_rate",
+    "per_primary_high_school_cases",
+]:
     """
-    Simple function to cast trigger strings into literals for validation
+    Simple function to cast trigger strings into literals for validation.
 
     Parameters:
         x (str): The string to be cast.
@@ -3625,10 +3658,10 @@ def trigCast(x):
     )
 
 
-def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
+def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -> bool:
     """
-    Function to populate the Pydantic model schema with the parameters in
-    this tab with scenario differentiation
+    Function to populate the Pydantic model schema with vaccination/NPI parameters
+    using scenario differentiation.
 
     Parameters:
         schema (Parameters): The Pydantic model (specifically an object in the
@@ -3639,23 +3672,30 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
             session state variables. A value of 0 means that this is the
             baseline scenario and will be treated accordingly.
 
-        advanced (bool): Set to True to show more complex parameters like
+        advanced (bool): Set to `True` to show more complex parameters like
             individual vaccine dose efficacies.
+
+    Returns:
+        bool: `True` if vaccines were used in the scenario, permitting
+            direct vs. indirect protection calculations.
     """
+    # TODO: Make code clearer (split up advanced section if needed)
+
+    # Load reused parameters immediately to save time
+    vaccineToggle = idGet("vaccineToggle", id, False)
+    waningToggle = idGet("vaccineWaningToggle", id, False)
+    boosterToggle = idGet("boosterToggle", id, False)
+    socialDistanceToggle = idGet("socialDistancingToggle", id, False)
+    ageNames = list(ageTimeDict.keys())
+    simLength = session.get("cycleCount", 360) * 2
+    primDoseCount = idGet("primaryDoseCount", id, 1)
+    initialProportion = idGet("initialVaccinated", id, 0.0)
+    targetProportion = idGet("targetVaccinated", id, 0.8)
+    socialCompliance = idGet("socialDistancingCompliance", id, 0.9)
     try:
         # Validate parameters
         if not isinstance(schema, Parameters):
             raise ValueError("schema should be a Parameters object")
-
-        # Load reused parameters immediately to save time
-        vaccineToggle = idGet("vaccineToggle", id, False)
-        boosterToggle = idGet("boosterToggle", id, False)
-        socialDistanceToggle = idGet("socialDistancingToggle", id, False)
-        ageNames = list(ageTimeDict.keys())
-        primDoseCount = idGet("primaryDoseCount", id, 1)
-        initialProportion = idGet("initialVaccinated", id, 0.0)
-        targetProportion = idGet("targetVaccinated", id, 0.8)
-        socialCompliance = idGet("socialDistancingCompliance", id, 0.9)
 
         # Initialising Scenario Parameters
         scenarioParams = (
@@ -3673,9 +3713,7 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                     if schema.Scenario_ParameterWithAgePrefix
                     else ageScenarioParameters()
                 )
-                ageScenarioParams.social_distance = (
-                    socialCompliance if socialDistanceToggle else 0.0
-                )
+                ageScenarioParams.social_distance = socialCompliance
                 schema.Scenario_ParameterWithAgePrefix = ageScenarioParams
 
                 distanceAgeForm = idGet(
@@ -3694,7 +3732,7 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                 ):
                     if age:
                         setattr(scenarioParams, f"{age}_social_distance", comp)
-                oldVarLengthForm = """
+                """
                 for i in range(session.get(f"socialRowCount{id}", 0)):
                     setattr(
                         scenarioParams,
@@ -3710,7 +3748,9 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                     idGet("primaryBaseEfficacy", id, 0.5, f"-{i}")
                     for i in range(primDoseCount)
                 ]
-                primWanedEfficacy = idGet("primaryWanedEfficacy", id, 0.0)
+                primWanedEfficacy = (
+                    idGet("primaryWanedEfficacy", id, 0.0) if waningToggle else 0.0
+                )
                 boostBaseEfficacy = idGet("boosterBaseEfficacy", id, 0.9)
                 boostWanedEfficacy = idGet("boosterWanedEfficacy", id, 0.6)
 
@@ -3754,7 +3794,6 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                     ]
                     for age in ageNames
                 }
-
                 ageWaneDict = {age: primWanedEfficacy for age in ageNames}
                 vacWaneAgeForm = idGet(
                     "vacWaneAgeForm",
@@ -3765,7 +3804,7 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                             "Dose Efficacy After Waning": [primWanedEfficacy],
                         },
                     ),
-                )
+                ).dropna()
                 ageWaneDict.update(
                     vacWaneAgeForm.set_index("Age Group")[
                         "Dose Efficacy After Waning"
@@ -3780,9 +3819,11 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                         WanedEfficacy=ageWaneDict[age],
                     )
                     for age in ageNames
+                    if ageInitialDict[age] != primBaseEfficacy
+                    or ageWaneDict[age] != primWanedEfficacy
                 ]
 
-                oldVarLengthForm = """
+                """
                 primAgeEfficacies = dict.fromkeys(ageNames, primBaseEfficacy)
                 for i in range(primDoseCount):
                     for j in range(session.get(f"primAgeRowCount{id}-{i}", 0)):
@@ -3844,7 +3885,7 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                         )
                         if age
                     ]
-                    oldVarLengthForm = """[
+                    """[
                         vaccineEfficacy(
                             DoseType="booster",
                             Age=ageCast(session[f"boostAgeGroup{id}-{i}"]),
@@ -3861,14 +3902,23 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                 schema.Scenario_VaccineDoseEfficacy = efficacyParams
 
                 # Scenario Vaccine Dose
+                primWaningDuration = idGet("primaryWaningRate", id, 12) * 60
                 doseParams = [
                     vaccineDose(
                         DoseType="primary",
                         Count=primDoseCount,
                         DoseSpacingCycles=idGet("primaryDelay", id, 3) * 60,
-                        WaningDelay=idGet("primaryDuration", id, 6) * 60,
-                        WaningRatePerCycle=(primBaseEfficacy[-1] - primWanedEfficacy)
-                        / (idGet("primaryWaningRate", id, 12) * 60),
+                        WaningDelay=(
+                            idGet("primaryDuration", id, 6) * 60
+                            if waningToggle
+                            else simLength
+                        ),
+                        WaningRatePerCycle=(
+                            (primBaseEfficacy[-1] - primWanedEfficacy)
+                            / primWaningDuration
+                            if waningToggle and primWaningDuration
+                            else 0.0
+                        ),
                     )
                 ]
                 if boosterToggle:
@@ -3932,8 +3982,8 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                         DoseType="primary",
                         Count=primDoseCount,
                         DoseSpacingCycles=idGet("primaryDelay", id, 3) * 60,
-                        WaningDelay=session.get("cycleCount", 360) * 2,
-                        WaningRatePerCycle=0.01,
+                        WaningDelay=simLength,
+                        WaningRatePerCycle=0.0,
                     )
                 ]
 
@@ -3965,7 +4015,7 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                 if age
             ]
 
-            oldVarLengthForm = """[
+            """[
                 vaccineCoverage(
                     Age=ageCast(session[f"vacAgeGroup{id}-{i}"]),
                     Initial=idGet("vacAgeInitial", id, initialProportion, f"-{i}"),
@@ -4045,7 +4095,7 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
         if idGet("reducedGroupToggle", id, False):
             scenarioParams.reduced_workgroup_size = idGet("reducedGroupSize", id, 5)
             reducedGroupTrigger = (
-                idGet("reducedGroupTrigger{id}", id, "Always") if advanced else "Always"
+                idGet("reducedGroupTrigger", id, "Always") if advanced else "Always"
             )
             scenarioParams.reduced_workgroup_trigger = trigCast(reducedGroupTrigger)
             scenarioParams.reduced_workgroup_relaxation = trigCast(reducedGroupTrigger)
@@ -4078,7 +4128,8 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                     bccPeriod[1] - bccPeriod[0] + 1
                 ) * 2
         # Other NPIs
-        scenarioParams.social_distance_compliance = socialCompliance
+        if socialDistanceToggle:
+            scenarioParams.social_distance_compliance = socialCompliance
         scenarioParams.diagnosed_case_isolation = idGet("caseIsolation", id, False)
 
         # Save the updated parameters
@@ -4091,3 +4142,479 @@ def vaccineSchema(schema: Parameters, id: int = 0, advanced: bool = False):
             )
         )
         raise e
+    return vaccineToggle
+
+
+def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
+    """
+    Function to read vaccination/NPI parameters from a schema and set the
+    dashboard's widgets to the specified values.
+
+    Parameters:
+        schema (Parameters): The Pydantic model (specifically an object in the
+            Parameters class) that the parameters will be read from.
+
+        id (int): An integer that will be used to differentiate the parameters in
+            different instances of the tab by adding a number to the Streamlit
+            session state variables. A value of 0 means that this is the
+            baseline scenario and will be treated accordingly.
+    """
+    # Keep track of whether any toggle-controlled parameters have shown up
+    useVaccines, useBoosters, useSocialDistancing = False, False, False
+    useNPIs = {
+        "schoolClosure": False,
+        "withdrawalIncrease": False,
+        "reducedGroup": False,
+        "bcc": False,
+    }
+
+    # Ordering dictionary to ensure global values are checked first
+    ageOrder = {
+        None: 0,
+        "young_infant": 1,
+        "infant": 2,
+        "young_child": 3,
+        "child": 4,
+        "adolescent": 5,
+        "young_adult": 6,
+        "adult": 7,
+        "older_adult": 8,
+        "senior": 9,
+        "older_senior": 10,
+    }
+    # Global Age Parameters
+    schemaAge = schema.Scenario_ParameterWithAgePrefix
+    if schemaAge is not None:
+        # TODO: Is 0.0 global SD with nonzero age SD a feasible simulation?
+        # Consider adding another dummy parameter to modelSchema
+        # if you need a better way to check if SD is disabled
+        compliance = schemaAge.social_distance
+        if compliance is not None and compliance > 0.0:
+            useSocialDistancing = True
+        updateParamFromSchema("socialDistancingCompliance", compliance, scenarioID)
+
+    # Vaccine Coverage Parameters
+    schemaCoverage = schema.Scenario_VaccineCoverage
+    if schemaCoverage is not None:
+        useVaccines = True
+        coverageTable = pd.DataFrame(
+            columns=(
+                "Age Group",
+                "Initial Vaccinated Proportion",
+                "Target Vaccinated Proportion",
+            )
+        )
+        # Get the global values (age=None) first
+        schemaCoverage.sort(key=lambda x: ageOrder.get(x.Age, 99))
+        if len(schemaCoverage) > 0 and schemaCoverage[0].Age is None:
+            baseCoverage = schemaCoverage.pop(0)
+            baseInitial = 0.0 if baseCoverage.Initial is None else baseCoverage.Initial
+            updateParamFromSchema("initialVaccinated", baseInitial, scenarioID)
+            baseTarget = baseCoverage.Target
+            updateParamFromSchema("targetVaccinated", baseTarget, scenarioID)
+        elif scenarioID == 0:
+            raise AssertionError(
+                """
+                Schema does not include general vaccine coverage
+                proportions for the baseline scenario
+                """
+            )
+        else:
+            baseInitial = idGet("initialVaccinated", 0, 0.0)
+            baseTarget = idGet("targetVaccinated", 0, 0.8)
+
+        # Iterate over each coverage age
+        for coverage in schemaCoverage:
+            age, initial, target = coverage.Age, coverage.Initial, coverage.Target
+            if age is not None:
+                coverageTable.loc[coverageTable.shape[0]] = [
+                    age,
+                    baseInitial if initial is None else initial,
+                    target,
+                ]
+        updateTableFromSchema(
+            "vacPropAgeForm",
+            coverageTable,
+            scenarioID,
+            pd.DataFrame(
+                {
+                    "Age Group": [None],
+                    "Initial Vaccinated Proportion": [baseInitial],
+                    "Target Vaccinated Proportion": [baseTarget],
+                },
+            ),
+        )
+
+    # Placeholders for attributes that may not be defined
+    # TODO: See which of these can become None to avoid
+    # propagating values not in the schema itself
+    primaryDoseCount = 1 if scenarioID == 0 else idGet("primaryDoseCount", 0, 1)
+    boosterDoseCount = 3 if scenarioID == 0 else idGet("boosterDoseCount", 0, 3)
+    primaryRatePerCycle = 12 if scenarioID == 0 else idGet("primaryWaningRate", 0, 12)
+    boosterRatePerCycle = 6 if scenarioID == 0 else idGet("boosterWaningRate", 0, 6)
+    baseFull = (
+        [0.5]
+        if scenarioID == 0
+        else [idGet("primaryBaseEfficacy", 0, 0.5, f"-{primaryDoseCount - 1}")]
+    )
+    baseWaned = 0.0 if scenarioID == 0 else idGet("primaryWanedEfficacy", 0, 0.0)
+    baseBoostFull = 0.9 if scenarioID == 0 else idGet("boosterBaseEfficacy", 0, 0.9)
+    baseBoostWaned = 0.6 if scenarioID == 0 else idGet("boosterWanedEfficacy", 0, 0.6)
+
+    # Vaccine Dosage Parameters
+    schemaDose = schema.Scenario_VaccineDose
+    if schemaDose is not None:
+        useVaccines = True
+        # TODO: Make sure stuff like duplicate primary vaccines are caught
+        # in validation before this function is called
+
+        # Primary vaccines
+        if any(dose.DoseType == "primary" for dose in schemaDose):
+            primaryDose = [dose for dose in schemaDose if dose.DoseType == "primary"][0]
+            primaryDoseCount = primaryDose.Count
+            updateParamFromSchema("primaryDoseCount", primaryDoseCount, scenarioID)
+            updateParamFromSchema(
+                "primaryDelay", primaryDose.DoseSpacingCycles // 60, scenarioID
+            )
+            waningDelay = primaryDose.WaningDelay
+            updateParamFromSchema("primaryDuration", waningDelay // 60, scenarioID)
+            # Efficacy needs to be logged so that waning rate per cycle
+            # can be calculated
+            primaryRatePerCycle = primaryDose.WaningRatePerCycle
+            updateParamFromSchema(
+                "vaccineWaningToggle", bool(primaryRatePerCycle), scenarioID
+            )
+
+            # TODO: See if waning-free default rate per cycle being 0.01 will
+            # interfere with what value is loaded for waning duration
+
+        # Booster Vaccines
+        if any(dose.DoseType == "booster" for dose in schemaDose):
+            boosterDose = [dose for dose in schemaDose if dose.DoseType == "booster"][0]
+            useBoosters = True
+            boosterDoseCount = boosterDose.Count
+            updateParamFromSchema("boosterDoseCount", boosterDoseCount, scenarioID)
+            updateParamFromSchema(
+                "boosterDelay", boosterDose.DoseSpacingCycles // 60, scenarioID
+            )
+            updateParamFromSchema(
+                "boosterDuration", boosterDose.WaningDelay // 60, scenarioID
+            )
+            # Efficacy needs to be logged so that waning rate per cycle
+            # can be calculated
+            boosterRatePerCycle = boosterDose.WaningRatePerCycle
+
+    # Vaccine Efficacy Parameters
+    schemaEfficacy = schema.Scenario_VaccineDoseEfficacy
+    if schemaEfficacy is not None:
+        useVaccines = True
+
+        # Primary Vaccines
+        primaryEfficacySchema = [
+            dose for dose in schemaEfficacy if dose.DoseType == "primary"
+        ]
+        primaryEfficacyTables = [
+            pd.DataFrame(columns=("Age Group", "Initial Dose Efficacy"))
+            for i in range(primaryDoseCount)
+        ]
+        primarySingleTable = pd.DataFrame(columns=("Age Group", "Vaccine Efficacy"))
+        primaryWanedTable = pd.DataFrame(
+            columns=("Age Group", "Dose Efficacy After Waning")
+        )
+
+        # Get the global values (age=None) first
+        primaryEfficacySchema.sort(key=lambda x: ageOrder.get(x.Age, 99))
+        if len(primaryEfficacySchema) > 0 and primaryEfficacySchema[0].Age is None:
+            baseEfficacy = primaryEfficacySchema.pop(0)
+            baseFull: list = baseEfficacy.Efficacy  # type: ignore
+            updateParamFromSchema("primarySingleEfficacy", baseFull[0], scenarioID)
+            for index, value in enumerate(baseFull):
+                updateParamFromSchema(
+                    "primaryBaseEfficacy", value, scenarioID, f"-{index}"
+                )
+            baseWaned = baseEfficacy.WanedEfficacy
+            updateParamFromSchema("primaryWanedEfficacy", baseWaned, scenarioID)
+        elif scenarioID == 0:
+            raise AssertionError(
+                "Schema does not include general primary vaccine efficacy "
+                "proportions for the baseline scenario"
+            )
+        else:
+            baseFull = [
+                idGet("primaryBaseEfficacy", 0, 0.5, f"-{i}")
+                for i in range(primaryDoseCount)
+            ]
+            baseWaned = idGet("primaryWanedEfficacy", 0, 0.0)
+
+        # Iterate over each efficacy age
+        for prim in primaryEfficacySchema:
+            age, base, waned = prim.Age, prim.Efficacy, prim.WanedEfficacy
+            # Assume correct number of efficacies are used
+            # since the schema should error before now otherwise
+            if age is not None:
+                if waned != baseWaned:
+                    primaryWanedTable.loc[primaryWanedTable.shape[0]] = [age, waned]
+                for index, value in enumerate(base):  # type: ignore
+                    if value != baseFull[index]:
+                        currentTable = primaryEfficacyTables[index]
+                        currentTable.loc[currentTable.shape[0]] = [age, value]
+                        # Use the first dose for the simplified one-efficacy table
+                        if index == 0:
+                            primarySingleTable.loc[primarySingleTable.shape[0]] = [
+                                age,
+                                value,
+                            ]
+
+        # Save the tables
+        updateTableFromSchema(
+            "vacWaneAgeForm",
+            primaryWanedTable,
+            scenarioID,
+            pd.DataFrame(
+                {
+                    "Age Group": [None],
+                    "Dose Efficacy After Waning": [baseWaned],
+                },
+            ),
+        )
+        updateTableFromSchema(
+            "vacSingleEfficacyAgeForm",
+            primarySingleTable,
+            scenarioID,
+            pd.DataFrame(
+                {
+                    "Age Group": [None],
+                    "Vaccine Efficacy": [baseFull[0]],
+                },
+            ),
+        )
+        for index, table in enumerate(primaryEfficacyTables):
+            updateTableFromSchema(
+                "vacInitialEfficacyAgeForm",
+                table,
+                scenarioID,
+                pd.DataFrame(
+                    {
+                        "Age Group": [None],
+                        "Vaccine Efficacy": [baseFull[index]],
+                    },
+                ),
+                extra=f"-{index}",
+            )
+
+        # Booster Vaccines
+        boosterEfficacySchema = [
+            dose for dose in schemaEfficacy if dose.DoseType == "booster"
+        ]
+        boosterEfficacyTable = pd.DataFrame(
+            columns=(
+                "Age Group",
+                "Initial Booster Efficacy",
+                "Booster Efficacy After Waning",
+            )
+        )
+
+        # Get the global values (age=None) first
+        boosterEfficacySchema.sort(key=lambda x: ageOrder.get(x.Age, 99))
+        if len(boosterEfficacySchema) > 0 and boosterEfficacySchema[0].Age is None:
+            baseBoostEfficacy = boosterEfficacySchema.pop(0)
+            baseBoostFull: EfficacyValue = baseBoostEfficacy.Efficacy  # type: ignore
+            updateParamFromSchema("boosterBaseEfficacy", baseBoostFull, scenarioID)
+            baseBoostWaned = baseBoostEfficacy.WanedEfficacy
+            updateParamFromSchema("boosterWanedEfficacy", baseBoostWaned, scenarioID)
+        elif useBoosters and scenarioID == 0:
+            raise AssertionError(
+                "Schema does not include general booster vaccine efficacy "
+                "proportions for the baseline scenario"
+            )
+        else:
+            baseBoostFull = idGet("boosterBaseEfficacy", 0, 0.9)
+            baseBoostWaned = idGet("boosterWanedEfficacy", 0, 0.6)
+
+        # Iterate over each efficacy age
+        for boost in boosterEfficacySchema:
+            age, base, waned = boost.Age, boost.Efficacy, boost.WanedEfficacy
+            if age is not None:
+                boosterEfficacyTable.loc[boosterEfficacyTable.shape[0]] = [
+                    age,
+                    base,
+                    waned,
+                ]
+
+        updateTableFromSchema(
+            "boostEfficacyAgeForm",
+            boosterEfficacyTable,
+            scenarioID,
+            pd.DataFrame(
+                {
+                    "Age Group": [None],
+                    "Initial Booster Efficacy": [baseBoostFull],
+                    "Booster Efficacy After Waning": [baseBoostWaned],
+                },
+            ),
+        )
+
+    # Come back to waning duration since it needs both efficacy and dose
+    if primaryRatePerCycle:
+        updateParamFromSchema(
+            "primaryWaningRate",
+            (baseFull[-1] - baseWaned) // (primaryRatePerCycle * 60),
+            scenarioID,
+        )
+    if boosterRatePerCycle:
+        updateParamFromSchema(
+            "boosterWaningRate",
+            (baseBoostFull - baseBoostWaned) // (boosterRatePerCycle * 60),
+            scenarioID,
+        )
+
+    # General Scenario Parameters
+    schemaParameters = schema.Scenario_Parameter
+    if schemaParameters is not None:
+        paramDict = {p: v for p, v in vars(schemaParameters).items() if v is not None}
+        paramConvert = {
+            "class_dismissal": "classDismissal",
+            "case_trigger_threshold": "caseTotalThreshold",
+            "rate_trigger_threshold": "rateStartThreshold",
+            "rate_relaxation_threshold": "rateRelaxThreshold",
+            "vaccination_first_dose_rate": "firstDoseRate",
+            "school_closure_compliance": "schoolClosureCompliance",
+            "increased_withdrawal": "withdrawalIncreaseAdult",
+            "increased_withdrawal_child": "withdrawalIncreaseChild",
+            "reduced_workgroup_size": "reducedGroupSize",
+            "social_distance_compliance": "socialDistancingCompliance",
+            "diagnosed_case_isolation": "caseIsolation",
+        }
+        simpleParams = {p: key for p, key in paramConvert.items() if p in paramDict}
+        for parameter, key in simpleParams.items():
+            if parameter in paramDict:
+                updateParamFromSchema(key, paramDict[parameter], scenarioID)
+
+        # BCC Reduction
+        updateParamFromSchema(
+            "bccReducedRate",
+            paramDict.get("bcc_reduction", 0.05) * idGet("bccRate", scenarioID, 4.0),
+            scenarioID,
+        )
+
+        # NPI periods
+        npiPrefixes = {
+            "school_closure": "schoolClosure",
+            "withdrawal_increase": "withdrawalIncrease",
+            "reduced_workgroup": "reducedGroup",
+            "bcc_reduction": "bcc",
+        }
+        triggerDict = {
+            "none": "Always",
+            "timed": "Timed",
+            "community_rate": "Community Case Rate",
+            "community_cases": "Community Case Total",
+            "per_school_cases": "Cases per School",
+        }
+        for npi, prefix in npiPrefixes.items():
+            # Relaxation always matches start on dashboard, so don't look for it
+            startTrigger = paramDict.get(f"{npi}_trigger", "none")
+            npiDelay = paramDict.get(f"{npi}_delay", 0)
+            npiDuration = paramDict.get(f"{npi}_duration", 0)
+            if startTrigger != "none":
+                useNPIs[prefix] = True
+
+                # Triggers
+                if npiDelay == 0 and npiDuration > session.get("cycleCount", 360) * 2:
+                    updateParamFromSchema(f"{prefix}Trigger", "Always", scenarioID)
+                elif startTrigger != "none":
+                    updateParamFromSchema(
+                        f"{prefix}Trigger", triggerDict[startTrigger], scenarioID
+                    )
+
+                # Periods
+                # Use baseline values to plug None gaps
+                basePeriodStart, basePeriodEnd = idGet(f"{prefix}Period", 0, (1, 60))
+                if npiDelay is None:
+                    npiDelay = (basePeriodStart - 1) * 2
+                if npiDuration is None:
+                    npiDuration = (basePeriodEnd - basePeriodStart + 1) * 2
+
+                # Calculate NPI period
+                npiPeriodStart = (npiDelay // 2) + 1
+                npiPeriodEnd = (npiDelay + npiDuration) // 2
+                updateParamFromSchema(
+                    f"{prefix}Period", (npiPeriodStart, npiPeriodEnd), scenarioID
+                )
+
+        # Miscellaneous toggles
+        if {
+            "vaccination_first_dose_rate",
+            "vaccine_doses",
+        }.intersection(paramDict):
+            limitedDoses = bool(
+                paramDict.get("vaccine_doses", 9999999)
+                < communityPopulation[session.get("community", "newcastle")]
+            )
+            updateParamFromSchema(
+                "limitDosesToggle",
+                limitedDoses,
+                scenarioID,
+            )
+            if limitedDoses:
+                updateParamFromSchema(
+                    "initialDoseReserve",
+                    paramDict.get("vaccine_doses"),
+                    scenarioID,
+                )
+            """useVaccines = True
+            if (
+                paramDict.get("vaccine_doses", 9999999)
+                < communityPopulation[session.get("community", "newcastle")]
+            ):
+                updateParamFromSchema("limitDosesToggle", True, scenarioID)"""
+        useSocialDistancing = useSocialDistancing or bool(
+            paramDict.get("social_distance_compliance", 0.0) > 0.0
+        )
+        # TODO: Make sure these aren't necessary
+        """if "school_closure_compliance" in paramDict:
+            useNPIs["schoolClosure"] = True
+        if "increased_withdrawal" in paramDict:
+            useNPIs["withdrawalIncrease"] = True
+        if "reduced_workgroup_size" in paramDict:
+            useNPIs["reducedGroup"] = True
+        if "bcc_reduction" in paramDict:
+            useNPIs["bcc"] = True"""
+
+        # Social Distancing Table
+        distanceParams = {
+            p.removesuffix("_social_distance"): v
+            for p, v in paramDict.items()
+            if p.endswith("_social_distance")
+        }
+        if distanceParams:
+            useSocialDistancing = True
+            distanceTable = pd.DataFrame(
+                columns=("Age Group", "Social Distancing Compliance")
+            )
+            for param, value in distanceParams.items():
+                distanceTable.loc[distanceTable.shape[0]] = [param, value]
+            updateTableFromSchema(
+                "distanceAgeForm",
+                distanceTable,
+                scenarioID,
+                pd.DataFrame(
+                    {
+                        "Age Group": [None],
+                        "Social Distancing Compliance": [
+                            paramDict.get(
+                                idGet("socialDistancingCompliance", scenarioID, 0.0),
+                            )
+                        ],
+                    },
+                ),
+            )
+
+        # Final Toggles
+        # TODO: Ensure that toggles being disabled is distinguishable from
+        # parameters being unchanged from baselines
+        updateParamFromSchema("vaccineToggle", useVaccines, scenarioID)
+        updateParamFromSchema("boosterToggle", useBoosters, scenarioID)
+        updateParamFromSchema("socialDistancingToggle", useSocialDistancing, scenarioID)
+        for prefix, value in useNPIs.items():
+            updateParamFromSchema(f"{prefix}Toggle", value, scenarioID)

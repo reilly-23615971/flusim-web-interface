@@ -10,14 +10,15 @@ import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import (
+from ClientResources.InterfaceFunctions import paramError
+from ClientResources.ModelSchema import Parameters, dynamicIntervention
+from ClientResources.ParameterFunctions import (
     hasDuplicates,
     idGet,
     loadKey,
-    paramError,
     saveKey,
+    updateTableFromSchema,
 )
-from ClientResources.ModelSchema import Parameters, dynamicIntervention
 
 # Logging
 dynamicLog = logging.getLogger(__name__)
@@ -30,14 +31,14 @@ session = st.session_state
 def buildDynamicTab(id: int):
     """
     Function to generate the dynamic parameters in a specified container
-    with scenario differentiation
+    with scenario differentiation.
 
     Parameters:
         id (int): An integer that will be used to differentiate the parameters in
             different instances of the tab by adding a number to the Streamlit
             session state variables.
     """
-    # Initialise session variables needed by the disease forms
+    # Initialise session variables needed by the pathogen forms
     # sessionParameters = {
     # f"seedRowCount{id}": 0,
     # f"closeRowCount{id}": 0,
@@ -66,7 +67,7 @@ def buildDynamicTab(id: int):
         be used to simulate the spike in cases following a border
         opening, while changing school closure compliance can
         simulate changing policies or increased public awareness of
-        the disease.
+        the pathogen.
 
         The parameters that support dynamic value changes are as
         follows:
@@ -76,7 +77,8 @@ def buildDynamicTab(id: int):
         - Reduced Background Contact Count
 
         The initial value for Infection Seeding Rate can be changed
-        in the "Infection Seeding" section of the "Disease" tab.
+        in the "Infection Seeding" section of
+        :primary-badge[:material/coronavirus: Pathogen].
         The other two parameters can have their initial values
         changed in the "Vaccinations and NPIs" tab. School Closure
         Compliance is in the "School Closure" section, while
@@ -163,7 +165,7 @@ each day of the simulation is 2 cycles.
         True,
     )
 
-    oldVarLengthForm = '''# Save relevant parameters as variables to avoid lookups
+    '''# Save relevant parameters as variables to avoid lookups
     seedRowCount = session[f"seedRowCount{id}"]
     baseSeedValue = idGet("seedRate", id, 0.25)
     seedStart, seedEnd = idGet("seedPeriod", id, (0, 29))
@@ -483,7 +485,7 @@ they are closed after the specified point in the simulation.
         True,
     )
 
-    oldVarLengthForm = '''# Save relevant parameters as variables to avoid lookups
+    '''# Save relevant parameters as variables to avoid lookups
     closeRowCount = session[f"closeRowCount{id}"]
     baseCloseValue = idGet("schoolClosureCompliance", id, 0.9)
     closeActive = idGet("schoolClosureToggle", id, False)
@@ -856,7 +858,7 @@ effect, overwriting the normal BCC rate.
         True,
     )
 
-    oldVarLengthForm = '''# Save relevant parameters as variables to avoid lookups
+    '''# Save relevant parameters as variables to avoid lookups
     bccRowCount = session[f"bccRowCount{id}"]
     baseBCCValue = idGet("bccReducedRate", id, 0.2)
     bccActive = idGet("bccToggle", id, False)
@@ -1134,12 +1136,22 @@ effect, overwriting the normal BCC rate.
     )'''
 
 
-def paramCast(x: str):
+def paramCast(x: str) -> Literal[
+    "work_nonattendance",
+    "bcc_reduction",
+    "school_closure",
+    "seed_rate",
+    "school_closure_delay",
+    "school_closure_duration",
+]:
     """
-    Simple function to convert strings into literals for the purpose of type validation
+    Simple function to convert strings into literals for the purpose of type validation.
 
     Parameters:
-        x (str): shorthand for the key to cast
+        x (str): Shorthand for the key to cast.
+
+    Returns:
+        Literal: A literal with the corresponding value.
     """
     # TODO: Add any new dynamic parameters
     return cast(
@@ -1159,10 +1171,10 @@ def paramCast(x: str):
     )
 
 
-def dynamicSchema(schema: Parameters, id: int = 0):
+def dynamicSaveSchema(schema: Parameters, id: int = 0):
     """
-    Function to populate the Pydantic model schema with the parameters in
-    this tab with scenario differentiation
+    Function to populate the Pydantic model schema with dynamic parameters
+    using scenario differentiation.
 
     Parameters:
         schema (Parameters): The Pydantic model (specifically an object in the
@@ -1216,7 +1228,7 @@ def dynamicSchema(schema: Parameters, id: int = 0):
                         )
                     )
 
-        oldVarLengthForm = """for prefix, default in {
+        """for prefix, default in {
             "seed": idGet("seedRate", id, 0.25),
             "close": idGet("schoolClosureCompliance", id, 0.9),
             "bcc": idGet("bccReducedRate", id, 0.2),
@@ -1240,3 +1252,83 @@ def dynamicSchema(schema: Parameters, id: int = 0):
             )
         )
         raise e
+
+
+def dynamicLoadSchema(schema: Parameters, scenarioID: int = 0):
+    """
+    Function to read dynamic parameters from a schema and set the
+    dashboard's widgets to the specified values.
+
+    Parameters:
+        schema (Parameters): The Pydantic model (specifically an object in the
+            Parameters class) that the parameters will be read from.
+
+        id (int): An integer that will be used to differentiate the parameters in
+            different instances of the tab by adding a number to the Streamlit
+            session state variables. A value of 0 means that this is the
+            baseline scenario and will be treated accordingly.
+    """
+    dynamicChanges = schema.Scenario_DynamicIntervention
+    if dynamicChanges is None:
+        return
+    dynamicTables = {
+        "seed_rate": pd.DataFrame(
+            columns=(
+                "Day to Update Parameter",
+                "New Infection Seeding Rate",
+            )
+        ),
+        "school_closure": pd.DataFrame(
+            columns=("Day to Update Parameter", "New School Closure Compliance"),
+        ),
+        "bcc_reduction": pd.DataFrame(
+            columns=("Day to Update Parameter", "New Reduced Background Contact Count"),
+        ),
+    }
+
+    for update in dynamicChanges:
+        # Get value and append to correct dataframe
+        param, time, newValue = (
+            update.Name,
+            (update.CycleOffset / 2) + 1,
+            update.NewValue,
+        )
+        currentTable = dynamicTables[param]
+        currentTable.loc[currentTable.shape[0]] = [time, newValue]
+
+    # Set the new tables into st.session_state, if they were updated at all
+    paramConvert = {
+        "seed_rate": (
+            "seedTimeForm",
+            pd.DataFrame(
+                {
+                    "Day to Update Parameter": [None],
+                    "New Infection Seeding Rate": [idGet("seedRate", scenarioID, 0.25)],
+                },
+            ),
+        ),
+        "school_closure": (
+            "closeTimeForm",
+            pd.DataFrame(
+                {
+                    "Day to Update Parameter": [None],
+                    "New School Closure Compliance": [
+                        idGet("schoolClosureCompliance", scenarioID, 0.9)
+                    ],
+                },
+            ),
+        ),
+        "bcc_reduction": (
+            "bccTimeForm",
+            pd.DataFrame(
+                {
+                    "Day to Update Parameter": [None],
+                    "New Reduced Background Contact Count": [
+                        idGet("bccReducedRate", scenarioID, 0.2)
+                    ],
+                },
+            ),
+        ),
+    }
+    for parameter, (key, default) in paramConvert.items():
+        updateTableFromSchema(key, dynamicTables[parameter], scenarioID, default)

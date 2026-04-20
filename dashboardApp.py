@@ -7,39 +7,34 @@
 import logging
 import os
 from datetime import datetime
+from functools import partial
 
 import pandas as pd
 import streamlit as st
 
 # Reload streamlit_notify if it fails the first time
+# TODO: it keeps happening
 try:
-    from streamlit_notify import notify, toast
+    import streamlit_notify as stn
 except ImportError:
     import importlib
     import time
 
     time.sleep(0.01)
     importlib.reload(importlib.import_module("streamlit_notify"))
-    from streamlit_notify import notify, toast  # type: ignore
+    import streamlit_notify as stn  # type: ignore
 
-# from streamlit_notify import notify, toast  # type: ignore
-
-from ClientResources.SharedResources import (
-    resultQueue,
-    usePresetData,
-    usePresetParams,
-)
-
-# from ClientResources.SimulationRunFunctions import runSimulationButton
+from ClientResources.SharedResources import resultQueue, usePresetData, usePresetParams
+from ClientResources.VisualisationFunctions import formatData
 
 # Set this early to minimise the time spent with a different page title
 st.set_page_config(
-    page_title="SMRG Flusim Web Dashboard",
+    page_title="Flusim Web Dashboard",
     page_icon=":material/microbiology:",
     layout="wide",
     menu_items={
         "About": """
-        ## SMRG Flusim Web Dashboard
+        ## Flusim Web Dashboard
         This dashboard is designed to work with the *Flusim* model
         designed by the UWA Software Modelling Research Group.
         ##### Additional Credits
@@ -49,11 +44,10 @@ st.set_page_config(
     },
 )
 
-# Logging config (create log folder outside of project dir to avoid
-# watchfiles getting into an endless update loop)
-os.makedirs("../Logs", exist_ok=True)
+# Logging config
+os.makedirs("Logs", exist_ok=True)
 logging.basicConfig(
-    filename="../Logs/interfaceAppLogs.txt",
+    filename="Logs/interfaceAppLogs.txt",
     filemode="a",
     format="%(asctime)s,%(msecs)03d %(name)s %(levelname)s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
@@ -65,8 +59,26 @@ appLog = logging.getLogger(__name__)
 # Store st.session_state as variable for efficiency
 session = st.session_state
 
-# Set environment variables for config
-# os.environ['STREAMLIT_GLOBAL_DISABLE_WIDGET_STATE_DUPLICATION_WARNING'] = '1'
+# Initialise session variables used globally by the dashboard
+# Use current time (Unix) as session ID so that different simulations
+# aren't mixed up by the server
+sessionParameters = {
+    "simulationInProgress": False,
+    "scenarioCount": 0,
+    "sessionID": int(datetime.now().timestamp()),
+    "scenarioSetParamsExtra": {},
+    "scenarioSetParams": {},
+    "activeErrors": {0: {}},
+}
+for parameter, default in sessionParameters.items():
+    session[parameter] = session.get(parameter, default)
+
+# TODO: See if an extra cookie package like streamlit-cookie-controller
+# can preserve parameters between refreshed pages
+
+# Define partial function for toasts
+notifyToast = partial(stn.toast, duration="infinite")
+
 
 st.logo(":material/microbiology:")
 
@@ -94,7 +106,7 @@ runSimulation = st.Page(
 )
 infectionGraphs = st.Page(
     "DashboardPages/infectionOverTimeGraphs.py",
-    title="Infection Over Time Graphs",
+    title="Infection Graphs",
     icon=":material/chart_data:",
 )
 healthTables = st.Page(
@@ -104,109 +116,94 @@ healthTables = st.Page(
 )
 
 pages = {
-    "SMRG Flusim Web Dashboard": [modelDescription],
+    "Flusim Web Dashboard": [modelDescription],
     "Parameter Configuration": [baselineParameters, scenarioParameters, runSimulation],
     "Results Visualisation": [infectionGraphs, healthTables],
 }
 
-# Initialise session variables used globally by the dashboard
-# Use current time (Unix) as session ID so that different simulations
-# aren't mixed up by the server
-sessionParameters = {
-    "simulationInProgress": False,
-    "scenarioCount": 0,
-    "sessionID": int(datetime.now().timestamp()),
-    "scenarioSetParamsExtra": {},
-    "scenarioSetParams": {},
-    "activeErrors": {0: {}},
-}
-for parameter, default in sessionParameters.items():
-    session[parameter] = session.get(parameter, default)
-
 # Display toasts
-notify(remove=True)
+stn.notify(remove=True)
 
 # Initialise and run the application pages
 flusimPages = st.navigation(pages)
 flusimPages.run()
 
+# TODO: Consider rendering user manual with 1.56's st.iframe instead of
+# just opening the PDF in a new tab
 st.sidebar.link_button(
     "User Manual", "/app/static/UserManual.pdf", icon=":material/quick_reference:"
 )
 
-# Add run simulation button to sidebar below pages
-# TODO: consider adding progress updates to the sidebar (time remaining,
-# progress bars, server availability etc.)
-oldButton = '''
-runModelButton = st.sidebar.button(
-    label=(
-        "Running simulations..." if session.simulationInProgress else "Run Simulations"
-    ),
-    on_click=runSimulationButton,
-    key="_runSimSidebar",
-    disabled=session.simulationInProgress,
-    type="primary",
-    icon=(
-        ":material/hourglass:"
-        if session.simulationInProgress
-        else ":material/motion_play:"
-    ),
-    help=(
-        """
-        Send a request to the *Flusim* model server to run the model
-        with the specified parameters. Once the request has been made,
-        you will be unable to run the model again until it completes,
-        so make sure you have configured your parameters to appropriate
-        values before clicking.
-    """
-        if not session.simulationInProgress
-        else """
-        A simulation is already running; please wait for it to conclude
-        before running another one.
-    """
-    ),
-)
-'''
 
-
-# Fragment to regularly check if model results have been received yet
 @st.fragment(run_every=1)
 def updateData():
+    """
+    Fragment to regularly check if model results have been received yet.
+    """
+    # TODO: Rewrite this to be cleaner and more readable
     if session.simulationInProgress and not resultQueue.empty():
-        processedData = resultQueue.get()
-        appLog.info(f"[updateData] Processing the following data:\n{processedData}")
+        returnedData = resultQueue.get()
+        appLog.info(f"[updateData] Processing the following data:\n{returnedData}")
+        os.write(1, "Simulation experiment call complete\n\n".encode())
+
+        # Make pending data no longer pending
+        pendingData = {
+            "Forms",
+            "Community",
+            "ScenarioNames",
+            "ScenarioCount",
+            "Asymptomatic",
+            "HealthOutcomeRates",
+            "MortalityRates",
+        }
+        for name in pendingData:
+            session[f"Data{name}"] = session.get(f"PendingData{name}")
+        # TODO: Add a check to ensure visualisations can't use the new values
+        # while this function is still processing the data
 
         # Check if the server returned an error instead of proper data
-        if isinstance(processedData, list):
+        if isinstance(returnedData, list):
             successes = 0
             scenarios = (
-                4 if usePresetData or usePresetParams else session.scenarioCount + 1
+                4 if usePresetData or usePresetParams else session.DataScenarioCount + 1
             )
-            for data, tag in processedData:
+            # Remove any old session data that won't be overridden here
+            # TODO: Make more robust when number of returned values can vary more
+            dataForms = session.get("DataForms", [])
+            if len(dataForms) < 4:
+                session.pop("modelDataAsirVaccinated", None)
+            for rawData, form in zip(returnedData, dataForms):
+                # TODO: Consider creating vaccinated/unvaccinated asir dataframes
+                # here rather than in generateAsir
+                # TODO: Make better use of data forms
+                # TODO: Consider leaving full errors to runSimulations and
+                # simplifying the toasts to just no errors/errors
+                data, tag = formatData(rawData, form)
                 # Further error checking
                 if len(data) == 0:
-                    toast(
-                        """
-                    :red-badge[Error]: No data was present on one
-                    or more of the files received from the server.
-                    Please make sure your parameters do not possess any
-                    errors and try again.
-                """,
+                    notifyToast(
+                        body="""
+                        :red-badge[Error]: No data was present on one
+                        or more of the files received from the server.
+                        Please make sure your parameters do not possess any
+                        errors and try again.
+                    """,
                         icon=":material/tab_unselected:",
                     )
                 elif (
                     tag in {"EpidemicCumulative", "EpidemicDaily"}
                     and len(data["Scenario"].value_counts()) != scenarios
                 ):
-                    toast(
-                        """
-                        :red-badge[Error]: One or more scenarios
-                        were not run correctly by the simulation
-                        server. Please ensure all scenarios do not
-                        possess any errors and try again.
-                    """,
+                    notifyToast(
+                        body="""
+                            :red-badge[Error]: One or more scenarios
+                            were not run correctly by the simulation
+                            server. Please ensure all scenarios do not
+                            possess any errors and try again.
+                        """,
                         icon=":material/donut_small:",
                     )
+
                 else:
                     successes += 1
                     session[f"modelData{tag}"] = data
@@ -216,18 +213,17 @@ def updateData():
             totalTime = session.simulationEndTime - session.simulationStartTime
             seconds = str(totalTime.seconds % 60).zfill(2)
             timeString = f"{totalTime.seconds // 60}:{seconds}"
-            if successes == 3:
-                toast(
+            if successes == len(dataForms):
+                notifyToast(
                     f"Simulation complete! Total duration: {timeString}",
                     icon=":material/check_circle:",
                 )
             elif successes > 0:
-                toast(
-                    f"""
-                Simulation complete,
-                though some analyses had errors.
+                notifyToast(
+                    body=f"""
+                Simulation complete, though some analyses had errors.
                 Total duration: {timeString}
-            """,
+                    """,
                     icon=":material/flaky:",
                 )
             appLog.info(
@@ -239,110 +235,98 @@ def updateData():
         else:
             appLog.error(
                 "[updateData] Received data was atypical. Contents: "
-                + str(processedData)
+                + str(returnedData)
             )
 
             # Show different toast messages for different errors
-            if isinstance(processedData, tuple):
+            if isinstance(returnedData, tuple):
                 # Errors with exceptions attached
-                errorType, e = processedData
+                errorType, e = returnedData
                 if errorType == "ClientConnectorError":
-                    toast(
-                        """
-                    :red-badge[Error]: Could not connect to the
-                    simulation server. Please make sure you are
-                    connected to the same network as the server, then
-                    try again.
-                """,
+                    notifyToast(
+                        body="""
+                            :red-badge[Error]: Could not connect to the
+                            simulation server. Please make sure you are
+                            connected to the same network as the server,
+                            then try again.
+                        """,
                         icon=":material/link_off:",
                     )
                 elif errorType == "ClientResponseError500":
-                    toast(
-                        """
-                    :red-badge[Error]: Simulation server had an
-                    internal error. Please try again later.
-                """,
+                    notifyToast(
+                        body="""
+                            :red-badge[Error]: The simulation server had an
+                            internal error. Please try again later.
+                        """,
                         icon=":material/error:",
                     )
                 elif errorType == "ValueError":
-                    toast(
-                        """
-                    :red-badge[Error]: The data received from the
-                    simulation server was incorrectly formatted. Please
-                    make sure your parameters do not possess any errors
-                    and try again.
-                """,
+                    notifyToast(
+                        body="""
+                            :red-badge[Error]: The data received from the
+                            simulation server was incorrectly formatted. Please
+                            make sure your parameters do not possess any errors
+                            and try again.
+                        """,
                         icon=":material/broken_image:",
                     )
                 elif errorType == "InvalidSchemaError":
-                    toast(
-                        """
-                        :red-badge[Error]: The parameters sent to the
-                        server do not match the required format. Please
-                        check your parameters for errors and try again.
-                    """,
+                    notifyToast(
+                        body="""
+                            :red-badge[Error]: The parameters sent to the
+                            server do not match the required format. Please
+                            check your parameters for errors and try again.
+                        """,
                         icon=":material/schema:",
                     )
-                    toast(
+                    notifyToast(
                         f":red-badge[Response Body]: {e.response}",
                         icon=":material/breaking_news:",
                     )
                 else:
-                    toast(
-                        """
-                    :red-badge[Error]: The simulation server
-                    encountered an error. Please try again later.
-                """,
+                    notifyToast(
+                        body="""
+                            :red-badge[Error]: The simulation server
+                            encountered an error. Please try again later.
+                        """,
                         icon=":material/error:",
                     )
-                toast(
+                notifyToast(
                     f":red-badge[Full Error Message]: {e}",
                     icon=":material/breaking_news:",
                 )
 
             # Errors without exception messages to send
-            elif isinstance(processedData, pd.DataFrame):
-                toast(
-                    """
-                :red-badge[Error]: The data was not processed
-                correctly. Please try again later.
-            """,
+            elif isinstance(returnedData, pd.DataFrame):
+                notifyToast(
+                    body="""
+                        :red-badge[Error]: The data was not processed
+                        correctly. Please try again later.
+                    """,
                     icon=":material/data_alert:",
                 )
-            elif processedData == "EmptyZipFile":
-                toast(
-                    """
-                :red-badge[Error]: The simulation server did not
-                return any readable files. Please make sure your
-                parameters do not possess any errors and try again.
-            """,
+            elif returnedData == "EmptyZipFile":
+                notifyToast(
+                    body="""
+                        :red-badge[Error]: The simulation server did not
+                        return any readable files. Please make sure your
+                        parameters do not possess any errors and try again.
+                    """,
                     icon=":material/unknown_document:",
                 )
             else:
-                toast(
-                    """
-                :red-badge[Error]: An unknown error occurred. Please
-                try again later.
-            """,
+                notifyToast(
+                    body="""
+                        :red-badge[Error]: An unknown error occurred. Please
+                        try again later.
+                    """,
                     icon=":material/error:",
                 )
-
-        # Make pending data no longer pending
-        pendingData = {
-            "Community",
-            "ScenarioNames",
-            "ScenarioCount",
-            "Asymptomatic",
-            "HealthOutcomeRates",
-            "MortalityRates",
-        }
-        for name in pendingData:
-            session[f"Data{name}"] = session.get(f"PendingData{name}")
-        session.scenariosToUse = session.DataScenarioNames
 
         # Re-enable running new simulations and using their data
         session.ChartGenerated = False
         session.simulationInProgress = False
+        session.scenariosToUse = session.DataScenarioNames
         st.rerun()
 
 
