@@ -14,17 +14,13 @@ from zipfile import ZipFile
 
 import pandas as pd
 import streamlit as st
-from aiohttp import (
-    ClientConnectorError,
-    ClientResponseError,
-    ClientSession,
-    ClientTimeout,
-)
+from aiohttp import ClientConnectorError, ClientResponseError, ClientSession
 from streamlit_notify import toast  # type: ignore
 
 from ClientResources.DownloadFunctions import createConfig
 from ClientResources.InterfaceFunctions import errorChecker
 from ClientResources.ParameterFunctions import idGet
+import ClientResources.SharedResources
 from ClientResources.SharedResources import (
     AnalysisFile,
     ageTimeDict,
@@ -34,6 +30,7 @@ from ClientResources.SharedResources import (
     resultQueue,
     saveJSON,
     serverUrl,
+    statusQueue,
     usePresetParams,
 )
 
@@ -258,6 +255,11 @@ simulation.
                 for scenarioID in range(scenarioCount + 1)
             }
 
+            # Clear the status queue
+            ClientResources.SharedResources.currentProgress = 0
+            statusQueue.clear()
+            statusQueue.append("Connecting to server...")
+
             # Make the model call
             runModelWrapper(parameterJSON)
 
@@ -289,11 +291,7 @@ async def runModelStart(parameterJSON: str):
     functionLog.info(
         f"[runModelStart] Initialising session with base url {serverUrl}..."
     )
-    async with ClientSession(
-        raise_for_status=False,
-        base_url=serverUrl,
-        # timeout=ClientTimeout(total=30),
-    ) as session:
+    async with ClientSession(raise_for_status=False, base_url=serverUrl) as session:
         functionLog.info("[runModelStart] Sending post request to run sim...")
         async with session.post("runModel", json=schema) as response:
             responseData = await response.json()
@@ -325,11 +323,7 @@ async def runModelStatus(simulationID: str):
     # TODO: Ensure wrapper handles errors
 
     # Send GET request to server with ID
-    async with ClientSession(
-        raise_for_status=False,
-        base_url=serverUrl,
-        # timeout=ClientTimeout(total=30),
-    ) as session:
+    async with ClientSession(raise_for_status=False, base_url=serverUrl) as session:
         functionLog.info(f"[runModelStatus] Checking status of sim {simulationID}...")
         async with session.get(f"runModel/status/{simulationID}") as response:
             statusResponse = await response.json()
@@ -365,11 +359,7 @@ async def runModelDownload(simulationID: str):
     functionLog.info(
         f"[runModelDownload] Downloading analysis data for sim {simulationID}..."
     )
-    async with ClientSession(
-        raise_for_status=False,
-        base_url=serverUrl,
-        # timeout=ClientTimeout(total=30),
-    ) as session:
+    async with ClientSession(raise_for_status=False, base_url=serverUrl) as session:
         # Download the analysis files
         async with session.get(f"runModel/download/{simulationID}") as response:
             fileData = await response.read()
@@ -403,7 +393,7 @@ async def runModelDownload(simulationID: str):
                     raise e
 
 
-async def runModel(parameterJSON: str):
+'''async def runModel(parameterJSON: str):
     """
     Asynchronous function to send JSON model parameters to the server, awaiting a
     response containing the results of the simulation.
@@ -525,7 +515,7 @@ The parameter schema did not comply with the Pydantic model
         return ("InvalidSchemaError", e)
     except Exception as e:
         functionLog.error(f"[runModel] Encountered {type(e).__name__}: {e}")
-        return ("UncaughtError", e)
+        return ("UncaughtError", e)'''
 
 
 def runModelWrapper(parameterJSON):
@@ -546,7 +536,18 @@ def runModelWrapper(parameterJSON):
         needed to avoid interrupting Streamlit UI functionality.
         """
         try:
-            # Split up test
+            # TODO: Generate progress using # of sims/analyses
+            # TODO: Include client side processing like formatAsir in this progress
+            progressDict = {
+                "start": (2, "Initialising parameters..."),
+                "configGenerated": (5, "Running simulations..."),
+                "allSimulationsComplete": (75, "Extracting cumulative infections..."),
+                "analysisComplete0": (80, "Extracting daily infections..."),
+                "analysisComplete1": (85, "Extracting age-based infections..."),
+                "analysisComplete2": (90, "Extracting vaccine-based infections..."),
+                "analysisComplete3": (95, "Compiling results..."),
+            }
+            # Get simulation ID
             simulationID = asyncio.run(runModelStart(parameterJSON))
             while True:
                 # asyncio.sleep(2)  # TODO: Tweak poll interval
@@ -557,48 +558,48 @@ def runModelWrapper(parameterJSON):
                         # Download the analysis files
                         simData = asyncio.run(runModelDownload(simulationID))
                         resultQueue.put(simData)
+                        ClientResources.SharedResources.currentProgress = 100
+                        statusQueue.append("Simulation complete!")
+                        # TODO: Add final complete status item to status queue
                         return
                     case "error":
-                        # TODO: Better error handling
+                        # TODO: Better error handling;
+                        # see if errors can be added to the status queue
+                        ClientResources.SharedResources.currentProgress = -1
+                        statusQueue.append("Experiment halted due to error")
                         raise Exception("An error occurred in the simulation.")
-                """case _:
-                        # Status patterns:
-                        # start
-                        # configGenerated
-                        # allSimulationsComplete
-                        # analysisComplete#
-                        # completed
-                        # error
-                        # TODO: Generate progress using # of sims/analyses
-                        progressDict = {
-                            "start": (0, "Initialising parameters..."),
-                            "configGenerated": (5, "Running simulations..."),
-                            "allSimulationsComplete": (5, "Running simulations..."),
-                            "analysisComplete#": (5, "Running simulations..."),
-                            "analysisComplete#": (5, "Running simulations..."),
-                            "analysisComplete#": (5, "Running simulations..."),
-                            "analysisComplete#": (5, "Running simulations..."),
-                        }
-                    # TODO: Update progress bars using status"""
-            # time.sleep(5)  # Debug for testing dashboard while running
-            formattedData = asyncio.run(runModel(parameterJSON))
+                    case _:
+                        progress, status = progressDict[simStatus]
+                        ClientResources.SharedResources.currentProgress = progress
+                        if status not in statusQueue:
+                            statusQueue.append(status)
+            """formattedData = asyncio.run(runModel(parameterJSON))
             if formattedData:
-                resultQueue.put(formattedData)  # type: ignore
+                resultQueue.put(formattedData)  # type: ignore"""
         # TODO: Tidy up the errors
         except ClientConnectorError as e:
             functionLog.error(f"[runModel] Couldn't connect to server: {e}")
+            ClientResources.SharedResources.currentProgress = -1
+            statusQueue.append("Error: Couldn't connect to server")
             resultQueue.put(("ClientConnectorError", e))
         except ClientResponseError as e:
             functionLog.error(f"[runModel] Server returned status {e.status}: {e}")
+            ClientResources.SharedResources.currentProgress = -1
             if e.status in {500, "500"}:
+                statusQueue.append("Error: Server not found")
                 resultQueue.put(("ClientResponseError500", e))
             else:
+                statusQueue.append(f"Error: Server returned status {e.status}")
                 resultQueue.put(("ClientResponseError", e))
         except invalidSchemaError as e:
             functionLog.error(f"[runModel] Parameter schema was invalid: {e}")
+            ClientResources.SharedResources.currentProgress = -1
+            statusQueue.append("Error: Invalid parameter schema")
             resultQueue.put(("InvalidSchemaError", e))
         except Exception as e:
             functionLog.error(f"[runModel] Encountered {type(e).__name__}: {e}")
+            ClientResources.SharedResources.currentProgress = -1
+            statusQueue.append("Experiment halted due to error")
             resultQueue.put(("UncaughtError", e))
 
         """except ClientConnectorError as e:

@@ -64,6 +64,7 @@ session = st.session_state
 # aren't mixed up by the server
 sessionParameters = {
     "simulationInProgress": False,
+    "keepSimResults": False,
     "scenarioCount": 0,
     "sessionID": int(datetime.now().timestamp()),
     "scenarioSetParamsExtra": {},
@@ -326,6 +327,7 @@ def updateData():
         # Re-enable running new simulations and using their data
         session.ChartGenerated = False
         session.simulationInProgress = False
+        session.keepSimResults = True
         session.scenariosToUse = session.DataScenarioNames
         st.rerun()
 

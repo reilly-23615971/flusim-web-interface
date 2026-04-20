@@ -11,7 +11,11 @@ import streamlit as st
 from ClientResources.DownloadFunctions import uploadDownloadBar
 from ClientResources.InterfaceFunctions import dayCount
 from ClientResources.ParameterFunctions import loadKey, saveKey, timeScaleChange
-from ClientResources.SharedResources import communityPopulation
+from ClientResources.SharedResources import (
+    communityPopulation,
+    currentProgress,
+    statusQueue,
+)
 from ClientResources.SimulationRunFunctions import runSimulationButton
 
 # Logging
@@ -19,6 +23,7 @@ runSimLog = logging.getLogger(__name__)
 
 # Store st.session_state as variable for efficiency
 session = st.session_state
+simulationInProgress = session.simulationInProgress
 
 
 # Page Content
@@ -120,14 +125,14 @@ uploadDownloadBar()
 st.button(
     label=(
         "Running simulations..."
-        if session.simulationInProgress
+        if simulationInProgress
         else "Run Simulation Experiment"
     ),
     on_click=runSimulationButton,
     key="_runSim",
-    disabled=session.simulationInProgress,
+    disabled=simulationInProgress,
     type="primary",
-    icon=("spinner" if session.simulationInProgress else ":material/motion_play:"),
+    icon="spinner" if simulationInProgress else ":material/motion_play:",
     help=(
         """
 Send a request to the *Flusim* model server to run the model
@@ -136,13 +141,42 @@ you will be unable to run the model again until it completes,
 so make sure you have configured your parameters to appropriate
 values before clicking.
         """
-        if not session.simulationInProgress
+        if not simulationInProgress
         else """
 A simulation is already running; please wait for it to conclude
 before running another one.
         """
     ),
 )
+
+
+# TODO: Work out best place for this (should run button be hidden?
+# Is disappearing after rerun OK?)
+@st.fragment(run_every=2)
+def simulationProgressBar():
+    """
+    Fragment to generate a progress bar showing how far along the simulation is
+    """
+    st.progress(
+        currentProgress if currentProgress >= 0 else 100,
+        statusQueue[-1] if statusQueue else "Initialising parameters...",
+    )
+    if currentProgress < 0:
+        simStatus = st.status(
+            "An error occurred when running the experiment", state="error"
+        )
+    elif currentProgress == 100:
+        simStatus = st.status("Experiment complete!", state="complete")
+    else:
+        simStatus = st.status("Experiment in progress...")
+    for newStatus in statusQueue:
+        simStatus.write(newStatus)
+
+
+if simulationInProgress or session.keepSimResults:
+    simulationProgressBar()
+    session.keepSimResults = False
+
 
 # TODO: log of previous simulations/errors
 

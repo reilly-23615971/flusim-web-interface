@@ -35,8 +35,12 @@ maxScenarios = 30
 # URLs where client/server is located (change to hosted URLs)
 clientUrl = "http://localhost:8501/"
 serverUrl = "http://127.0.0.1:8000/"
-# Queue used to store CSV data from completed server requests
+
+# Variables used to store data from server requests
 resultQueue = Queue[list | tuple]()
+currentProgress: int = 0
+statusQueue = list[str]()
+# statusQueue = Queue[list | tuple]()
 
 # Dictionary holding ordinal strings for variable-length forms
 ordinals = {
