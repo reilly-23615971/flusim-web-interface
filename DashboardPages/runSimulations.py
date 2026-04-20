@@ -157,15 +157,16 @@ def simulationProgressBar():
     """
     Fragment to generate a progress bar showing how far along the simulation is
     """
+    progress = currentProgress[0]
     st.progress(
-        currentProgress if currentProgress >= 0 else 100,
+        progress if progress >= 0 else 100,
         statusQueue[-1] if statusQueue else "Initialising parameters...",
     )
-    if currentProgress < 0:
+    if progress < 0:
         simStatus = st.status(
             "An error occurred when running the experiment", state="error"
         )
-    elif currentProgress == 100:
+    elif progress == 100:
         simStatus = st.status("Experiment complete!", state="complete")
     else:
         simStatus = st.status("Experiment in progress...")

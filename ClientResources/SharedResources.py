@@ -5,6 +5,7 @@
 # Imports
 import logging
 import re
+from collections import deque
 from queue import Queue
 from typing import List, Literal
 
@@ -36,11 +37,10 @@ maxScenarios = 30
 clientUrl = "http://localhost:8501/"
 serverUrl = "http://127.0.0.1:8000/"
 
-# Variables used to store data from server requests
+# Queues used to store data from server requests
 resultQueue = Queue[list | tuple]()
-currentProgress: int = 0
+currentProgress = deque[int](maxlen=1)
 statusQueue = list[str]()
-# statusQueue = Queue[list | tuple]()
 
 # Dictionary holding ordinal strings for variable-length forms
 ordinals = {

@@ -20,11 +20,11 @@ from streamlit_notify import toast  # type: ignore
 from ClientResources.DownloadFunctions import createConfig
 from ClientResources.InterfaceFunctions import errorChecker
 from ClientResources.ParameterFunctions import idGet
-import ClientResources.SharedResources
 from ClientResources.SharedResources import (
     AnalysisFile,
     ageTimeDict,
     ageWithTime,
+    currentProgress,
     outcomeRateDefaults,
     outcomeRateVariables,
     resultQueue,
@@ -256,7 +256,7 @@ simulation.
             }
 
             # Clear the status queue
-            ClientResources.SharedResources.currentProgress = 0
+            currentProgress.append(0)
             statusQueue.clear()
             statusQueue.append("Connecting to server...")
 
@@ -558,19 +558,19 @@ def runModelWrapper(parameterJSON):
                         # Download the analysis files
                         simData = asyncio.run(runModelDownload(simulationID))
                         resultQueue.put(simData)
-                        ClientResources.SharedResources.currentProgress = 100
+                        currentProgress.append(100)
                         statusQueue.append("Simulation complete!")
                         # TODO: Add final complete status item to status queue
                         return
                     case "error":
                         # TODO: Better error handling;
                         # see if errors can be added to the status queue
-                        ClientResources.SharedResources.currentProgress = -1
+                        currentProgress.append(-1)
                         statusQueue.append("Experiment halted due to error")
                         raise Exception("An error occurred in the simulation.")
                     case _:
                         progress, status = progressDict[simStatus]
-                        ClientResources.SharedResources.currentProgress = progress
+                        currentProgress.append(progress)
                         if status not in statusQueue:
                             statusQueue.append(status)
             """formattedData = asyncio.run(runModel(parameterJSON))
@@ -579,12 +579,12 @@ def runModelWrapper(parameterJSON):
         # TODO: Tidy up the errors
         except ClientConnectorError as e:
             functionLog.error(f"[runModel] Couldn't connect to server: {e}")
-            ClientResources.SharedResources.currentProgress = -1
+            currentProgress.append(-1)
             statusQueue.append("Error: Couldn't connect to server")
             resultQueue.put(("ClientConnectorError", e))
         except ClientResponseError as e:
             functionLog.error(f"[runModel] Server returned status {e.status}: {e}")
-            ClientResources.SharedResources.currentProgress = -1
+            currentProgress.append(-1)
             if e.status in {500, "500"}:
                 statusQueue.append("Error: Server not found")
                 resultQueue.put(("ClientResponseError500", e))
@@ -593,12 +593,12 @@ def runModelWrapper(parameterJSON):
                 resultQueue.put(("ClientResponseError", e))
         except invalidSchemaError as e:
             functionLog.error(f"[runModel] Parameter schema was invalid: {e}")
-            ClientResources.SharedResources.currentProgress = -1
+            currentProgress.append(-1)
             statusQueue.append("Error: Invalid parameter schema")
             resultQueue.put(("InvalidSchemaError", e))
         except Exception as e:
             functionLog.error(f"[runModel] Encountered {type(e).__name__}: {e}")
-            ClientResources.SharedResources.currentProgress = -1
+            currentProgress.append(-1)
             statusQueue.append("Experiment halted due to error")
             resultQueue.put(("UncaughtError", e))
 
