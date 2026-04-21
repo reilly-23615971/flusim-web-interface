@@ -365,7 +365,7 @@ def loadConfig(file: BytesIO):
                 buildVaccinationNPITab(testID, True)
                 buildDynamicTab(testID)
 
-    except ValidationError as e:
+    except AssertionError as e:
         # TODO: See if it's possible/worthwhile to give
         # different errors different icons
         st.error(body=e, icon=":material/error:")

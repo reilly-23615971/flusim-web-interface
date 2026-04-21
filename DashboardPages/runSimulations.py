@@ -158,26 +158,45 @@ def simulationProgressBar():
     Fragment to generate a progress bar showing how far along the simulation is
     """
     # TODO: Display how long each step took
-    progress = currentProgress[0]
-    st.progress(
-        progress if progress >= 0.0 else 1.0,
-        statusQueue[-1] if statusQueue else "Initialising parameters...",
-    )
+    try:
+        progress = currentProgress[0]
+    except IndexError:
+        progress = 0.0
     if progress < 0.0:
-        simStatus = st.status(
-            "An error occurred when running the experiment", state="error"
+        # Display errors that have occurred alongside progress
+        errorTitle, errorBody, errorIcon, errorObject = session.get(
+            "simulationError",
+            (
+                "Error occurred when running simulation",
+                "An unspecified error has occurred while running the simulation.",
+                "error",
+                None,
+            ),
         )
-    elif progress == 1.0:
-        simStatus = st.status("Experiment complete!", state="complete")
+        st.progress(1.0, f":red[:material/error:] {errorTitle}")
+        simStatus = st.status(
+            label="Experiment stopped due to error (click for more info)", state="error"
+        )
+        for newStatus in statusQueue:
+            simStatus.write(newStatus)
+        simStatus.error(f"Error: {errorBody}", icon=f":material/{errorIcon}:")
+        if errorObject is not None:
+            simStatus.exception(errorObject)
     else:
-        simStatus = st.status("Experiment in progress...")
-    for newStatus in statusQueue:
-        simStatus.write(newStatus)
+        st.progress(
+            progress,
+            statusQueue[-1] if statusQueue else "Initialising parameters...",
+        )
+        simStatus = st.status(
+            "Experiment in progress..." if progress < 1.0 else "Experiment complete!",
+            state="running" if progress < 1.0 else "complete",
+        )
+        for newStatus in statusQueue:
+            simStatus.write(newStatus)
 
 
 if simulationInProgress or session.keepSimResults:
     simulationProgressBar()
-    session.keepSimResults = False
 
 
 # TODO: log of previous simulations/errors

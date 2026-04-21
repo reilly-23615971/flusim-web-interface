@@ -138,6 +138,9 @@ def validationErrorFormatting(e: ValidationError):
     """
     Function to convert ValidationErrors raised by Pydantic into user-readable
     error messages.
+
+    Parameters:
+        e (ValidationError): The error to unpack.
     """
     for error in e.errors():
         # TODO: Use Pydantic's method of subbing in custom messages

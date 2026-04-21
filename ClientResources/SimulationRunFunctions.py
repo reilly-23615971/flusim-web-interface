@@ -24,6 +24,7 @@ from ClientResources.SharedResources import (
     ageTimeDict,
     ageWithTime,
     currentProgress,
+    errorQueue,
     outcomeRateDefaults,
     outcomeRateVariables,
     resultQueue,
@@ -259,6 +260,7 @@ simulation.
             currentProgress.append(0.0)
             statusQueue.clear()
             statusQueue.append("Connecting to server...")
+            session["simulationError"] = None
 
             # Make the model call
             runModelWrapper(parameterJSON)
@@ -292,15 +294,14 @@ async def runModelStart(parameterJSON: str) -> str:
         f"[runModelStart] Initialising session with base url {serverUrl}..."
     )
     async with ClientSession(raise_for_status=False, base_url=serverUrl) as session:
-        functionLog.info("[runModelStart] Sending post request to run sim...")
         async with session.post("runModel", json=schema) as response:
             responseData = await response.json()
             if response.status == 422:
                 # TODO: Unwrap Pydantic errors instead of
-                # making a new class for them
-                raise invalidSchemaError(
+                # making them AssertionErrors
+                raise AssertionError(
                     """
-The parameter schema did not comply with the Pydantic model
+The provided parameters did not comply with the simulation's model schema
                     """,
                     response.text(),
                 )
@@ -329,7 +330,6 @@ async def runModelStatus(simulationID: str, parameterJSON: str):
     schemaSims = schema["simulation_sets"][0]["simulations"]
     scenarioCount = len(schemaSims)
     scenarioSegments = (splitPoint - 0.02) / scenarioCount
-    functionLog.info(f"[runModelStatus] {scenarioCount} scenarios read from schema")
     progressDict |= {
         f"runningSim{i}": (
             scenarioSegments * i + 0.02,
@@ -386,15 +386,13 @@ async def runModelStatus(simulationID: str, parameterJSON: str):
                         case "completed":
                             # Download the analysis files
                             simData = await runModelDownload(simulationID)
-                            resultQueue.put(simData)  # type: ignore
+                            resultQueue.put(simData)
                             currentProgress.append(1.0)
                             statusQueue.append("Simulation complete!")
-                            # TODO: Add final complete status item to status queue
                             return
                         case "error":
-                            # TODO: Better error handling;
-                            # see if errors can be added to the status queue
-                            currentProgress.append(-1.0)
+                            # TODO: Better error handling; see if the server
+                            # can send more detail about these errors
                             statusQueue.append("Experiment halted due to error")
                             functionLog.error(
                                 f"[runModelStatus] Error getting {simulationID} status"
@@ -403,12 +401,16 @@ async def runModelStatus(simulationID: str, parameterJSON: str):
                         case _:
                             progress, status = progressDict[simStatus]
                             currentProgress.append(progress)
+                            # Prevent duplicate status messages
                             if status not in statusQueue:
                                 statusQueue.append(status)
                 elif msg.type == WSMsgType.ERROR:
-                    currentProgress.append(-1.0)
                     statusQueue.append("Error: Server websocket had issues")
-                    raise Exception(f"WebSocket error: {ws.exception()}")
+                    socketError = ws.exception()
+                    if socketError is not None:
+                        raise socketError
+                    else:
+                        raise RuntimeError(f"WebSocket error: {ws.exception()}")
 
 
 async def runModelDownload(simulationID: str) -> list[bytes]:
@@ -438,26 +440,10 @@ async def runModelDownload(simulationID: str) -> list[bytes]:
                 # for file in fileNames:
                 #     functionLog.info(f"File Data: {analyses.read(file).decode()}")
                 if len(fileNames) == 0:
-                    functionLog.error(
-                        "[runModelDownload] Server returned no readable files"
-                    )
-                    # return "EmptyZipFile"
-                    raise FileNotFoundError()
+                    raise FileNotFoundError("Server returned no readable files")
                 try:
                     return [analyses.read(file) for file in fileNames]
                 except ValueError as e:
-                    functionLog.error(
-                        f"[runModelDownload] Server returned malformed files: {e}"
-                    )
-                    # return ("ValueError", e)
-                    raise e
-                except Exception as e:
-                    functionLog.error(
-                        f"""
-[runModelDownload] Server returned unspecified malformed files: {e}
-                        """
-                    )
-                    # return ("UncaughtFormatError", e)
                     raise e
 
 
@@ -486,31 +472,80 @@ def runModelWrapper(parameterJSON):
             asyncio.run(runModelStatus(simulationID, parameterJSON))
 
         # TODO: Tidy up the errors
-        except ClientConnectorError as e:
-            functionLog.error(f"[runModel] Couldn't connect to server: {e}")
-            currentProgress.append(-1.0)
-            statusQueue.append("Error: Couldn't connect to server")
-            resultQueue.put(("ClientConnectorError", e))
-        except ClientResponseError as e:
-            functionLog.error(f"[runModel] Server returned status {e.status}: {e}")
-            currentProgress.append(-1.0)
-            if e.status in {500, "500"}:
-                statusQueue.append("Error: Server not found")
-                resultQueue.put(("ClientResponseError500", e))
-            else:
-                statusQueue.append(f"Error: Server returned status {e.status}")
-                resultQueue.put(("ClientResponseError", e))
-        except invalidSchemaError as e:
-            functionLog.error(f"[runModel] Parameter schema was invalid: {e}")
-            currentProgress.append(-1.0)
-            statusQueue.append("Error: Invalid parameter schema")
-            resultQueue.put(("InvalidSchemaError", e))
         except Exception as e:
-            functionLog.error(f"[runModel] Encountered {type(e).__name__}: {e}")
-            currentProgress.append(-1.0)
-            statusQueue.append("Experiment halted due to error")
-            resultQueue.put(("UncaughtError", e))
+            formatError(e)
 
     session.simulationInProgress = True
     runModelThread = threading.Thread(target=threadRunner)
     runModelThread.start()
+
+
+def formatError(e: Exception):
+    """
+    Function to format error messages for display on the dashboard
+
+    Parameters:
+        e (Exception): The exception to format.
+    """
+    # Get error message based on error type
+    match e:
+        case ClientConnectorError():
+            errorShort = "Couldn't connect to server"
+            errorBody = """
+Could not connect to the simulation server. Please make sure you are connected
+to the same network as the server, then try again.
+            """
+            errorIcon = "link_off"
+        case ClientResponseError():
+            if e.status in {500, "500"}:
+                errorShort = "Internal server error"
+                errorBody = """
+The simulation server had an internal error. Please try again later.
+                """
+            else:
+                errorShort = f"Server returned status {e.status}"
+                errorBody = """
+An error occurred when attempting to contact the simulation server. Please
+try again later.
+                """
+            errorIcon = "http"
+        case AssertionError():
+            errorShort = "Server failed to validate parameters"
+            errorBody = """
+The server encountered an error when attempting to validate the simulation
+parameters. Please make sure that all parameters are set to the right values
+before trying again.
+            """
+            errorIcon = "schema"
+        case RuntimeError():
+            errorShort = "Websocket encountered an error"
+            errorBody = """
+The websocket used to monitor the simulation server had an internal error.
+Please check your network connection and try again.
+            """
+            errorIcon = "plug_connect"
+        case ValueError():
+            errorShort = "Error unzipping analysis files"
+            errorBody = """
+The results generated by the server could not be extracted properly. Please
+make sure your parameters do not possess any errors and try again.
+            """
+            errorIcon = "folder_zip"
+        case FileNotFoundError():
+            errorShort = "Server returned no readable files"
+            errorBody = """
+The simulation server did not return any readable files. Ensure your
+parameters do not result in a simulation where nobody is infected and try again.
+            """
+            errorIcon = "unknown_document"
+        case _:
+            errorShort = "Error occurred when running simulation"
+            errorBody = """
+An error occurred when attempting to run the simulation experiment. Please
+try again later.
+            """
+            errorIcon = "error"
+
+    # Add to the queue
+    functionLog.error(f"[runModel] {errorShort}: {e}")
+    errorQueue.put((errorShort, errorBody, errorIcon, e))

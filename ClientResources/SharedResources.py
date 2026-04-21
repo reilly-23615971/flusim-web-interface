@@ -6,7 +6,7 @@
 import logging
 from collections import deque
 from queue import Queue
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 # Logging
 sharedLog = logging.getLogger(__name__)
@@ -35,7 +35,8 @@ maxScenarios = 30
 splitPoint = 0.65
 
 # Queues used to store data from server requests
-resultQueue = Queue[list | tuple]()
+resultQueue = Queue[list]()
+errorQueue = Queue[tuple[str, str, str, Optional[Exception]]]()
 currentProgress = deque[float](maxlen=1)
 statusQueue = list[str]()
 
