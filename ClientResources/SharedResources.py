@@ -4,12 +4,9 @@
 
 # Imports
 import logging
-import re
 from collections import deque
 from queue import Queue
 from typing import List, Literal
-
-import streamlit as st
 
 # Logging
 sharedLog = logging.getLogger(__name__)
@@ -33,14 +30,14 @@ saveJSON = False
 # Maximum number of additional scenarios
 maxScenarios = 30
 
+# Queues used to store data from server requests
+resultQueue = Queue[list | tuple]()
+currentProgress = deque[float](maxlen=1)
+statusQueue = list[str]()
+
 # URLs where client/server is located (change to hosted URLs)
 clientUrl = "http://localhost:8501/"
 serverUrl = "http://127.0.0.1:8000/"
-
-# Queues used to store data from server requests
-resultQueue = Queue[list | tuple]()
-currentProgress = deque[int](maxlen=1)
-statusQueue = list[str]()
 
 # Dictionary holding ordinal strings for variable-length forms
 ordinals = {
@@ -115,95 +112,6 @@ communityAgePops = {
     },
 }
 
-
-def ageRangeString(lower: int | float, upper: int | float) -> str:
-    """
-    Simple function to format 2 numbers as an age range, accounting for
-    unbound ends and rendering decimal values as months.
-
-    Parameters:
-        lower (int or float): The lower bound of the range.
-
-        lower (int or float): The upper bound of the range.
-
-    Returns:
-        str: The string representation of the specified range.
-    """
-    if upper > 250:
-        # Use a + for ranges large enough to be uncapped
-        return f"{lower}+"
-    elif (isinstance(lower, float) or isinstance(upper, float)) and upper < 9:
-        # Use months if it's more readable that way
-        return "{low}-{high} Months".format(
-            low=round(lower * 12), high=round((upper if upper < 1 else upper - 1) * 12)
-        )
-    else:
-        return f"{lower}-{upper - 1}"
-
-
-def ageRangeCombiner(ages: list[str]) -> str:
-    """
-    Function to convert a list of age brackets into a single string
-    concisely listing them all.
-
-    Parameters:
-        ages (list of str): The age groups to combine.
-
-    Returns:
-        str: The string representation of the specified age groups.
-    """
-    # Immediate end conditions
-    if len(ages) == 1:
-        return (
-            "All Ages" if ages[0] == "Total" else re.findall(r"\((.*?)\)", ages[0])[0]
-        )
-    if set(ages) == set(ageWithTime):
-        return "All Ages"
-
-    # Dictionaries to get the starts/ends of each age bracket
-    ageStarts = {
-        "Young Infant (0-6 Months)": 0,
-        "Infant (7-24 Months)": 0.5,
-        "Young Child (3-5 Years)": 3,
-        "Child (6-12 Years)": 6,
-        "Adolescent (13-17 Years)": 13,
-        "Young Adult (18-24 Years)": 18,
-        "Adult (25-44 Years)": 25,
-        "Older Adult (45-64 Years)": 45,
-        "Senior (65-79 Years)": 65,
-        "Older Senior (80+ Years)": 80,
-    }
-    ageEnds = {
-        "Young Infant (0-6 Months)": 0.5,
-        "Infant (7-24 Months)": 3,
-        "Young Child (3-5 Years)": 6,
-        "Child (6-12 Years)": 13,
-        "Adolescent (13-17 Years)": 18,
-        "Young Adult (18-24 Years)": 25,
-        "Adult (25-44 Years)": 45,
-        "Older Adult (45-64 Years)": 65,
-        "Senior (65-79 Years)": 80,
-        "Older Senior (80+ Years)": 999,
-    }
-
-    # Sort the ages
-    ageList = ages.copy()
-    ageList.sort(key=lambda x: ageStarts[x])
-
-    # Iteratively identify continuous age blocks and display as string
-    currentStart, currentEnd = ageStarts[ageList[0]], ageEnds[ageList[0]]
-    currentString = ""
-    for age in ageList[1:]:
-        if ageStarts[age] == currentEnd:
-            currentEnd = ageEnds[age]
-        else:
-            currentString += f", {ageRangeString(currentStart, currentEnd)}"
-            currentStart, currentEnd = ageStarts[age], ageEnds[age]
-    currentString += f", {ageRangeString(currentStart, currentEnd)}"
-    currentString += " Years" if currentString[-6:] != "Months" else ""
-    return currentString[2:]
-
-
 # Set containing health outcomes selectable for tables
 tableOutcomes = (
     "Symptomatic Infections",
@@ -264,19 +172,6 @@ triggerConditions = {
     "Cases per School": "per_school_cases",
     # "Cases per K-12 School": "per_primary_high_school_cases",
 }
-
-
-# Simple function to get theme colours
-# Change these values if background colour changes
-def backgroundColour() -> str:
-    """
-    Simple function to get the background colour of the current theme.
-
-    Returns:
-        str: The hex code representing the background colour as a string.
-    """
-    return "#0F1116" if st.context.theme.type == "dark" else "#FFFFFF"
-
 
 # Colour codes for Paul Tol's "bright" colourblind-safe palette
 # (and other pallettes if enough scenarios are created)

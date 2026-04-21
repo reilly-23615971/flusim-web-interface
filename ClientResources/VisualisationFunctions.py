@@ -1,6 +1,6 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
-# Functions used by tables and graphs
+# Functions used to generate tables and graphs
 
 # Imports
 import logging
@@ -16,9 +16,9 @@ import pandas as pd
 import streamlit as st
 from streamlit.elements.lib.column_types import ColumnConfig
 
+from ClientResources.InterfaceFunctions import ageRangeCombiner
 from ClientResources.SharedResources import (  # outcomeAdjectives,
     AnalysisFile,
-    ageRangeCombiner,
     ageWithTime,
     brightCodes,
     communityAgePops,

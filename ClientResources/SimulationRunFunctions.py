@@ -255,7 +255,7 @@ simulation.
             }
 
             # Clear the status queue
-            currentProgress.append(0)
+            currentProgress.append(0.0)
             statusQueue.clear()
             statusQueue.append("Connecting to server...")
 
@@ -309,7 +309,7 @@ The parameter schema did not comply with the Pydantic model
         return simulationID
 
 
-async def runModelStatus(simulationID: str):
+async def runModelStatus(simulationID: str, parameterJSON: str):
     """
     Async function to get status updates from the server via a websocket
 
@@ -318,15 +318,28 @@ async def runModelStatus(simulationID: str):
     """
     # TODO: Generate progress using # of sims/analyses
     # TODO: Include client side processing like formatAsir in this progress
+    schema = json.loads(parameterJSON)
     progressDict = {
-        "start": (2, "Initialising parameters..."),
-        "configGenerated": (5, "Running simulations..."),
-        "allSimulationsComplete": (75, "Extracting cumulative infections..."),
-        "analysisComplete0": (80, "Extracting daily infections..."),
-        "analysisComplete1": (85, "Extracting age-based infections..."),
-        "analysisComplete2": (90, "Extracting vaccine-based infections..."),
-        "analysisComplete3": (95, "Compiling results..."),
+        "start": (0.02, "Initialising parameters..."),
+        "configGenerated": (0.05, "Running simulations..."),
+        "allSimulationsComplete": (0.75, "Extracting cumulative infections..."),
     }
+    # Use parameters to weigh analyses
+    # TODO: See if 75/25 run/analysis split is accurate
+    if "+vaccine" in schema.get("middle_joint"):
+        progressDict |= {
+            "analysisComplete0": (0.8, "Extracting daily infections..."),
+            "analysisComplete1": (0.85, "Extracting age-based infections..."),
+            "analysisComplete2": (0.9, "Extracting vaccine-based infections..."),
+            "analysisComplete3": (0.95, "Compiling results..."),
+        }
+    else:
+        progressDict |= {
+            "analysisComplete0": (0.82, "Extracting daily infections..."),
+            "analysisComplete1": (0.89, "Extracting age-based infections..."),
+            "analysisComplete3": (0.96, "Compiling results..."),
+        }
+    # TODO: try a big simulation and make sure this doesn't time out
     async with ClientSession(raise_for_status=False, base_url=serverUrl) as session:
         async with session.ws_connect(f"/runModel/simStatus/{simulationID}") as ws:
             async for msg in ws:
@@ -338,14 +351,14 @@ async def runModelStatus(simulationID: str):
                             # Download the analysis files
                             simData = await runModelDownload(simulationID)
                             resultQueue.put(simData)  # type: ignore
-                            currentProgress.append(100)
+                            currentProgress.append(1.0)
                             statusQueue.append("Simulation complete!")
                             # TODO: Add final complete status item to status queue
                             return
                         case "error":
                             # TODO: Better error handling;
                             # see if errors can be added to the status queue
-                            currentProgress.append(-1)
+                            currentProgress.append(-1.0)
                             statusQueue.append("Experiment halted due to error")
                             functionLog.error(
                                 f"[runModelStatus] Error getting {simulationID} status"
@@ -357,7 +370,7 @@ async def runModelStatus(simulationID: str):
                             if status not in statusQueue:
                                 statusQueue.append(status)
                 elif msg.type == WSMsgType.ERROR:
-                    currentProgress.append(-1)
+                    currentProgress.append(-1.0)
                     statusQueue.append("Error: Server websocket had issues")
                     raise Exception(f"WebSocket error: {ws.exception()}")
 
@@ -434,17 +447,17 @@ def runModelWrapper(parameterJSON):
             simulationID = asyncio.run(runModelStart(parameterJSON))
 
             # Open the websocket
-            asyncio.run(runModelStatus(simulationID))
+            asyncio.run(runModelStatus(simulationID, parameterJSON))
 
         # TODO: Tidy up the errors
         except ClientConnectorError as e:
             functionLog.error(f"[runModel] Couldn't connect to server: {e}")
-            currentProgress.append(-1)
+            currentProgress.append(-1.0)
             statusQueue.append("Error: Couldn't connect to server")
             resultQueue.put(("ClientConnectorError", e))
         except ClientResponseError as e:
             functionLog.error(f"[runModel] Server returned status {e.status}: {e}")
-            currentProgress.append(-1)
+            currentProgress.append(-1.0)
             if e.status in {500, "500"}:
                 statusQueue.append("Error: Server not found")
                 resultQueue.put(("ClientResponseError500", e))
@@ -453,12 +466,12 @@ def runModelWrapper(parameterJSON):
                 resultQueue.put(("ClientResponseError", e))
         except invalidSchemaError as e:
             functionLog.error(f"[runModel] Parameter schema was invalid: {e}")
-            currentProgress.append(-1)
+            currentProgress.append(-1.0)
             statusQueue.append("Error: Invalid parameter schema")
             resultQueue.put(("InvalidSchemaError", e))
         except Exception as e:
             functionLog.error(f"[runModel] Encountered {type(e).__name__}: {e}")
-            currentProgress.append(-1)
+            currentProgress.append(-1.0)
             statusQueue.append("Experiment halted due to error")
             resultQueue.put(("UncaughtError", e))
 

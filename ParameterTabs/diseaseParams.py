@@ -11,7 +11,12 @@ import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import dayCount, dualError, paramError
+from ClientResources.InterfaceFunctions import (
+    backgroundColour,
+    dayCount,
+    dualError,
+    paramError,
+)
 from ClientResources.ModelSchema import (
     Parameters,
     ageScenarioParameters,
@@ -27,7 +32,7 @@ from ClientResources.ParameterFunctions import (
     updateParamFromSchema,
     updateTableFromSchema,
 )
-from ClientResources.SharedResources import ageTimeDict, backgroundColour
+from ClientResources.SharedResources import ageTimeDict
 
 # Logging
 diseaseLog = logging.getLogger(__name__)

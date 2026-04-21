@@ -159,14 +159,14 @@ def simulationProgressBar():
     """
     progress = currentProgress[0]
     st.progress(
-        progress if progress >= 0 else 100,
+        progress if progress >= 0.0 else 1.0,
         statusQueue[-1] if statusQueue else "Initialising parameters...",
     )
-    if progress < 0:
+    if progress < 0.0:
         simStatus = st.status(
             "An error occurred when running the experiment", state="error"
         )
-    elif progress == 100:
+    elif progress == 1.0:
         simStatus = st.status("Experiment complete!", state="complete")
     else:
         simStatus = st.status("Experiment in progress...")
