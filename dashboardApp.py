@@ -179,7 +179,8 @@ def updateData():
                 # TODO: Make better use of data forms
                 # TODO: Consider leaving full errors to runSimulations and
                 # simplifying the toasts to just no errors/errors
-                data, tag = formatData(rawData, form)
+                data = formatData(rawData, form)
+
                 # Further error checking
                 if len(data) == 0:
                     notifyToast(
@@ -192,7 +193,7 @@ def updateData():
                         icon=":material/tab_unselected:",
                     )
                 elif (
-                    tag in {"EpidemicCumulative", "EpidemicDaily"}
+                    form.tool == "epidemic"
                     and len(data["Scenario"].value_counts()) != scenarios
                 ):
                     notifyToast(
@@ -207,7 +208,7 @@ def updateData():
 
                 else:
                     successes += 1
-                    session[f"modelData{tag}"] = data
+                    session[f"modelData{form.dataTag}"] = data
 
             # Tell the user what's happened
             session.simulationEndTime = datetime.now()

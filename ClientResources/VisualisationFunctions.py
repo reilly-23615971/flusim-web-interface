@@ -52,7 +52,7 @@ vaccineDescriptions = {
 ageWithTotal = ["Total"] + ageWithTime
 
 
-def formatData(data: bytes, settings: AnalysisFile) -> tuple[pd.DataFrame, str]:
+def formatData(data: bytes, settings: AnalysisFile) -> pd.DataFrame:
     """
     Wrapper function to perform the correct formatting process on CSV data.
 
@@ -63,25 +63,17 @@ def formatData(data: bytes, settings: AnalysisFile) -> tuple[pd.DataFrame, str]:
 
     Returns:
         DataFrame: The formatted data.
-
-        str: A string identifying what sort of data was formatted.
     """
-    # TODO: Axe typeTag since updateData can access the data forms directly
     if settings.tool == "epidemic":
-        typeTag = "Cumulative" if settings.useCumulative else "Daily"
-        return (
-            formatEpidemic(
-                data,
-                settings.names,
-                settings.outcome,
-                settings.useCumulative,
-                settings.splitByAge,
-            ),
-            f"Epidemic{typeTag}",
+        return formatEpidemic(
+            data,
+            settings.names,
+            settings.outcome,
+            settings.useCumulative,
+            settings.splitByAge,
         )
     elif settings.tool == "asir":
-        typeTag = "Vaccinated" if settings.vaccinatedOnly else "Full"
-        return formatAsir(data, settings.names), f"Asir{typeTag}"
+        return formatAsir(data, settings.names)
     else:
         raise ValueError(
             "Analysis tool was unrecognised; should be 'epidemic' or 'asir'"

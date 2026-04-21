@@ -228,7 +228,9 @@ class AnalysisFile:
         if tool == "epidemic":
             self.useCumulative = kwargs.get("useCumulative", False)
             self.splitByAge = kwargs.get("splitByAge", False)
+            self.dataTag = f"Epidemic{"Cumulative" if self.useCumulative else "Daily"}"
         if tool == "asir":
             self.useProportion = kwargs.get("useProportion", False)
             self.differenceType = kwargs.get("differenceType", "")
             self.vaccinatedOnly = kwargs.get("vaccinated", False)
+            self.dataTag = f"Asir{"Vaccinated" if self.vaccinatedOnly else "Full"}"
