@@ -29,6 +29,7 @@ from ClientResources.SharedResources import (
     resultQueue,
     saveJSON,
     serverUrl,
+    splitPoint,
     statusQueue,
     usePresetParams,
 )
@@ -318,37 +319,58 @@ async def runModelStatus(simulationID: str, parameterJSON: str):
     """
     # Generate progress using # of sims/analyses
     # TODO: Include client side processing like formatAsir in this progress
-    # TODO: See if 75/25 run/analysis split is accurate
     schema = json.loads(parameterJSON)
     progressDict = {
         "generatingConfig": (0.02, "Initialising parameters..."),
-        "zippingAnalysis": (0.95, "Compiling results..."),
+        "zippingAnalysis": (0.98, "Compiling results..."),
     }
+
     # Scenario status
     schemaSims = schema["simulation_sets"][0]["simulations"]
     scenarioCount = len(schemaSims)
-    scenarioSegments = 0.7 / scenarioCount
+    scenarioSegments = (splitPoint - 0.02) / scenarioCount
     functionLog.info(f"[runModelStatus] {scenarioCount} scenarios read from schema")
     progressDict |= {
         f"runningSim{i}": (
-            scenarioSegments * i + 0.05,
+            scenarioSegments * i + 0.02,
             f'Running scenario "{sim["name"]}"...',
         )
         for i, sim in enumerate(schemaSims)
     }
     # Analysis status
+    # Note that ASIR gets twice the progress length as epidemic
     if "+vaccine" in schema.get("middle_joint"):
+        analysisSegments = (1 - splitPoint - 0.02) / 6
         progressDict |= {
-            "toolboxAnalysis0": (0.75, "Extracting cumulative infections..."),
-            "toolboxAnalysis1": (0.8, "Extracting daily infections..."),
-            "toolboxAnalysis2": (0.85, "Extracting age-based infections..."),
-            "toolboxAnalysis3": (0.9, "Extracting vaccine-based infections..."),
+            "toolboxAnalysis0": (
+                splitPoint,
+                "Extracting cumulative infections...",
+            ),
+            "toolboxAnalysis1": (
+                analysisSegments + splitPoint,
+                "Extracting daily infections...",
+            ),
+            "toolboxAnalysis2": (
+                3 * analysisSegments + splitPoint,
+                "Extracting age-based infections...",
+            ),
+            "toolboxAnalysis3": (
+                5 * analysisSegments + splitPoint,
+                "Extracting vaccine-based infections...",
+            ),
         }
     else:
+        analysisSegments = (1 - splitPoint - 0.02) / 4
         progressDict |= {
-            "toolboxAnalysis0": (0.75, "Extracting cumulative infections..."),
-            "toolboxAnalysis1": (0.81667, "Extracting daily infections..."),
-            "toolboxAnalysis2": (0.88333, "Extracting age-based infections..."),
+            "toolboxAnalysis0": (splitPoint, "Extracting cumulative infections..."),
+            "toolboxAnalysis1": (
+                analysisSegments + splitPoint,
+                "Extracting daily infections...",
+            ),
+            "toolboxAnalysis2": (
+                3 * analysisSegments + splitPoint,
+                "Extracting age-based infections...",
+            ),
         }
     # TODO: try a big simulation and make sure this doesn't time out
     async with ClientSession(raise_for_status=False, base_url=serverUrl) as session:

@@ -152,7 +152,7 @@ before running another one.
 
 # TODO: Work out best place for this (should run button be hidden?
 # Is disappearing after rerun OK?)
-@st.fragment(run_every=2)
+@st.fragment(run_every=1)
 def simulationProgressBar():
     """
     Fragment to generate a progress bar showing how far along the simulation is

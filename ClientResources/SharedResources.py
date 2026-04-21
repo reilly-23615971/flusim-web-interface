@@ -30,6 +30,10 @@ saveJSON = False
 # Maximum number of additional scenarios
 maxScenarios = 30
 
+# Change this constant to affect the scenario/analysis progress bar split
+# TODO: See if 75/25 or 65/35 splits are better
+splitPoint = 0.65
+
 # Queues used to store data from server requests
 resultQueue = Queue[list | tuple]()
 currentProgress = deque[float](maxlen=1)
