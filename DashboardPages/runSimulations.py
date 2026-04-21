@@ -157,6 +157,7 @@ def simulationProgressBar():
     """
     Fragment to generate a progress bar showing how far along the simulation is
     """
+    # TODO: Display how long each step took
     progress = currentProgress[0]
     st.progress(
         progress if progress >= 0.0 else 1.0,

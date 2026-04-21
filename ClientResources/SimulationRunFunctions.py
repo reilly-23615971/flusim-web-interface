@@ -316,36 +316,50 @@ async def runModelStatus(simulationID: str, parameterJSON: str):
     Parameters:
         simulationID (str): The ID distinguishing this simulation experiment.
     """
-    # TODO: Generate progress using # of sims/analyses
+    # Generate progress using # of sims/analyses
     # TODO: Include client side processing like formatAsir in this progress
+    # TODO: See if 75/25 run/analysis split is accurate
     schema = json.loads(parameterJSON)
     progressDict = {
-        "start": (0.02, "Initialising parameters..."),
-        "configGenerated": (0.05, "Running simulations..."),
-        "allSimulationsComplete": (0.75, "Extracting cumulative infections..."),
+        "generatingConfig": (0.02, "Initialising parameters..."),
+        "zippingAnalysis": (0.95, "Compiling results..."),
     }
-    # Use parameters to weigh analyses
-    # TODO: See if 75/25 run/analysis split is accurate
+    # Scenario status
+    schemaSims = schema["simulation_sets"][0]["simulations"]
+    scenarioCount = len(schemaSims)
+    scenarioSegments = 0.7 / scenarioCount
+    functionLog.info(f"[runModelStatus] {scenarioCount} scenarios read from schema")
+    progressDict |= {
+        f"runningSim{i}": (
+            scenarioSegments * i + 0.05,
+            f'Running scenario "{sim["name"]}"...',
+        )
+        for i, sim in enumerate(schemaSims)
+    }
+    # Analysis status
     if "+vaccine" in schema.get("middle_joint"):
         progressDict |= {
-            "analysisComplete0": (0.8, "Extracting daily infections..."),
-            "analysisComplete1": (0.85, "Extracting age-based infections..."),
-            "analysisComplete2": (0.9, "Extracting vaccine-based infections..."),
-            "analysisComplete3": (0.95, "Compiling results..."),
+            "toolboxAnalysis0": (0.75, "Extracting cumulative infections..."),
+            "toolboxAnalysis1": (0.8, "Extracting daily infections..."),
+            "toolboxAnalysis2": (0.85, "Extracting age-based infections..."),
+            "toolboxAnalysis3": (0.9, "Extracting vaccine-based infections..."),
         }
     else:
         progressDict |= {
-            "analysisComplete0": (0.82, "Extracting daily infections..."),
-            "analysisComplete1": (0.89, "Extracting age-based infections..."),
-            "analysisComplete3": (0.96, "Compiling results..."),
+            "toolboxAnalysis0": (0.75, "Extracting cumulative infections..."),
+            "toolboxAnalysis1": (0.81667, "Extracting daily infections..."),
+            "toolboxAnalysis2": (0.88333, "Extracting age-based infections..."),
         }
     # TODO: try a big simulation and make sure this doesn't time out
     async with ClientSession(raise_for_status=False, base_url=serverUrl) as session:
-        async with session.ws_connect(f"/runModel/simStatus/{simulationID}") as ws:
+        async with session.ws_connect(f"/runModel/status/{simulationID}") as ws:
             async for msg in ws:
                 if msg.type == WSMsgType.TEXT:
                     data = json.loads(msg.data)
                     simStatus = data.get("status")
+                    functionLog.info(
+                        f"[runModelStatus] Sim {simulationID} status: {simStatus}"
+                    )
                     match simStatus:
                         case "completed":
                             # Download the analysis files
