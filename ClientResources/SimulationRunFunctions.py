@@ -433,7 +433,7 @@ async def runModelDownload(simulationID: str) -> list[bytes]:
         # Download the analysis files
         async with session.get(f"runModel/download/{simulationID}") as response:
             fileData = await response.read()
-
+            # TODO: Account for server returning JSON when issues occur
             # Unzip data and format each analysis file
             with ZipFile(BytesIO(fileData)) as analyses:
                 fileNames = analyses.namelist()
