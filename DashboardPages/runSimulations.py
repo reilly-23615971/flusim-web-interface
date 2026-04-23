@@ -198,8 +198,7 @@ def simulationProgressBar():
 if simulationInProgress or session.keepSimResults:
     simulationProgressBar()
 
-
-# TODO: log of previous simulations/errors
+# TODO: stop button
 
 
 # TODO: Debug

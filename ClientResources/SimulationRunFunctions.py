@@ -372,8 +372,7 @@ async def runModelStatus(simulationID: str, parameterJSON: str):
                 "Extracting age-based infections...",
             ),
         }
-    # TODO: try a big simulation and make sure this doesn't time out
-    async with ClientSession(raise_for_status=False, base_url=serverUrl) as session:
+    async with ClientSession(base_url=serverUrl) as session:
         async with session.ws_connect(f"/runModel/status/{simulationID}") as ws:
             async for msg in ws:
                 if msg.type == WSMsgType.TEXT:
@@ -391,8 +390,7 @@ async def runModelStatus(simulationID: str, parameterJSON: str):
                             statusQueue.append("Simulation complete!")
                             return
                         case "error":
-                            # TODO: Better error handling; see if the server
-                            # can send more detail about these errors
+                            # TODO: Better error handling
                             statusQueue.append("Experiment halted due to error")
                             functionLog.error(
                                 f"[runModelStatus] Error getting {simulationID} status"
@@ -429,7 +427,7 @@ async def runModelDownload(simulationID: str) -> list[bytes]:
     functionLog.info(
         f"[runModelDownload] Downloading analysis data for sim {simulationID}..."
     )
-    async with ClientSession(raise_for_status=False, base_url=serverUrl) as session:
+    async with ClientSession(base_url=serverUrl) as session:
         # Download the analysis files
         async with session.get(f"runModel/download/{simulationID}") as response:
             fileData = await response.read()
@@ -497,17 +495,32 @@ to the same network as the server, then try again.
             """
             errorIcon = "link_off"
         case ClientResponseError():
-            if e.status in {500, "500"}:
-                errorShort = "Internal server error"
-                errorBody = """
+            match e.status:
+                # TODO: Make sure these errors only show up in the described cases
+                # (or have even finer-grain distinguishing between them)
+                case 404:
+                    errorShort = "Simulation ID not found"
+                    errorBody = """
+The dashboard attempted to access a simulation using the wrong ID. Please
+refresh the page or clear your browser cache and try again.
+                    """
+                case 500:
+                    errorShort = "Internal server error"
+                    errorBody = """
 The simulation server had an internal error. Please try again later.
-                """
-            else:
-                errorShort = f"Server returned status {e.status}"
-                errorBody = """
+                    """
+                case 503:
+                    errorShort = "Results not ready"
+                    errorBody = """
+The dashboard attempted to obtain the results of the simulation before the
+simulation was complete. Please try again later.
+                    """
+                case _:
+                    errorShort = f"Server returned status {e.status}"
+                    errorBody = """
 An error occurred when attempting to contact the simulation server. Please
 try again later.
-                """
+                    """
             errorIcon = "http"
         case AssertionError():
             errorShort = "Server failed to validate parameters"
