@@ -10,8 +10,18 @@ from io import BytesIO
 from typing import Optional
 
 import streamlit as st
-import streamlit_notify as stn  # type: ignore
 from pydantic import ValidationError
+
+# Reload streamlit_notify if it fails the first time
+# TODO: it keeps happening
+try:
+    import streamlit_notify as stn
+except ImportError:
+    import importlib
+
+    time.sleep(0.01)
+    importlib.reload(importlib.import_module("streamlit_notify"))
+    import streamlit_notify as stn  # type: ignore
 
 from ClientResources.InterfaceFunctions import uniqueName, validationErrorFormatting
 from ClientResources.ModelSchema import (

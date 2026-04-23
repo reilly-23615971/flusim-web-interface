@@ -16,7 +16,10 @@ from ClientResources.SharedResources import (
     currentProgress,
     statusQueue,
 )
-from ClientResources.SimulationRunFunctions import runSimulationButton
+from ClientResources.SimulationRunFunctions import (
+    runSimulationButton,
+    stopSimulationButton,
+)
 
 # Logging
 runSimLog = logging.getLogger(__name__)
@@ -195,10 +198,22 @@ def simulationProgressBar():
             simStatus.write(newStatus)
 
 
-if simulationInProgress or session.keepSimResults:
+if simulationInProgress or session.keepProgressBar:
     simulationProgressBar()
 
 # TODO: stop button
+if simulationInProgress:
+    st.button(
+        label="Cancel Simulation",
+        on_click=stopSimulationButton,
+        key="_stopSim",
+        type="primary",
+        icon=":material/stop_circle:",
+        help="""
+Cancel the currently running simulation, allowing you to immediately run a new
+simulation with different parameters.
+        """,
+    )
 
 
 # TODO: Debug

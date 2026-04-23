@@ -69,7 +69,7 @@ session = st.session_state
 # aren't mixed up by the server
 sessionParameters = {
     "simulationInProgress": False,
-    "keepSimResults": False,
+    "keepProgressBar": False,
     "scenarioCount": 0,
     "sessionID": int(datetime.now().timestamp()),
     "scenarioSetParamsExtra": {},
@@ -148,22 +148,22 @@ def updateData():
     """
     hasResults, hasError = not resultQueue.empty(), not errorQueue.empty()
     if session.simulationInProgress and (hasResults or hasError):
-        # Reset pending simulation variables
-        pendingData = {
-            "Forms",
-            "Community",
-            "ScenarioNames",
-            "ScenarioCount",
-            "Asymptomatic",
-            "HealthOutcomeRates",
-            "MortalityRates",
-        }
-        # TODO: Add a check to ensure visualisations can't use the new values
-        # while this function is still processing the data
-        for name in pendingData:
-            session[f"Data{name}"] = session.get(f"PendingData{name}")
-
         if hasResults and not hasError:
+            # Reset pending simulation variables
+            pendingData = {
+                "Forms",
+                "Community",
+                "ScenarioNames",
+                "ScenarioCount",
+                "Asymptomatic",
+                "HealthOutcomeRates",
+                "MortalityRates",
+            }
+            # TODO: Add a check to ensure visualisations can't use the new values
+            # while this function is still processing the data
+            for name in pendingData:
+                session[f"Data{name}"] = session.get(f"PendingData{name}")
+
             # Process data and ensure there is no formatting errors
             returnedData = resultQueue.get()
             appLog.info(f"[updateData] Processing the following data:\n{returnedData}")
@@ -228,6 +228,7 @@ ensure all scenarios do not possess any errors and try again.
                     icon=":material/check_circle:",
                 )
                 appLog.info("[updateData] Data processing is complete.")
+                session.ChartGenerated = False
         if hasError:
             # Notify user of errors, but leave displaying them to runSimulations
             session["simulationError"] = errorQueue.get()
@@ -241,10 +242,8 @@ Simulation encountered an error; see
             )
 
         # Re-enable running new simulations and using their data
-        session.ChartGenerated = False
         session.simulationInProgress = False
-        session.keepSimResults = True
-        session.scenariosToUse = session.DataScenarioNames
+        session.keepProgressBar = True
         st.rerun()
 
 

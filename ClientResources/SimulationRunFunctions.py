@@ -13,8 +13,24 @@ from zipfile import ZipFile
 
 import pandas as pd
 import streamlit as st
-from aiohttp import ClientConnectorError, ClientResponseError, ClientSession, WSMsgType
-from streamlit_notify import toast  # type: ignore
+from aiohttp import (
+    ClientConnectorError,
+    ClientResponseError,
+    ClientSession,
+    WSMsgType,
+)
+
+# Reload streamlit_notify if it fails the first time
+# TODO: it keeps happening
+try:
+    import streamlit_notify as stn
+except ImportError:
+    import importlib
+    import time
+
+    time.sleep(0.01)
+    importlib.reload(importlib.import_module("streamlit_notify"))
+    import streamlit_notify as stn  # type: ignore
 
 from ClientResources.DownloadFunctions import createConfig
 from ClientResources.InterfaceFunctions import errorChecker
@@ -41,20 +57,7 @@ functionLog = logging.getLogger(__name__)
 # Store st.session_state as variable for efficiency
 session = st.session_state
 
-
-class invalidSchemaError(Exception):
-    """
-    Error class for getting full responses
-    """
-
-    # TODO: Flesh out docstrings
-    def __init__(self, message, response):
-        self.message = message
-        self.response = response
-        super().__init__(self.message)
-
-    def __str__(self):
-        return f"{self.message} (Full Response: {self.response})"
+cancelSimThread = threading.Event()
 
 
 @st.dialog("Run Simulation Experiment", width="large", icon=":material/motion_play:")
@@ -140,6 +143,7 @@ simulation.
             # Set params indicating model is simulating
             session.simulationInProgress = True
             session.simulationStartTime = datetime.now()
+            cancelSimThread.clear()
 
             # Create the final model JSON
             # Load debug parameters from file
@@ -268,16 +272,66 @@ simulation.
             # TODO: Remember streamlit_push_notifications
 
             # Generate popup to let the user know it's pending
-            toast(
+            stn.toast(
                 "Sending a request to run the simulation. Please wait...",
                 icon=":material/experiment:",
             )
             st.rerun()
 
 
+@st.dialog("Cancel Simulation", width="large", icon=":material/stop_circle:")
+def stopSimulationButton():
+    """
+    Callback function for the Cancel Simulation button, opening a dialog window
+    before cancelling the currently pending simulation.
+    """
+    # Disable button if it's taking a while to run
+    cancelPending = bool(session.get("confirmCancelButton"))
+
+    st.warning(
+        "Are you sure you want to cancel the currently running simulation?",
+        icon=":material/warning:",
+    )
+
+    if st.button(
+        "Confirm",
+        key="confirmCancelButton",
+        icon="spinner" if cancelPending else None,
+        disabled=cancelPending,
+    ):
+        # Exit immediately if there's nothing to stop
+        if not session.simulationInProgress:
+            stn.toast(
+                "No simulations are currently running; there's nothing to cancel.",
+                icon=":material/stop:",
+            )
+            st.rerun()
+
+        # Display as error on the progress bar
+        session["simulationError"] = (
+            "Simulation cancelled",
+            "The simulation was manually cancelled by the user.",
+            "stop_circle",
+            None,
+        )
+        currentProgress.append(-1.0)
+
+        # Stop the runModel thread
+        cancelSimThread.set()
+        session.simulationInProgress = False
+        session.keepProgressBar = True
+
+        # Generate popup to let the user know it's cancelled
+        stn.toast(
+            "The simulation has been cancelled.",
+            icon=":material/stop_circle:",
+        )
+        st.rerun()
+
+
 async def runModelStart(parameterJSON: str) -> str:
     """
-    Asynchronous function to prompt the server to begin running a simulation.
+    Async function to prompt the server to begin running a simulation.
 
     Parameters:
         parameterJSON (str): A string containing the JSON representation of
@@ -377,45 +431,60 @@ async def runModelStatus(simulationID: str, parameterJSON: str):
     async with ClientSession(base_url=serverUrl) as session:
         async with session.ws_connect(f"/runModel/status/{simulationID}") as ws:
             async for msg in ws:
-                if msg.type == WSMsgType.TEXT:
-                    data = json.loads(msg.data)
-                    simStatus = data.get("status")
-                    functionLog.info(
-                        f"[runModelStatus] Sim {simulationID} status: {simStatus}"
-                    )
-                    match simStatus:
-                        case "completed":
-                            # Download the analysis files
-                            simData = await runModelDownload(simulationID)
-                            resultQueue.put(simData)
-                            currentProgress.append(1.0)
-                            statusQueue.append("Simulation complete!")
-                            return
-                        case "error":
-                            # TODO: Better error handling
-                            statusQueue.append("Experiment halted due to error")
-                            functionLog.error(
-                                f"[runModelStatus] Error getting {simulationID} status"
-                            )
-                            raise Exception("An error occurred in the simulation.")
-                        case _:
-                            progress, status = progressDict[simStatus]
-                            currentProgress.append(progress)
-                            # Prevent duplicate status messages
-                            if status not in statusQueue:
-                                statusQueue.append(status)
-                elif msg.type == WSMsgType.ERROR:
-                    statusQueue.append("Error: Server websocket had issues")
-                    socketError = ws.exception()
-                    if socketError is not None:
-                        raise socketError
-                    else:
-                        raise RuntimeError(f"WebSocket error: {ws.exception()}")
+                if cancelSimThread.is_set():
+                    # Cancel the simulation
+                    await runModelCancel(simulationID)
+                    return
+
+                match msg.type:
+                    case WSMsgType.TEXT:
+                        data = json.loads(msg.data)
+                        simStatus = data.get("status")
+                        functionLog.info(
+                            f"[runModelStatus] Sim {simulationID} status: {simStatus}"
+                        )
+                        match simStatus:
+                            case "completed":
+                                # Download the analysis files
+                                simData = await runModelDownload(simulationID)
+                                resultQueue.put(simData)
+                                currentProgress.append(1.0)
+                                statusQueue.append("Simulation complete!")
+                                return
+                            case "error":
+                                # TODO: Better error handling
+                                statusQueue.append("Experiment halted due to error")
+                                functionLog.error(
+                                    f"""
+[runModelStatus] Server encountered an error while running the simulation {simulationID}
+                                    """
+                                )
+                                raise Exception(
+                                    """
+An error occurred while attempting to run the simulation.
+                                    """
+                                )
+                            case _:
+                                progress, status = progressDict[simStatus]
+                                currentProgress.append(progress)
+                                # Prevent duplicate status messages
+                                if status not in statusQueue:
+                                    statusQueue.append(status)
+                    case WSMsgType.CLOSE:
+                        if msg.data == 1008:
+                            raise RuntimeError("Websocket with requested ID not found")
+                    case WSMsgType.ERROR:
+                        statusQueue.append("Error: Server websocket had issues")
+                        socketError = ws.exception()
+                        if socketError is not None:
+                            raise socketError
+                        else:
+                            raise RuntimeError(f"WebSocket error: {ws.exception()}")
 
 
 async def runModelDownload(simulationID: str) -> list[bytes]:
     """
-    Asynchronous function to download the results from a complete simulation.
+    Async function to download the results from a complete simulation.
 
     Parameters:
         simulationID (str): The ID distinguishing this simulation experiment.
@@ -433,18 +502,32 @@ async def runModelDownload(simulationID: str) -> list[bytes]:
         # Download the analysis files
         async with session.get(f"runModel/download/{simulationID}") as response:
             fileData = await response.read()
-            # TODO: Account for server returning JSON when issues occur
             # Unzip data and format each analysis file
             with ZipFile(BytesIO(fileData)) as analyses:
                 fileNames = analyses.namelist()
-                # for file in fileNames:
-                #     functionLog.info(f"File Data: {analyses.read(file).decode()}")
                 if len(fileNames) == 0:
                     raise FileNotFoundError("Server returned no readable files")
                 try:
                     return [analyses.read(file) for file in fileNames]
                 except ValueError as e:
                     raise e
+
+
+async def runModelCancel(simulationID: str):
+    """
+    Async function to cancel a running simulation.
+
+    Parameters:
+        simulationID (str): The ID distinguishing this simulation experiment.
+    """
+
+    # Send DELETE request to server with parameters
+    functionLog.info(f"[runModelCancel] Cancelling sim {simulationID}...")
+    async with ClientSession(base_url=serverUrl) as session:
+        async with session.delete(f"runModel/cancel/{simulationID}"):
+            functionLog.info(
+                f"[runModelCancel] Sim {simulationID} successfully cancelled."
+            )
 
 
 def runModelWrapper(parameterJSON):
@@ -474,6 +557,8 @@ def runModelWrapper(parameterJSON):
         # TODO: Tidy up the errors
         except Exception as e:
             formatError(e)
+        finally:
+            cancelSimThread.clear()
 
     session.simulationInProgress = True
     runModelThread = threading.Thread(target=threadRunner)
