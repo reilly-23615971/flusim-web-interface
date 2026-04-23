@@ -320,9 +320,11 @@ async def runModelStatus(simulationID: str, parameterJSON: str):
     """
     # Generate progress using # of sims/analyses
     # TODO: Include client side processing like formatAsir in this progress
+    # TODO: Fake mid-simulation progress with estimated times
     schema = json.loads(parameterJSON)
     progressDict = {
-        "generatingConfig": (0.02, "Initialising parameters..."),
+        "start": (0.01, "Initialising parameters..."),
+        "generatingConfig": (0.02, "Preparing simulation engine..."),
         "zippingAnalysis": (0.98, "Compiling results..."),
     }
 
