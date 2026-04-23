@@ -365,12 +365,30 @@ The provided parameters did not comply with the simulation's model schema
         return simulationID
 
 
-async def runModelStatus(simulationID: str, parameterJSON: str):
+async def runModelMonitor(simulationID: str):
+    """
+    Async function to wait until the cancellation flag is set before progressing
+
+    Parameters:
+        simulationID (str): The ID distinguishing this simulation experiment.
+    """
+    while True:
+        if cancelSimThread.is_set():
+            return simulationID
+        await asyncio.sleep(0.25)
+
+
+async def runModelStatus(session: ClientSession, simulationID: str, parameterJSON: str):
     """
     Async function to get status updates from the server via a websocket
 
     Parameters:
+        session: The `aiohttp` session to open the websocket on.
+
         simulationID (str): The ID distinguishing this simulation experiment.
+
+        parameterJSON (str): A string containing the JSON representation of
+            the simulation experiment to run.
     """
     # Generate progress using # of sims/analyses
     # TODO: Include client side processing like formatAsir in this progress
@@ -428,58 +446,85 @@ async def runModelStatus(simulationID: str, parameterJSON: str):
                 "Extracting age-based infections...",
             ),
         }
-    async with ClientSession(base_url=serverUrl) as session:
-        async with session.ws_connect(f"/runModel/status/{simulationID}") as ws:
-            async for msg in ws:
-                if cancelSimThread.is_set():
-                    # Cancel the simulation
-                    await runModelCancel(simulationID)
-                    return
-
-                match msg.type:
-                    case WSMsgType.TEXT:
-                        data = json.loads(msg.data)
-                        simStatus = data.get("status")
-                        functionLog.info(
-                            f"[runModelStatus] Sim {simulationID} status: {simStatus}"
-                        )
-                        match simStatus:
-                            case "completed":
-                                # Download the analysis files
-                                simData = await runModelDownload(simulationID)
-                                resultQueue.put(simData)
-                                currentProgress.append(1.0)
-                                statusQueue.append("Simulation complete!")
-                                return
-                            case "error":
-                                # TODO: Better error handling
-                                statusQueue.append("Experiment halted due to error")
-                                functionLog.error(
-                                    f"""
+    async with session.ws_connect(f"/runModel/status/{simulationID}") as ws:
+        async for msg in ws:
+            match msg.type:
+                case WSMsgType.TEXT:
+                    data = json.loads(msg.data)
+                    simStatus = data.get("status")
+                    functionLog.info(
+                        f"[runModelStatus] Sim {simulationID} status: {simStatus}"
+                    )
+                    match simStatus:
+                        case "completed":
+                            # Download the analysis files
+                            simData = await runModelDownload(simulationID)
+                            resultQueue.put(simData)
+                            currentProgress.append(1.0)
+                            statusQueue.append("Simulation complete!")
+                            return
+                        case "error":
+                            # TODO: Better error handling
+                            statusQueue.append("Experiment halted due to error")
+                            functionLog.error(
+                                f"""
 [runModelStatus] Server encountered an error while running the simulation {simulationID}
-                                    """
-                                )
-                                raise Exception(
-                                    """
+                                """
+                            )
+                            raise Exception(
+                                """
 An error occurred while attempting to run the simulation.
-                                    """
-                                )
-                            case _:
-                                progress, status = progressDict[simStatus]
+                                """
+                            )
+                        case _:
+                            progress, status = progressDict[simStatus]
+                            # Prevent duplicate status messages
+                            if status not in statusQueue:
                                 currentProgress.append(progress)
-                                # Prevent duplicate status messages
-                                if status not in statusQueue:
-                                    statusQueue.append(status)
-                    case WSMsgType.CLOSE:
-                        if msg.data == 1008:
-                            raise RuntimeError("Websocket with requested ID not found")
-                    case WSMsgType.ERROR:
-                        statusQueue.append("Error: Server websocket had issues")
-                        socketError = ws.exception()
-                        if socketError is not None:
-                            raise socketError
-                        else:
-                            raise RuntimeError(f"WebSocket error: {ws.exception()}")
+                                statusQueue.append(status)
+                case WSMsgType.CLOSE:
+                    if msg.data == 1008:
+                        raise RuntimeError("Websocket with requested ID not found")
+                case WSMsgType.ERROR:
+                    statusQueue.append("Error: Server websocket had issues")
+                    socketError = ws.exception()
+                    if socketError is not None:
+                        raise socketError
+                    else:
+                        raise RuntimeError(f"WebSocket error: {ws.exception()}")
+
+
+async def runModelWebsocket(simulationID: str, parameterJSON: str):
+    """
+    Async function to monitor the server websocket and cancel if requested
+
+    Parameters:
+        simulationID (str): The ID distinguishing this simulation experiment.
+
+        parameterJSON (str): A string containing the JSON representation of
+            the simulation experiment to run.
+    """
+    async with ClientSession(base_url=serverUrl) as session:
+        statusTask = asyncio.create_task(
+            runModelStatus(session, simulationID, parameterJSON)
+        )
+        monitorTask = asyncio.create_task(runModelMonitor(simulationID))
+
+        # Continue when either results are downloaded or monitor stops
+        finishedTask, incompleteTask = await asyncio.wait(
+            [statusTask, monitorTask], return_when=asyncio.FIRST_COMPLETED
+        )
+        for task in incompleteTask:
+            task.cancel()
+
+        # Cancel the sim if monitor was first
+        if monitorTask in finishedTask:
+            # Cancel the simulation
+            await runModelCancel(simulationID)
+            return
+        else:
+            statusTask.result()  # TODO: Check if necessary
+        # TODO: Do we need to catch asyncio.CancelledError here?
 
 
 async def runModelDownload(simulationID: str) -> list[bytes]:
@@ -552,7 +597,7 @@ def runModelWrapper(parameterJSON):
             simulationID = asyncio.run(runModelStart(parameterJSON))
 
             # Open the websocket
-            asyncio.run(runModelStatus(simulationID, parameterJSON))
+            asyncio.run(runModelWebsocket(simulationID, parameterJSON))
 
         # TODO: Tidy up the errors
         except Exception as e:
