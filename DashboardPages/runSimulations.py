@@ -9,7 +9,6 @@ import streamlit as st
 
 # from streamlit_push_notifications import send_push, send_alert
 from ClientResources.DownloadFunctions import uploadDownloadBar
-from ClientResources.InterfaceFunctions import dayCount
 from ClientResources.ParameterFunctions import loadKey, saveKey, timeScaleChange
 from ClientResources.SharedResources import (
     communityPopulation,
@@ -71,11 +70,12 @@ and has a higher Indigenous population compared to Newcastle.
 
 # TODO: Notify users if parameters are changed when cycle count is adjusted
 loadKey("cycleCount", default=360)
-st.select_slider(
+st.slider(
     "Length of Simulation (Days)",
-    range(30, 721),
+    30,
+    720,
     360,
-    format_func=dayCount,
+    format="%f Day(s)",
     key="_cycleCount",
     on_change=timeScaleChange,
     help="""
@@ -106,10 +106,11 @@ simulations but more accurate results.
 )
 
 loadKey("startDay", default="Monday")
-st.select_slider(
+st.radio(
     "Starting Day of the Week",
     ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"),
-    "Monday",
+    index=0,
+    horizontal=True,
     key="_startDay",
     on_change=saveKey,
     args=["startDay"],

@@ -495,13 +495,16 @@ group in the simulation population.
         """,
     )'''
 
-    loadKey("healthOutcomeAgeSeparation", "", False, noZeroDefault=True)
-    # TODO: Prevent no selection once Streamlit 1.56 is on Conda
-    ageSeparation = st.segmented_control(
+    loadKey("healthOutcomeAgeSeparation", "", "Combined", noZeroDefault=True)
+    ageSeparation = st.radio(
         "Age Group Separation",
-        # required=True,
         options=["Combined", "By Row", "By Column"],
-        default="Combined",
+        captions=[
+            "Don't separate data by age groups",
+            "Give each age group its own row in the table",
+            "Allow columns to display specific age groups",
+        ],
+        index=0,
         on_change=saveKey,
         args=["healthOutcomeAgeSeparation", ""],
         kwargs={"notScenario": True},
@@ -521,10 +524,6 @@ able to select which age groups the health burden data in that column will
 be derived from.
         """,
     )
-    # TODO: Replace this line with the required parameter when
-    # Streamlit 1.56 is available on base Conda
-    if ageSeparation is None:
-        ageSeparation = "Combined"
 
     if ageSeparation == "By Row":
         loadKey("healthOutcomeAgesToUse", "", ageGroups, noZeroDefault=True)
