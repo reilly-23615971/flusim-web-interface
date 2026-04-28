@@ -12,6 +12,7 @@ from ClientResources.DownloadFunctions import (
     loadTemplate,
     resetScenario,
 )
+from ClientResources.SharedResources import templateDict
 
 # Logging
 templateLog = logging.getLogger(__name__)
@@ -30,21 +31,27 @@ def defaultTemplateButton(scenarioID: int, templatePath: str, templateName: str)
 
         templatePath (str): The path to the JSON file holding the template
             parameter values.
-        templatePath (str): The name of the template.
+
+        templateName (str): The name of the template.
     """
     # Disable button if it's taking a while to update parameters
     templatePending = bool(session.get("confirmTemplateButton"))
 
-    currentName = session[f"scenarioName{scenarioID}"]
     st.markdown(
-        f"""
-Are you sure you want to replace the parameter values in the
-{"baseline scenario" if scenarioID == 0 else f'scenario named "{currentName}"'}
-with the values from the "{templateName}" template? Note that this will not
-change the name of the scenario.
         """
+Are you sure you want to replace the parameter values in the {name}
+with the values from the "{template}" template? Note that this will not
+change the name of the scenario.
+        """.format(
+            name=(
+                "baseline scenario"
+                if scenarioID == 0
+                else f'scenario named "{session[f"scenarioName{scenarioID}"]}"'
+            ),
+            template=templateName,
+        )
     )
-    if scenarioID == 0:
+    if scenarioID == 0 and session.get("scenarioCount"):
         st.warning(
             body="""
                 Updating the baseline scenario's parameter values with a
@@ -120,15 +127,6 @@ Note that this will not change the names of either scenario.
         st.rerun()
 
 
-"""
-TODO: Deal with this warning:
-  Warning: A fragment rerun was triggered with a callback that displays one or
-  more elements. During a fragment rerun, within a callback, displaying elements
-  is not officially supported because those elements will replace the existing
-  elements at the top of your app.
-"""
-
-
 @st.dialog(
     "Reset Scenario to Baseline Values",
     width="large",
@@ -168,7 +166,7 @@ scenario? Note that this will not change the scenario's name.
         st.rerun()
 
 
-@st.fragment
+# @st.fragment
 def buildTemplateTab(scenarioID: int):
     """
     Function to generate template loading buttons in a specified container
@@ -200,7 +198,15 @@ disease or situation.
     # TODO: Influenza and COVID-19
     # TODO: Load parameter defaults directly from flu template
     # rather than having them be hardcoded
-    st.code("TODO")
+    for templateName, (icon, templatePath, description) in templateDict.items():
+        st.button(
+            templateName,
+            icon=f":material/{icon}:",
+            key=f"_defaultTemplateButton{templateName}",
+            on_click=defaultTemplateButton,
+            args=[scenarioID, templatePath, templateName],
+            help=description,
+        )
 
     # Scenario Templates
     # TODO: Make sure copying scenario params onto baseline works as intended

@@ -79,6 +79,8 @@ sessionParameters = {
 for parameter, default in sessionParameters.items():
     session[parameter] = session.get(parameter, default)
 
+# TODO: Load defaults from template
+
 # TODO: See if an extra cookie package like streamlit-cookie-controller
 # can preserve parameters between refreshed pages
 

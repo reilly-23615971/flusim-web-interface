@@ -34,15 +34,22 @@ maxScenarios = 30
 # TODO: See if 75/25 or 65/35 splits are better
 splitPoint = 0.65
 
-# Queues used to store data from server requests
-resultQueue = Queue[list]()
-errorQueue = Queue[tuple[str, str, str, Optional[Exception]]]()
-currentProgress = deque[float](maxlen=1)
-statusQueue = list[str]()
-
 # URLs where client/server is located (change to hosted URLs)
 clientUrl = "http://localhost:8501/"
 serverUrl = "http://127.0.0.1:8000/"
+
+# Dictionary holding templates and their details
+templateDict = {
+    "Influenza": (
+        "microbiology",
+        "ClientResources/Templates/default.json",
+        """
+The dashboard's default parameters, simulating an influenza outbreak with no
+additional mitigation strategies.
+        """,
+    )
+}
+
 
 # Dictionary holding ordinal strings for variable-length forms
 ordinals = {
@@ -198,6 +205,12 @@ brightCodes = (
 # Extend pallette list if absolutely necessary
 while len(brightCodes) < maxScenarios:
     brightCodes = brightCodes + brightCodes  # type: ignore
+
+# Queues used to store data from server requests
+resultQueue = Queue[list]()
+errorQueue = Queue[tuple[str, str, str, Optional[Exception]]]()
+currentProgress = deque[float](maxlen=1)
+statusQueue = list[str]()
 
 
 class AnalysisFile:
