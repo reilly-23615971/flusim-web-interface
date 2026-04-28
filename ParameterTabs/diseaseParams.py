@@ -1385,12 +1385,13 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
         # Immunity Waning
         if advanced and idGet("naturalWaningToggle", id, False):
             wanedEfficacy = idGet("naturalWanedEfficacy", id, 0.5)
+            waningRate = idGet("naturalWaningRate", id, 6) * 60
             scenarioParams.infection_waning_cycle_delay = (
                 idGet("naturalImmunityDuration", id, 2) * 60
             )
             scenarioParams.infection_waned_protection = wanedEfficacy
-            scenarioParams.infection_waning_rate_per_cycle = (1.0 - wanedEfficacy) / (
-                idGet("naturalWaningRate", id, 6) * 60
+            scenarioParams.infection_waning_rate_per_cycle = (
+                1.0 if waningRate == 0 else (1.0 - wanedEfficacy) / waningRate
             )
         else:
             # Set immunity delay to length of simulation, effectively disabling it
@@ -1577,17 +1578,20 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             if wanedEfficacy is None:
                 wanedEfficacy = baseWanedEfficacy
             if waningRate is None:
-                waningRate = (1.0 - baseWanedEfficacy) / (baseWaningDuration * 60)
+                waningRate = 1.0 if baseWaningDuration == 0 else (1.0 - baseWanedEfficacy) / (baseWaningDuration * 60)
 
             # Calculate efficacy waning duration
             # TODO: Double-check that conversion method doesn't cause
             # rounding errors or anything of the sort
             updateParamFromSchema("naturalWaningEfficacy", wanedEfficacy, scenarioID)
-            updateParamFromSchema(
-                "naturalWaningRate",
-                int((1.0 - wanedEfficacy) / (waningRate * 60)),
-                scenarioID,
-            )
+            if waningRate in {0.0, 1.0}:
+                updateParamFromSchema("naturalWaningRate", 0, scenarioID)
+            else:
+                updateParamFromSchema(
+                    "naturalWaningRate",
+                    int((1.0 - wanedEfficacy) / (waningRate * 60)),
+                    scenarioID,
+                )
 
         if {"seeding_start_cycle", "seeding_duration"}.intersection(paramDict):
             # Seeding period
