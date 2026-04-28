@@ -13,12 +13,7 @@ from zipfile import ZipFile
 
 import pandas as pd
 import streamlit as st
-from aiohttp import (
-    ClientConnectorError,
-    ClientResponseError,
-    ClientSession,
-    WSMsgType,
-)
+from aiohttp import ClientConnectorError, ClientResponseError, ClientSession, WSMsgType
 
 # Reload streamlit_notify if it fails the first time
 # TODO: it keeps happening

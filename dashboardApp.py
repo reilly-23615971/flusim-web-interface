@@ -219,6 +219,7 @@ ensure all scenarios do not possess any errors and try again.
                     session[f"modelData{form.dataTag}"] = data
 
                 # Tell the user what's happened
+                # TODO: send time string to status queue
                 session.simulationEndTime = datetime.now()
                 totalTime = session.simulationEndTime - session.simulationStartTime
                 seconds = str(totalTime.seconds % 60).zfill(2)

@@ -1578,7 +1578,11 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             if wanedEfficacy is None:
                 wanedEfficacy = baseWanedEfficacy
             if waningRate is None:
-                waningRate = 1.0 if baseWaningDuration == 0 else (1.0 - baseWanedEfficacy) / (baseWaningDuration * 60)
+                waningRate = (
+                    1.0
+                    if baseWaningDuration == 0
+                    else (1.0 - baseWanedEfficacy) / (baseWaningDuration * 60)
+                )
 
             # Calculate efficacy waning duration
             # TODO: Double-check that conversion method doesn't cause

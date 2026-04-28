@@ -3914,11 +3914,14 @@ def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -
                             else simLength
                         ),
                         WaningRatePerCycle=(
-                            0.0 
+                            0.0
                             if not waningToggle
-                            else 1.0 
-                            if primWaningDuration == 0
-                            else (primBaseEfficacy[-1] - primWanedEfficacy) / primWaningDuration
+                            else (
+                                1.0
+                                if primWaningDuration == 0
+                                else (primBaseEfficacy[-1] - primWanedEfficacy)
+                                / primWaningDuration
+                            )
                         ),
                     )
                 ]
@@ -3931,9 +3934,10 @@ def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -
                             DoseSpacingCycles=idGet("boosterDelay", id, 3) * 60,
                             WaningDelay=idGet("boosterDuration", id, 4) * 60,
                             WaningRatePerCycle=(
-                                1.0 
-                                if boostWaningDuration == 0 
-                                else (boostBaseEfficacy - boostWanedEfficacy) / boostWaningDuration
+                                1.0
+                                if boostWaningDuration == 0
+                                else (boostBaseEfficacy - boostWanedEfficacy)
+                                / boostWaningDuration
                             ),
                         )
                     ]
@@ -4463,13 +4467,21 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
     if primaryRatePerCycle:
         updateParamFromSchema(
             "primaryWaningRate",
-            0 if primaryRatePerCycle == 1.0 else (baseFull[-1] - baseWaned) // (primaryRatePerCycle * 60),
+            (
+                0
+                if primaryRatePerCycle == 1.0
+                else (baseFull[-1] - baseWaned) // (primaryRatePerCycle * 60)
+            ),
             scenarioID,
         )
     if boosterRatePerCycle:
         updateParamFromSchema(
             "boosterWaningRate",
-            0 if boosterRatePerCycle == 1.0 else (baseBoostFull - baseBoostWaned) // (boosterRatePerCycle * 60),
+            (
+                0
+                if boosterRatePerCycle == 1.0
+                else (baseBoostFull - baseBoostWaned) // (boosterRatePerCycle * 60)
+            ),
             scenarioID,
         )
 
