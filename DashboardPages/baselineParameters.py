@@ -13,6 +13,7 @@ from ClientResources.ParameterFunctions import containerSave, loadKey
 from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.diseaseParams import buildDiseaseTab
 from ParameterTabs.dynamicParams import buildDynamicTab
+from ParameterTabs.templateParams import buildTemplateTab
 from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
 
 # from streamlit_push_notifications import send_push, send_alert
@@ -79,24 +80,26 @@ dynamic parameter updates.
 # change scale or switch to number input
 
 # Create tabs for each category of parameters
-# TODO: :material/pattern: for the template tab
+# TODO: :material/pattern: or :material/list_alt: for the template tab
 if showAdvanced:
-    (diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
+    (diseaseTab, communityTab, interventionTab, dynamicTab, templateTab) = st.tabs(
         [
             ":material/coronavirus: Pathogen",
             ":material/groups: Community",
             ":material/vaccines: Vaccination and NPIs",
             ":material/manage_history: Dynamic",
+            ":material/list_alt: Templates",
         ],
         on_change="rerun",
         key="paramTabs0",
     )
 else:
-    (diseaseTab, communityTab, interventionTab) = st.tabs(
+    (diseaseTab, communityTab, interventionTab, templateTab) = st.tabs(
         [
             ":material/coronavirus: Pathogen",
             ":material/groups: Community",
             ":material/vaccines: Vaccination and NPIs",
+            ":material/list_alt: Templates",
         ],
         on_change="rerun",
         key="paramTabs0",
@@ -120,3 +123,6 @@ if interventionTab.open:
 if showAdvanced and dynamicTab.open:  # type: ignore
     with dynamicTab:  # type: ignore
         buildDynamicTab(0)
+if templateTab.open:
+    with templateTab:
+        buildTemplateTab(0)

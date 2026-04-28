@@ -255,10 +255,10 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
 def loadConfig(file: BytesIO):
     """
     Function to read a JSON config file and set the dashboard's parameters
-    to correspond to it [in progress].
+    to correspond to it.
 
     Parameters:
-        file (bytes): The JSON file containing the parameter settings.
+        file (BytesIO): The JSON file containing the parameter settings.
     """
     try:
         schema = modelGuideFile.model_validate_json(file.read())
@@ -270,10 +270,10 @@ def loadConfig(file: BytesIO):
     # Save a backup of st.session_state to ensure changes aren't left unfinished
     backupSession = deepcopy(dict(session))
 
-    # Simulation engine settings
     # TODO: More error checks for parameter values allowed by the
     # simulation engine but not the dashboard
     try:
+        # Simulation engine settings
         if len(schema.community_used) > 1:
             raise AssertionError(
                 """
@@ -364,15 +364,16 @@ def loadConfig(file: BytesIO):
                     vaccineLoadSchema(scenarioParams, scenarioID)
                     dynamicLoadSchema(scenarioParams, scenarioID)
         # Load tabs briefly to initialise errors
+        useAdvanced = session.get("showAdvanced", False)
         placeholderContainer = st.empty()
         for testID in range(scenarioCount + 1):
             # TODO: Find a less hacky way to initialise errors
             with placeholderContainer.popover(
                 "Loading parameters...", icon="spinner", disabled=True
             ):
-                buildDiseaseTab(testID, True)
-                buildCommunityTab(testID, True)
-                buildVaccinationNPITab(testID, True)
+                buildDiseaseTab(testID, useAdvanced)
+                buildCommunityTab(testID, useAdvanced)
+                buildVaccinationNPITab(testID, useAdvanced)
                 buildDynamicTab(testID)
 
     except AssertionError as e:
@@ -390,6 +391,109 @@ def loadConfig(file: BytesIO):
     stn.toast(
         "Parameters successfully uploaded!",
         icon=":material/download_done:",
+        duration="short",
+    )
+    st.rerun()
+
+
+def createTemplate(scenarioID: int) -> Parameters:
+    """
+    Function to generate a JSON config object from a single scenario's parameters.
+
+    Parameters:
+        scenarioID (int): The ID representing the scenario to make a template from.
+
+    Returns:
+        Parameters: A Pydantic object storing the template parameters
+            in a format that can be loaded easily.
+    """
+    # Set up schema objects
+    session = st.session_state
+    useAdvanced = session.get("showAdvanced", False)
+    template = Parameters()
+
+    diseaseSaveSchema(template, scenarioID, useAdvanced)
+    communitySaveSchema(template, scenarioID, useAdvanced)
+    vaccineSaveSchema(template, scenarioID, useAdvanced)
+    if useAdvanced:
+        dynamicSaveSchema(template, scenarioID)
+    return template
+
+
+def loadTemplate(
+    scenarioID: int, template: Parameters | str, templateName: Optional[str] = None
+):
+    """
+    Function to set a single scenario's parameters to match a given template.
+
+    Parameters:
+        scenarioID (int): The ID representing the scenario to make a template from.
+
+        template (Parameters or str): Either the object containing the parameters
+            to initialise in the selected scenario, or the path to the file
+            containing said parameters.
+
+        templateName (str, optional): The name of the template being applied.
+    """
+    if not isinstance(template, Parameters):
+        try:
+            with open(template, "r") as file:
+                templateData = Parameters.model_validate_json(file.read())
+        except FileNotFoundError as e:
+            downloadLog.error(f"[loadTemplate] Template file not found: {e}")
+            raise e
+        except ValidationError as e:
+            downloadLog.error(
+                f"[loadTemplate] Template file had validation errors: {e}"
+            )
+            raise e
+    else:
+        templateData = template
+
+    # Save a backup of st.session_state to ensure changes aren't left unfinished
+    backupSession = deepcopy(dict(session))
+
+    try:
+        # Load the parameters
+        # TODO: Make sure things work OK when baseline is involved
+        diseaseLoadSchema(templateData, scenarioID)
+        communityLoadSchema(templateData, scenarioID)
+        vaccineLoadSchema(templateData, scenarioID)
+        dynamicLoadSchema(templateData, scenarioID)
+
+        # Load tabs briefly to initialise errors
+        # TODO: Find a less hacky way to initialise errors
+        # TODO: Make sure this popover is shown properly
+        useAdvanced = session.get("showAdvanced", False)
+        placeholderContainer = st.empty()
+        with placeholderContainer.popover(
+            "Loading parameters...", icon="spinner", disabled=True
+        ):
+            buildDiseaseTab(scenarioID, useAdvanced)
+            buildCommunityTab(scenarioID, useAdvanced)
+            buildVaccinationNPITab(scenarioID, useAdvanced)
+            buildDynamicTab(scenarioID)
+            if scenarioID == 0:
+                for testID in range(1, session.get("scenarioCount", 0) + 1):
+                    buildDiseaseTab(testID, useAdvanced)
+                    buildCommunityTab(testID, useAdvanced)
+                    buildVaccinationNPITab(testID, useAdvanced)
+                    buildDynamicTab(testID)
+
+    except AssertionError as e:
+        # TODO: Decide how template errors should be handled
+        st.error(body=e, icon=":material/error:")
+
+        # Restore session state
+        # TODO: Make sure this can't overrule simulation results or other changes
+        # that may occur between starting the upload process and an error occurring
+        session.clear()
+        session.update(backupSession)
+        return
+
+    stn.toast(
+        body="Template successfully loaded!",
+        icon=":material/list_alt_check:",
         duration="short",
     )
     st.rerun()
@@ -469,7 +573,7 @@ def deleteScenario(scenarioID: int, openTab: Optional[str] = None):
     session["scenarioCount"] -= 1
 
     # Open the scenario taking the deleted one's place
-    # TODO: If programmatic anchor tags are possible,
+    # TODO: If programmatic anchor tags are possible (append to URL?),
     # move user to the top of the tab container
     if openTab is not None:
         if scenarioCount > 1:
@@ -477,3 +581,21 @@ def deleteScenario(scenarioID: int, openTab: Optional[str] = None):
             session[openTab] = f"**#{openCount}** {session[f"scenarioName{openCount}"]}"
             session.tabReloader = not session.get("tabReloader", False)
         stn.toast("Scenario removed!", icon=":material/delete:")
+
+
+def resetScenario(scenarioID: int):
+    """
+    Function that resets all parameters in a scenario to their baseline values.
+
+    Parameters:
+        scenarioID (int): The ID representing the scenario to be reset.
+    """
+    # Delete scenario parameters (excluding the name)
+    for param in session["scenarioSetParams"][scenarioID] - {"scenarioName"}:
+        del session[f"{param}{scenarioID}"]
+    for param, extra in session["scenarioSetParamsExtra"][scenarioID]:
+        del session[f"{param}{scenarioID}{extra}"]
+    session["scenarioSetParams"][scenarioID] = set()
+    session["scenarioSetParamsExtra"][scenarioID] = set()
+    session["activeErrors"][scenarioID] = session["activeErrors"][0]
+    stn.toast("Scenario reset!", icon=":material/settings_backup_restore:")

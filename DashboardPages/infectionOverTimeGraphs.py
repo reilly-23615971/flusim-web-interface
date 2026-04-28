@@ -290,6 +290,8 @@ graph.
     infectionDataDownload()
 
     st.subheader("Using the Graph")
+    # TODO: mention how every sim may end early on plateaus and that's why
+    # x-axis ends before number of days? Mention in manual too?
     st.markdown(
         """
         - Hover your mouse over a point on the graph to display a
