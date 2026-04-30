@@ -57,15 +57,13 @@ def buildCommunityTab(id: int, advanced: bool = False):
 
     # Tab Content
     st.header("Community-Related Parameters")
-    st.markdown(
-        """
+    st.markdown("""
         This tab contains parameters relating to the community that
         is simulated by the model, including the likelihood of
         different health burden outcomes, how individuals react to
         the pathogen, and the size of groups that individuals form
         in different locations.
-    """
-    )
+    """)
 
     # Withdrawal and BCC
     '''with st.expander("Withdrawals and Diagnosis"):
@@ -85,93 +83,93 @@ def buildCommunityTab(id: int, advanced: bool = False):
             using the parameters in the "Vaccinations and NPIs" tab.
         """
         )'''
-    st.subheader("Withdrawals and Contact")
+    st.subheader("Withdrawals and Contact", divider="grey")
     # TODO: See if header dividers help here and elsewhere
 
     # The parameters in question
     loadKey("withdrawalWork", id, 0.5)
-    st.select_slider(
+    st.slider(
         "Work Withdrawal Rate (Probability)",
-        np.linspace(0.0, 1.0, 201),
-        0.5,
-        format_func=lambda x: f"{100 * x:0.3g}%",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.5,
+        format="percent",
         on_change=saveKey,
-        args=["withdrawalWork", id],  # type: ignore
+        args=["withdrawalWork", id],
         key=f"_withdrawalWork{id}",
         help="""
 The probability of an infected individual in the
-simulation voluntarily withdrawing from work after
+simulation not going to work after
 becoming symptomatic.
         """,
     )
     loadKey("withdrawalSchool", id, 0.9)
-    st.select_slider(
+    st.slider(
         "School Withdrawal Rate (Probability)",
-        np.linspace(0.0, 1.0, 201),
-        0.9,
-        format_func=lambda x: f"{100 * x:0.3g}%",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.9,
+        format="percent",
         on_change=saveKey,
-        args=["withdrawalSchool", id],  # type: ignore
+        args=["withdrawalSchool", id],
         key=f"_withdrawalSchool{id}",
         help="""
 The probability of an infected individual in the
-simulation voluntarily withdrawing from school
+simulation not going to school
 after becoming symptomatic.
         """,
     )
     loadKey("bccRate", id, 4.0)
+    # Note that this is daily, not once per cycle
     st.slider(
-        (
-            (
-                "Background Contact Count (Average "
-                "Number of Interactions per Person per Day)"
-            )
-        ),
-        0.0,
-        8.0,
-        4.0,
+        "Background Contact Count (Interactions per Person per Day)",
+        min_value=0.0,
+        max_value=8.0,
+        value=4.0,
         key=f"_bccRate{id}",
         on_change=saveKey,
-        args=["bccRate", id],  # type: ignore
+        args=["bccRate", id],
         help="""
-The average number of other people each individual
-will interact with in the background phase of each
-day in the simulation. These interactions emulate
-interactions outside of locations simulated by the model.
+The average number of other people each individual will contact in the
+background phase of each day in the simulation. This is used to emulate
+interactions that occur in locations not modelled in the simulation, such
+as public transport.
         """,
     )
 
     if advanced:
-        st.divider()
         # Other Community Parameters
-        st.subheader("Advanced Community Settings")
+        st.subheader("Advanced Community Settings", divider="grey")
 
-        # TODO: Allow half-days here
         loadKey("diagnosisDelay", id, 1)
-        st.select_slider(
+        st.slider(
             "Case Diagnosis Delay (Days)",
-            range(15),
-            1,
+            min_value=0.0,
+            max_value=14.0,
+            value=1,
+            step=0.5,
+            format="%f Day(s)",
             on_change=saveKey,
-            args=["diagnosisDelay", id],  # type: ignore
-            format_func=dayCount,
+            args=["diagnosisDelay", id],
             key=f"_diagnosisDelay{id}",
             help="""
-The number of days after an individual begins
-showing symptoms of the pathogen before their
-infection can be formally diagnosed as a confirmed case.
+The number of days after an individual begins showing symptoms of the pathogen
+before their infection can be formally diagnosed as a confirmed case. This may
+affect non-pharmaceutical interventions that use case numbers to choose when to
+come into effect.
             """,
         )
 
         loadKey("childSupervision", id, 1.0)
-        st.select_slider(
+        st.slider(
             "Child Supervision Rate (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            1.0,
+            min_value=0.0,
+            max_value=1.0,
+            value=0.5,
+            format="percent",
             key=f"_childSupervision{id}",
             on_change=saveKey,
-            args=["childSupervision", id],  # type: ignore
-            format_func=lambda x: f"{100 * x:0.3g}%",
+            args=["childSupervision", id],
             help="""
 The probability that an adult in the simulation
 will remain at their household if there is at least
@@ -187,12 +185,13 @@ one child present and no other adults are at home.
             25,
             10,
             key=f"_maxClassSize{id}",
+            format="%f Person(s)",
             on_change=saveKey,
-            args=["maxClassSize", id],  # type: ignore
+            args=["maxClassSize", id],
             help="""
-The maximum size of school classes within
-schools and childcare facilities in the simulation.
+The maximum size of classes within schools in the simulation.
             """,
+            # TODO: if childcare becomes relevant again mention it in the tooltip
         )
 
         '''loadKey("maxClassCount", id, 1)
@@ -218,9 +217,10 @@ rest of the class.
             0,
             25,
             10,
+            format="%f Person(s)",
             key=f"_maxWorkGroupSize{id}",
             on_change=saveKey,
-            args=["maxWorkGroupSize", id],  # type: ignore
+            args=["maxWorkGroupSize", id],
             help="""
 The maximum size of groups within workplaces in the simulation.
             """,
