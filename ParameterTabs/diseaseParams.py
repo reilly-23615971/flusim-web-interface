@@ -6,7 +6,6 @@
 import logging
 
 import altair as alt
-import numpy as np
 import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
@@ -103,18 +102,21 @@ def buildDiseaseTab(id: int, advanced: bool = False):
         """
         )
         loadKey("seedRate", id, 0.25)
-        st.select_slider(
+        # TODO: Is this enough/too much precision?
+        # TODO: Change cycle to half-day?
+        st.slider(
             "Infection Seeding Rate (Average Individuals per Cycle)",
-            np.linspace(0.025, 5.0, 200),
-            0.25,
+            0.05,
+            5.0,
+            value=0.25,
+            step=0.05,
             key=f"_seedRate{id}",
             on_change=saveKey,
-            args=["seedRate", id],  # type: ignore
-            format_func=lambda x: f"{x:0.4g}",
+            args=["seedRate", id],
+            format="%0.4g",
             help="""
-The average number of individuals that will be
-infected directly via infection seeding each cycle.
-Note that each day of the simulation is 2 cycles.
+The average number of individuals that will be infected directly via infection
+seeding each cycle. Note that each day of the simulation is 2 cycles.
             """,
         )
         # TODO: Notify users if dynamic parameters are changed
@@ -129,18 +131,14 @@ Note that each day of the simulation is 2 cycles.
             args=["seedPeriod", "seedTimeForm", id],
             key=f"_seedPeriod{id}",
             help="""
-The time period during which infection seeding will
-occur in the simulation. The first value is the day
-on which seeding will begin (where Day 1 is the
-first day of the simulation), and the second value
-is the day on which it will stop.
+The time period during which infection seeding will occur in the simulation.
+The first value is the day on which seeding will begin (where Day 1 is the
+first day of the simulation), and the second value is the day on which it will stop.
 
-Note that if you modify this value, the update
-points for infection seeding defined in
-:primary-badge[:material/manage_history: Dynamic] may have
-their values altered. For instance, if you go from seeding
-ending on Day 60 to Day 30, an update point set to affect
-the value on Day 45 will be changed to affect it on Day 30 instead.
+Note that if you modify this value, the update points for infection seeding defined in
+:primary-badge[:material/manage_history: Dynamic] may have their values altered.
+For instance, if you go from seeding ending on Day 60 to Day 30, an update point
+set to affect the value on Day 45 will be changed to affect it on Day 30 instead.
             """,
         )
 
@@ -148,7 +146,6 @@ the value on Day 45 will be changed to affect it on Day 30 instead.
     with st.expander(
         "Infection Transmission",  # key=f"transmissionContainer{id}", on_change="rerun"
     ):
-        # Describe what sort of parameters are here
         st.markdown(
             """
             These parameters control the likelihood that the
@@ -469,7 +466,7 @@ group to contract the pathogen when interacting with infected individuals.
                         else transRemainingGroups
                     ),
                     on_change=saveKey,
-                    args=["transAgeGroup", id, f"-{i}"],  # type: ignore
+                    args=["transAgeGroup", id, f"-{i}"],
                     disabled=not transRowCount < 10,
                     help="""
                     An age group that will have specific
@@ -500,7 +497,7 @@ group to contract the pathogen when interacting with infected individuals.
                     1.0,
                     key=f"_transInfect{id}-{i}",
                     on_change=saveKey,
-                    args=["transInfect", id, f"-{i}"],  # type: ignore
+                    args=["transInfect", id, f"-{i}"],
                     format_func=lambda x: f"{x:0.3g}",
                     help="""
                     The value of the infectiousness parameter
@@ -521,7 +518,7 @@ group to contract the pathogen when interacting with infected individuals.
                     1.0,
                     key=f"_transSuscept{id}-{i}",
                     on_change=saveKey,
-                    args=["transSuscept", id, f"-{i}"],  # type: ignore
+                    args=["transSuscept", id, f"-{i}"],
                     format_func=lambda x: f"{x:0.3g}",
                     help="""
                     The value of the susceptibility parameter
@@ -640,7 +637,7 @@ group to contract the pathogen when interacting with infected individuals.
             step=0.5,
             format="%f Day(s)",
             on_change=saveKey,
-            args=["latencyPeriod", id],  # type: ignore
+            args=["latencyPeriod", id],
             key=f"_latencyPeriod{id}",
             help="""
 The length in days of the pathogen's latency period,
@@ -660,7 +657,7 @@ individual becoming infectious themselves.
             format="%f Day(s)",
             key=f"_preSymptomPeriod{id}",
             on_change=saveKey,
-            args=["preSymptomPeriod", id],  # type: ignore
+            args=["preSymptomPeriod", id],
             help="""
 The length in days of the pathogen's pre-symptomatic
 period, i.e. the length of time between an
@@ -679,7 +676,7 @@ beginning to show symptoms.
             step=0.5,
             format="%f Day(s)",
             on_change=saveKey,
-            args=["symptomPeriod", id],  # type: ignore
+            args=["symptomPeriod", id],
             key=f"_symptomPeriod{id}",
             help="""
 The length in days of the pathogen's symptomatic
@@ -698,7 +695,7 @@ infected individual will show symptoms of the pathogen.
             format="%f Day(s)",
             key=f"_postSymptomPeriod{id}",
             on_change=saveKey,
-            args=["postSymptomPeriod", id],  # type: ignore
+            args=["postSymptomPeriod", id],
             help="""
 The length in days of the pathogen's
 post-symptomatic period, i.e. the length of time
@@ -788,7 +785,6 @@ recovered/no longer infectious.
         st.altair_chart(chart)
 
         # Written period lengths
-        # TODO: Round these so there's no more 14.0
         st.markdown(
             """
             With the parameters defined above, the following time
@@ -832,57 +828,58 @@ pathogen to others.
         )
 
         # Asymptomatic params (age-separated if advanced params are enabled)
-        # TODO: See if other slider options are more percent-friendly
         # TODO: Parity between simple and advanced parameter inputs
         st.divider()
         st.subheader("Asymptomatic Likelihood")
         if advanced:
             loadKey("asymptomaticChild", id, 0.35)
-            st.select_slider(
+            # TODO: Is this precise enough?
+            st.slider(
                 "Probability of Young (0-24) Asymptomatic Case",
-                np.linspace(0.0, 1.0, 201),
-                0.35,
-                format_func=lambda x: f"{100 * x:0.3g}%",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.35,
+                format="percent",
                 on_change=saveKey,
-                args=["asymptomaticChild", id],  # type: ignore
+                args=["asymptomaticChild", id],
                 key=f"_asymptomaticChild{id}",
                 help="""
-The probability that an infected young person
-(defined as 0-24 years old) in the simulation will
-be asymptomatic (i.e. they never show any symptoms
-of the pathogen despite being infectious).
+The probability that an infected young person (defined as 0-24 years old) in
+the simulation will be asymptomatic (i.e. they never show any symptoms of the
+pathogen despite being infectious).
                 """,
             )
             loadKey("asymptomaticAdult", id, 0.35)
-            st.select_slider(
+            st.slider(
                 "Probability of Adult (24+) Asymptomatic Case",
-                np.linspace(0.0, 1.0, 201),
-                0.35,
-                format_func=lambda x: f"{100 * x:0.3g}%",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.35,
+                format="percent",
                 on_change=saveKey,
-                args=["asymptomaticAdult", id],  # type: ignore
+                args=["asymptomaticAdult", id],
                 key=f"_asymptomaticAdult{id}",
                 help="""
-The probability that an infected adult (defined as
-24+ years old) in the simulation will be
-asymptomatic (i.e. they never show any symptoms of
-the pathogen despite being infectious).
+The probability that an infected adult (defined as 24+ years old) in the
+simulation will be asymptomatic (i.e. they never show any symptoms of the
+pathogen despite being infectious).
                 """,
             )
         else:
             loadKey("asymptomaticBoth", id, 0.35)
-            st.select_slider(
+            st.slider(
                 "Probability of Asymptomatic Case",
-                np.linspace(0.0, 1.0, 201),
-                0.35,
-                format_func=lambda x: f"{100 * x:0.3g}%",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.35,
+                format="percent",
                 on_change=saveKey,
-                args=["asymptomaticBoth", id],  # type: ignore
+                args=["asymptomaticBoth", id],
                 key=f"_asymptomaticBoth{id}",
                 help="""
-The probability that an infected individual in the
-simulation will be asymptomatic (i.e. they never
-show any symptoms of the pathogen despite being infectious).
+The probability that an infected individual in the simulation will be
+asymptomatic (i.e. they never show any symptoms of the pathogen despite
+being infectious).
                 """,
             )
 
@@ -1219,7 +1216,6 @@ group who will die as a direct result of the pathogen.
                 in the "Vaccinations and NPIs" tab.
             """
             )
-
             loadKey("naturalWaningToggle", id, False)
             waningToggle = st.toggle(
                 "Enable Natural Immunity Waning",
@@ -1233,54 +1229,47 @@ wane over time. If this is enabled, individuals in the simulation can be
 infected again after recovering from a previous infection.
                 """,
             )
-
+            # TODO: No more months
             loadKey("naturalImmunityDuration", id, 2)
             st.slider(
                 "Natural Immunity Waning Delay (Months)",
                 1,
-                36,
+                12,
                 2,
                 disabled=not waningToggle,
                 on_change=saveKey,
-                args=["naturalImmunityDuration", id],  # type: ignore
+                args=["naturalImmunityDuration", id],
                 key=f"_naturalImmunityDuration{id}",
                 help="""
-The number of months after an individual fully
-recovers from the pathogen before the immunity
-conferred by having been infected begins to
-diminish, where a month is 30 days.
+The number of months after an individual fully recovers from the pathogen
+before they begin losing their immunity, where a month is 30 days.
                 """,
             )
-            loadKey("naturalWanedEfficacy", id, 0.5)
-            st.select_slider(
-                "Natural Immunity After Waning (Probability)",
-                np.linspace(0.0, 1.0, 201),
-                0.5,
-                disabled=not waningToggle,
-                key=f"_naturalWanedEfficacy{id}",
-                on_change=saveKey,
-                args=["naturalWanedEfficacy", id],  # type: ignore
-                format_func=lambda x: f"{100 * x:0.3g}%",
-                help="""
-The final efficacy value that an individual's
-natural immunity after recovering from the pathogen
-will approach as it begins to diminish, represented
-as the probability that the individual will remain
-healthy when exposed to the pathogen after their
-immunity is fully waned.
-                """,
-            )
+            """
+The number of months after an individual fully recovers from the pathogen
+before the immunity conferred by having been infected begins to diminish,
+where a month is 30 days.
+            """
             loadKey("naturalWaningRate", id, 6)
             st.slider(
                 "Natural Immunity Waning Duration (Months)",
                 0,
-                36,
+                12,
                 6,
                 disabled=not waningToggle,
                 on_change=saveKey,
-                args=["naturalWaningRate", id],  # type: ignore
+                args=["naturalWaningRate", id],
                 key=f"_naturalWaningRate{id}",
                 help="""
+The number of months after an individual begins losing their immunity before
+their resistance to the pathogen reaches its lowest point, where a month is 30
+days.
+
+If this parameter is set to 0, individuals will lose their immunity to the
+pathogen all at once.
+                """,
+            )
+            """
 The number of months after the immunity from having
 fully recovered from the pathogen begins waning
 before the efficacy of the immunity stabilises,
@@ -1292,8 +1281,30 @@ the final immunity probability defined above.
 
 If this parameter is set to 0, the immunity
 provided by recovering from the pathogen will never diminish.
+            """
+            loadKey("naturalWanedEfficacy", id, 0.5)
+            st.slider(
+                "Natural Immunity After Waning (Probability)",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.5,
+                format="percent",
+                disabled=not waningToggle,
+                key=f"_naturalWanedEfficacy{id}",
+                on_change=saveKey,
+                args=["naturalWanedEfficacy", id],
+                help="""
+The efficacy of an individual's natural immunity after the full waning duration,
+represented as the probability that they will remain healthy when exposed to
+the pathogen.
                 """,
             )
+            """
+The final efficacy value that an individual's natural immunity after recovering
+from the pathogen will approach as it begins to diminish, represented as the
+probability that the individual will remain healthy when exposed to the pathogen
+after their immunity is fully waned.
+            """
 
 
 def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):

@@ -440,7 +440,7 @@ with tableSettings:
             default=scenarioNames,
             key="_healthOutcomeScenariosToUse",
             on_change=saveKey,
-            args=["healthOutcomeScenariosToUse", ""],  # type: ignore
+            args=["healthOutcomeScenariosToUse", ""],
             placeholder="Please select at least 1 scenario",
             kwargs={"notScenario": True},
             help="""
@@ -486,7 +486,7 @@ attempting to generate a table.
         "Separate Results by Age Group",
         value=False,
         on_change=saveKey,
-        args=["healthOutcomeAgeGroupToggle", ""],  # type: ignore
+        args=["healthOutcomeAgeGroupToggle", ""],
         kwargs={"notScenario": True},
         key="_healthOutcomeAgeGroupToggle",
         help="""
@@ -533,7 +533,7 @@ be derived from.
             default=ageGroups,
             key="_healthOutcomeAgesToUse",
             on_change=saveKey,
-            args=["healthOutcomeAgesToUse", ""],  # type: ignore
+            args=["healthOutcomeAgesToUse", ""],
             placeholder="Please select at least 1 age group",
             kwargs={"notScenario": True},
             help="""
@@ -791,7 +791,7 @@ Age Group Separation mode before attempting to generate a table.
                     ]
                 ),
                 on_change=saveKey,
-                args=[f"healthOutcome", i],  # type: ignore
+                args=[f"healthOutcome", i],
                 kwargs={"notScenario": True},
                 help="""
                 Select the health burden outcome you would like to be
@@ -830,7 +830,7 @@ Age Group Separation mode before attempting to generate a table.
                 False,
                 key=f"_useBaselineDifference{i}",
                 on_change=saveKey,
-                args=["useBaselineDifference", i],  # type: ignore
+                args=["useBaselineDifference", i],
                 disabled=not usePresetData
                 and (
                     session.get("DataScenarioCount", -1) == 0
@@ -871,7 +871,7 @@ Age Group Separation mode before attempting to generate a table.
                 False,
                 key=f"_useProportion{i}",
                 on_change=saveKey,
-                args=[f"useProportion", i],  # type: ignore
+                args=[f"useProportion", i],
                 kwargs={"notScenario": True},
                 help="""
                 Toggle whether this column should display its value as

@@ -379,6 +379,7 @@ def loadConfig(file: BytesIO):
     except AssertionError as e:
         # TODO: See if it's possible/worthwhile to give
         # different errors different icons
+        # TODO: Give the errors titles once updated to Streamlit 1.57
         st.error(body=e, icon=":material/error:")
 
         # Restore session state
