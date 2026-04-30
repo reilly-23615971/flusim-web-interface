@@ -59,8 +59,8 @@
         "bcc_reduction_trigger": "none",
         "bcc_reduction_relaxation": "none",
         "bcc_reduction_delay": 0,
-        "bcc_reduction_duration": 0,
-        "vaccine_doses": 0,
+        "bcc_reduction_duration": 720,
+        "vaccine_doses": 9999999,
         "vaccination_first_dose_rate": 300,
         "vaccination_trigger": "timed",
         "vaccination_relaxation": "timed",
@@ -135,7 +135,7 @@
                 {
             "DoseType": "primary",
             "Count": 1,
-            "DoseSpacingCycles": 56,
+            "DoseSpacingCycles": 120,
             "WaningDelay": 720,
             "WaningRatePerCycle": 0.0
         }

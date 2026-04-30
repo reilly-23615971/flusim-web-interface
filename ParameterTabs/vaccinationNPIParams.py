@@ -199,7 +199,7 @@ vaccinated individuals in the simulation.
                 st.number_input(
                     "Total Number of Vaccine Doses",
                     min_value=0,
-                    value=0,
+                    value=50000,
                     key=f"_initialDoseReserve{id}",
                     disabled=not useVaccinesToggle or not limitDosesToggle,
                     on_change=saveKey,
@@ -741,22 +741,23 @@ modifying this value will change the number of
 sections used for specifying efficacy below.
             """,
         )
-        loadKey("primaryDelay", id, 3)
-        st.slider(
-            "Time Between Vaccine Doses (Months)",
-            1,
-            12,
-            3,
-            disabled=(not useVaccinesToggle) or primaryDoseCount == 1,
-            on_change=saveKey,
-            args=["primaryDelay", id],
-            key=f"_primaryDelay{id}",
-            help="""
-The number of months after an individual
-receives a vaccine dose before they are able to
-receive another, where a month is 30 days.
-            """,
-        )
+        if primaryDoseCount > 1:
+            loadKey("primaryDelay", id, 3)
+            st.slider(
+                "Time Between Vaccine Doses (Months)",
+                min_value=1,
+                max_value=12,
+                value=3,
+                disabled=(not useVaccinesToggle) or primaryDoseCount == 1,
+                on_change=saveKey,
+                args=["primaryDelay", id],
+                key=f"_primaryDelay{id}",
+                help="""
+    The number of months after an individual
+    receives a vaccine dose before they are able to
+    receive another, where a month is 30 days.
+                """,
+            )
         # Waning parameters (only if advanced parameters are enabled)
         if advanced:
             loadKey("vaccineWaningToggle", id, False)
@@ -2656,7 +2657,7 @@ rest of the simulation.
                 if schoolClosureTrigger == "Timed":
                     loadKey("schoolClosurePeriod", id, (1, 60))
                     st.slider(
-                        "School Closure Time Period (Days)",
+                        "School Closure Time Period",
                         min_value=1,
                         max_value=simLength,
                         value=(1, 60),
