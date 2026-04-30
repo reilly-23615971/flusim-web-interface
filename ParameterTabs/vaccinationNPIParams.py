@@ -126,13 +126,11 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
 
     # Tab Content
     st.header("Vaccination and NPI Parameters")
-    st.markdown(
-        """
+    st.markdown("""
         This tab contains parameters relating to whether
         vaccination and non-pharmaceutical interventions (NPIs) are
         integrated into the simulation.
-    """
-    )
+    """)
     # globalErrorContainer = st.container()
 
     # Vaccination
@@ -142,12 +140,11 @@ def buildVaccinationNPITab(id: int, advanced: bool = False):
         "Enable Vaccines in Simulation",
         value=False,
         on_change=saveKey,
-        args=["vaccineToggle", id],  # type: ignore
+        args=["vaccineToggle", id],
         key=f"_vaccineToggle{id}",
         help="""
 Toggle whether or not individuals in the simulation
-will be vaccinated against the pathogen, overriding
-all other vaccine-related parameters.
+will be vaccinated against the pathogen.
         """,
     )
 
@@ -158,13 +155,26 @@ all other vaccine-related parameters.
         "Vaccination Programs", key=f"vaccineProgramContainer{id}", on_change="rerun"
     ):
         # Describe what sort of parameters are here
-        st.markdown(
-            """
+        st.markdown("""
             These parameters control the rollout of vaccines in
             the simulation, with parameters such as how frequently
             vaccines are administered and what proportion of the
             population is already vaccinated.
-        """
+        """)
+        loadKey("firstDoseRate", id, 300)
+        st.number_input(
+            "Vaccination Rate (Vaccinations per Day)",
+            min_value=1,
+            value=300,
+            key=f"_firstDoseRate{id}",
+            placeholder="Enter a whole number of people",
+            on_change=saveKey,
+            args=["firstDoseRate", id],
+            disabled=not useVaccinesToggle,
+            help="""
+The number of unvaccinated individuals who will
+receive the first dose of the vaccine each day.
+            """,
         )
 
         # Limited Dose Parameters (if advanced parameters are enabled)
@@ -176,68 +186,66 @@ all other vaccine-related parameters.
                 key=f"_limitDosesToggle{id}",
                 disabled=not useVaccinesToggle,
                 on_change=saveKey,
-                args=["limitDosesToggle", id],  # type: ignore
+                args=["limitDosesToggle", id],
                 help="""
-Toggle whether the total number of vaccine
-first doses that can be administered across the
-whole simulation should be limited to a
-specific value, putting an upper limit on the
-number of vaccinated individuals in the simulation.
+Toggle whether the number of vaccine doses that can be administered in each
+simulation should be limited, putting an upper limit on the number of
+vaccinated individuals in the simulation.
                 """,
             )
-            # TODO: Consider hiding when doses aren't limited
-            # instead of merely disabling input
-            loadKey("initialDoseReserve", id, 0)
-            st.number_input(
-                "Total Number of Vaccine First Doses",
-                0,
-                key=f"_initialDoseReserve{id}",
-                disabled=not useVaccinesToggle or not limitDosesToggle,
-                on_change=saveKey,
-                args=["initialDoseReserve", id],  # type: ignore
-                placeholder="Enter a whole number of doses",
-                help="""
-The total number of vaccine first doses that
-will be available to administer to unvaccinated
-individuals throughout the simulation. Once all
-first doses have been administered, any
-remaining unvaccinated individuals in the
-simulation will never be vaccinated.
-Individuals who have already received the first
-dose of the vaccine will still receive future
-doses regardless of the remaining dose count.
+            if limitDosesToggle:
+                loadKey("initialDoseReserve", id, 0)
+                st.number_input(
+                    "Total Number of Vaccine Doses",
+                    min_value=0,
+                    value=0,
+                    key=f"_initialDoseReserve{id}",
+                    disabled=not useVaccinesToggle or not limitDosesToggle,
+                    on_change=saveKey,
+                    args=["initialDoseReserve", id],
+                    placeholder="Enter a whole number of doses",
+                    help="""
+    The total number of vaccine doses that will be available in the simulation. Once
+    all doses have been administered, any remaining unvaccinated individuals in the
+    simulation will never be vaccinated.
 
-This parameter is ignored if "Enable Limited
-Number of Vaccine Doses" has been toggled off.
-                """,
-            )
-        loadKey("firstDoseRate", id, 300)
-        st.number_input(
-            "First Dose Vaccination Rate (Vaccinations per Day)",
-            1,
-            value=300,
-            key=f"_firstDoseRate{id}",
-            placeholder="Enter a whole number of people",
+    Note that only the first dose of the vaccine counts towards this limit.
+    Individuals who have already received the first dose of the vaccine will still
+    receive future doses regardless of the remaining dose count.
+                    """,
+                )
+        # TODO: See if imprecise percent sliders are better than no-percent inputs
+        # TODO: Check the format
+        leftCol, rightCol = st.columns(2)
+        loadKey("initialVaccinated", id, 0.0)
+        initialVaccinated = leftCol.number_input(
+            "Initial Vaccinated Proportion of Population",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.0,
+            step=0.001,
+            format="%0.5g",
+            key=f"_initialVaccinated{id}",
             on_change=saveKey,
-            args=["firstDoseRate", id],  # type: ignore
+            args=["initialVaccinated", id],
             disabled=not useVaccinesToggle,
             help="""
-The number of unvaccinated individuals who will
-receive the first dose of the vaccine each day,
-assuming there are enough doses available.
+                The proportion of the population that will
+                already be vaccinated against the pathogen at
+                the beginning of the simulation.
             """,
         )
-
-        # TODO: Change to numeric input/proportion/regular slider
-        loadKey("initialVaccinated", id, 0.0)
-        initialVaccinated = st.select_slider(
+        '''
+        initialVaccinated = st.slider(
             "Initial Vaccinated Proportion of Population",
-            np.linspace(0.0, 1.0, 201),
-            0.0,
+            min_value=0.0,
+            max_value=1.0,
+            value=0.0,
+            step=0.001,
+            format="percent",
             key=f"_initialVaccinated{id}",
-            format_func=lambda x: f"{100 * x:0.3g}%",
             on_change=saveKey,
-            args=["initialVaccinated", id],  # type: ignore
+            args=["initialVaccinated", id],
             disabled=not useVaccinesToggle,
             help="""
 The percentage of the population that will
@@ -245,54 +253,16 @@ already be vaccinated against the pathogen at
 the beginning of the simulation.
             """,
         )
-        '''
-        loadKey("initialVaccinated", id, 0.0)
-        initialVaccinated = st.number_input(
-            "Initial Vaccinated Proportion of Population (%)",
-            min_value=0.0,
-            max_value=idGet("targetVaccinated", id, 80.0),
-            value=0.0,
-            step=0.01,
-            key=f"_initialVaccinated{id}",
-            on_change=saveKey,
-            args=["initialVaccinated", id],  # type: ignore
-            disabled=not useVaccinesToggle,
-            help="""
-                The percentage of the population that will
-                already be vaccinated against the pathogen at
-                the beginning of the simulation.
-            """,
-        )
-        loadKey("targetVaccinated", id, 80.0)
-        targetVaccinated = st.number_input(
-            "Target Vaccinated Proportion of Population (%)",
-            min_value=idGet("initialVaccinated", id, 0.0),
-            max_value=100.0,
-            value=80.0,
-            step=0.01,
-            key=f"_targetVaccinated{id}",
-            on_change=saveKey,
-            args=["targetVaccinated", id],  # type: ignore
-            disabled=not useVaccinesToggle,
-            help="""
-                The percentage of the population that will be
-                targeted by the vaccine schedule in the
-                simulation. The actual proportion of the
-                population that is vaccinated may be lower if
-                there are an insufficient number of doses
-                available.
-            """,
-        )
-        '''
-        loadKey("targetVaccinated", id, 0.8)
-        targetVaccinated = st.select_slider(
+        targetVaccinated = st.slider(
             "Target Vaccinated Proportion of Population",
-            np.linspace(0.0, 1.0, 201),
-            0.8,
+            min_value=0.0,
+            max_value=1.0,
+            value=0.8,
+            step=0.001,
+            format="percent",
             key=f"_targetVaccinated{id}",
-            format_func=lambda x: f"{100 * x:0.3g}%",
             on_change=saveKey,
-            args=["targetVaccinated", id],  # type: ignore
+            args=["targetVaccinated", id],
             disabled=not useVaccinesToggle,
             help="""
 The percentage of the population that will be
@@ -302,8 +272,28 @@ population that is vaccinated may be lower if
 there are an insufficient number of doses available.
             """,
         )
+        '''
+        loadKey("targetVaccinated", id, 0.8)
+        targetVaccinated = rightCol.number_input(
+            "Target Vaccinated Proportion of Population",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.8,
+            step=0.001,
+            format="%0.5g",
+            key=f"_targetVaccinated{id}",
+            on_change=saveKey,
+            args=["targetVaccinated", id],
+            disabled=not useVaccinesToggle,
+            help="""
+The proportion of the population that will be targeted by the vaccine schedule
+in the simulation. The actual proportion of the population that is vaccinated
+may be lower if there are an insufficient number of doses available.
+            """,
+        )
 
         # Show error if initial proportion is above target
+        # TODO: Convert to using proportions if needed
         paramError(
             "vaccineTargetAlreadyFulfilled",
             id,
@@ -316,9 +306,9 @@ there are an insufficient number of doses available.
                         session[f'scenarioName{id}']
                     }"'
                 } is
-                {100 * targetVaccinated:0.3g}% of the
+                {100 * targetVaccinated:0.5g}% of the
                 population, but the initial vaccinated
-                proportion is {100 * initialVaccinated:0.3g}%. As
+                proportion is {100 * initialVaccinated:0.5g}%. As
                 such, the target proportion will already be met,
                 and no new vaccinations will occur.
 
@@ -326,10 +316,10 @@ there are an insufficient number of doses available.
 
                 - Increase Initial Vaccinated Proportion of Population in
                 :primary-badge[:material/vaccines: Vaccination and NPIs]
-                to be greater than {100 * targetVaccinated:0.3g}%.
+                to be greater than {100 * targetVaccinated:0.5g}%.
                 - Decrease Target Vaccinated Proportion of Population in
                 :primary-badge[:material/vaccines: Vaccination and NPIs]
-                to be lower than {100 * initialVaccinated:0.3g}%.
+                to be lower than {100 * initialVaccinated:0.5g}%.
             """,
             False,
         )
@@ -386,7 +376,7 @@ overriding the base proportions.
                     """,
                 ),
                 "Initial Vaccinated Proportion": st.column_config.NumberColumn(
-                    "Initial Vaccinated Proportion of Population",
+                    "Initial Vaccinated Percentage",
                     required=True,
                     default=initialVaccinated,
                     min_value=0.0,
@@ -398,7 +388,7 @@ vaccinated against the pathogen at the beginning of the simulation.
                     """,
                 ),
                 "Target Vaccinated Proportion": st.column_config.NumberColumn(
-                    "Target Vaccinated Proportion of Population",
+                    "Target Vaccinated Percentage",
                     required=True,
                     default=targetVaccinated,
                     min_value=0.0,
@@ -437,7 +427,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
             lambda: np.any(
                 vacPropAgeForm["Initial Vaccinated Proportion"]
                 > vacPropAgeForm["Target Vaccinated Proportion"]
-            ),  # type: ignore
+            ),
             f"""
                 Error: The age-specific vaccinated proportions form used by the {
                     'baseline scenario' if id == 0
@@ -506,7 +496,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
                     ),
                     disabled=(not useVaccinesToggle or not vaccineRowCount < 10),
                     on_change=saveKey,
-                    args=["vacAgeGroup", id, f"-{i}"],  # type: ignore
+                    args=["vacAgeGroup", id, f"-{i}"],
                     help="""
                     An age group that will have specific
                     vaccination initial and target proportions
@@ -536,7 +526,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
                     format_func=lambda x: f"{100 * x:0.3g}%",
                     disabled=not useVaccinesToggle,
                     on_change=saveKey,
-                    args=["vacAgeInitial", id, f"-{i}"],  # type: ignore
+                    args=["vacAgeInitial", id, f"-{i}"],
                     key=f"_vacAgeInitial{id}-{i}",
                     help="""
                         The percentage of individuals in this
@@ -555,7 +545,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
                     format_func=lambda x: f"{100 * x:0.3g}%",
                     disabled=not useVaccinesToggle,
                     on_change=saveKey,
-                    args=["vacAgeTarget", id, f"-{i}"],  # type: ignore
+                    args=["vacAgeTarget", id, f"-{i}"],
                     key=f"_vacAgeTarget{id}-{i}",
                     help="""
                         The percentage of individuals in this
@@ -719,16 +709,14 @@ are vaccinated may be lower if there are an insufficient number of doses availab
         "Vaccine Properties", key=f"vaccinePropertyContainer{id}", on_change="rerun"
     ):
         # Describe primary vaccines
-        st.markdown(
-            """
+        st.markdown("""
             These parameters control the properties of the main
             schedule of vaccines that will be administered to
             individuals within the simulation. Each vaccine in
             the schedule can have its own efficacy values set,
             since in many cases multiple doses are required to
             achieve maximum immunity to the pathogen.
-        """
-        )
+        """)
 
         # Universal primary parameters
         loadKey("primaryDoseCount", id, 1)
@@ -739,7 +727,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
             1,
             key=f"_primaryDoseCount{id}",
             on_change=saveKey,
-            args=["primaryDoseCount", id],  # type: ignore
+            args=["primaryDoseCount", id],
             disabled=not useVaccinesToggle,
             help="""
 The number of times each individual in the
@@ -756,11 +744,11 @@ sections used for specifying efficacy below.
         st.slider(
             "Time Between Vaccine Doses (Months)",
             1,
-            36,
+            12,
             3,
             disabled=(not useVaccinesToggle) or primaryDoseCount == 1,
             on_change=saveKey,
-            args=["primaryDelay", id],  # type: ignore
+            args=["primaryDelay", id],
             key=f"_primaryDelay{id}",
             help="""
 The number of months after an individual
@@ -788,42 +776,34 @@ infected if it has been a sufficiently long time since they were vaccinated.
                 st.slider(
                     "Vaccine Immunity Waning Delay (Months)",
                     1,
-                    36,
+                    12,
                     6,
                     disabled=not useVaccinesToggle,
                     on_change=saveKey,
-                    args=["primaryDuration", id],  # type: ignore
+                    args=["primaryDuration", id],
                     key=f"_primaryDuration{id}",
                     help="""
-The number of months after an individual
-receives a vaccine dose before the immunity
-conferred by this vaccine begins to diminish,
-where a month is 30 days.
+The number of months after an individual receives a vaccine dose before they
+begin losing their immunity, where a month is 30 days.
                     """,
                 )
                 loadKey("primaryWaningRate", id, 12)
                 st.slider(
                     "Vaccine Waning Duration (Months)",
                     1,
-                    36,
                     12,
+                    6,
                     disabled=not useVaccinesToggle,
                     on_change=saveKey,
-                    args=["primaryWaningRate", id],  # type: ignore
+                    args=["primaryWaningRate", id],
                     key=f"_primaryWaningRate{id}",
                     help="""
-The number of months after the immunity from a
-vaccine dose begins waning before the efficacy
-of the vaccine stabilises, where a month is 30
-days. Vaccine-conferred immunity in the
-*Flusim* simulation will wane at a linear rate,
-so this parameter represents how long it takes
-for the vaccine's efficacy to decrease from the
-final dose's initial value to its final value.
+The number of months after a vaccinated individual begins losing their immunity
+before their resistance to the pathogen reaches its lowest point, where a month
+is 30 days.
 
-If this parameter is set to 0, the immunity
-provided by the main vaccine schedule will
-never diminish.
+If this parameter is set to 0, individuals will lose their immunity to the
+pathogen all at once.
                     """,
                 )
 
@@ -832,38 +812,36 @@ never diminish.
             # primAgeInitials = {}
 
             # Modifiable-length field for each primary dose
-            st.markdown(
-                f"""
+            st.markdown(f"""
                 ### {"Individual " if waningToggle else ""}Dose Efficacies
 
                 Here you can set the {"initial " if waningToggle else ""}efficacy
                 of each vaccine dose in the schedule separately. Note that
                 changing the "Number of Vaccine Doses" parameter
                 will affect how many sections are present here.
-            """
-            )
-            # TODO: Change to numeric input/proportion/more precise slider
+            """)
+            # TODO: Is 1% precision precise enough?
             for i in range(primaryDoseCount):
                 with st.container(border=True):
                     st.markdown(f"#### {ordinals[i+1]} Vaccine Dose")
                     loadKey("primaryBaseEfficacy", id, 0.5, f"-{i}")
-                    baseDoseEfficacy = st.select_slider(
+                    baseDoseEfficacy = st.slider(
                         (
                             "Initial Dose Efficacy (Probability)"
                             if waningToggle
                             else "Dose Efficacy (Probability)"
                         ),
-                        np.linspace(0.0, 1.0, 201),
-                        0.5,
-                        format_func=lambda x: f"{100 * x:0.3g}%",
+                        min_value=0.0,
+                        max_value=1.0,
+                        value=0.5,
+                        format="percent",
                         disabled=not useVaccinesToggle,
                         on_change=saveKey,
-                        args=["primaryBaseEfficacy", id, f"-{i}"],  # type: ignore
+                        args=["primaryBaseEfficacy", id, f"-{i}"],
                         key=f"_primaryBaseEfficacy{id}-{i}",
                         help=f"""
 The {"initial " if waningToggle else ""}efficacy of this vaccine dose,
-represented as the probability that an
-individual that has received the
+represented as the probability that an individual that has received the
 dose will remain healthy when exposed to the pathogen.
                         """,
                     )
@@ -1014,7 +992,7 @@ that use the same age group as another row.
                                     or not primaryAgeRowCounts[i] < 10
                                 ),
                                 on_change=saveKey,
-                                args=["primAgeGroup", id, f"-{i}-{j}"],  # type: ignore
+                                args=["primAgeGroup", id, f"-{i}-{j}"],
                                 help="""
                                 An age group that will have specific
                                 initial vaccine efficacy values defined
@@ -1276,21 +1254,20 @@ that use the same age group as another row.
             # Efficacy After Waning
             if waningToggle:
                 loadKey("primaryWanedEfficacy", id, 0.0)
-                primaryWanedEfficacy = st.select_slider(
+                primaryWanedEfficacy = st.slider(
                     "Dose Efficacy After Immunity Waning (Probability)",
-                    np.linspace(0.0, 1.0, 201),
-                    0.0,
-                    format_func=lambda x: f"{100 * x:0.3g}%",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=0.0,
+                    format="percent",
                     disabled=not useVaccinesToggle,
                     on_change=saveKey,
-                    args=["primaryWanedEfficacy", id],  # type: ignore
+                    args=["primaryWanedEfficacy", id],
                     key=f"_primaryWanedEfficacy{id}",
                     help="""
-The final efficacy value that the vaccine
-schedule will approach as the immunity it
-provides begins to diminish, represented as the
-probability that an individual with completely
-waned immunity will remain healthy when exposed to the pathogen.
+The efficacy of a vaccinated individual's immunity after the full waning duration,
+represented as the probability that they will remain healthy when exposed to
+the pathogen.
                     """,
                 )
                 # Last efficacy value is all that's cared about
@@ -1386,11 +1363,10 @@ immunity waning defined for it, overriding the base value.
                             max_value=1.0,
                             format="percent",
                             help="""
-The final efficacy value that the vaccine schedule will approach for this
-age group as the immunity it provides begins to diminish, represented as
-the probability that an individual in this age group with completely waned
-immunity will not remain healthy when exposed to the pathogen.
-                            """,
+The efficacy of a vaccinated individual in this age group's immunity after the
+full waning duration, represented as the probability that they will remain
+healthy when exposed to the pathogen.
+                    """,
                         ),
                     },
                 )
@@ -1441,7 +1417,7 @@ immunity will not remain healthy when exposed to the pathogen.
                     lambda: np.any(
                         combinedEfficacy["Initial Dose Efficacy"]
                         < combinedEfficacy["Dose Efficacy After Waning"]
-                    ),  # type: ignore
+                    ),
                     f"""
                         Error: The vaccine age-specific
                         efficacy forms used for the final vaccine dose by the {
@@ -1508,7 +1484,7 @@ immunity will not remain healthy when exposed to the pathogen.
                             not useVaccinesToggle or not primaryWanedRowCount < 10
                         ),
                         on_change=saveKey,
-                        args=["primWanedGroup", id, f"-{i}"],  # type: ignore
+                        args=["primWanedGroup", id, f"-{i}"],
                         help="""
                         An age group that will have a specific
                         final efficacy value after immunity waning
@@ -1538,7 +1514,7 @@ immunity will not remain healthy when exposed to the pathogen.
                         format_func=lambda x: f"{100 * x:0.3g}%",
                         disabled=not useVaccinesToggle,
                         on_change=saveKey,
-                        args=["primAgeWanedEfficacy", id, f"-{i}"],  # type: ignore
+                        args=["primAgeWanedEfficacy", id, f"-{i}"],
                         key=f"_primAgeWanedEfficacy{id}-{i}",
                         help="""
                             The final efficacy value that the
@@ -1604,14 +1580,14 @@ immunity will not remain healthy when exposed to the pathogen.
                 ),
             )'''
         else:
-            # Vaccine Efficacy
-            # TODO: Change to numeric input/proportion/more precise slider
+            # Vaccine Efficacy for All Doses
             loadKey("primarySingleEfficacy", id, 0.5)
-            doseEfficacy = st.select_slider(
+            doseEfficacy = st.slider(
                 "Vaccine Efficacy (Probability)",
-                np.linspace(0.0, 1.0, 201),
-                0.5,
-                format_func=lambda x: f"{100 * x:0.3g}%",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.5,
+                format="percent",
                 disabled=not useVaccinesToggle,
                 on_change=saveKey,
                 args=["primarySingleEfficacy", id],
@@ -1711,8 +1687,7 @@ remain healthy when exposed to the pathogen.
             "Booster Vaccines", key=f"boosterContainer{id}", on_change="rerun"
         ):
             # Describe booster vaccines
-            st.markdown(
-                """
+            st.markdown("""
                 These parameters control the properties of booster
                 vaccines, additional doses of a vaccine only
                 administered to individuals who have already
@@ -1723,8 +1698,7 @@ remain healthy when exposed to the pathogen.
                 diseases like COVID-19, meningococcal disease and
                 diphtheria to preserve an individual's immunity to
                 the pathogen as it wanes over time.
-            """
-            )
+            """)
 
             # Universal booster parameters
             loadKey("boosterToggle", id, False)
@@ -1733,7 +1707,7 @@ remain healthy when exposed to the pathogen.
                 value=False,
                 key=f"_boosterToggle{id}",
                 on_change=saveKey,
-                args=["boosterToggle", id],  # type: ignore
+                args=["boosterToggle", id],
                 disabled=not useVaccinesToggle,
                 help="""
 Toggle whether or not booster vaccines are
@@ -1749,7 +1723,7 @@ administered in the simulation, overriding other booster-related parameters.
                 key=f"_boosterDoseCount{id}",
                 disabled=not useVaccinesToggle or not useBoostersToggle,
                 on_change=saveKey,
-                args=["boosterDoseCount", id],  # type: ignore
+                args=["boosterDoseCount", id],
                 help="""
 The number of times each individual in the
 simulation will be administered a booster vaccine.
@@ -1759,13 +1733,13 @@ simulation will be administered a booster vaccine.
             boosterDelay = st.slider(
                 "Time Between Booster Doses (Months)",
                 1,
-                36,
+                12,
                 3,
                 disabled=not useVaccinesToggle
                 or not useBoostersToggle
                 or boosterDoseCount == 1,
                 on_change=saveKey,
-                args=["boosterDelay", id],  # type: ignore
+                args=["boosterDelay", id],
                 key=f"_boosterDelay{id}",
                 help="""
 The number of months after an individual receives
@@ -1777,18 +1751,35 @@ to receive another, where a month is 30 days.
             boosterDuration = st.slider(
                 "Booster Immunity Waning Delay (Months)",
                 1,
-                36,
+                12,
                 4,
                 disabled=not useVaccinesToggle or not useBoostersToggle,
                 on_change=saveKey,
-                args=["boosterDuration", id],  # type: ignore
+                args=["boosterDuration", id],
                 key=f"_boosterDuration{id}",
                 help="""
-The number of months after an individual receives
-a booster vaccine dose before the immunity
-conferred by this vaccine begins to diminish,
-where a month is 30 days.
+The number of months after an individual receives a booster vaccine dose
+before they begin losing their immunity, where a month is 30 days.
                 """,
+            )
+            loadKey("boosterWaningRate", id, 6)
+            st.slider(
+                "Booster Waning Duration (Months)",
+                0,
+                12,
+                6,
+                disabled=not useVaccinesToggle or not useBoostersToggle,
+                on_change=saveKey,
+                args=["boosterWaningRate", id],
+                key=f"_boosterWaningRate{id}",
+                help="""
+The number of months after a booster-vaccinated individual begins losing their
+immunity before their resistance to the pathogen reaches its lowest point, where
+a month is 30 days.
+
+If this parameter is set to 0, individuals will lose their immunity to the
+pathogen all at once.
+                    """,
             )
             paramError(
                 "boosterWanesTooFast",
@@ -1816,15 +1807,16 @@ where a month is 30 days.
                 True,
             )
             loadKey("boosterBaseEfficacy", id, 0.9)
-            boosterBaseEfficacy = st.select_slider(
+            boosterBaseEfficacy = st.slider(
                 "Initial Booster Efficacy (Probability)",
-                np.linspace(0.0, 1.0, 201),
-                0.9,
+                min_value=0.0,
+                max_value=1.0,
+                value=0.9,
+                format="percent",
                 key=f"_boosterBaseEfficacy{id}",
                 disabled=not useVaccinesToggle or not useBoostersToggle,
                 on_change=saveKey,
-                args=["boosterBaseEfficacy", id],  # type: ignore
-                format_func=lambda x: f"{100 * x:0.3g}%",
+                args=["boosterBaseEfficacy", id],
                 help="""
 The initial efficacy of each booster vaccine,
 represented as the probability that an
@@ -1833,22 +1825,21 @@ booster will remain healthy when exposed to the pathogen.
                 """,
             )
             loadKey("boosterWanedEfficacy", id, 0.6)
-            boosterWanedEfficacy = st.select_slider(
+            boosterWanedEfficacy = st.slider(
                 "Booster Efficacy After Immunity Waning (Probability)",
-                np.linspace(0.0, 1.0, 201),
-                0.6,
+                min_value=0.0,
+                max_value=1.0,
+                value=0.6,
+                format="percent",
                 key=f"_boosterWanedEfficacy{id}",
                 disabled=not useVaccinesToggle or not useBoostersToggle,
                 on_change=saveKey,
-                args=["boosterWanedEfficacy", id],  # type: ignore
-                format_func=lambda x: f"{100 * x:0.3g}%",
+                args=["boosterWanedEfficacy", id],
                 help="""
-The final efficacy value that the booster
-vaccine will approach as the immunity it
-provides begins to diminish, represented as the
-probability that an individual with completely
-waned immunity will remain healthy when exposed to the pathogen.
-                """,
+The efficacy of a booster-vaccinated individual's immunity after the
+full waning duration, represented as the probability that they will remain
+healthy when exposed to the pathogen.
+                    """,
             )
 
             # Show error if waned efficacy is above initial
@@ -1880,31 +1871,6 @@ waned immunity will remain healthy when exposed to the pathogen.
                     to be lower than {100 * boosterBaseEfficacy:0.3g}%.
                 """,
                 True,
-            )
-
-            loadKey("boosterWaningRate", id, 6)
-            st.slider(
-                "Booster Waning Duration (Months)",
-                0,
-                36,
-                6,
-                disabled=not useVaccinesToggle or not useBoostersToggle,
-                on_change=saveKey,
-                args=["boosterWaningRate", id],  # type: ignore
-                key=f"_boosterWaningRate{id}",
-                help="""
-The number of months after the immunity from a
-booster vaccine begins waning before the
-efficacy of the vaccine stabilises, where a
-month is 30 days. Vaccine-conferred immunity in
-the *Flusim* simulation will wane at a linear
-rate, so this parameter represents how long it
-takes for the vaccine's efficacy to decrease
-from its initial value to its final value.
-
-If this parameter is set to 0, the immunity
-provided by booster vaccines will never diminish.
-                """,
             )
 
             # Store age-based booster efficacy values for error checking
@@ -1979,11 +1945,10 @@ will remain healthy when exposed to the pathogen.
                         max_value=1.0,
                         format="percent",
                         help="""
-The final efficacy value that the booster vaccine will approach for this age
-group as the immunity it provides begins to diminish, represented as the
-probability that an individual in this age group with completely waned
-immunity will remain healthy when exposed to the pathogen.
-                        """,
+The efficacy of a booster-vaccinated individual in this age group's immunity
+after the full waning duration, represented as the probability that they will remain
+healthy when exposed to the pathogen.
+                    """,
                     ),
                 },
             )
@@ -2013,7 +1978,7 @@ immunity will remain healthy when exposed to the pathogen.
                 lambda: np.any(
                     boostEfficacyAgeForm["Initial Booster Efficacy"]
                     < boostEfficacyAgeForm["Booster Efficacy After Waning"]
-                ),  # type: ignore
+                ),
                 f"""
                     Error: The booster vaccine age-specific
                     efficacy form used by the {
@@ -2086,7 +2051,7 @@ immunity will remain healthy when exposed to the pathogen.
                             or not boosterRowCount < 10
                         ),
                         on_change=saveKey,
-                        args=["boostAgeGroup", id, f"-{i}"],  # type: ignore
+                        args=["boostAgeGroup", id, f"-{i}"],
                         help="""
                         An age group that will have specific
                         booster vaccine efficacy values defined for
@@ -2116,7 +2081,7 @@ immunity will remain healthy when exposed to the pathogen.
                         disabled=(not useVaccinesToggle or not useBoostersToggle),
                         format_func=lambda x: f"{100 * x:0.3g}%",
                         on_change=saveKey,
-                        args=["boostAgeEfficacy", id, f"-{i}"],  # type: ignore
+                        args=["boostAgeEfficacy", id, f"-{i}"],
                         key=f"_boostAgeEfficacy{id}-{i}",
                         help="""
                             The initial efficacy of each booster
@@ -2137,7 +2102,7 @@ immunity will remain healthy when exposed to the pathogen.
                         disabled=(not useVaccinesToggle or not useBoostersToggle),
                         format_func=lambda x: f"{100 * x:0.3g}%",
                         on_change=saveKey,
-                        args=["boostAgeWanedEfficacy", id, f"-{i}"],  # type: ignore
+                        args=["boostAgeWanedEfficacy", id, f"-{i}"],
                         key=f"_boostAgeWanedEfficacy{id}-{i}",
                         help="""
                             The final efficacy value that the
@@ -2313,15 +2278,13 @@ immunity will remain healthy when exposed to the pathogen.
     # General NPIs
     st.html('<span id = "generalTriggerCondition"></span>')
     with st.expander("Social Distancing", key=f"npiContainer{id}", on_change="rerun"):
-        st.markdown(
-            """
+        st.markdown("""
             These parameters control the implementation of
             simple non-pharmaceutical intervention (NPI)
             techniques that do not have configurable trigger
             conditions, including social distancing, case
             isolation and class dismissal.
-        """
-        )
+        """)
 
         # Case Isolation
         loadKey("caseIsolation", id, False)
@@ -2329,7 +2292,7 @@ immunity will remain healthy when exposed to the pathogen.
             "Enable Case Isolation",
             value=False,
             on_change=saveKey,
-            args=["caseIsolation", id],  # type: ignore
+            args=["caseIsolation", id],
             key=f"_caseIsolation{id}",
             help="""
 Toggle whether or not individuals who have been
@@ -2345,7 +2308,7 @@ forced to isolate at home.
                 "Enable Class Dismissal",
                 value=False,
                 on_change=saveKey,
-                args=["classDismissal", id],  # type: ignore
+                args=["classDismissal", id],
                 key=f"_classDismissal{id}",
                 help="""
 Toggle whether or not school classes should be
@@ -2378,7 +2341,7 @@ as their trigger threshold.
             "Enable Social Distancing",
             value=False,
             on_change=saveKey,
-            args=["socialDistancingToggle", id],  # type: ignore
+            args=["socialDistancingToggle", id],
             key=f"_socialDistancingToggle{id}",
             help="""
 Toggle whether or not social distancing
@@ -2387,14 +2350,15 @@ simulation, overriding other social distancing parameters.
             """,
         )
         loadKey("socialDistancingCompliance", id, 0.9)
-        socialDistancingCompliance = st.select_slider(
+        socialDistancingCompliance = st.slider(
             "Social Distancing Compliance (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            0.9,
-            format_func=lambda x: f"{100 * x:0.3g}%",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.9,
+            format="percent",
             disabled=not useSocialDistancingToggle,
             on_change=saveKey,
-            args=["socialDistancingCompliance", id],  # type: ignore
+            args=["socialDistancingCompliance", id],
             key=f"_socialDistancingCompliance{id}",
             help="""
 The probability that an individual will comply
@@ -2527,7 +2491,7 @@ social distancing interventions in the simulation.
                             not useSocialDistancingToggle or not socialRowCount < 10
                         ),
                         on_change=saveKey,
-                        args=["socialAgeGroup", id, f"-{i}"],  # type: ignore
+                        args=["socialAgeGroup", id, f"-{i}"],
                         help="""
                         An age group that will have specific
                         social distancing compliance probability
@@ -2557,7 +2521,7 @@ social distancing interventions in the simulation.
                         format_func=lambda x: f"{100 * x:0.3g}%",
                         disabled=not useSocialDistancingToggle,
                         on_change=saveKey,
-                        args=["socialCompliance", id, f"-{i}"],  # type: ignore
+                        args=["socialCompliance", id, f"-{i}"],
                         key=f"_socialCompliance{id}-{i}",
                         help="""
                         The probability that an individual in
@@ -2623,18 +2587,16 @@ social distancing interventions in the simulation.
     with st.expander(
         "School Closure", key=f"schoolClosureContainer{id}", on_change="rerun"
     ):
-        st.markdown(
-            """
+        st.markdown("""
             These parameters control if and when schools will
             close as a result of the pathogen.
-        """
-        )
+        """)
         loadKey("schoolClosureToggle", id, False)
         useSchoolClosureToggle = st.toggle(
             "Enable School Closures",
             value=False,
             on_change=saveKey,
-            args=["schoolClosureToggle", id],  # type: ignore
+            args=["schoolClosureToggle", id],
             key=f"_schoolClosureToggle{id}",
             help="""
 Toggle whether or not school closure
@@ -2652,7 +2614,7 @@ simulation, overriding other school closure parameters.
                     key=f"_schoolClosureTrigger{id}",
                     options=triggerNames,
                     on_change=saveKey,
-                    args=["schoolClosureTrigger", id],  # type: ignore
+                    args=["schoolClosureTrigger", id],
                     disabled=not useSchoolClosureToggle,
                     help="""
 The type of condition that must be
@@ -2757,18 +2719,19 @@ on Day 45 will be changed to affect it on Day 30 instead.
 
         # School closure compliance
         loadKey("schoolClosureCompliance", id, 0.9)
-        st.select_slider(
+        st.slider(
             "School Closure Compliance (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            0.9,
-            format_func=lambda x: f"{100 * x:0.3g}%",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.9,
+            format="percent",
             disabled=not useSchoolClosureToggle,
             on_change=saveKey,
             args=["schoolClosureCompliance", id],
             key=f"_schoolClosureCompliance{id}",
             help="""
 The probability that an individual will
-withdraw from schools when they are closed in the simulation.
+not attend schools when they are closed in the simulation.
             """,
         )
 
@@ -2777,8 +2740,7 @@ withdraw from schools when they are closed in the simulation.
     with st.expander(
         "Withdrawal Increase", key=f"withdrawalContainer{id}", on_change="rerun"
     ):
-        st.markdown(
-            """
+        st.markdown("""
             These parameters control the properties of
             interventions that increase the likelihood of
             infected individuals withdrawing from work/school
@@ -2788,14 +2750,13 @@ withdraw from schools when they are closed in the simulation.
             withdrawing from work/school when this intervention
             is not active can be configured in the "Withdrawals
             and Diagnosis" section of the "Community" tab.
-        """
-        )
+        """)
         loadKey("withdrawalIncreaseToggle", id, False)
         useWithdrawalIncreaseToggle = st.toggle(
             "Enable Withdrawal Increases",
             value=False,
             on_change=saveKey,
-            args=["withdrawalIncreaseToggle", id],  # type: ignore
+            args=["withdrawalIncreaseToggle", id],
             key=f"_withdrawalIncreaseToggle{id}",
             help="""
 Toggle whether or not withdrawal increasing
@@ -2814,7 +2775,7 @@ increase parameters.
                     key=f"_withdrawalIncreaseTrigger{id}",
                     options=triggerNames[:-1],
                     on_change=saveKey,
-                    args=["withdrawalIncreaseTrigger", id],  # type: ignore
+                    args=["withdrawalIncreaseTrigger", id],
                     disabled=not useWithdrawalIncreaseToggle,
                     help="""
 The type of condition that must be
@@ -2860,7 +2821,7 @@ simulation.
                         key=f"_withdrawalIncreasePeriod{id}",
                         disabled=not useWithdrawalIncreaseToggle,
                         on_change=saveKey,
-                        args=["withdrawalIncreasePeriod", id],  # type: ignore
+                        args=["withdrawalIncreasePeriod", id],
                         help="""
 The time period during which withdrawal
 rates will be increased in the
@@ -2906,14 +2867,15 @@ rates will return to normal.
 
         # Increased Withdrawal
         loadKey("withdrawalIncreaseAdult", id, 0.9)
-        withdrawalIncreaseAdult = st.select_slider(
+        withdrawalIncreaseAdult = st.slider(
             "Increased Work Withdrawal Rate (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            0.9,
-            format_func=lambda x: f"{100 * x:0.3g}%",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.9,
+            format="percent",
             disabled=not useWithdrawalIncreaseToggle,
             on_change=saveKey,
-            args=["withdrawalIncreaseAdult", id],  # type: ignore
+            args=["withdrawalIncreaseAdult", id],
             key=f"_withdrawalIncreaseAdult{id}",
             help="""
 The probability of an infected adult
@@ -2924,14 +2886,15 @@ normal withdrawal rate.
             """,
         )
         loadKey("withdrawalIncreaseChild", id, 1.0)
-        withdrawalIncreaseChild = st.select_slider(
+        withdrawalIncreaseChild = st.slider(
             "Increased School Withdrawal Rate (Probability)",
-            np.linspace(0.0, 1.0, 201),
-            1.0,
-            format_func=lambda x: f"{100 * x:0.3g}%",
+            min_value=0.0,
+            max_value=1.0,
+            value=1.0,
+            format="percent",
             disabled=not useWithdrawalIncreaseToggle,
             on_change=saveKey,
-            args=["withdrawalIncreaseChild", id],  # type: ignore
+            args=["withdrawalIncreaseChild", id],
             key=f"_withdrawalIncreaseChild{id}",
             help="""
 The probability of an infected child
@@ -3005,8 +2968,7 @@ normal withdrawal rate.
     with st.expander(
         "Reduced Work Group Size", key=f"workGroupContainer{id}", on_change="rerun"
     ):
-        st.markdown(
-            """
+        st.markdown("""
             These parameters control the properties of
             interventions that reduce the size of work groups
             when in effect. Note that this NPI does not target
@@ -3015,14 +2977,13 @@ normal withdrawal rate.
             The base size of work groups when this intervention
             is not active can be configured in the "Population
             Behaviours" section of the "Community" tab.
-        """
-        )
+        """)
         loadKey("reducedGroupToggle", id, False)
         useReducedGroupToggle = st.toggle(
             "Enable Group Size Reductions",
             value=False,
             on_change=saveKey,
-            args=["reducedGroupToggle", id],  # type: ignore
+            args=["reducedGroupToggle", id],
             key=f"_reducedGroupToggle{id}",
             help="""
 Toggle whether or not group size reduction
@@ -3041,7 +3002,7 @@ reduction parameters.
                     key=f"_reducedGroupTrigger{id}",
                     options=triggerNames[:-1],
                     on_change=saveKey,
-                    args=["reducedGroupTrigger", id],  # type: ignore
+                    args=["reducedGroupTrigger", id],
                     disabled=not useReducedGroupToggle,
                     help="""
 The type of condition that must be
@@ -3086,7 +3047,7 @@ reduced size for the rest of the simulation.
                         key=f"_reducedGroupPeriod{id}",
                         disabled=not useReducedGroupToggle,
                         on_change=saveKey,
-                        args=["reducedGroupPeriod", id],  # type: ignore
+                        args=["reducedGroupPeriod", id],
                         help="""
 The time period during which work
 group sizes will be smaller in the
@@ -3139,7 +3100,8 @@ return to normal.
             5,
             disabled=not useReducedGroupToggle,
             on_change=saveKey,
-            args=["reducedGroupSize", id],  # type: ignore
+            args=["reducedGroupSize", id],
+            format="%f Person(s)",
             key=f"_reducedGroupSize{id}",
             help="""
 The maximum size of work groups while a reduced
@@ -3182,8 +3144,7 @@ overwriting the normal maximum.
     with st.expander(
         "Background Contact Count Reduction", key=f"bccContainer{id}", on_change="rerun"
     ):
-        st.markdown(
-            """
+        st.markdown("""
             These parameters control the properties of
             interventions that reduce the background contact
             count (BCC) in the simulation, thus reducing the
@@ -3194,8 +3155,7 @@ overwriting the normal maximum.
             intervention is not active can be configured in the
             "Population Behaviours" section of the "Community"
             tab.
-        """
-        )
+        """)
         loadKey("bccToggle", id, False)
         useBCCToggle = st.toggle(
             "Enable BCC Reduction",
@@ -3219,7 +3179,7 @@ simulation, overriding other BCC reduction parameters.
                     key=f"_bccTrigger{id}",
                     options=triggerNames[:-1],
                     on_change=saveKey,
-                    args=["bccTrigger", id],  # type: ignore
+                    args=["bccTrigger", id],
                     disabled=not useBCCToggle,
                     help="""
 The type of condition that must be
@@ -3265,7 +3225,7 @@ simulation.
                         key=f"_bccPeriod{id}",
                         disabled=not useBCCToggle,
                         on_change=dynamicScaleChange,
-                        args=["bccPeriod", "bccTimeForm", id],  # type: ignore
+                        args=["bccPeriod", "bccTimeForm", id],
                         help="""
 The time period during which background
 contact count (BCC) will be reduced in
@@ -3307,17 +3267,13 @@ the day on which BCC will return to normal.
                     )
 
         # Reduced BCC rate
+        # TODO: Is this precise slider too difficult to control?
         loadKey("bccReducedRate", id, 0.2)
         bccReducedRate = st.slider(
-            (
-                (
-                    "Reduced Background Contact Count (Average "
-                    "Number of Interactions per Person per Day)"
-                )
-            ),
-            0.0,
-            8.0,
-            0.2,
+            "Reduced Background Contact Count (Interactions per Person per Day)",
+            min_value=0.0,
+            max_value=8.0,
+            value=0.2,
             disabled=not useBCCToggle,
             on_change=saveKey,
             args=["bccReducedRate", id],
@@ -3369,8 +3325,7 @@ effect, overwriting the normal BCC rate.
             key=f"triggerContainer{id}",
             on_change="rerun",
         ):
-            st.markdown(
-                """
+            st.markdown("""
                 These parameters affect the threshold values that must
                 be reached for non-pharmaceutical
                 interventions to be triggered in the simulation. Due to
@@ -3388,11 +3343,11 @@ effect, overwriting the normal BCC rate.
                 likelihood of an infected individual being diagnosed as
                 a case can be configured in the "Health Burden
                 Outcomes" section of the "Community" tab.
-            """
-            )
+            """)
 
             # Display values based on what is used by the triggers
             # TODO: Account for NPI toggles being off
+            # TODO: Rewrite to not need seven type: ignores
             interventionTriggers = [
                 schoolClosureTrigger,  # type: ignore
                 withdrawalIncreaseTrigger,  # type: ignore
@@ -3426,7 +3381,7 @@ effect, overwriting the normal BCC rate.
                 if usesRates or classDismissal:  # type: ignore
                     # Display links to NPIs that use rates (including
                     # the non-standard Class Dismissal if applicable)
-                    st.subheader("Case Rate Trigger Thresholds")
+                    st.subheader("Case Rate Trigger Thresholds", divider="grey")
                     st.markdown(
                         """
                             The following interventions currently use
@@ -3447,15 +3402,16 @@ effect, overwriting the normal BCC rate.
                     )
 
                     # Set rate thresholds
+                    # TODO: Are the slider mins/maxes realistic?
                     loadKey("rateStartThreshold", id, 10)
                     rateStartThreshold = st.slider(
                         "Start Trigger Threshold Rate (Cases per Day)",
-                        0,
-                        100,
-                        10,
+                        min_value=0,
+                        max_value=100,
+                        value=10,
                         key=f"_rateStartThreshold{id}",
                         on_change=saveKey,
-                        args=["rateStartThreshold", id],  # type: ignore
+                        args=["rateStartThreshold", id],
                         help="""
 Any interventions set to trigger using the
 "Community Case Rate" condition will begin
@@ -3466,12 +3422,12 @@ number of newly diagnosed cases per day exceeds this value.
                     loadKey("rateRelaxThreshold", id, 5)
                     rateRelaxThreshold = st.slider(
                         "Relaxation Trigger Threshold Rate (Cases per Day)",
-                        0,
-                        100,
-                        5,
+                        min_value=0,
+                        max_value=100,
+                        value=5,
                         key=f"_rateRelaxThreshold{id}",
                         on_change=saveKey,
-                        args=["rateRelaxThreshold", id],  # type: ignore
+                        args=["rateRelaxThreshold", id],
                         help="""
 Any active interventions set to trigger
 using the "Community Case Rate" condition
@@ -3512,14 +3468,10 @@ per day goes below this value.
                         False,
                     )
 
-                # Divider if both are present
-                if usesRates and usesTotals:
-                    st.divider()
-
                 # Case totals
                 if usesTotals:
                     # Display links to NPIs that use totals
-                    st.subheader("Case Total Trigger Thresholds")
+                    st.subheader("Case Total Trigger Thresholds", divider="grey")
                     st.markdown(
                         """
                             The following interventions currently use
@@ -3535,6 +3487,7 @@ per day goes below this value.
                     )
 
                     # Set total threshold
+                    # TODO: Use population as maximum
                     loadKey("caseTotalThreshold", id, 1000)
                     caseTotalThreshold = st.number_input(
                         "Start Trigger Case Threshold (Total Community Cases)",
@@ -3543,7 +3496,7 @@ per day goes below this value.
                         1000,
                         key=f"_caseTotalThreshold{id}",
                         on_change=saveKey,
-                        args=["caseTotalThreshold", id],  # type: ignore
+                        args=["caseTotalThreshold", id],
                         placeholder="Enter a whole number of cases",
                         help="""
 Any interventions set to trigger using the
@@ -4222,12 +4175,10 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             baseTarget = baseCoverage.Target
             updateParamFromSchema("targetVaccinated", baseTarget, scenarioID)
         elif scenarioID == 0:
-            raise AssertionError(
-                """
+            raise AssertionError("""
                 Schema does not include general vaccine coverage
                 proportions for the baseline scenario
-                """
-            )
+                """)
         else:
             baseInitial = idGet("initialVaccinated", 0, 0.0)
             baseTarget = idGet("targetVaccinated", 0, 0.8)

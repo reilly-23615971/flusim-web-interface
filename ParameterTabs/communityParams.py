@@ -146,7 +146,7 @@ as public transport.
             "Case Diagnosis Delay (Days)",
             min_value=0.0,
             max_value=14.0,
-            value=1,
+            value=1.0,
             step=0.5,
             format="%f Day(s)",
             on_change=saveKey,
@@ -201,7 +201,7 @@ The maximum size of classes within schools in the simulation.
             5,
             1,
             on_change=saveKey,
-            args=["maxClassCount", id],  # type: ignore
+            args=["maxClassCount", id],
             key=f"_maxClassCount{id}",
             help="""
 The maximum number of subgroups that may exist
