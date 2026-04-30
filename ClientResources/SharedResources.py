@@ -44,8 +44,7 @@ templateDict = {
         "microbiology",
         "ClientResources/Templates/default.json",
         """
-The dashboard's default parameters, simulating an influenza outbreak with no
-additional mitigation strategies.
+Parameters simulating an influenza outbreak with an existing vaccinated population.
         """,
     )
 }

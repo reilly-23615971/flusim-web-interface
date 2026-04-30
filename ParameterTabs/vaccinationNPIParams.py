@@ -161,6 +161,7 @@ will be vaccinated against the pathogen.
             vaccines are administered and what proportion of the
             population is already vaccinated.
         """)
+        # TODO: Get data for a more accurate default
         loadKey("firstDoseRate", id, 300)
         st.number_input(
             "Vaccination Rate (Vaccinations per Day)",
@@ -297,7 +298,7 @@ may be lower if there are an insufficient number of doses available.
         paramError(
             "vaccineTargetAlreadyFulfilled",
             id,
-            lambda: useVaccinesToggle and initialVaccinated >= targetVaccinated,
+            lambda: useVaccinesToggle and initialVaccinated > targetVaccinated,
             f"""
                 Warning: The target vaccinated proportion of
                 population in the {
