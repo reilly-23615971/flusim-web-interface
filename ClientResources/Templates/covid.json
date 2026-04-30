@@ -1,0 +1,132 @@
+{
+    "Scenario_ParameterWithAgePrefix": {
+        "mort": 0.00009577
+    },
+    "Scenario_Parameter": {
+        "seed_rate": 0.125,
+        "seeding_duration": 60,
+        "seeding_start_cycle": 0,
+        "beta_asymptomatic": 0.55,
+        "beta_post_symptomatic": 0.55,
+        "kappa_household": 2.2,
+        "kappa_child_education": 1.0,
+        "kappa_workplace": 1.0,
+        "kappa_background": 1.0,
+        "prob_asymptomatic": 0.35,
+        "prob_asymptomatic_young": 0.35,
+        "transmissibility_delay": 6,
+        "symptom_latency": 10,
+        "generation_time": 18,
+        "infection_duration": 18,
+        "prob_withdrawal": 0.5,
+        "prob_school_withdrawal": 0.9,
+        "prob_hospitalisation": 0.006415,
+        "prob_icu": 0.001283,
+        "prob_diagnosis": 0.33,
+        "prob_gp": 0.17,
+        "prob_child_supervision": 1.0,
+        "background_contact_count": 4.0,
+        "max_class_size": 10,
+        "max_workgroup_size": 10,
+        "diagnosis_delay": 0,
+        "case_trigger_threshold": 1000,
+        "rate_trigger_threshold": 1,
+        "rate_relaxation_threshold": 0,
+        "maximum_trigger_count": 250,
+        "social_distance_compliance": 0.0,
+        "diagnosed_case_isolation": true,
+        "class_dismissal": false,
+        "infection_waning_cycle_delay": 720,
+        "infection_waning_rate_per_cycle": 0.005,
+        "infection_waned_protection": 0.5,
+        "school_closure_compliance": 0.5,
+        "school_closure_trigger": "none",
+        "school_closure_relaxation": "none",
+        "school_closure_duration": 720,
+        "school_closure_delay": 0,
+        "withdrawal_increase_trigger": "community_rate",
+        "withdrawal_increase_relaxation": "none",
+        "withdrawal_increase_delay": 0,
+        "withdrawal_increase_duration": 720,
+        "increased_withdrawal": 0.9,
+        "increased_withdrawal_child": 1.0,
+        "reduced_workgroup_size": 5,
+        "reduced_workgroup_trigger": "none",
+        "reduced_workgroup_relaxation": "none",
+        "reduced_workgroup_delay": 0,
+        "reduced_workgroup_duration": 720,
+        "bcc_reduction": 0.4,
+        "bcc_reduction_trigger": "community_rate",
+        "bcc_reduction_relaxation": "none",
+        "bcc_reduction_delay": 0,
+        "bcc_reduction_duration": 0,
+        "vaccine_doses": 0,
+        "vaccination_first_dose_rate": 300,
+        "vaccination_trigger": "timed",
+        "vaccination_relaxation": "timed",
+        "vaccination_delay": 0,
+        "vaccination_duration": 720,
+        "young_infant_trans": 0.5,
+        "infant_trans": 0.5,
+        "young_child_trans": 0.5,
+        "child_trans": 0.5,
+        "young_infant_mort": 0.0,
+        "infant_mort": 0.0,
+        "young_child_mort": 0.00000424,
+        "child_mort": 0.000003704,
+        "adolescent_mort": 0.00002684,
+        "young_adult_mort": 0.00003976,
+        "adult_mort": 0.00009577,
+        "older_adult_mort": 0.000966,
+        "senior_mort": 0.004356,
+        "older_senior_mort": 0.0159
+    },
+    "Scenario_Strain": [
+        {
+            "StrainId": 0,
+            "Beta": 0.152,
+            "SeedingWeight": 1
+        }
+    ],
+    "Scenario_VaccineCoverage": [
+        {
+            "Age": null,
+            "Initial": 0.8,
+            "Target": 0.8
+        },
+        {
+            "Age": "young_infant",
+            "Initial": 0.0,
+            "Target": 0.0
+        },
+        {
+            "Age": "infant",
+            "Initial": 0.0,
+            "Target": 0.0
+        },
+        {
+            "Age": "young_child",
+            "Initial": 0.0,
+            "Target": 0.0
+        }
+    ],
+    "Scenario_VaccineDose": [
+                {
+            "DoseType": "primary",
+            "Count": 1,
+            "DoseSpacingCycles": 56,
+            "WaningDelay": 360,
+            "WaningRatePerCycle": 0.0
+        }
+    ],
+    "Scenario_VaccineDoseEfficacy": [
+        {
+            "DoseType": "primary",
+            "Age": null,
+            "Efficacy": [
+                0.88
+            ],
+            "WanedEfficacy": 0.0
+        }
+    ]
+}

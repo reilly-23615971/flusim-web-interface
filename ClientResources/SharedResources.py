@@ -46,8 +46,20 @@ templateDict = {
         """
 Parameters simulating an influenza outbreak with an existing vaccinated population.
         """,
-    )
+    ),
+    "COVID-19": (
+        "coronavirus",
+        "ClientResources/Templates/covid.json",
+        """
+Parameters simulating a SARS-CoV-2 Delta outbreak with moderate NPIs enabled.
+        """,
+    ),
 }
+
+# TODO: COVID-19 Preset
+# Based on Delta as opposed to Omicron
+# R0 is 6.0; work out transmission beta from there (files say 0.267)
+# Check that case/death ratios don't need further processing
 
 
 # Dictionary holding ordinal strings for variable-length forms
