@@ -28,7 +28,7 @@ except ImportError:
     import streamlit_notify as stn  # type: ignore
 
 from ClientResources.DownloadFunctions import createConfig
-from ClientResources.InterfaceFunctions import errorChecker
+from ClientResources.InterfaceFunctions import errorChecker, timeString
 from ClientResources.ParameterFunctions import idGet
 from ClientResources.SharedResources import (
     AnalysisFile,
@@ -55,6 +55,27 @@ session = st.session_state
 cancelSimThread = threading.Event()
 
 
+def runtimeEstimate(days: int, runs: int, scenarios: int) -> int:
+    """
+    Simple function estimating how long a simulation will take based on its
+    length. This uses a linear function derived from testing at various lengths
+    with default parameters (excluding immunity waning, which is as low as possible
+    to ensure constant infections). The actual length of a given simulation is
+    dependent on the number of infections, so this estimate is only a rough guess.
+
+    Parameters:
+        days (int): The number of days the simulation will run for.
+
+        runs (int): The number of simulation runs that will be done for each scenario.
+
+        scenarios (int): The number of scenarios defined in the simulation.
+
+    Returns:
+        int: The estimated number of seconds the simulation will run for.
+    """
+    return round((0.0948297101449275 * days - 2.977807971014478) * runs * scenarios)
+
+
 @st.dialog("Run Simulation Experiment", width="large", icon=":material/motion_play:")
 def runSimulationButton():
     """
@@ -67,21 +88,17 @@ def runSimulationButton():
     # List scenarios
     scenarioCount = session.get("scenarioCount", 0)
     if scenarioCount == 0:
-        st.markdown(
-            f"""
+        st.markdown(f"""
 With the current parameters, this modelling experiment will use the
 "{session.get('community', 'newcastle').capitalize()}"
 community data to simulate the baseline scenario.
-    """
-        )
+    """)
     else:
-        st.markdown(
-            f"""
+        st.markdown(f"""
 With the current parameters, this modelling experiment will use the
 "{session.get('community', 'newcastle').capitalize()}"
 community data to simulate each of the following {scenarioCount + 1} scenarios:
-        """
-        )
+        """)
         with st.container() if scenarioCount < 10 else st.expander("Scenario Names"):
             st.markdown(
                 "- Baseline\n"
@@ -122,13 +139,28 @@ simulation.
         """,
                 icon=":material/bar_chart_off:",
             )
-            # TODO: Display estimated simulation run time
-        st.markdown(
-            """
+
+        # Get estimated simulation runtime
+        dayCount = session.get("cycleCount", 360)
+        runCount = session.get("runCount", 24)
+        estimatedTime = runtimeEstimate(dayCount, runCount, scenarioCount + 1)
+        # TODO: See if mm:ss is an okay format or if spelling it out is better
+        st.metric(
+            f"Estimated Time to Run Simulation Experiment",
+            value=timeString(estimatedTime),
+            border=True,
+            help="""
+This estimate is based on the length of each simulation run, the number of runs
+per scenario and the number of scenarios you have defined. The actual duration
+of the simulation experiment may differ from this estimate depending on other
+simulation parameters, as well as whether or not the simulation server is
+already busy with a different task.
+            """,
+        )
+        st.markdown("""
             Are you sure you want to begin running simulations with the
             selected parameters?
-        """
-        )
+        """)
         if st.button(
             "Confirm",
             key="confirmRunButton",
@@ -461,16 +493,12 @@ async def runModelStatus(session: ClientSession, simulationID: str, parameterJSO
                         case "error":
                             # TODO: Better error handling
                             statusQueue.append("Experiment halted due to error")
-                            functionLog.error(
-                                f"""
+                            functionLog.error(f"""
 [runModelStatus] Server encountered an error while running the simulation {simulationID}
-                                """
-                            )
-                            raise Exception(
-                                """
+                                """)
+                            raise Exception("""
 An error occurred while attempting to run the simulation.
-                                """
-                            )
+                                """)
                         case _:
                             progress, status = progressDict[simStatus]
                             # Prevent duplicate status messages

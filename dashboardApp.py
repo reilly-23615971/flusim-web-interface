@@ -23,6 +23,7 @@ except ImportError:
     importlib.reload(importlib.import_module("streamlit_notify"))
     import streamlit_notify as stn  # type: ignore
 
+from ClientResources.InterfaceFunctions import timeString
 from ClientResources.SharedResources import (
     currentProgress,
     errorQueue,
@@ -37,16 +38,14 @@ st.set_page_config(
     page_title="Flusim Web Dashboard",
     page_icon=":material/microbiology:",
     layout="wide",
-    menu_items={
-        "About": """
+    menu_items={"About": """
         ## Flusim Web Dashboard
         This dashboard is designed to work with the *Flusim* model
         designed by the UWA Software Modelling Research Group.
         ##### Additional Credits
         Colour palette for scenarios created by Paul Tol
         https://sronpersonalpages.nl/~pault/
-    """
-    },
+    """},
 )
 
 # Logging config
@@ -224,10 +223,9 @@ ensure all scenarios do not possess any errors and try again.
                 # TODO: send time string to status queue
                 session.simulationEndTime = datetime.now()
                 totalTime = session.simulationEndTime - session.simulationStartTime
-                seconds = str(totalTime.seconds % 60).zfill(2)
-                timeString = f"{totalTime.seconds // 60}:{seconds}"
+                formattedTime = timeString(totalTime.total_seconds())
                 notifyToast(
-                    f"Simulation complete! Total duration: {timeString}",
+                    f"Simulation complete! Total duration: {formattedTime}",
                     icon=":material/check_circle:",
                 )
                 appLog.info("[updateData] Data processing is complete.")

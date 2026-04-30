@@ -31,7 +31,6 @@ saveJSON = False
 maxScenarios = 30
 
 # Change this constant to affect the scenario/analysis progress bar split
-# TODO: See if 75/25 or 65/35 splits are better
 splitPoint = 0.65
 
 # URLs where client/server is located (change to hosted URLs)
@@ -53,13 +52,11 @@ Parameters simulating an influenza outbreak with an existing vaccinated populati
         """
 Parameters simulating a SARS-CoV-2 Delta outbreak with moderate NPIs enabled.
         """,
+        # R0 is 6; should that be mentioned?
+        # TODO: Replace increased withdrawal in COVID template
+        # with workplace nonattendance when it's added again
     ),
 }
-
-# TODO: COVID-19 Preset
-# Based on Delta as opposed to Omicron
-# R0 is 6.0; work out transmission beta from there (files say 0.267)
-# Check that case/death ratios don't need further processing
 
 
 # Dictionary holding ordinal strings for variable-length forms

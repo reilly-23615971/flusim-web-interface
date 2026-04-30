@@ -111,13 +111,11 @@ included in this file.
         """,
     ) as pop:
         if pop.open:
-            st.markdown(
-                """
+            st.markdown("""
                 Would you like to download the currently selected parameter settings
                 as a JSON file? This will allow you to load the settings onto the
                 dashboard at a later date instead of manually setting them again.
-            """
-            )
+            """)
             st.download_button(
                 "Confirm",
                 createConfig(session.get("scenarioCount", 0) + 1).model_dump_json(
@@ -275,34 +273,28 @@ def loadConfig(file: BytesIO):
     try:
         # Simulation engine settings
         if len(schema.community_used) > 1:
-            raise AssertionError(
-                """
+            raise AssertionError("""
                 The selected parameter schema includes multiple
                 communities in `community_used`. The dashboard currently only
                 supports simulating a single community at a time; please
                 remove any excess communities from the JSON file.
-                """
-            )
+                """)
         if schema.community_used[0] not in communityPopulation:
-            raise AssertionError(
-                f"""
+            raise AssertionError(f"""
                 The selected parameter schema uses the community
                 "{schema.community_used[0]}". The dashboard currently only
                 supports `newcastle` and `cairns` as communities; please
                 change the value in the JSON file's `community_used` field to
                 one of these.
-                """
-            )
+                """)
         if schema.community_overrides:
             if len(schema.community_overrides) > 1:
-                raise AssertionError(
-                    """
+                raise AssertionError("""
                     The selected parameter schema includes multiple
                     `community_overrides` sections. The dashboard currently only
                     supports simulating a single community at a time; please
                     remove any excess community override sections from the JSON file.
-                    """
-                )
+                    """)
             engineSettings = schema.community_overrides[0]
             session.community = engineSettings.name
 
@@ -337,15 +329,13 @@ def loadConfig(file: BytesIO):
 
         # Scenario parameters
         if len(schema.simulation_sets) > 1:
-            raise AssertionError(
-                """
+            raise AssertionError("""
                     The selected parameter schema includes multiple
                     `simulation_sets` objects. Parameter files for the dashboard
                     put all scenarios in a single set, such that there should
                     be only one `simulation_sets` object. Please modify the
                     JSON file so that there is only one `simulation_sets` object.
-                    """
-            )
+                    """)
         simulationList = schema.simulation_sets[0].simulations
         scenarioCount = session.get("scenarioCount", 0)
         # Delete current scenarios in order to start fresh
@@ -397,17 +387,21 @@ def loadConfig(file: BytesIO):
     st.rerun()
 
 
-def createTemplate(scenarioID: int) -> Parameters:
+def createTemplate(scenarioID: int, includeInterventions: bool = True) -> Parameters:
     """
     Function to generate a JSON config object from a single scenario's parameters.
 
     Parameters:
         scenarioID (int): The ID representing the scenario to make a template from.
 
+        includeInterventions (bool): Set to True to not include any vaccination or
+            NPI parameters in the template, such as when performing R0 analysis.
+
     Returns:
         Parameters: A Pydantic object storing the template parameters
             in a format that can be loaded easily.
     """
+
     # Set up schema objects
     session = st.session_state
     useAdvanced = session.get("showAdvanced", False)
@@ -415,7 +409,8 @@ def createTemplate(scenarioID: int) -> Parameters:
 
     diseaseSaveSchema(template, scenarioID, useAdvanced)
     communitySaveSchema(template, scenarioID, useAdvanced)
-    vaccineSaveSchema(template, scenarioID, useAdvanced)
+    if includeInterventions:
+        vaccineSaveSchema(template, scenarioID, useAdvanced)
     if useAdvanced:
         dynamicSaveSchema(template, scenarioID)
     return template

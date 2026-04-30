@@ -159,6 +159,29 @@ def dayCount(count: int | float):
     return "1 Day" if count == 1 else f"{count:g} Days"
 
 
+def timeString(time: int | float) -> str:
+    """
+    Function to format a number of seconds in mm:ss (or h:mm:ss) format.
+
+    Parameters:
+        time (int or float): The number of seconds.
+
+    Returns:
+        str: The time as a string in either h:mm:ss or mm:ss format.
+    """
+    if time > 3600:
+        return "{hours} hours, {minutes} minutes, {seconds} seconds".format(
+            hours=time // 3600,
+            minutes=str(time % 3600).zfill(2),
+            seconds=str(time % 60).zfill(2),
+        )
+    else:
+        return "{minutes} minutes, {seconds} seconds".format(
+            minutes=time // 60,
+            seconds=str(time % 60).zfill(2),
+        )
+
+
 def saveName(
     key: str,
     scenarioID: int,
