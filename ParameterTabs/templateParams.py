@@ -81,12 +81,10 @@ def scenarioTemplateButton(currentID: int, newID: int):
     """
     # Validate scenario ID
     if newID == 0:
-        templateLog.error(
-            """
+        templateLog.error("""
 [scenarioTemplateButton] Tried to load baseline scenario as template;
 use resetScenario for that!
-            """
-        )
+            """)
         st.rerun()
     if currentID == newID:
         templateLog.error(
@@ -99,15 +97,13 @@ use resetScenario for that!
 
     currentName = session[f"scenarioName{currentID}"]
     newName = session[f"scenarioName{newID}"]
-    st.markdown(
-        f"""
+    st.markdown(f"""
 Are you sure you want to replace the parameter values in the
 {"baseline scenario" if currentID == 0 else f'scenario named "{currentName}"'}
 with the values from the
 {"baseline scenario" if newID == 0 else f'scenario named "{newName}"'}?
 Note that this will not change the names of either scenario.
-        """
-    )
+        """)
     if currentID == 0:
         st.warning(
             body="""
@@ -149,13 +145,11 @@ def scenarioResetButton(scenarioID: int):
     # Disable button if it's taking a while to update parameters
     templatePending = bool(session.get("confirmTemplateButton"))
 
-    st.markdown(
-        f"""
+    st.markdown(f"""
 Are you sure you want to reset the parameter values in the scenario named
 "{session[f"scenarioName{scenarioID}"]}" to the values from the baseline
 scenario? Note that this will not change the scenario's name.
-        """
-    )
+        """)
     if st.button(
         "Confirm",
         key="confirmTemplateButton",
@@ -180,12 +174,10 @@ def buildTemplateTab(scenarioID: int):
 
     # Tab Content
     st.header("Parameter Templates")
-    st.markdown(
-        """
+    st.markdown("""
         This tab allows for presets representing existing infectious diseases
         or scenarios to be loaded onto the dashboard.
-    """
-    )
+    """)
 
     # Disease Templates
     st.subheader(
@@ -195,7 +187,6 @@ The templates in this section use parameter settings that replicate a real-life
 disease or situation.
         """,
     )
-    # TODO: Influenza and COVID-19
     # TODO: Load parameter defaults directly from flu template
     # rather than having them be hardcoded
     for templateName, (icon, templatePath, description) in templateDict.items():
@@ -209,7 +200,6 @@ disease or situation.
         )
 
     # Scenario Templates
-    # TODO: Make sure copying scenario params onto baseline works as intended
     scenarioCount = session.get("scenarioCount", 0)
     if scenarioCount > 0:
         st.subheader(

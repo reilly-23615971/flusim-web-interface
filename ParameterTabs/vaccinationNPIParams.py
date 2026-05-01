@@ -216,7 +216,6 @@ vaccinated individuals in the simulation.
                     """,
                 )
         # TODO: See if imprecise percent sliders are better than no-percent inputs
-        # TODO: Check the format
         leftCol, rightCol = st.columns(2)
         loadKey("initialVaccinated", id, 0.0)
         initialVaccinated = leftCol.number_input(
@@ -2274,7 +2273,6 @@ healthy when exposed to the pathogen.
                 session[f"ageBoostEfficacyError{id}"] = 0'''
 
     # NPIs
-    # TODO: NPI Presets
     st.subheader("Non-Pharmaceutical Intervention (NPI) Parameters")
 
     # General NPIs
@@ -4237,8 +4235,6 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
     schemaDose = schema.Scenario_VaccineDose
     if schemaDose is not None:
         useVaccines = True
-        # TODO: Make sure stuff like duplicate primary vaccines are caught
-        # in validation before this function is called
 
         # Primary vaccines
         if any(dose.DoseType == "primary" for dose in schemaDose):
@@ -4256,9 +4252,6 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             updateParamFromSchema(
                 "vaccineWaningToggle", bool(primaryRatePerCycle), scenarioID
             )
-
-            # TODO: See if waning-free default rate per cycle being 0.01 will
-            # interfere with what value is loaded for waning duration
 
         # Booster Vaccines
         if any(dose.DoseType == "booster" for dose in schemaDose):
@@ -4551,15 +4544,6 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
         useSocialDistancing = useSocialDistancing or bool(
             paramDict.get("social_distance_compliance", 0.0) > 0.0
         )
-        # TODO: Make sure these aren't necessary
-        """if "school_closure_compliance" in paramDict:
-            useNPIs["schoolClosure"] = True
-        if "increased_withdrawal" in paramDict:
-            useNPIs["withdrawalIncrease"] = True
-        if "reduced_workgroup_size" in paramDict:
-            useNPIs["reducedGroup"] = True
-        if "bcc_reduction" in paramDict:
-            useNPIs["bcc"] = True"""
 
         # Social Distancing Table
         distanceParams = {

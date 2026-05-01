@@ -66,7 +66,6 @@ and has a higher Indigenous population compared to Newcastle.
     """,
 )
 
-# TODO: Notify users if parameters are changed when cycle count is adjusted
 loadKey("cycleCount", default=360)
 st.slider(
     "Length of Simulation (Days)",
@@ -122,8 +121,6 @@ uploadDownloadBar()
 
 # Button to run the simulation
 # TODO: Check if server is available and grey out button if not
-# TODO: consider adding progress updates to the sidebar (time remaining,
-# progress bars, server availability etc.)
 st.button(
     label=(
         "Running simulations..."
@@ -152,8 +149,6 @@ before running another one.
 )
 
 
-# TODO: Work out best place for this (should run button be hidden?
-# Is disappearing after rerun OK?)
 @st.fragment(run_every=1)
 def simulationProgressBar():
     """
@@ -200,7 +195,7 @@ def simulationProgressBar():
 if simulationInProgress or session.keepProgressBar:
     simulationProgressBar()
 
-# TODO: stop button
+# Stop Simulation Button
 if simulationInProgress:
     st.button(
         label="Cancel Simulation",

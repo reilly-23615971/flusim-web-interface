@@ -165,13 +165,11 @@ def generateTable():
         else []
     )
     useColour = session.get("colourToggle")
-    tableLog.info(
-        f"""
+    tableLog.info(f"""
         [generateTable] Formatting Asir data using the scenarios
         {scenariosUsed} (of {scenarioNames}), the age groups {agesUsed}
         and the following columns: {columnDetails}'
-    """
-    )
+    """)
 
     # Debug code for loading data in testing
     if usePresetData:
@@ -355,22 +353,18 @@ def generateTable():
 
 st.title("Health Burden Tables")
 
-st.markdown(
-    """
+st.markdown("""
     Here you can generate and save tables comparing various health
     burden outcomes (e.g. infections, diagnosed cases, deaths) between
     the different scenarios from the most recently ran simulation.
-"""
-)
+""")
 
 # Modify CSS to avoid age group names being cut off
-st.html(
-    """
+st.html("""
         <style>
             .stMultiSelect [data-baseweb=select] span{max-width: 500px;}
         </style>
-    """
-)
+    """)
 
 # Save relevant params as variables to avoid lookups
 disableTable = False
@@ -416,15 +410,13 @@ if currentDataExists and session.simulationInProgress:
 # Form (container) for selecting table settings
 tableSettings = st.expander("Table Settings")
 with tableSettings:
-    st.markdown(
-        """
+    st.markdown("""
         Use these parameters to configure how the table will be generated.
         Hover your mouse over the :material/help: help icon next to a
         setting's input field to show an explanation of what that setting
         does. Hover your mouse over any buttons to show an explanation of
         what that button does.
-    """
-    )
+    """)
 
     # Scenario and age group selection
     st.subheader("Scenario and Age Group Selection")
@@ -582,7 +574,6 @@ magnitude of the difference.
     )
 
     # Variable-length form for choosing columns
-    # TODO: Axe the duplicate column rule
     # TODO: Either fix or prevent percentage infection >100 due to reinfection
     st.subheader(
         "Select Health Burden Columns",
@@ -631,7 +622,6 @@ included in the table.
                 "Health Burden Outcome",
                 required=True,
                 options=tableOutcomes,
-                # TODO: Should we explain all the outcomes in this tooltip?
                 help="""
 Select the health burden outcome you would like to be included as a column on the table.
 ### Options:
@@ -753,7 +743,7 @@ Age Group Separation mode before attempting to generate a table.
         )
         and healthColumnForm["Options"].isin([["Percentage"]]).any()
     ):
-        # TODO: Ensure this reflects the sim data's parameters and not
+        # TODO: Make this reflect the sim data's parameters and not
         # the current parameters since they may differ
         st.warning(
             """
@@ -997,8 +987,7 @@ Download the above table as a CSV file.
     burdenDataDownload()
 
     st.subheader("Using the Table")
-    st.markdown(
-        """
+    st.markdown("""
         - Use the scroll bars on the right and bottom edges of the
         table to scroll and view rows/columns that are not immediately
         visible.
@@ -1024,8 +1013,7 @@ Download the above table as a CSV file.
         - Click the :material/fullscreen: fullscreen symbol to put the
         table in fullscreen; click it again to return to viewing the
         whole dashboard.
-    """
-    )
+    """)
 
 
 # st.header('DEBUG ZONE')

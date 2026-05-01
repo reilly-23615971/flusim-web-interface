@@ -30,8 +30,7 @@ session = st.session_state
 
 st.title("Baseline Parameters")
 
-st.markdown(
-    """
+st.markdown("""
     This page allows for configuring the parameters that will be used
     as a baseline for the simulation.
 
@@ -47,8 +46,7 @@ st.markdown(
     different values defined at the
     :grey-badge[:material/variable_add: Scenario Parameters]
     page, overwriting these base values.
-"""
-)
+""")
 
 # Buttons to upload simulation parameters
 uploadDownloadBar()
@@ -73,16 +71,9 @@ dynamic parameter updates.
     """,
 )
 
-# TODO: Consider having a tab for templates that load parameters for
-# specific stuff (e.g. influenza, NPI presets)
-# TODO: Check studies for better parameter defaults/ranges
-# TODO: Check parameters where slider is bad for selecting and either
-# change scale or switch to number input
-
 # Create tabs for each category of parameters
-# TODO: :material/pattern: or :material/list_alt: for the template tab
 if showAdvanced:
-    (diseaseTab, communityTab, interventionTab, dynamicTab, templateTab) = st.tabs(
+    diseaseTab, communityTab, interventionTab, dynamicTab, templateTab = st.tabs(
         [
             ":material/coronavirus: Pathogen",
             ":material/groups: Community",
@@ -94,7 +85,7 @@ if showAdvanced:
         key="paramTabs0",
     )
 else:
-    (diseaseTab, communityTab, interventionTab, templateTab) = st.tabs(
+    diseaseTab, communityTab, interventionTab, templateTab = st.tabs(
         [
             ":material/coronavirus: Pathogen",
             ":material/groups: Community",

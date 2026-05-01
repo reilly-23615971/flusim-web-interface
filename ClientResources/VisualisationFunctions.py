@@ -515,11 +515,9 @@ def generateAsir(
         ValueError: If `scenarioNames` is not a list of strings or columns
             are not formatted correctly.
     """
-    # TODO: More options
     # TODO: Improve efficiency (don't calculate age rows if ageSeparation isn't By Row)
 
     # Validate parameters
-    # TODO: Update to account for expanded parameters
     try:
         if not scenarioNames:
             raise ValueError("scenarioNames should not be empty.")
@@ -670,7 +668,6 @@ def generateAsir(
 
         # Apply proportion/difference modifications
         # TODO: Either fix or disable just proportion
-        # TODO: See if there's a better way to handle the 2 booleans
         if proportion and not baselineDifference:
             # Get required total population
             if ageSeparation == "By Column":

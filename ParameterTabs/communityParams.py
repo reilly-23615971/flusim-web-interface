@@ -84,7 +84,6 @@ def buildCommunityTab(id: int, advanced: bool = False):
         """
         )'''
     st.subheader("Withdrawals and Contact", divider="grey")
-    # TODO: See if header dividers help here and elsewhere
 
     # The parameters in question
     loadKey("withdrawalWork", id, 0.5)

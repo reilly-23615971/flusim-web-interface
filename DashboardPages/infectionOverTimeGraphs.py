@@ -43,12 +43,10 @@ def generateGraph():
     )
     scenariosUsed = session.get("chartScenariosToUse", "all")
     chartType = session.get("chartType", "Cumulative")
-    graphLog.info(
-        f"""
+    graphLog.info(f"""
         [generateGraph] Formatting epidemic data using the scenarios
         {scenariosUsed} and the data type {chartType}
-    """
-    )
+    """)
 
     # Debug code for loading data in testing
     if usePresetData:
@@ -82,12 +80,10 @@ def generateGraph():
 
 st.title("Infection Over Time Graphs")
 
-st.markdown(
-    """
+st.markdown("""
     Here you can generate line graphs plotting infection rates over
     time for different scenarios in the most recently run simulation.
-"""
-)
+""")
 
 # Check if there is data to tabulate
 chartErrorContainer = st.container()
@@ -119,15 +115,13 @@ if currentDataExists and session.simulationInProgress:
 
 graphSettings = st.expander("Graph Settings")
 with graphSettings:
-    st.markdown(
-        """
+    st.markdown("""
         Use these parameters to configure how the line graph will be generated.
         Hover your mouse over the :material/help: help icon next to a
         setting's input field to show an explanation of what that setting
         does. Hover your mouse over any buttons to show an explanation of
         what that button does.
-    """
-    )
+    """)
 
     loadKey("chartType", "", "Cumulative", noZeroDefault=True)
     chartType = st.selectbox(
@@ -290,10 +284,7 @@ graph.
     infectionDataDownload()
 
     st.subheader("Using the Graph")
-    # TODO: mention how every sim may end early on plateaus and that's why
-    # x-axis ends before number of days? Mention in manual too?
-    st.markdown(
-        """
+    st.markdown("""
         - Hover your mouse over a point on the graph to display a
         tooltip, which lists the infection values for each scenario on
         the corresponding day.
@@ -312,5 +303,4 @@ graph.
         of additional options. With these options you can download the
         graph as an image file or access the Vega source data for the
         graph.
-    """
-    )
+    """)

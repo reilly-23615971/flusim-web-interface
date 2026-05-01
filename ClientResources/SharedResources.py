@@ -223,10 +223,9 @@ statusQueue = list[str]()
 
 class AnalysisFile:
     """
-    Class for analysis file parameters
+    Class for descriptions of analysis files and what data they hold
     """
 
-    # TODO: Flesh out docstrings
     def __init__(
         self,
         tool: Literal["epidemic", "asir"],

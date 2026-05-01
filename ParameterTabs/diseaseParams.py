@@ -115,7 +115,6 @@ The average number of individuals that will be infected directly via infection
 seeding each cycle. Note that each day of the simulation is 2 cycles.
             """,
         )
-        # TODO: Notify users if dynamic parameters are changed
         loadKey("seedPeriod", id, (1, 30))
         st.slider(
             "Infection Seeding Time Period (Days)",
@@ -1390,7 +1389,6 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
             )
         else:
             # Set immunity delay to length of simulation, effectively disabling it
-            # TODO: See if omitting waning params outright has the same effect
             scenarioParams.infection_waning_cycle_delay = (
                 session.get("cycleCount", 360) * 2
             )
@@ -1534,7 +1532,6 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             < session.get("cycleCount", 360) * 2
         ):
             updateParamFromSchema("naturalWaningToggle", True, scenarioID)"""
-        # TODO: Ensure this holds up for scenarios that default to baseline
         updateParamFromSchema(
             "naturalWaningToggle",
             bool(
@@ -1580,8 +1577,6 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                 )
 
             # Calculate efficacy waning duration
-            # TODO: Double-check that conversion method doesn't cause
-            # rounding errors or anything of the sort
             updateParamFromSchema("naturalWaningEfficacy", wanedEfficacy, scenarioID)
             if waningRate in {0.0, 1.0}:
                 updateParamFromSchema("naturalWaningRate", 0, scenarioID)
@@ -1611,8 +1606,6 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                 seedLength = (basePeriodEnd - basePeriodStart + 1) * 2
 
             # Calculate seeding period
-            # TODO: Double-check that conversion method doesn't cause
-            # rounding errors or anything of the sort
             seedPeriodStart = (seedStart // 2) + 1
             seedPeriodEnd = (seedStart + seedLength) // 2
             updateParamFromSchema(
@@ -1662,8 +1655,6 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                     baseLatency + basePreSymptom + baseSymptom + basePostSymptom
                 ) * 2
 
-            # TODO: Double-check that conversion method doesn't cause
-            # rounding errors or anything of the sort
             updateParamFromSchema(
                 "latencyPeriod", transmissibilityDelay / 2, scenarioID
             )

@@ -16,7 +16,6 @@ import streamlit as st
 from aiohttp import ClientConnectorError, ClientResponseError, ClientSession, WSMsgType
 
 # Reload streamlit_notify if it fails the first time
-# TODO: it keeps happening
 try:
     import streamlit_notify as stn
 except ImportError:
@@ -128,7 +127,6 @@ community data to simulate each of the following {scenarioCount + 1} scenarios:
             icon=":material/error:",
         )
     else:
-        # TODO: Ensure any visualisations show this chart warning
         if session.get("ChartGenerated"):
             st.warning(
                 """
@@ -144,7 +142,6 @@ simulation.
         dayCount = session.get("cycleCount", 360)
         runCount = session.get("runCount", 24)
         estimatedTime = runtimeEstimate(dayCount, runCount, scenarioCount + 1)
-        # TODO: See if mm:ss is an okay format or if spelling it out is better
         st.metric(
             f"Estimated Time to Run Simulation Experiment",
             value=timeString(estimatedTime),
@@ -367,7 +364,6 @@ async def runModelStart(parameterJSON: str) -> str:
     Returns:
         str: The ID used to obtain information on the simulation.
     """
-    # TODO: Ensure wrapper handles errors
 
     # Send POST request to server with parameters
     schema = json.loads(parameterJSON)
@@ -546,8 +542,7 @@ async def runModelWebsocket(simulationID: str, parameterJSON: str):
             await runModelCancel(simulationID)
             return
         else:
-            statusTask.result()  # TODO: Check if necessary
-        # TODO: Do we need to catch asyncio.CancelledError here?
+            statusTask.result()
 
 
 async def runModelDownload(simulationID: str) -> list[bytes]:
@@ -560,8 +555,6 @@ async def runModelDownload(simulationID: str) -> list[bytes]:
     Returns:
         list: The analysis files, unzipped and stored as byte data.
     """
-    # TODO: Ensure wrapper handles errors
-
     # Send POST request to server with parameters
     functionLog.info(
         f"[runModelDownload] Downloading analysis data for sim {simulationID}..."
@@ -622,7 +615,6 @@ def runModelWrapper(parameterJSON):
             # Open the websocket
             asyncio.run(runModelWebsocket(simulationID, parameterJSON))
 
-        # TODO: Tidy up the errors
         except Exception as e:
             formatError(e)
         finally:
