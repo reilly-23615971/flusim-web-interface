@@ -451,7 +451,8 @@ def loadTemplate(
 
     try:
         # Load the parameters
-        # TODO: Make sure things work OK when baseline is involved
+        if scenarioID != 0:
+            resetScenario(scenarioID, loud=False)
         diseaseLoadSchema(templateData, scenarioID)
         communityLoadSchema(templateData, scenarioID)
         vaccineLoadSchema(templateData, scenarioID)
@@ -459,7 +460,6 @@ def loadTemplate(
 
         # Load tabs briefly to initialise errors
         # TODO: Find a less hacky way to initialise errors
-        # TODO: Make sure this popover is shown properly
         useAdvanced = session.get("showAdvanced", False)
         placeholderContainer = st.empty()
         with placeholderContainer.popover(
@@ -579,12 +579,14 @@ def deleteScenario(scenarioID: int, openTab: Optional[str] = None):
         stn.toast("Scenario removed!", icon=":material/delete:")
 
 
-def resetScenario(scenarioID: int):
+def resetScenario(scenarioID: int, loud: bool = True):
     """
     Function that resets all parameters in a scenario to their baseline values.
 
     Parameters:
         scenarioID (int): The ID representing the scenario to be reset.
+
+        loud (bool): Set to true to show a notification upon resetting.
     """
     # Delete scenario parameters (excluding the name)
     for param in session["scenarioSetParams"][scenarioID] - {"scenarioName"}:
@@ -594,4 +596,5 @@ def resetScenario(scenarioID: int):
     session["scenarioSetParams"][scenarioID] = set()
     session["scenarioSetParamsExtra"][scenarioID] = set()
     session["activeErrors"][scenarioID] = session["activeErrors"][0]
-    stn.toast("Scenario reset!", icon=":material/settings_backup_restore:")
+    if loud:
+        stn.toast("Scenario reset!", icon=":material/settings_backup_restore:")

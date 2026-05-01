@@ -16,4 +16,5 @@ gatherUsageStats = false
 
 [theme]
 
+# TODO: This breaks light/dark mode; see if that can be fixed
 baseFontSize = 22

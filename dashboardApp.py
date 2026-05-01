@@ -91,6 +91,7 @@ st.logo(":material/microbiology:")
 
 
 # Define application pages
+# TODO: Limit nested containers since apparently they might cause page blanking
 modelDescription = st.Page(
     "DashboardPages/modelDescription.py",
     title="Model Description",

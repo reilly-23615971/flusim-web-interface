@@ -32,12 +32,10 @@ simulationInProgress = session.simulationInProgress
 
 st.title("Run Simulations")
 
-st.markdown(
-    """
+st.markdown("""
     This page lets you configure the simulation engine's settings and
     run the simulation experiment itself.
-"""
-)
+""")
 
 # Global Engine Parameters
 st.header("Simulation Engine Settings")
@@ -218,5 +216,5 @@ simulation with different parameters.
 
 
 # TODO: Debug
-# st.header("DEBUG ZONE")
+# st.header("DEBUG ZONE", anchor="test")
 # st.write(session)
