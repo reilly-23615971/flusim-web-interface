@@ -13,7 +13,6 @@ import streamlit as st
 from pydantic import ValidationError
 
 # Reload streamlit_notify if it fails the first time
-# TODO: it keeps happening
 try:
     import streamlit_notify as stn
 except ImportError:
@@ -196,7 +195,6 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
             dynamicSaveSchema(scenario, id)
 
     # Use middle joint to control options
-    # TODO: Account for more conditionals
     middleJoint = "-dashboard"
     if useVaccines:
         middleJoint += "+vaccines"
@@ -261,7 +259,6 @@ def loadConfig(file: BytesIO):
     try:
         schema = modelGuideFile.model_validate_json(file.read())
     except ValidationError as e:
-        # TODO: Process the full message to show the issues with the loaded file
         validationErrorFormatting(e)
         return
 
@@ -367,9 +364,7 @@ def loadConfig(file: BytesIO):
                 buildDynamicTab(testID)
 
     except AssertionError as e:
-        # TODO: See if it's possible/worthwhile to give
-        # different errors different icons
-        # TODO: Give the errors titles once updated to Streamlit 1.57
+        # TODO: Give the errors icons and titles once updated to Streamlit 1.57
         st.error(body=e, icon=":material/error:")
 
         # Restore session state
@@ -477,7 +472,6 @@ def loadTemplate(
                     buildDynamicTab(testID)
 
     except AssertionError as e:
-        # TODO: Decide how template errors should be handled
         st.error(body=e, icon=":material/error:")
 
         # Restore session state

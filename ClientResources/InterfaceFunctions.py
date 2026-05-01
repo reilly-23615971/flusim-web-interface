@@ -54,7 +54,7 @@ def paramError(
             the simulation if present.
     """
     # TODO: Allow errors to link to the affected parameter
-    # since containers can be dynamically opened now
+    # (if anchor tags are/become possible)
     # TODO: Consider reworking errors so that you don't need to open
     # their tab to generate them
     if condition():
@@ -145,7 +145,6 @@ def validationErrorFormatting(e: ValidationError):
     for error in e.errors():
         # TODO: Use Pydantic's method of subbing in custom messages
         # See https://pydantic.dev/docs/validation/latest/errors/errors/
-        # TODO: Use error type to determine icon to use
         st.error(f"Error: {error["msg"]}", icon=":material/error:")
 
 

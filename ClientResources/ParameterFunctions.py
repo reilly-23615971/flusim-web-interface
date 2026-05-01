@@ -4,10 +4,21 @@
 
 # Imports
 import logging
+import time
 from typing import Any, Callable, Literal, Optional
 
 import pandas as pd
 import streamlit as st
+
+# Reload streamlit_notify if it fails the first time
+try:
+    import streamlit_notify as stn
+except ImportError:
+    import importlib
+
+    time.sleep(0.01)
+    importlib.reload(importlib.import_module("streamlit_notify"))
+    import streamlit_notify as stn  # type: ignore
 
 # Logging
 paramFunctionLog = logging.getLogger(__name__)
@@ -166,43 +177,56 @@ def loadKey(
 # List of parameters that will be affected by changing cycleCount
 # TODO: Add additional parameters or devise a way to automate their addition
 timeParamList = [
-    "seedPeriod",
-    "schoolClosurePeriod",
-    "withdrawalIncreasePeriod",
-    "reducedGroupPeriod",
-    "bccPeriod",
+    ("seedPeriod", "Infection Seeding Time Period"),
+    ("schoolClosurePeriod", "School Closure Time Period"),
+    ("withdrawalIncreasePeriod", "Withdrawal Increase Time Period"),
+    ("reducedGroupPeriod", "Reduced Group Size Time Period"),
+    ("bccPeriod", "BCC Reduction Time Period"),
 ]
 
 # List of parameters that modify dynamic parameter forms when changed
 dynamicParamList = {
-    "seedPeriod": "seedTimeForm",
-    "schoolClosurePeriod": "closeTimeForm",
-    "bccPeriod": "bccTimeForm",
+    "seedPeriod": ("seedTimeForm", "Infection Seeding Rate"),
+    "schoolClosurePeriod": ("closeTimeForm", "School Closure Compliance"),
+    "bccPeriod": ("bccTimeForm", "Reduced Background Contact Count"),
 }
 
 
-# TODO: Notify users if parameters are changed when cycle count is adjusted
 def timeScaleChange():
     """
     Function to update the ranges of time-based parameters.
     """
     saveKey("cycleCount")
     newLength = session["cycleCount"]
+    changedList = []
     for id in range(session["scenarioCount"] + 1):
-        for key in timeParamList:
+        for key, name in timeParamList:
             fullKey = f"{key}{id}"
-            if session.get(fullKey, None):
+            oldValue = session.get(fullKey, None)
+            if oldValue is not None:
+                if oldValue[1] > newLength:
+                    changedList.append(name)
                 session[fullKey] = (
-                    min(session[fullKey][0], newLength),
-                    min(session[fullKey][1], newLength),
+                    min(oldValue[0], newLength),
+                    min(oldValue[1], newLength),
                 )
-    for param, form in dynamicParamList.items():
-        dynamicScaleChange(param, form, 0, noSave=True)
+    for param, (form, name) in dynamicParamList.items():
+        dynamicScaleChange(param, form, name, 0, noSave=True)
+    if changedList:
+        # TODO: Note which scenario these were present in
+        stn.toast(
+            f"""
+These parameters were above the new simulation length,
+so they have been reduced:\n""" + "\n".join(f"- {name}" for name in changedList),
+            icon=":material/timer_arrow_down:",
+            duration="infinite",
+        )
 
 
 def dynamicScaleChange(
     key: str,
     formKey: str,
+    paramName: str,
     scenarioID: int,
     condition: Optional[Callable[[], bool]] = None,
     noSave=False,
@@ -217,6 +241,9 @@ def dynamicScaleChange(
         formKey (str): The identifier used to distinguish the form
             whose ranges must be updated.
 
+        paramName (str): The name of the parameter, to display in messages
+            indicating that something has changed.
+
         scenarioID (int): The integer representing the scenario the widget
             is part of.
 
@@ -227,30 +254,50 @@ def dynamicScaleChange(
         noSave (bool): Set to `True` if running this function from a different
             page where saving the widget value would instead set it to `None`.
     """
+
     if not noSave:
         saveKey(key, scenarioID)
     if condition is None or condition():
+        hasChanged = False
         newMin, newMax = idGet(key, scenarioID, (1, 720))
         if scenarioID == 0:
             # Check all scenarios if the baseline was modified
             for id in range(session["scenarioCount"] + 1):
                 fullKey = f"{formKey}{id}"
                 scenarioMin, scenarioMax = idGet(key, id, (newMin, newMax))
-                if session.get(fullKey, None) is not None:
-                    form = session[fullKey]
-                    form["Day to Update Parameter"] = form[
-                        "Day to Update Parameter"
-                    ].clip(lower=scenarioMin, upper=scenarioMax)
+                form = session.get(fullKey, None)
+                if form is not None and not form.empty:
+                    newDays = form["Day to Update Parameter"].clip(
+                        lower=scenarioMin, upper=scenarioMax
+                    )
+                    if not newDays.equals(form["Day to Update Parameter"]):
+                        hasChanged = True
+                    form["Day to Update Parameter"] = newDays
                     session[fullKey] = form
         else:
             # Only update the relevant scenario
             fullKey = f"{formKey}{scenarioID}"
             form = session.get(fullKey, None)
             if form is not None and not form.empty:
-                form["Day to Update Parameter"] = form["Day to Update Parameter"].clip(
+                newDays = form["Day to Update Parameter"].clip(
                     lower=newMin, upper=newMax
                 )
+                if not newDays.equals(form["Day to Update Parameter"]):
+                    hasChanged = True
+                form["Day to Update Parameter"] = newDays
                 session[fullKey] = form
+
+        # Notify any changes
+        if hasChanged:
+            stn.toast(
+                f"""
+Some of the dynamic update points for {paramName} were outside
+of the new period where {paramName.rsplit(' ', 1)[0]} is active.
+They have been adjusted to fit the new period.
+            """,
+                icon=":material/timer_arrow_down:",
+                duration="infinite",
+            )
 
 
 def idGet(key: str, scenarioID: int, defaultValue, extra: Optional[str] = None):

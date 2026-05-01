@@ -2664,7 +2664,12 @@ rest of the simulation.
                         format="Day %i",
                         key=f"_schoolClosurePeriod{id}",
                         on_change=dynamicScaleChange,
-                        args=["schoolClosurePeriod", "closeTimeForm", id],
+                        args=[
+                            "schoolClosurePeriod",
+                            "closeTimeForm",
+                            "School Closure Time Period",
+                            id,
+                        ],
                         disabled=not useSchoolClosureToggle,
                         help="""
 The time period during which schools
@@ -3227,7 +3232,12 @@ simulation.
                         key=f"_bccPeriod{id}",
                         disabled=not useBCCToggle,
                         on_change=dynamicScaleChange,
-                        args=["bccPeriod", "bccTimeForm", id],
+                        args=[
+                            "bccPeriod",
+                            "bccTimeForm",
+                            "BCC Reduction Time Period",
+                            id,
+                        ],
                         help="""
 The time period during which background
 contact count (BCC) will be reduced in

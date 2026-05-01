@@ -77,14 +77,12 @@ def buildDiseaseTab(id: int, advanced: bool = False):
 
     # Tab Content
     st.header("Pathogen-Related Parameters")
-    st.markdown(
-        """
+    st.markdown("""
         This tab contains parameters relating to the pathogen itself, including
         the rate of infectious individuals entering the modelled community, the
         rate at which the pathogen spreads and how long infection lasts before
         recovery.
-    """
-    )
+    """)
 
     # Seeding Parameters
     simLength = session.get("cycleCount", 360)
@@ -92,15 +90,13 @@ def buildDiseaseTab(id: int, advanced: bool = False):
         "Infection Seeding",  # key=f"infectionSeedingContainer{id}", on_change="rerun"
     ):
         # Describe what sort of parameters are here
-        st.markdown(
-            """
+        st.markdown("""
             These parameters control how infected individuals
             are directly seeded into the community. Seeding is
             typically used to kickstart the initial epidemic by
             ensuring a steady number of people are infected
             daily.
-        """
-        )
+        """)
         loadKey("seedRate", id, 0.25)
         # TODO: Is this enough/too much precision?
         # TODO: Change cycle to half-day?
@@ -128,7 +124,7 @@ seeding each cycle. Note that each day of the simulation is 2 cycles.
             value=(1, 30),
             format="Day %i",
             on_change=dynamicScaleChange,
-            args=["seedPeriod", "seedTimeForm", id],
+            args=["seedPeriod", "seedTimeForm", "Infection Seeding Time Period", id],
             key=f"_seedPeriod{id}",
             help="""
 The time period during which infection seeding will occur in the simulation.
@@ -146,8 +142,7 @@ set to affect the value on Day 45 will be changed to affect it on Day 30 instead
     with st.expander(
         "Infection Transmission",  # key=f"transmissionContainer{id}", on_change="rerun"
     ):
-        st.markdown(
-            """
+        st.markdown("""
             These parameters control the likelihood that the
             pathogen will spread when an infected individual
             interacts with others.
@@ -178,8 +173,7 @@ set to affect the value on Day 45 will be changed to affect it on Day 30 instead
 
             The parameters in this section will control the values
             of each of these parameters under various conditions.
-        """
-        )
+        """)
 
         # Beta and symptom multipliers
         # Previous default for beta was 0.11
@@ -588,17 +582,14 @@ group to contract the pathogen when interacting with infected individuals.
         "Infection Life Cycle",  # key=f"lifeCycleContainer{id}", on_change="rerun"
     ):
         # Describe what sort of parameters are here
-        st.markdown(
-            """
+        st.markdown("""
             These parameters control the pathogen's life cycle,
             including how long individuals are infectious for and
             the likelihood of developing symptoms.
-        """
-        )
+        """)
 
         # Duration Parameters
-        st.markdown(
-            """
+        st.markdown("""
             ### Infection Life Stages
 
             Pathogens in the simulation have 5 distinct stages in
@@ -625,8 +616,7 @@ group to contract the pathogen when interacting with infected individuals.
 
             The following parameters configure the length of each
             stage in the pathogen's life cycle.
-        """
-        )
+        """)
         loadKey("latencyPeriod", id, 0.5)
         # Previous default was 10
         latencyPeriod = st.slider(
@@ -785,12 +775,10 @@ recovered/no longer infectious.
         st.altair_chart(chart)
 
         # Written period lengths
-        st.markdown(
-            """
+        st.markdown("""
             With the parameters defined above, the following time
             periods can be defined:
-        """
-        )
+        """)
         totalCol, incubationCol, infectiousCol = st.columns(
             (0.33333, 0.33333, 0.33333), vertical_alignment="center"
         )
@@ -890,8 +878,7 @@ being infectious).
         # on_change="rerun",
     ):
         # Describe what sort of parameters are here
-        st.markdown(
-            """
+        st.markdown("""
             These parameters control how likely different health
             burden outcomes (such as hospitalisation and death) are
             to occur as a result of the pathogen. These parameters
@@ -906,8 +893,7 @@ being infectious).
             capable of occurring in asymptomatic individuals; the
             probabilities defined here will only apply to people
             who are symptomatic.
-        """
-        )
+        """)
 
         # Health Burden Outcomes
         # TODO: Consider having these be just infected proportion rather than
@@ -1201,8 +1187,7 @@ group who will die as a direct result of the pathogen.
             "Immunity Waning",  # key=f"naturalWaningContainer{id}", on_change="rerun"
         ):
             # Describe what sort of parameters are here
-            st.markdown(
-                """
+            st.markdown("""
                 These parameters control how immunity to the pathogen
                 conferred by having been infected by it in the past
                 will become less effective over time. Note that
@@ -1214,8 +1199,7 @@ group who will die as a direct result of the pathogen.
                 the pathogen that is obtained from vaccination. This
                 type of immunity can be configured using the parameters
                 in the "Vaccinations and NPIs" tab.
-            """
-            )
+            """)
             loadKey("naturalWaningToggle", id, False)
             waningToggle = st.toggle(
                 "Enable Natural Immunity Waning",

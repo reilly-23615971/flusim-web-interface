@@ -12,7 +12,6 @@ from functools import partial
 import streamlit as st
 
 # Reload streamlit_notify if it fails the first time
-# TODO: it keeps happening
 try:
     import streamlit_notify as stn
 except ImportError:
@@ -78,7 +77,7 @@ sessionParameters = {
 for parameter, default in sessionParameters.items():
     session[parameter] = session.get(parameter, default)
 
-# TODO: Load defaults from template
+# TODO: Load defaults from influenza template instead of hardcoding
 
 # TODO: See if an extra cookie package like streamlit-cookie-controller
 # can preserve parameters between refreshed pages
@@ -143,6 +142,7 @@ st.sidebar.link_button(
 )
 
 
+# TODO: Fix the "fragment no longer exists" issues
 @st.fragment(run_every=1)
 def updateData():
     """
@@ -221,7 +221,6 @@ ensure all scenarios do not possess any errors and try again.
                     session[f"modelData{form.dataTag}"] = data
 
                 # Tell the user what's happened
-                # TODO: send time string to status queue
                 session.simulationEndTime = datetime.now()
                 totalTime = session.simulationEndTime - session.simulationStartTime
                 formattedTime = timeString(totalTime.total_seconds())
