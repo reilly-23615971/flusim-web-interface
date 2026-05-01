@@ -195,7 +195,7 @@ triggerConditions = {
 
 # Colour codes for Paul Tol's "bright" colourblind-safe palette
 # (and other pallettes if enough scenarios are created)
-brightCodes = (
+brightCodes = [
     "#BBBBBB",
     "#4477AA",
     "#EE6677",
@@ -208,11 +208,11 @@ brightCodes = (
     "#009988",
     "#332288",
     "#882255",
-)
+]
 
 # Extend pallette list if absolutely necessary
 while len(brightCodes) < maxScenarios:
-    brightCodes = brightCodes + brightCodes  # type: ignore
+    brightCodes = brightCodes + brightCodes
 
 # Queues used to store data from server requests
 resultQueue = Queue[list]()

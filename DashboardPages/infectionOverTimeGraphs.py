@@ -41,7 +41,7 @@ def generateGraph():
         "DataScenarioNames",
         ["Baseline", "School Closure", "Case Isolation", "Community Contact Reduction"],
     )
-    scenariosUsed = session.get("chartScenariosToUse", "all")
+    scenariosUsed = session.get("chartScenariosToUse", scenarioNames)
     chartType = session.get("chartType", "Cumulative")
     graphLog.info(f"""
         [generateGraph] Formatting epidemic data using the scenarios
@@ -69,8 +69,8 @@ def generateGraph():
 
     chartData = plotEpidemic(
         epidemicData,  # type: ignore
-        cumulative=chartType == "Cumulative",
         includedScenarios=scenariosUsed,
+        cumulative=chartType == "Cumulative",
     )
 
     # Save the generated graph

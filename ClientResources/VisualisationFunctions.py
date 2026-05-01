@@ -175,9 +175,9 @@ def formatEpidemic(
 
 def plotEpidemic(
     data: pd.DataFrame,
+    includedScenarios: list[str],
     outcomeName: str = "Symptomatic Infections",
     cumulative=False,
-    includedScenarios: list[str] | Literal["all"] = "all",
 ) -> alt.LayerChart:
     """
     Function to create an Altair line graph of time-series data obtained
@@ -229,6 +229,7 @@ def plotEpidemic(
         )
         raise e
     outcome = "Infections"  # TODO: placeholder until other burdens can be graphed
+
     # Define reusable chart components
     plotTitle = (
         f"Cumulative Median {outcome} Over Time"
@@ -243,13 +244,16 @@ def plotEpidemic(
     legendPicker = alt.selection_point(fields=[colourLabel[:-2]], bind="legend")
     tooltipCondition = alt.when(tooltipPicker)
     scenarioNames = data["Scenario"].unique()
+    orderedScenarios, includedColours = zip(
+        *[
+            (name, brightCodes[index])
+            for index, name in enumerate(scenarioNames)
+            if name in includedScenarios
+        ]
+    )
 
     # Remove any scenarios/age groups not specified in the data
-    # TODO: Affect the legend as well, preferably without affecting the colours
-    if includedScenarios != "all":
-        newData = data[data["Scenario"].isin(includedScenarios)]
-    else:
-        newData = data
+    newData = data[data["Scenario"].isin(includedScenarios)]
 
     # Plot the line graph itself
     epidemicPlot = (
@@ -261,8 +265,9 @@ def plotEpidemic(
                 domain=(0, ceil(data["Days Since First Infection"].max() / 10) * 10),
             ),
             y=yLabel,
+            # TODO: Reserve grey for the baseline
             color=alt.Color(colourLabel).scale(
-                domain=list(scenarioNames), range=brightCodes[: len(scenarioNames)]
+                domain=orderedScenarios, range=includedColours
             ),
             opacity=(
                 alt.when(legendPicker).then(alt.value(1)).otherwise(alt.value(0.2))

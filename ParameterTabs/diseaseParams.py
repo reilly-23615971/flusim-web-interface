@@ -738,10 +738,11 @@ recovered/no longer infectious.
                 ],
             }
         )
+        # Filter out zero values and define chart values
+        data = data[data["Length (Days)"] > 0].reset_index(drop=True)
         data["end"] = data["Length (Days)"].cumsum()
         data["start"] = data["end"].shift(fill_value=0)
         data["tooltip"] = data["Life Stage"] + ": " + data["Length (Days)"].astype(str)
-        # TODO: Like other graphs, only include existing bars in legend
         chart = (
             alt.Chart(data, title="Current Infection Life Cycle")
             .mark_bar(size=30, stroke=backgroundColour(), strokeWidth=1)
@@ -765,7 +766,9 @@ recovered/no longer infectious.
                 x2="end:Q",
                 y=alt.value(0),
                 color=alt.Color(
-                    "Life Stage:N", sort=stageNames, scale=alt.Scale(scheme="inferno")
+                    "Life Stage:N",
+                    sort=stageNames,
+                    scale=alt.Scale(scheme="inferno", domain=list(data["Life Stage"])),
                 ),
                 tooltip=["Life Stage", "Length (Days)"],
             )
