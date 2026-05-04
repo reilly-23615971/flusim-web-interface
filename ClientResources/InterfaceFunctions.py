@@ -170,14 +170,14 @@ def timeString(time: int | float) -> str:
     """
     if time > 3600:
         return "{hours} hours, {minutes} minutes, {seconds} seconds".format(
-            hours=time // 3600,
-            minutes=str(time % 3600).zfill(2),
-            seconds=str(time % 60).zfill(2),
+            hours=int(time // 3600),
+            minutes=str(int(time % 3600 // 60)).zfill(2),
+            seconds=str(int(time % 60)).zfill(2),
         )
     else:
         return "{minutes} minutes, {seconds} seconds".format(
-            minutes=time // 60,
-            seconds=str(time % 60).zfill(2),
+            minutes=int(time // 60),
+            seconds=str(int(time % 60)).zfill(2),
         )
 
 
