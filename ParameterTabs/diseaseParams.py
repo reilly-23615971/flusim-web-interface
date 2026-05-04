@@ -4,6 +4,7 @@
 
 # Imports
 import logging
+from typing import Literal
 
 import altair as alt
 import pandas as pd
@@ -38,6 +39,34 @@ diseaseLog = logging.getLogger(__name__)
 
 # Store st.session_state as variable for efficiency
 session = st.session_state
+
+
+def asymptomaticSave(
+    key: str,
+    scenarioID: int,
+    direction: Literal["simpleToAdvanced", "advancedToSimple"],
+):
+    """
+    Wrapper for `saveKey` that keeps asymptomatic probabilities synced.
+
+    Parameters:
+        key (str): The string used to identify the widget.
+
+        scenarioID (int or ""): The integer representing the scenario the widget
+            is part of. Defaults to `""`, allowing for parameters that are not
+            associated with scenarios to be saved.
+
+        direction (str): Either "simpleToAdvanced" or "advancedToSimple", used to
+            determine which parameters to propagate values to.
+    """
+    saveKey(key, scenarioID)
+    match direction:
+        case "simpleToAdvanced":
+            simpleProb = idGet(key, scenarioID, 0.35)
+            session[f"asymptomaticChild{scenarioID}"] = simpleProb
+            session[f"asymptomaticAdult{scenarioID}"] = simpleProb
+        case "advancedToSimple":
+            session[f"asymptomaticBoth{scenarioID}"] = idGet(key, scenarioID, 0.35)
 
 
 @st.fragment
@@ -84,65 +113,6 @@ def buildDiseaseTab(id: int, advanced: bool = False):
         recovery.
     """)
 
-    # Seeding Parameters
-    simLength = session.get("cycleCount", 360)
-    with st.expander(
-        "Infection Seeding", key=f"infectionSeedingContainer{id}", on_change="rerun"
-    ) as seedingContainer:
-        if seedingContainer.open:
-            # Describe what sort of parameters are here
-            st.markdown("""
-                These parameters control how infected individuals
-                are directly seeded into the community. Seeding is
-                typically used to kickstart the initial epidemic by
-                ensuring a steady number of people are infected
-                daily.
-            """)
-            loadKey("seedRate", id, 0.25)
-            # TODO: Is this enough/too much precision?
-            # TODO: Change cycle to half-day?
-            st.slider(
-                "Infection Seeding Rate (Average Individuals per Cycle)",
-                0.05,
-                5.0,
-                value=0.25,
-                step=0.05,
-                key=f"_seedRate{id}",
-                on_change=saveKey,
-                args=["seedRate", id],
-                format="%0.4g",
-                help="""
-The average number of individuals that will be infected directly via infection
-seeding each cycle. Note that each day of the simulation is 2 cycles.
-                """,
-            )
-            loadKey("seedPeriod", id, (1, 30))
-            st.slider(
-                "Infection Seeding Time Period (Days)",
-                min_value=1,
-                max_value=simLength,
-                value=(1, 30),
-                format="Day %i",
-                on_change=dynamicScaleChange,
-                args=[
-                    "seedPeriod",
-                    "seedTimeForm",
-                    "Infection Seeding Time Period",
-                    id,
-                ],
-                key=f"_seedPeriod{id}",
-                help="""
-The time period during which infection seeding will occur in the simulation.
-The first value is the day on which seeding will begin (where Day 1 is the
-first day of the simulation), and the second value is the day on which it will stop.
-
-Note that if you modify this value, the update points for infection seeding defined in
-:primary-badge[:material/manage_history: Dynamic] may have their values altered.
-For instance, if you go from seeding ending on Day 60 to Day 30, an update point
-set to affect the value on Day 45 will be changed to affect it on Day 30 instead.
-                """,
-            )
-
     # Transmission Parameters
     with st.expander(
         "Infection Transmission", key=f"transmissionContainer{id}", on_change="rerun"
@@ -154,8 +124,8 @@ set to affect the value on Day 45 will be changed to affect it on Day 30 instead
                 interacts with others.
 
                 The probability that an interaction between an infected
-                individual $I_i$ and an uninfected, non-immune
-                individual $I_s$ will result in the infection of $I_s$
+                individual $I_i$ and an uninfected individual $I_s$ with
+                no immunity to the disease will result in the infection of $I_s$
                 is calculated with the following formula
                 [[1](https://www.doi.org/10.1371/journal.pone.0004005)]:
 
@@ -196,10 +166,9 @@ set to affect the value on Day 45 will be changed to affect it on Day 30 instead
                 args=["beta", id],
                 help="""
 The value of the basic transmission parameter
-$\\beta$, the base constant used to calculate the
-probability of an individual being infected with
-the pathogen upon interacting with an infected
-individual. The higher this value is, the more
+$\\beta$, the base probability of a person being infected
+when interacting with someone who is already infected.
+The higher this value is, the more
 likely it is for uninfected individuals to contract
 the pathogen in any interaction with infected individuals.
                 """,
@@ -216,6 +185,8 @@ the pathogen in any interaction with infected individuals.
                 on_change=saveKey,
                 args=["betaAsymptomatic", id],
                 key=f"_betaAsymptomatic{id}",
+                # TODO: Say stuff like "If this is 0.5, asymptomatic people
+                # are half as likely to spread the infection"?
                 help="""
 The value of the transmissibility modifier
 $sym(I_i)$ when the infected individual in an
@@ -327,9 +298,9 @@ individuals in households.
                     args=["backgroundKappa", id],
                     help="""
 The value of the transmissibility modifier
-$\\kappa$ when an interaction takes place during the
-model's background phase (i.e. outside of simulated
-locations). The higher this value is, the more
+$\\kappa$ when an interaction takes place outside of the previous 3
+locations (during the simulation's background phase).
+The higher this value is, the more
 likely it is for uninfected individuals to contract
 the pathogen during the background phase.
                         """,
@@ -376,9 +347,7 @@ are not specified for a specific age group.
                         options=ageTimeDict.keys(),
                         format_func=lambda x: ageTimeDict[x],  # type: ignore
                         help="""
-An age group that will have specific infectiousness and susceptibility
-parameters defined for it, modifying the base transmission probability for
-interactions involving individuals in that age group.
+The age group whose infectiousness and susceptibility will be modified.
                         """,
                     ),
                     "Infectiousness": st.column_config.NumberColumn(
@@ -608,18 +577,17 @@ group to contract the pathogen when interacting with infected individuals.
                 2. Pre-Symptomatic: The pathogen has developed further
                 and the infected individual can now spread the pathogen
                 to others, but they still do not show any symptoms.
-                3. Symptomatic: The pathogen is now showing symptoms in
-                the infected individual, and thus can now be diagnosed.
+                3. Symptomatic: The infected individual is showing symptoms
+                and thus can be diagnosed.
                 4. Post-Symptomatic: The infected individual's
                 condition has improved enough that they no longer show
                 symptoms of the pathogen, but they are still infectious.
                 5. Recovered: The individual is no longer infectious
                 and has gained an immunity to the pathogen.
 
-                If an infected individual is asymptomatic, their
-                infection will not progress into the symptomatic stage;
-                they will remain in the pre-symptomatic stage without
-                symptoms for the pathogen's entire duration.
+                If an infected individual is asymptomatic, the infection will
+                last the same amount of time, but they will not show any symptoms
+                even during the symptomatic phase.
 
                 The following parameters configure the length of each
                 stage in the pathogen's life cycle.
@@ -638,9 +606,8 @@ group to contract the pathogen when interacting with infected individuals.
                 key=f"_latencyPeriod{id}",
                 help="""
 The length in days of the pathogen's latency period,
-i.e. the length of time between an individual
-initially being infected by the pathogen and said
-individual becoming infectious themselves.
+i.e. the length of time between a person
+initially being infected by the pathogen and becoming infectious themselves.
                 """,
             )
             loadKey("preSymptomPeriod", id, 1.0)
@@ -657,10 +624,8 @@ individual becoming infectious themselves.
                 args=["preSymptomPeriod", id],
                 help="""
 The length in days of the pathogen's pre-symptomatic
-period, i.e. the length of time between an
-infected individual becoming capable of infecting
-others with the pathogen and said individual
-beginning to show symptoms.
+period, i.e. the length of time between a person becoming
+infectious and beginning to show symptoms.
                 """,
             )
             loadKey("symptomPeriod", id, 2.0)
@@ -696,9 +661,8 @@ infected individual will show symptoms of the pathogen.
                 help="""
 The length in days of the pathogen's
 post-symptomatic period, i.e. the length of time
-between an individual ceasing to show symptoms of
-the pathogen and said individual being fully
-recovered/no longer infectious.
+between a person ceasing to show symptoms of
+the pathogen and being fully recovered/no longer infectious.
                 """,
             )
             dualError(
@@ -808,9 +772,9 @@ recovered/no longer infectious.
                 ),
                 help="""
 The length in days of the pathogen's total lifespan,
-i.e. the length of time between an individual
+i.e. the length of time between a person
 initially being infected by the pathogen and said
-individual being fully recovered/no longer infectious.
+person being fully recovered/no longer infectious.
                 """,
             )
             incubationCol.metric(
@@ -818,9 +782,8 @@ individual being fully recovered/no longer infectious.
                 dayCount(latencyPeriod + preSymptomPeriod),
                 help="""
 The length in days of the pathogen's incubation
-period, i.e. the length of time between an
-individual initially being infected by the pathogen
-and said individual beginning to show symptoms.
+period, i.e. the length of time between a person
+being infected and beginning to show symptoms.
                 """,
             )
             infectiousCol.metric(
@@ -851,7 +814,7 @@ pathogen to others.
                     args=["asymptomaticChild", id],
                     key=f"_asymptomaticChild{id}",
                     help="""
-The probability that an infected young person (defined as 0-24 years old) in
+The probability that an infected young person (less than 24 years old) in
 the simulation will be asymptomatic (i.e. they never show any symptoms of the
 pathogen despite being infectious).
                     """,
@@ -863,11 +826,11 @@ pathogen despite being infectious).
                     max_value=1.0,
                     value=0.35,
                     format="percent",
-                    on_change=saveKey,
-                    args=["asymptomaticAdult", id],
+                    on_change=asymptomaticSave,
+                    args=["asymptomaticAdult", id, "advancedToSimple"],
                     key=f"_asymptomaticAdult{id}",
                     help="""
-The probability that an infected adult (defined as 24+ years old) in the
+The probability that an infected adult (over 24 years old) in the
 simulation will be asymptomatic (i.e. they never show any symptoms of the
 pathogen despite being infectious).
                     """,
@@ -880,8 +843,8 @@ pathogen despite being infectious).
                     max_value=1.0,
                     value=0.35,
                     format="percent",
-                    on_change=saveKey,
-                    args=["asymptomaticBoth", id],
+                    on_change=asymptomaticSave,
+                    args=["asymptomaticBoth", id, "simpleToAdvanced"],
                     key=f"_asymptomaticBoth{id}",
                     help="""
 The probability that an infected individual in the simulation will be
@@ -889,6 +852,65 @@ asymptomatic (i.e. they never show any symptoms of the pathogen despite
 being infectious).
                     """,
                 )
+
+    # Seeding Parameters
+    simLength = session.get("cycleCount", 360)
+    with st.expander(
+        "Infection Seeding", key=f"infectionSeedingContainer{id}", on_change="rerun"
+    ) as seedingContainer:
+        if seedingContainer.open:
+            # Describe what sort of parameters are here
+            st.markdown("""
+                These parameters control how infected individuals
+                are directly seeded into the community. Seeding is
+                typically used to kickstart the initial epidemic by
+                ensuring a steady number of people are infected
+                daily.
+            """)
+            loadKey("seedRate", id, 0.25)
+            # TODO: Is this enough/too much precision?
+            # TODO: Change cycle to half-day?
+            st.slider(
+                "Infection Seeding Rate (Average Individuals per Cycle)",
+                0.05,
+                5.0,
+                value=0.25,
+                step=0.05,
+                key=f"_seedRate{id}",
+                on_change=saveKey,
+                args=["seedRate", id],
+                format="%0.4g",
+                help="""
+The average number of individuals that will be infected directly via infection
+seeding each cycle. Note that each day of the simulation is 2 cycles.
+                """,
+            )
+            loadKey("seedPeriod", id, (1, 30))
+            st.slider(
+                "Infection Seeding Time Period (Days)",
+                min_value=1,
+                max_value=simLength,
+                value=(1, 30),
+                format="Day %i",
+                on_change=dynamicScaleChange,
+                args=[
+                    "seedPeriod",
+                    "seedTimeForm",
+                    "Infection Seeding Time Period",
+                    id,
+                ],
+                key=f"_seedPeriod{id}",
+                help="""
+The time period during which infection seeding will occur in the simulation.
+The first value is the day on which seeding will begin (where Day 1 is the
+first day of the simulation), and the second value is the day on which it will stop.
+
+Note that if you modify this value, the update points for infection seeding defined in
+:primary-badge[:material/manage_history: Dynamic] may have their values altered.
+For instance, if you go from seeding ending on Day 60 to Day 30, an update point
+set to affect the value on Day 45 will be changed to affect it on Day 30 instead.
+                """,
+            )
 
     # Health Burden Outcome Parameters
     with st.expander(
