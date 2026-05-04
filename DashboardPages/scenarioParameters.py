@@ -155,6 +155,8 @@ if scenarioCount > 0:
         key="scenarioTabs",
         on_change="rerun",
     )
+    # TODO: Switching tabs takes a while to load;
+    # integrate dynamic expanders in the tabs to mitigate this
     for index, tab in enumerate(scenarioTabs):
         scenarioID = index + 1
         with tab:
