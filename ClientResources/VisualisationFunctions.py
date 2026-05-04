@@ -265,7 +265,6 @@ def plotEpidemic(
                 domain=(0, ceil(data["Days Since First Infection"].max() / 10) * 10),
             ),
             y=yLabel,
-            # TODO: Reserve grey for the baseline
             color=alt.Color(colourLabel).scale(
                 domain=orderedScenarios, range=includedColours
             ),

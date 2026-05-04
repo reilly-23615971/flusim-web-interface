@@ -48,7 +48,6 @@ session = st.session_state
 
 # TODO: See if the vaccination trigger parameters are fully working
 # and reimplement them if they are
-# TODO: Properly integrate the expander rerunning
 @st.fragment
 def buildVaccinationNPITab(id: int, advanced: bool = False):
     """
@@ -4136,6 +4135,9 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             session state variables. A value of 0 means that this is the
             baseline scenario and will be treated accordingly.
     """
+    # Load sim length early
+    simLength = session.get("cycleCount", 360)
+
     # Keep track of whether any toggle-controlled parameters have shown up
     useVaccines, useBoosters, useSocialDistancing = False, False, False
     useNPIs = {
@@ -4498,7 +4500,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
                 useNPIs[prefix] = True
 
                 # Triggers
-                if npiDelay == 0 and npiDuration > session.get("cycleCount", 360) * 2:
+                if npiDelay == 0 and npiDuration > simLength * 2:
                     updateParamFromSchema(f"{prefix}Trigger", "Always", scenarioID)
                 elif startTrigger != "none":
                     updateParamFromSchema(
@@ -4515,7 +4517,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
 
                 # Calculate NPI period
                 npiPeriodStart = (npiDelay // 2) + 1
-                npiPeriodEnd = (npiDelay + npiDuration) // 2
+                npiPeriodEnd = min(simLength, (npiDelay + npiDuration) // 2)
                 updateParamFromSchema(
                     f"{prefix}Period", (npiPeriodStart, npiPeriodEnd), scenarioID
                 )

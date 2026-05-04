@@ -57,8 +57,7 @@ def buildDynamicTab(id: int):
     # Tab Content
     # TODO: Sort rows from earliest to latest
     st.header("Dynamic Parameters")
-    st.markdown(
-        """
+    st.markdown("""
         This tab allows for specific parameters to change their
         values at predefined points throughout the simulation.
         Modifying parameters midway through the simulation can be
@@ -89,8 +88,7 @@ def buildDynamicTab(id: int):
         non-pharmaceutical interventions (NPIs), any changes to
         their value made here will only affect the simulation if
         the corresponding NPI is active at that time.
-    """
-    )
+    """)
     # globalErrorContainer = st.container()
 
     # Get simulation length for error checking
@@ -1285,14 +1283,20 @@ def dynamicLoadSchema(schema: Parameters, scenarioID: int = 0):
             columns=("Day to Update Parameter", "New Reduced Background Contact Count"),
         ),
     }
-
+    dynamicPeriods = {
+        "seed_rate": idGet("seedPeriod", scenarioID, (1, 30)),
+        "school_closure": idGet("schoolClosurePeriod", scenarioID, (1, 60)),
+        "bcc_reduction": idGet("bccPeriod", scenarioID, (1, 60)),
+    }
     for update in dynamicChanges:
         # Get value and append to correct dataframe
         param, time, newValue = (
             update.Name,
-            (update.CycleOffset / 2) + 1,
+            round(update.CycleOffset / 2) + 1,
             update.NewValue,
         )
+        minTime, maxTime = dynamicPeriods[param]
+        time = min(maxTime, max(minTime, time))
         currentTable = dynamicTables[param]
         currentTable.loc[currentTable.shape[0]] = [time, newValue]
 

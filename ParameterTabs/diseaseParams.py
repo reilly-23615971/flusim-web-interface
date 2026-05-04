@@ -1341,6 +1341,7 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
         preSymptomPeriod = idGet("preSymptomPeriod", id, 1.0)
         symptomPeriod = idGet("symptomPeriod", id, 2.0)
         postSymptomPeriod = idGet("postSymptomPeriod", id, 2.5)
+        simLength = session.get("cycleCount", 360) * 2
 
         # Strain Parameters
         schema.Scenario_Strain = [
@@ -1394,9 +1395,7 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
             probAsymptomatic = idGet("asymptomaticBoth", id, 0.35)
             scenarioParams.prob_asymptomatic_young = probAsymptomatic
             scenarioParams.prob_asymptomatic = probAsymptomatic
-            scenarioParams.infection_waning_cycle_delay = (
-                session.get("cycleCount", 360) * 2
-            )
+            scenarioParams.infection_waning_cycle_delay = simLength
 
         # Immunity Waning
         if advanced and idGet("naturalWaningToggle", id, False):
@@ -1411,9 +1410,7 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
             )
         else:
             # Set immunity delay to length of simulation, effectively disabling it
-            scenarioParams.infection_waning_cycle_delay = (
-                session.get("cycleCount", 360) * 2
-            )
+            scenarioParams.infection_waning_cycle_delay = simLength
         # Infection Seeding
         scenarioParams.seed_rate = idGet("seedRate", id, 0.25)
         scenarioParams.seeding_start_cycle = (seedPeriod[0] - 1) * 2
@@ -1518,6 +1515,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
     # General Scenario Parameters
     schemaParameters = schema.Scenario_Parameter
     if schemaParameters is not None:
+        simLength = session.get("cycleCount", 360)
         paramDict = {p: v for p, v in vars(schemaParameters).items() if v is not None}
 
         # Use dictionary to convert schema parameters into dashboard values
@@ -1551,7 +1549,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             )
         """if (
             paramDict.get("infection_waning_cycle_delay", 99999)
-            < session.get("cycleCount", 360) * 2
+            < simLength
         ):
             updateParamFromSchema("naturalWaningToggle", True, scenarioID)"""
         updateParamFromSchema(
@@ -1565,7 +1563,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                         else 99999
                     ),
                 )
-                < session.get("cycleCount", 360) * 2
+                < simLength * 2
             ),
             scenarioID,
         )
@@ -1629,7 +1627,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
 
             # Calculate seeding period
             seedPeriodStart = (seedStart // 2) + 1
-            seedPeriodEnd = (seedStart + seedLength) // 2
+            seedPeriodEnd = min(simLength, (seedStart + seedLength) // 2)
             updateParamFromSchema(
                 "seedPeriod", (seedPeriodStart, seedPeriodEnd), scenarioID
             )
