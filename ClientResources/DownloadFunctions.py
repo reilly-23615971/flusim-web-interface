@@ -132,6 +132,7 @@ def parameterUpload():
     """
     Dialog wrapper function to upload parameter settings from a JSON file.
     """
+    # TODO: This still blanks the page occasionally
     uploadPending = bool(session.get("parameterUpload") is not None)
     st.info(
         body="""

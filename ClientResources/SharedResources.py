@@ -173,7 +173,7 @@ outcomeRateDefaults = {
 
 # Tuple holding the names of the different possible NPIs
 npis = (
-    "Vaccination",
+    # "Vaccination",
     "School Closure",
     "Withdrawal Increase",
     "Reduced Group Size",
@@ -181,7 +181,8 @@ npis = (
 )
 
 # Tuple holding the camelCase names of NPIs for anchor tags and the like
-npiCamel = ("vaccination", "schoolClosure", "withdrawalIncrease", "reducedGroup", "bcc")
+npiCamel = ("schoolClosure", "withdrawalIncrease", "reducedGroup", "bcc")
+# "vaccination",
 
 # Tuple holding the possible trigger conditions for NPIs
 triggerConditions = {

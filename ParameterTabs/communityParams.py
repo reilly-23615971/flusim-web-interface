@@ -39,21 +39,6 @@ def buildCommunityTab(id: int, advanced: bool = False):
         advanced (bool): Set to `True` to show more complex parameters like
             child supervision rate.
     """
-    # Initialise session variables needed by the pathogen forms
-    # sessionParameters = {f"deathRowCount{id}": 0}
-    # for parameter, default in sessionParameters.items():
-    # st.session_state[parameter] = st.session_state.get(parameter, default)
-
-    # Ensure age selections only give possible parameters
-    # Dictionary format: 'remaining groups variable': (
-    #   'number of rows variable', 'group row variable prefix'
-    # )
-    # ageGroupSets = {
-    # f"deathRemainingAgeGroups{id}": (f"deathRowCount{id}", f"deathAgeGroup{id}-")
-    # }
-
-    # Use function to recalculate remaining group parameters
-    # getRemainingGroups(ageGroupSets, ageCategories.keys())
 
     # Tab Content
     st.header("Community-Related Parameters")

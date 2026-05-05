@@ -792,7 +792,7 @@ class scenarioParameters(BaseModel):
     )
     increased_withdrawal_child: Optional[float] = Field(
         title="Increased Child Withdrawal Probability",
-        default=0.9,
+        default=1.0,
         ge=0.0,
         description=(
             (
@@ -2255,14 +2255,12 @@ class modelGuideFile(BaseModel):
         if self.community_overrides:
             for override in self.community_overrides:
                 if override.name not in validCommunities:
-                    raise ValueError(
-                        """
+                    raise ValueError("""
                         `community_overrides` includes communities not present in
                         `community_used`. Ensure the `name` property of each
                         override in `community_overrides` matches a community
                         in `community_used`.
-                        """
-                    )
+                        """)
         return self
 
     """

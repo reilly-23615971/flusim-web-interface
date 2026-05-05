@@ -2275,6 +2275,10 @@ healthy when exposed to the pathogen.
     # NPIs
     st.subheader("Non-Pharmaceutical Intervention (NPI) Parameters")
 
+    # Load variables used by case rates
+    schoolClosureTrigger, withdrawalIncreaseTrigger = None, None
+    reducedGroupTrigger, bccTrigger, classDismissal = None, None, None
+
     # General NPIs
     st.html('<span id = "generalTriggerCondition"></span>')
     with st.expander(
@@ -2584,6 +2588,9 @@ social distancing interventions in the simulation.
                     """
                     ),
                 )'''
+        else:
+            # Make sure triggers account for class dismissal
+            classDismissal = idGet("classDismissal", id, False)
 
     # School Closure
     st.html('<span id = "schoolClosureTriggerCondition"></span>')
@@ -3360,26 +3367,27 @@ effect, overwriting the normal BCC rate.
             """)
 
             # Display values based on what is used by the triggers
-            # TODO: Account for NPI toggles being off
-            # TODO: Rewrite to not need seven type: ignores
             interventionTriggers = [
-                schoolClosureTrigger,  # type: ignore
-                withdrawalIncreaseTrigger,  # type: ignore
-                reducedGroupTrigger,  # type: ignore
-                bccTrigger,  # type: ignore
+                (schoolClosureTrigger, useSchoolClosureToggle),
+                (withdrawalIncreaseTrigger, useWithdrawalIncreaseToggle),
+                (reducedGroupTrigger, useReducedGroupToggle),
+                (bccTrigger, useBCCToggle),
+            ]
+            enabledInterventions = [
+                trigger for trigger, toggle in interventionTriggers if toggle
             ]
             usesRates = [
                 index
-                for index, condition in enumerate(interventionTriggers)
+                for index, condition in enumerate(enabledInterventions)
                 if condition == "Community Case Rate"
             ]
             usesTotals = [
                 index
-                for index, condition in enumerate(interventionTriggers)
+                for index, condition in enumerate(enabledInterventions)
                 if condition
                 in {"Community Case Total", "Cases per School", "Cases per K-12 School"}
             ]
-            if not (usesRates or usesTotals or classDismissal):  # type: ignore
+            if not (usesRates or usesTotals or classDismissal):
                 st.info(
                     """
                 No interventions are currently using case rates or
@@ -3392,7 +3400,7 @@ effect, overwriting the normal BCC rate.
                 )
             else:
                 # Case rates
-                if usesRates or classDismissal:  # type: ignore
+                if usesRates or classDismissal:
                     # Display links to NPIs that use rates (including
                     # the non-standard Class Dismissal if applicable)
                     st.subheader("Case Rate Trigger Thresholds", divider="grey")
@@ -3406,7 +3414,7 @@ effect, overwriting the normal BCC rate.
                         """
                         + (
                             "\n- [Class Dismissal](#generalTriggerCondition)"
-                            if classDismissal  # type: ignore
+                            if classDismissal
                             else ""
                         )
                         + "".join(
