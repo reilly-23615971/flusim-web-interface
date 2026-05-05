@@ -1308,7 +1308,7 @@ provided by recovering from the pathogen will never diminish.
                 st.slider(
                     "Natural Immunity After Waning (Probability)",
                     min_value=0.0,
-                    max_value=1.0,
+                    max_value=0.99,
                     value=0.5,
                     format="percent",
                     disabled=not waningToggle,

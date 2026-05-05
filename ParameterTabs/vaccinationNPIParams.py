@@ -1253,7 +1253,7 @@ that use the same age group as another row.
                     primaryWanedEfficacy = st.slider(
                         "Dose Efficacy After Immunity Waning (Probability)",
                         min_value=0.0,
-                        max_value=1.0,
+                        max_value=0.99,
                         value=0.0,
                         format="percent",
                         disabled=not useVaccinesToggle,
@@ -1358,7 +1358,7 @@ immunity waning defined for it, overriding the base value.
                                 required=True,
                                 default=primaryWanedEfficacy,
                                 min_value=0.0,
-                                max_value=1.0,
+                                max_value=0.999999,
                                 format="percent",
                                 help="""
 The efficacy of a vaccinated individual in this age group's immunity after the
@@ -1829,7 +1829,7 @@ booster will remain healthy when exposed to the pathogen.
                 boosterWanedEfficacy = st.slider(
                     "Booster Efficacy After Immunity Waning (Probability)",
                     min_value=0.0,
-                    max_value=1.0,
+                    max_value=0.99,
                     value=0.6,
                     format="percent",
                     key=f"_boosterWanedEfficacy{id}",
@@ -1943,7 +1943,7 @@ will remain healthy when exposed to the pathogen.
                             required=True,
                             default=boosterWanedEfficacy,
                             min_value=0.0,
-                            max_value=1.0,
+                            max_value=0.999999,
                             format="percent",
                             help="""
 The efficacy of a booster-vaccinated individual in this age group's immunity
