@@ -827,6 +827,8 @@ reduced background contact count will come into effect.
                 required=True,
                 default=baseBCCValue,
                 min_value=0.0,
+                max_value=8.0,
+                step=0.05,
                 help="""
 The average number of other people each individual will interact with in
 the background phase of each day in the simulation (emulating interactions

@@ -4,14 +4,13 @@
 
 # Imports
 import logging
-from typing import Literal, cast
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import paramError
+from ClientResources.InterfaceFunctions import ageCast, paramError, trigCast
 from ClientResources.ModelSchema import (
     EfficacyValue,
     Parameters,
@@ -32,7 +31,6 @@ from ClientResources.SharedResources import (
     ageTimeDict,
     communityPopulation,
     ordinals,
-    triggerConditions,
 )
 
 # Logging
@@ -2256,74 +2254,6 @@ healthy when exposed to the pathogen.
                     session[f"ageBoostEfficacyError{id}"] = 0'''
 
     # TODO: Reintegrate trigger thresholds when vaccines care about them
-
-
-def ageCast(x: str) -> Literal[
-    "young_infant",
-    "infant",
-    "young_child",
-    "child",
-    "adolescent",
-    "young_adult",
-    "adult",
-    "older_adult",
-    "senior",
-    "older_senior",
-]:
-    """
-    Simple function to cast age strings into literals for validation.
-
-    Parameters:
-        x (str): The string to be cast.
-
-    Returns:
-        Literal: A literal with the same value as the string.
-    """
-    return cast(
-        Literal[
-            "young_infant",
-            "infant",
-            "young_child",
-            "child",
-            "adolescent",
-            "young_adult",
-            "adult",
-            "older_adult",
-            "senior",
-            "older_senior",
-        ],
-        x,
-    )
-
-
-def trigCast(x: str) -> Literal[
-    "none",
-    "timed",
-    "per_school_cases",
-    "community_cases",
-    "community_rate",
-    "per_primary_high_school_cases",
-]:
-    """
-    Simple function to cast trigger strings into literals for validation.
-
-    Parameters:
-        x (str): The string to be cast.
-
-    Returns:
-        Literal: A literal with the same value as the string.
-    """
-    return cast(
-        Literal[
-            "none",
-            "timed",
-            "per_school_cases",
-            "community_cases",
-            "community_rate",
-            "per_primary_high_school_cases",
-        ],
-        triggerConditions[x],
-    )
 
 
 def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -> bool:

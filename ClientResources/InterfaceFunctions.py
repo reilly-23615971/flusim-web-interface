@@ -6,14 +6,14 @@
 import logging
 import re
 from functools import partial
-from typing import Any, Callable
+from typing import Any, Callable, Literal, cast
 
 import numpy as np
 import streamlit as st
 from pydantic import ValidationError
 
 from ClientResources.ParameterFunctions import containerSave
-from ClientResources.SharedResources import ageWithTime
+from ClientResources.SharedResources import ageWithTime, triggerConditions
 
 # Logging
 functionLog = logging.getLogger(__name__)
@@ -191,6 +191,36 @@ def timeString(time: int | float) -> str:
             minutes=int(time // 60),
             seconds=str(int(time % 60)).zfill(2),
         )
+
+
+def trigCast(x: str) -> Literal[
+    "none",
+    "timed",
+    "per_school_cases",
+    "community_cases",
+    "community_rate",
+    "per_primary_high_school_cases",
+]:
+    """
+    Simple function to cast trigger strings into literals for validation.
+
+    Parameters:
+        x (str): The string to be cast.
+
+    Returns:
+        Literal: A literal with the same value as the string.
+    """
+    return cast(
+        Literal[
+            "none",
+            "timed",
+            "per_school_cases",
+            "community_cases",
+            "community_rate",
+            "per_primary_high_school_cases",
+        ],
+        triggerConditions[x],
+    )
 
 
 # Scenario name functions
@@ -385,6 +415,44 @@ def ageRangeCombiner(ages: list[str]) -> str:
     currentString += f", {ageRangeString(currentStart, currentEnd)}"
     currentString += " Years" if currentString[-6:] != "Months" else ""
     return currentString[2:]
+
+
+def ageCast(x: str) -> Literal[
+    "young_infant",
+    "infant",
+    "young_child",
+    "child",
+    "adolescent",
+    "young_adult",
+    "adult",
+    "older_adult",
+    "senior",
+    "older_senior",
+]:
+    """
+    Simple function to cast age strings into literals for validation.
+
+    Parameters:
+        x (str): The string to be cast.
+
+    Returns:
+        Literal: A literal with the same value as the string.
+    """
+    return cast(
+        Literal[
+            "young_infant",
+            "infant",
+            "young_child",
+            "child",
+            "adolescent",
+            "young_adult",
+            "adult",
+            "older_adult",
+            "senior",
+            "older_senior",
+        ],
+        x,
+    )
 
 
 # Miscellaneous functions

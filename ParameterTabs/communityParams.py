@@ -110,6 +110,7 @@ after becoming symptomatic.
         min_value=0.0,
         max_value=8.0,
         value=4.0,
+        step=0.25,
         key=f"_bccRate{id}",
         on_change=saveKey,
         args=["bccRate", id],
