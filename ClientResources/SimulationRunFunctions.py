@@ -35,8 +35,6 @@ from ClientResources.SharedResources import (
     ageWithTime,
     currentProgress,
     errorQueue,
-    outcomeRateDefaults,
-    outcomeRateVariables,
     resultQueue,
     saveJSON,
     serverUrl,
@@ -73,6 +71,92 @@ def runtimeEstimate(days: int, runs: int, scenarios: int) -> int:
         int: The estimated number of seconds the simulation will run for.
     """
     return round((0.0948297101449275 * days - 2.977807971014478) * runs * scenarios)
+
+
+def healthOutcomeStore(
+    singleKey: str, ageKey: str, scenarioNames: list[str], useAges: bool = True
+):
+    """
+    Function to format and store health burden outcome rates for a given set
+    of scenarios.
+
+    Parameters:
+        singleKey (str): The `st.session_state` key for health burdens that
+            are not age-specific.
+
+        ageKey (str): The `st.session_state` key for health burdens that
+            are age-specific.
+
+        scenarioNames (list of str): The names of each scenario defined in
+            the simulation.
+
+        useAges (Boolean): Set to False to ignore age-specific health burdens
+            and define each of their values to be the same baseline value.
+    """
+    # Required values for outcome rates
+    icuKey, icuDefault, icuFormat = "icuRatio", 20.0, lambda x: x / 100
+    deathKey, deathDefault, deathFormat = "deathRatio", 12.0, lambda x: x / 100000
+    outcomeRates = {
+        "Diagnosed Cases": ("caseRatio", 50.0, lambda x: x / 100),
+        "GP Visits": ("gpRatio", 17.0, lambda x: x / 100),
+        "Hospitalisations": ("hospitalRatio", 320.0, lambda x: x / 100000),
+        "Deaths": (deathKey, deathDefault, deathFormat),
+    }
+
+    # Basic rates (not age-specific)
+    singleRates = {}
+    for outcome, (key, default, formatFunc) in outcomeRates.items():
+        singleRates[outcome] = {
+            scenario: formatFunc(idGet(key, i, default))
+            for i, scenario in enumerate(scenarioNames)
+        }
+
+    # ICU (dependent on hospitalisation)
+    singleRates["ICU Visits"] = {
+        scenario: singleRates["Hospitalisations"][scenario]
+        * icuFormat(idGet(icuKey, i, icuDefault))
+        for i, scenario in enumerate(scenarioNames)
+    }
+
+    # Deaths (age-specific)
+    """session.PendingDataMortalityRates = {
+        scenarioNames[scenarioID]: {
+            idGet("deathAgeGroup", scenarioID, None, f"-{rowID}"): deathFormat(
+                idGet(deathKey, scenarioID, deathDefault, f"-{rowID}")
+            )
+            for rowID in range(idGet("deathRowCount", scenarioID, 0))
+        }
+        for scenarioID in range(scenarioCount + 1)
+    }"""
+    ageRates = {}
+    for scenarioID, name in enumerate(scenarioNames):
+        baseDeathRate = deathFormat(idGet(deathKey, scenarioID, deathDefault))
+        if useAges:
+            mortAgeForm = idGet(
+                "mortAgeForm",
+                scenarioID,
+                pd.DataFrame(
+                    {
+                        "Age Group": [None],
+                        "Mortality Rate": [baseDeathRate],
+                    },
+                ),
+            ).copy()
+            mortAgeForm["Mortality Rate"] = mortAgeForm["Mortality Rate"].apply(
+                deathFormat
+            )
+            mortAgeDict = (
+                mortAgeForm.dropna()
+                .replace({"Age Group": ageTimeDict})
+                .set_index("Age Group")["Mortality Rate"]
+                .to_dict()
+            )
+        else:
+            mortAgeDict = {}
+        ageRates[name] = {age: baseDeathRate for age in ageWithTime} | mortAgeDict
+
+    session[singleKey] = singleRates
+    session[ageKey] = ageRates
 
 
 @st.dialog("Run Simulation Experiment", width="large", icon=":material/motion_play:")
@@ -236,53 +320,12 @@ already busy with a different task.
                 ]
             )
 
-            session.PendingDataHealthOutcomeRates = {
-                outcome: {
-                    scenario: idGet(
-                        outcomeRateVariables[outcome], i, outcomeRateDefaults[outcome]
-                    )
-                    for i, scenario in enumerate(scenarioNames)
-                }
-                for outcome in outcomeRateDefaults.keys()
-            }
-            """session.PendingDataMortalityRates = {
-                scenarioNames[scenarioID]: {
-                    idGet("deathAgeGroup", scenarioID, None, f"-{rowID}"): idGet(
-                        "deathRatio",
-                        scenarioID,
-                        outcomeRateDefaults["Deaths"],
-                        f"-{rowID}",
-                    )
-                    for rowID in range(idGet("deathRowCount", scenarioID, 0))
-                }
-                for scenarioID in range(scenarioCount + 1)
-            }"""
-            pendingDeaths = {
-                scenarioID: idGet("deathRatio", scenarioID, 0.000115077)
-                for scenarioID in range(scenarioCount + 1)
-            }
-            session.PendingDataMortalityRates = {
-                scenarioNames[scenarioID]: {
-                    age: pendingDeaths[scenarioID] for age in ageWithTime
-                }
-                | (
-                    idGet(
-                        "mortAgeForm",
-                        scenarioID,
-                        pd.DataFrame(
-                            {
-                                "Age Group": [None],
-                                "Mortality Rate": [pendingDeaths[scenarioID]],
-                            },
-                        ),
-                    )
-                    .dropna()
-                    .replace({"Age Group": ageTimeDict})
-                    .set_index("Age Group")["Mortality Rate"]
-                    .to_dict()
-                )
-                for scenarioID in range(scenarioCount + 1)
-            }
+            healthOutcomeStore(
+                "PendingDataHealthOutcomeRates",
+                "PendingDataMortalityRates",
+                scenarioNames,
+                useAges=useAdvanced,
+            )
 
             # Clear the status queue
             currentProgress.append(0.0)

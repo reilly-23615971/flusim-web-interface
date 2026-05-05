@@ -762,9 +762,7 @@ the pathogen and being fully recovered/no longer infectious.
                 With the parameters defined above, the following time
                 periods can be defined:
             """)
-            totalCol, incubationCol, infectiousCol = st.columns(
-                (0.33333, 0.33333, 0.33333), vertical_alignment="center"
-            )
+            totalCol, incubationCol, infectiousCol = st.columns(3)
             totalCol.metric(
                 "Total Length of Infection",
                 dayCount(
@@ -798,9 +796,7 @@ pathogen to others.
             )
 
             # Asymptomatic params (age-separated if advanced params are enabled)
-            # TODO: Parity between simple and advanced parameter inputs
-            st.divider()
-            st.subheader("Asymptomatic Likelihood")
+            st.subheader("Asymptomatic Likelihood", divider="grey")
             if advanced:
                 loadKey("asymptomaticChild", id, 0.35)
                 # TODO: Is this precise enough?
@@ -938,92 +934,89 @@ set to affect the value on Day 45 will be changed to affect it on Day 30 instead
             """)
 
             # Health Burden Outcomes
-            # TODO: Consider having these be just infected proportion rather than
-            # infected symptomatic proportion (which one is easier for
-            # researchers to calculate?)
-            # TODO: Note how scientific notation works in the description or something
-            loadKey("caseRatio", id, 0.5)
+            loadKey("caseRatio", id, 50.0)
             st.number_input(
-                "Diagnosed Case Rate (Proportion of Population)",
+                "Diagnosed Case Rate (% Percentage of Population)",
                 min_value=0.0,
-                max_value=1.0,
-                value=0.5,
-                step=0.00001,
-                format="%0.5g",
+                max_value=100.0,
+                value=50.0,
+                step=0.1,
+                format="%0.3g",
+                placeholder="Enter a percentage between 0 and 100",
                 key=f"_caseRatio{id}",
                 on_change=saveKey,
                 args=["caseRatio", id],
                 help="""
-The proportion of infected, symptomatic
-individuals who will be formally diagnosed as a
-confirmed case of the pathogen.
+The percentage of infected, symptomatic individuals who will be formally
+diagnosed as a confirmed case of the pathogen.
                 """,
             )
-            loadKey("gpRatio", id, 0.17)
+            loadKey("gpRatio", id, 17.0)
             st.number_input(
-                "GP Visit Rate (Proportion of Population)",
+                "GP Visit Rate (% Percentage of Population)",
                 min_value=0.0,
-                max_value=1.0,
-                value=0.17,
-                step=0.00001,
-                format="%0.5g",
+                max_value=100.0,
+                value=17.0,
+                step=0.1,
+                format="%0.3g",
+                placeholder="Enter a percentage between 0 and 100",
                 key=f"_gpRatio{id}",
                 on_change=saveKey,
                 args=["gpRatio", id],
                 help="""
-The proportion of infected, symptomatic
-individuals who will visit their general practitioner
-(GP) as a result of the pathogen.
+The percentage of infected, symptomatic individuals who will visit their
+general practitioner (GP) as a result of the pathogen.
                 """,
             )
-            loadKey("hospitalRatio", id, 0.00316133)
+            loadKey("hospitalRatio", id, 320.0)
             st.number_input(
-                "Hospitalisation Rate (Proportion of Population)",
+                "Hospitalisation Rate (Hospitalisations per 100,000 Cases)",
                 min_value=0.0,
-                max_value=1.0,
-                value=0.00316133,
-                step=0.00001,
-                format="%0.5e",
+                max_value=100000.0,
+                value=320.0,
+                step=0.01,
+                format="%0.5g",
+                placeholder="Enter a number between 0 and 100000",
                 key=f"_hospitalRatio{id}",
                 on_change=saveKey,
                 args=["hospitalRatio", id],
                 help="""
-The proportion of infected, symptomatic
-individuals who will be admitted to a hospital as a
-result of the pathogen.
+The average number of infected individuals who will be admitted to a hospital
+for every 100,000 cases of the pathogen.
                 """,
             )
-            loadKey("icuRatio", id, 0.00063227)
+            loadKey("icuRatio", id, 20.0)
             st.number_input(
-                "ICU Visit Rate (Proportion of Population)",
+                "ICU Visit Rate (% Percentage of Hospitalisations)",
                 min_value=0.0,
-                max_value=1.0,
-                value=0.00063227,
-                step=0.00001,
-                format="%0.5e",
+                max_value=100.0,
+                value=20.0,
+                step=0.1,
+                format="%0.3g",
+                placeholder="Enter a percentage between 0 and 100",
                 key=f"_icuRatio{id}",
                 on_change=saveKey,
                 args=["icuRatio", id],
                 help="""
-The proportion of infected, symptomatic
-individuals who will be admitted to a hospital's
-intensive care unit (ICU) as a result of the pathogen.
+The percentage of infected, hospitalised individuals who will be admitted to
+a hospital's intensive care unit (ICU) as a result of the pathogen.
                 """,
             )
-            loadKey("deathRatio", id, 0.000115077)
+            loadKey("deathRatio", id, 12.0)
             deathRate = st.number_input(
-                "Mortality Rate (Proportion of Population)",
+                "Mortality Rate (Deaths per 100,000 Cases)",
                 min_value=0.0,
-                max_value=1.0,
-                value=0.000115077,
-                step=0.00001,
-                format="%0.5e",
+                max_value=100000.0,
+                value=12.0,
+                step=0.01,
+                format="%0.5g",
+                placeholder="Enter a number between 0 and 100000",
                 key=f"_deathRatio{id}",
                 on_change=saveKey,
                 args=["deathRatio", id],
                 help="""
-The base proportion of infected, symptomatic
-individuals who will die as a direct result of the pathogen.
+The average number of infected individuals who will die for every 100,000
+cases of the pathogen.
                 """,
             )
 
@@ -1069,15 +1062,15 @@ overriding the base proportion.
                             """,
                         ),
                         "Mortality Rate": st.column_config.NumberColumn(
-                            "Mortality Rate (Proportion of Population)",
+                            "Mortality Rate (Deaths per 100,000 Cases)",
                             required=True,
                             default=deathRate,
                             min_value=0.0,
-                            max_value=1.0,
-                            format="%0.5e",
+                            max_value=100000.0,
+                            format="%0.5g",
                             help="""
-The proportion of infected, symptomatic individuals in this age
-group who will die as a direct result of the pathogen.
+The average number of infected individuals in this age group who will die
+for every 100,000 cases of the pathogen.
                             """,
                         ),
                     },
@@ -1376,7 +1369,7 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
             if schema.Scenario_ParameterWithAgePrefix
             else ageScenarioParameters()
         )
-        deathRate = idGet("deathRatio", id, 0.000115077)
+        deathRate = round(idGet("deathRatio", id, 12.0) / 100000, 10)
         ageScenarioParams.mort = deathRate
         schema.Scenario_ParameterWithAgePrefix = ageScenarioParams
 
@@ -1412,7 +1405,7 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                 mortAgeForm["Mortality Rate"],
             ):
                 if age:
-                    setattr(scenarioParams, f"{age}_mort", mort)
+                    setattr(scenarioParams, f"{age}_mort", round(mort / 100000, 10))
         else:
             probAsymptomatic = idGet("asymptomaticBoth", id, 0.35)
             scenarioParams.prob_asymptomatic_young = probAsymptomatic
@@ -1450,10 +1443,13 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
             latencyPeriod + preSymptomPeriod + symptomPeriod + postSymptomPeriod
         ) * 2
         # Health Burden Outcomes
-        scenarioParams.prob_diagnosis = idGet("caseRatio", id, 0.5)
-        scenarioParams.prob_hospitalisation = idGet("hospitalRatio", id, 0.00316133)
-        scenarioParams.prob_gp = idGet("gpRatio", id, 0.17)
-        scenarioParams.prob_icu = idGet("icuRatio", id, 0.00063227)
+        scenarioParams.prob_diagnosis = round(idGet("caseRatio", id, 50.0) / 100, 6)
+        scenarioParams.prob_gp = round(idGet("gpRatio", id, 17.0) / 100, 6)
+        hospitalRate = idGet("hospitalRatio", id, 320.0) / 100000
+        scenarioParams.prob_hospitalisation = round(hospitalRate, 10)
+        scenarioParams.prob_icu = round(
+            hospitalRate * idGet("icuRatio", id, 20.0) / 100, 10
+        )
         # Age-Specific Parameters
         transAgeForm = idGet(
             "transAgeForm",
@@ -1532,7 +1528,8 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
     # Global Age Parameters
     schemaAge = schema.Scenario_ParameterWithAgePrefix
     if schemaAge is not None:
-        updateParamFromSchema("deathRatio", schemaAge.mort, scenarioID)
+        newMort = schemaAge.mort * 100000 if schemaAge.mort is not None else None
+        updateParamFromSchema("deathRatio", newMort, scenarioID)
 
     # General Scenario Parameters
     schemaParameters = schema.Scenario_Parameter
@@ -1541,6 +1538,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
         paramDict = {p: v for p, v in vars(schemaParameters).items() if v is not None}
 
         # Use dictionary to convert schema parameters into dashboard values
+        # TODO: Address any float rounding errors caused by health burden rates
         paramConvert = {
             "seed_rate": ("seedRate", lambda x: x),
             "beta_asymptomatic": ("betaAsymptomatic", lambda x: x),
@@ -1551,10 +1549,8 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             "kappa_background": ("backgroundKappa", lambda x: x),
             "prob_asymptomatic": ("asymptomaticAdult", lambda x: x),
             "prob_asymptomatic_young": ("asymptomaticChild", lambda x: x),
-            "prob_diagnosis": ("caseRatio", lambda x: x),
-            "prob_gp": ("gpRatio", lambda x: x),
-            "prob_hospitalisation": ("hospitalRatio", lambda x: x),
-            "prob_icu": ("icuRatio", lambda x: x),
+            "prob_diagnosis": ("caseRatio", lambda x: x * 100),
+            "prob_gp": ("gpRatio", lambda x: x * 100),
             "infection_waning_cycle_delay": (
                 "naturalImmunityDuration",
                 lambda x: x // 60,
@@ -1563,6 +1559,27 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
         simpleParams = {p: v for p, v in paramConvert.items() if p in paramDict}
         for parameter, (key, formatFunc) in simpleParams.items():
             updateParamFromSchema(key, formatFunc(paramDict[parameter]), scenarioID)
+
+        # Hospitalisation and ICU ratio
+        if {"hospitalRatio", "icuRatio"}.intersection(paramDict):
+            hospitalRate, icuRate = paramDict["hospitalRatio"], paramDict["icuRatio"]
+            if None in {hospitalRate, icuRate} and scenarioID == 0:
+                raise AssertionError(
+                    "Hospitalisation and ICU rate parameters were only partially "
+                    "defined for the baseline scenario"
+                )
+
+            # Use baseline values to plug None gaps
+            baseHospitalRate = idGet("hospitalRatio", 0, 320.0)
+            baseICUProb = idGet("icuRatio", 0, 20.0)
+            if hospitalRate is None:
+                hospitalRate = baseHospitalRate / 100000
+            if icuRate is None:
+                icuRate = hospitalRate * baseICUProb / 100
+
+            # Calculate ICU proportion
+            updateParamFromSchema("hospitalRatio", hospitalRate * 100000, scenarioID)
+            updateParamFromSchema("icuRatio", icuRate * 100 / hospitalRate, scenarioID)
 
         # Advanced parameter differences
         if "prob_asymptomatic" in paramDict:
@@ -1754,7 +1771,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             )
 
         mortParams = {
-            p.removesuffix("_mort"): v
+            p.removesuffix("_mort"): v * 100000 if v is not None else None
             for p, v in paramDict.items()
             if p.endswith("_mort")
         }
@@ -1770,9 +1787,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                 pd.DataFrame(
                     {
                         "Age Group": [None],
-                        "Mortality Rate": [
-                            idGet("deathRatio", scenarioID, 0.000115077)
-                        ],
+                        "Mortality Rate": [idGet("deathRatio", scenarioID, 12.0)],
                     },
                 ),
             )

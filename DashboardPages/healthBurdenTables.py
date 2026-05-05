@@ -15,14 +15,12 @@ from matplotlib.colors import TwoSlopeNorm, to_hex
 
 from ClientResources.ParameterFunctions import idGet, loadKey, replaceTableNA, saveKey
 from ClientResources.SharedResources import (
-    ageTimeDict,
     ageWithTime,
     brightCodes,
-    outcomeRateDefaults,
-    outcomeRateVariables,
     tableOutcomes,
     usePresetData,
 )
+from ClientResources.SimulationRunFunctions import healthOutcomeStore
 from ClientResources.VisualisationFunctions import formatAsir, generateAsir
 
 # Logging
@@ -32,7 +30,7 @@ tableLog = logging.getLogger(__name__)
 session = st.session_state
 
 # Initialise session variables needed by the table
-sessionParameters = {"healthOutcomeRowCount": 1, "DataCommunity": "newcastle"}
+sessionParameters = {"DataCommunity": "newcastle"}  # "healthOutcomeRowCount": 1
 for parameter, default in sessionParameters.items():
     session[parameter] = session.get(parameter, default)
 
@@ -190,42 +188,13 @@ def generateTable():
                 for scenarioID in range(4)
             ]
         )
-        session.DataHealthOutcomeRates = {
-            outcome: {
-                scenario: idGet(
-                    outcomeRateVariables[outcome], i, outcomeRateDefaults[outcome]
-                )
-                for i, scenario in enumerate(scenarioNames)
-            }
-            for outcome in outcomeRateDefaults.keys()
-        }
+        healthOutcomeStore(
+            "DataHealthOutcomeRates",
+            "DataMortalityRates",
+            scenarioNames,
+            useAges=useAdvanced,
+        )
 
-        """session.DataMortalityRates = {
-            scenarioNames[scenarioID]: {
-                idGet("deathAgeGroup", scenarioID, None, f"-{rowID}"): idGet(
-                    "deathRatio", scenarioID, outcomeRateDefaults["Deaths"], f"-{rowID}"
-                )
-                for rowID in range(idGet("deathRowCount", scenarioID, 0))
-            }
-            for scenarioID in range(4)
-        }"""
-        session.DataMortalityRates = {
-            scenarioNames[scenarioID]: {
-                age: idGet("deathRatio", scenarioID, 0.000115077) for age in ageWithTime
-            }
-            | (
-                idGet(
-                    "mortAgeForm",
-                    scenarioID,
-                    pd.DataFrame(columns=["Age Group", "Mortality Rate"]),
-                )
-                .dropna()
-                .replace({"Age Group": ageTimeDict})
-                .set_index("Age Group")["Mortality Rate"]
-                .to_dict()
-            )
-            for scenarioID in range(4)
-        }
         # Load test data from files
         with open("./TestData/asirMedianAbsolute.csv", "rb") as csv:
             fullData = formatAsir(csv.read(), scenarioNames)
@@ -373,7 +342,7 @@ Use the data from the most recent simulation to generate a table displaying diff
 health outcomes on the scenarios in the simulation, with the specific columns
 displayed depending on the parameters selected above.
 """
-healthOutcomeRowCount = session["healthOutcomeRowCount"]
+# healthOutcomeRowCount = session["healthOutcomeRowCount"]
 healthOutcomeErrorContainer = st.container()
 
 # Check if there is data to tabulate

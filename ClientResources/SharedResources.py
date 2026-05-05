@@ -152,25 +152,6 @@ outcomeAdjectives = {
     "Deaths": "Dead",
 }
 
-# Dictionary getting session_state variables for outcome rates
-outcomeRateVariables = {
-    "Diagnosed Cases": "caseRatio",
-    "GP Visits": "gpRatio",
-    "Hospitalisations": "hospitalRatio",
-    "ICU Visits": "icuRatio",
-    "Deaths": "deathRatio",
-}
-
-# Default values for rates
-outcomeRateDefaults = {
-    "Diagnosed Cases": 0.5,
-    "GP Visits": 0.17,
-    "Hospitalisations": 0.00316133,
-    "ICU Visits": 0.00063227,
-    "Deaths": 0.000115077,
-}
-
-
 # Tuple holding the names of the different possible NPIs
 npis = (
     # "Vaccination",
