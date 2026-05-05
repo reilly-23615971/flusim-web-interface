@@ -50,8 +50,13 @@ from ParameterTabs.dynamicParams import (
     dynamicLoadSchema,
     dynamicSaveSchema,
 )
-from ParameterTabs.vaccinationNPIParams import (
-    buildVaccinationNPITab,
+from ParameterTabs.npiParams import (
+    buildNPITab,
+    npiLoadSchema,
+    npiSaveSchema,
+)
+from ParameterTabs.vaccinationParams import (
+    buildVaccinationTab,
     vaccineLoadSchema,
     vaccineSaveSchema,
 )
@@ -192,6 +197,7 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
         diseaseSaveSchema(scenario, id, useAdvanced)
         communitySaveSchema(scenario, id, useAdvanced)
         useVaccines = vaccineSaveSchema(scenario, id, useAdvanced) or useVaccines
+        npiSaveSchema(scenario, id, useAdvanced)
         if useAdvanced:
             dynamicSaveSchema(scenario, id)
 
@@ -323,6 +329,7 @@ def loadConfig(file: BytesIO):
             diseaseLoadSchema(baselineParams, 0)
             communityLoadSchema(baselineParams, 0)
             vaccineLoadSchema(baselineParams, 0)
+            npiLoadSchema(baselineParams, 0)
             dynamicLoadSchema(baselineParams, 0)
 
         # Scenario parameters
@@ -350,6 +357,7 @@ def loadConfig(file: BytesIO):
                     diseaseLoadSchema(scenarioParams, scenarioID)
                     communityLoadSchema(scenarioParams, scenarioID)
                     vaccineLoadSchema(scenarioParams, scenarioID)
+                    npiLoadSchema(scenarioParams, scenarioID)
                     dynamicLoadSchema(scenarioParams, scenarioID)
         # Load tabs briefly to initialise errors
         useAdvanced = session.get("showAdvanced", False)
@@ -361,7 +369,8 @@ def loadConfig(file: BytesIO):
             ):
                 buildDiseaseTab(testID, useAdvanced)
                 buildCommunityTab(testID, useAdvanced)
-                buildVaccinationNPITab(testID, useAdvanced)
+                buildVaccinationTab(testID, useAdvanced)
+                buildNPITab(testID, useAdvanced)
                 buildDynamicTab(testID)
 
     except AssertionError as e:
@@ -407,6 +416,7 @@ def createTemplate(scenarioID: int, includeInterventions: bool = True) -> Parame
     communitySaveSchema(template, scenarioID, useAdvanced)
     if includeInterventions:
         vaccineSaveSchema(template, scenarioID, useAdvanced)
+        npiSaveSchema(template, scenarioID, useAdvanced)
     if useAdvanced:
         dynamicSaveSchema(template, scenarioID)
     return template
@@ -452,6 +462,7 @@ def loadTemplate(
         diseaseLoadSchema(templateData, scenarioID)
         communityLoadSchema(templateData, scenarioID)
         vaccineLoadSchema(templateData, scenarioID)
+        npiLoadSchema(templateData, scenarioID)
         dynamicLoadSchema(templateData, scenarioID)
 
         # Load tabs briefly to initialise errors
@@ -463,13 +474,15 @@ def loadTemplate(
         ):
             buildDiseaseTab(scenarioID, useAdvanced)
             buildCommunityTab(scenarioID, useAdvanced)
-            buildVaccinationNPITab(scenarioID, useAdvanced)
+            buildVaccinationTab(scenarioID, useAdvanced)
+            buildNPITab(scenarioID, useAdvanced)
             buildDynamicTab(scenarioID)
             if scenarioID == 0:
                 for testID in range(1, session.get("scenarioCount", 0) + 1):
                     buildDiseaseTab(testID, useAdvanced)
                     buildCommunityTab(testID, useAdvanced)
-                    buildVaccinationNPITab(testID, useAdvanced)
+                    buildVaccinationTab(testID, useAdvanced)
+                    buildNPITab(testID, useAdvanced)
                     buildDynamicTab(testID)
 
     except AssertionError as e:

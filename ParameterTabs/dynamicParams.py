@@ -79,8 +79,8 @@ def buildDynamicTab(id: int):
         in the "Infection Seeding" section of
         :primary-badge[:material/coronavirus: Pathogen].
         The other two parameters can have their initial values
-        changed in the "Vaccinations and NPIs" tab. School Closure
-        Compliance is in the "School Closure" section, while
+        changed in :primary-badge[:material/medical_mask: NPIs].
+        School Closure Compliance is in the "School Closure" section, while
         Reduced Background Contact Count is in the "Background
         Contact Count Reduction" section.
 
@@ -406,9 +406,9 @@ each day of the simulation is 2 cycles.
                 {'the baseline' if id == 0 else 'this'} scenario. As
                 such, dynamic updates to school closure compliance
                 cannot be edited and will not take effect unless you enable the
-                NPI in the "School Closure" section of the
-                "Vaccinations and NPIs" tab prior to running the
-                simulation.
+                NPI in the "School Closure" section of
+                :primary-badge[:material/medical_mask: NPIs] prior to
+                running the simulation.
             """,
             icon=":material/info:",
         )
@@ -498,8 +498,8 @@ they are closed after the specified point in the simulation.
             {'the baseline' if id == 0 else 'this'} scenario. As
             such, any dynamic updates to school closure compliance
             made here will not take effect unless you enable the
-            NPI in the "School Closure" section of the
-            "Vaccinations and NPIs" tab prior to running the
+            NPI in the "School Closure" section of
+            :primary-badge[:material/medical_mask: NPIs] prior to running the
             simulation.
         """,
                 icon=":material/info:",
@@ -512,7 +512,7 @@ they are closed after the specified point in the simulation.
             such, the dynamic updates to school closure compliance
             that have been defined here will not take effect unless
             you enable the NPI in the "School Closure" section of
-            the "Vaccinations and NPIs" tab prior to running the
+            :primary-badge[:material/medical_mask: NPIs] prior to running the
             simulation.
         """,
                 icon=":material/warning:",
@@ -641,13 +641,12 @@ they are closed after the specified point in the simulation.
                     {closeStart + 1} and Day {closeEnd + 1}.
                     - Change the scenario's School Closure Trigger
                     Condition in the "School Closure" section of
-                    the "Vaccinations and NPIs" tab to any option
-                    other than "Timed".
+                    :primary-badge[:material/medical_mask: NPIs]
+                    to any option other than "Timed".
                     - Modify the scenario's School Closure Time
-                    Period in the "School Closure" section of the
-                    "Vaccinations and NPIs" tab to include Day {
-                        closeUpdatePoint + 1
-                    }.
+                    Period in the "School Closure" section of
+                    :primary-badge[:material/medical_mask: NPIs]
+                    to include Day {closeUpdatePoint + 1}.
                 """,
                     icon=":material/error:",
                 )
@@ -681,13 +680,12 @@ they are closed after the specified point in the simulation.
                     }.
                     - Change the scenario's School Closure Trigger
                     Condition in the "School Closure" section of
-                    the "Vaccinations and NPIs" tab to any option
-                    other than "Timed".
+                    :primary-badge[:material/medical_mask: NPIs]
+                    to any option other than "Timed".
                     - Modify the scenario's School Closure Time
-                    Period in the "School Closure" section of the
-                    "Vaccinations and NPIs" tab to include Day {
-                        closeUpdatePoint + 1
-                    }.
+                    Period in the "School Closure" section of
+                    :primary-badge[:material/medical_mask: NPIs]
+                    to include Day {closeUpdatePoint + 1}.
                 """,
                     icon=":material/error:",
                 )
@@ -776,8 +774,8 @@ they are closed after the specified point in the simulation.
                 {'the baseline' if id == 0 else 'this'} scenario. As
                 such, dynamic updates to the reduced BCC cannot be edited
                 and will not take effect unless you enable the
-                NPI in the "Background Contact Count Reduction" section of the
-                "Vaccinations and NPIs" tab prior to running the
+                NPI in the "Background Contact Count Reduction" section of
+                :primary-badge[:material/medical_mask: NPIs] prior to running the
                 simulation.
             """,
             icon=":material/info:",
@@ -872,8 +870,8 @@ effect, overwriting the normal BCC rate.
             {'the baseline' if id == 0 else 'this'} scenario. As
             such, any dynamic updates to reduced BCC made here will
             not take effect unless you enable the NPI in the
-            "Background Contact Count Reduction" section of the
-            "Vaccinations and NPIs" tab prior to running the
+            "Background Contact Count Reduction" section of
+            :primary-badge[:material/medical_mask: NPIs] prior to running the
             simulation.
         """,
                 icon=":material/info:",
@@ -887,7 +885,7 @@ effect, overwriting the normal BCC rate.
             such, the dynamic updates to reduced BCC that have been
             defined here will not take effect unless you enable the
             NPI in the "Background Contact Count Reduction" section
-            of the "Vaccinations and NPIs" tab prior to running the
+            of :primary-badge[:material/medical_mask: NPIs] prior to running the
             simulation.
         """,
                 icon=":material/warning:",

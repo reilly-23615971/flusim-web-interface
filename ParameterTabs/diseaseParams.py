@@ -1236,7 +1236,7 @@ for every 100,000 cases of the pathogen.
                     Note that these parameters do not affect immunity to
                     the pathogen that is obtained from vaccination. This
                     type of immunity can be configured using the parameters
-                    in the "Vaccinations and NPIs" tab.
+                    in :primary-badge[:material/vaccines: Vaccination].
                 """)
                 loadKey("naturalWaningToggle", id, False)
                 waningToggle = st.toggle(

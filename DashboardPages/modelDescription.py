@@ -85,3 +85,5 @@ with st.expander(
     "Pathogen-Related Parameters", expanded=True, icon=":material/coronavirus:"
 ):
     diseaseDescribe(0, advanced=showAdvanced)
+
+st.markdown("Other parameters coming soon!")

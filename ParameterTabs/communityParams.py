@@ -65,7 +65,7 @@ def buildCommunityTab(id: int, advanced: bool = False):
             related to social distancing and other programs
             implemented by the government to reduce the spread of
             the pathogen. These interventions can be configured
-            using the parameters in the "Vaccinations and NPIs" tab.
+            using the parameters in :primary-badge[:material/medical_mask: NPIs].
         """
         )'''
     st.subheader("Withdrawals and Contact", divider="grey")

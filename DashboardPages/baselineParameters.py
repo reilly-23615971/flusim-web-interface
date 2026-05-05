@@ -13,8 +13,9 @@ from ClientResources.ParameterFunctions import containerSave, loadKey
 from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.diseaseParams import buildDiseaseTab
 from ParameterTabs.dynamicParams import buildDynamicTab
+from ParameterTabs.npiParams import buildNPITab
 from ParameterTabs.templateParams import buildTemplateTab
-from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
+from ParameterTabs.vaccinationParams import buildVaccinationTab
 
 # from streamlit_push_notifications import send_push, send_alert
 
@@ -73,11 +74,12 @@ dynamic parameter updates.
 
 # Create tabs for each category of parameters
 if showAdvanced:
-    diseaseTab, communityTab, interventionTab, dynamicTab, templateTab = st.tabs(
+    diseaseTab, communityTab, vaccineTab, npiTab, dynamicTab, templateTab = st.tabs(
         [
             ":material/coronavirus: Pathogen",
             ":material/groups: Community",
-            ":material/vaccines: Vaccination and NPIs",
+            ":material/vaccines: Vaccination",
+            ":material/medical_mask: NPIs",
             ":material/manage_history: Dynamic",
             ":material/list_alt: Templates",
         ],
@@ -85,11 +87,12 @@ if showAdvanced:
         key="paramTabs0",
     )
 else:
-    diseaseTab, communityTab, interventionTab, templateTab = st.tabs(
+    diseaseTab, communityTab, vaccineTab, npiTab, templateTab = st.tabs(
         [
             ":material/coronavirus: Pathogen",
             ":material/groups: Community",
-            ":material/vaccines: Vaccination and NPIs",
+            ":material/vaccines: Vaccination",
+            ":material/medical_mask: NPIs",
             ":material/list_alt: Templates",
         ],
         on_change="rerun",
@@ -101,7 +104,10 @@ if diseaseTab.open:
 if communityTab.open:
     with communityTab:
         buildCommunityTab(0, showAdvanced)
-if interventionTab.open:
+if vaccineTab.open:
+    with vaccineTab:
+        buildVaccinationTab(0, showAdvanced)
+if npiTab.open:
     containersToOpen |= {
         "npiContainer0",
         "schoolClosureContainer0",
@@ -109,8 +115,8 @@ if interventionTab.open:
         "workGroupContainer0",
         "bccContainer0",
     }
-    with interventionTab:
-        buildVaccinationNPITab(0, showAdvanced)
+    with npiTab:
+        buildNPITab(0, showAdvanced)
 if showAdvanced and dynamicTab.open:  # type: ignore
     with dynamicTab:  # type: ignore
         buildDynamicTab(0)
