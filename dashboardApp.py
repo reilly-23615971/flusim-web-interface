@@ -91,6 +91,11 @@ st.logo(":material/microbiology:")
 
 # Define application pages
 # TODO: Limit nested containers since apparently they might cause page blanking
+landingPage = st.Page(
+    "DashboardPages/landingPage.py",
+    title="Main Page",
+    icon=":material/home:",
+)
 modelDescription = st.Page(
     "DashboardPages/modelDescription.py",
     title="Model Description",
@@ -123,8 +128,13 @@ healthTables = st.Page(
 )
 
 pages = {
-    "Flusim Web Dashboard": [modelDescription],
-    "Parameter Configuration": [baselineParameters, scenarioParameters, runSimulation],
+    "Flusim Web Dashboard": [landingPage],
+    "Parameter Configuration": [
+        modelDescription,
+        baselineParameters,
+        scenarioParameters,
+    ],
+    "Conducting Experiments": [runSimulation],
     "Results Visualisation": [infectionGraphs, healthTables],
 }
 
@@ -135,8 +145,6 @@ stn.notify(remove=True)
 flusimPages = st.navigation(pages)
 flusimPages.run()
 
-# TODO: Consider rendering user manual with 1.56's st.iframe instead of
-# just opening the PDF in a new tab
 st.sidebar.link_button(
     "User Manual", "/app/static/UserManual.pdf", icon=":material/quick_reference:"
 )

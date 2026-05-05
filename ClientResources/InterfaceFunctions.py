@@ -6,7 +6,7 @@
 import logging
 import re
 from functools import partial
-from typing import Callable
+from typing import Any, Callable
 
 import numpy as np
 import streamlit as st
@@ -29,6 +29,7 @@ warnFormat = partial(st.warning, icon=":material/warning:")
 # Use sRGB in the colour picker for the best display/code match
 
 
+# Error functions
 def paramError(
     label: str,
     scenarioID: int,
@@ -148,6 +149,17 @@ def validationErrorFormatting(e: ValidationError):
         st.error(f"Error: {error["msg"]}", icon=":material/error:")
 
 
+# Formatting functions
+def plural(value: int | float):
+    """
+    Simple function to add "s" to words when a value is not 1.
+
+    Parameters:
+        value (int or float): The value to check.
+    """
+    return "" if value == 1 else "s"
+
+
 def dayCount(count: int | float):
     """
     Simple function to convert a number into a string describing a number of days.
@@ -181,6 +193,7 @@ def timeString(time: int | float) -> str:
         )
 
 
+# Scenario name functions
 def saveName(
     key: str,
     scenarioID: int,
@@ -258,6 +271,32 @@ def uniqueName(currentName: str, names: set[str]):
         n += 1
         candidate = f"{base} {n}"
     return candidate
+
+
+# Age functions
+def ageSort(age: tuple[str, Any]) -> int:
+    """
+    Function to be used in `sorted()` for ordering age groups
+
+    Parameters:
+        age (tuple with str): A tuple where the first item is the string
+            representation of an age group.
+
+    Returns:
+        int: The numeric ordering index of the age group.
+    """
+    return [
+        "young_infant",
+        "infant",
+        "young_child",
+        "child",
+        "adolescent",
+        "young_adult",
+        "adult",
+        "older_adult",
+        "senior",
+        "older_senior",
+    ].index(age[0])
 
 
 def ageRangeString(lower: int | float, upper: int | float) -> str:
@@ -348,6 +387,7 @@ def ageRangeCombiner(ages: list[str]) -> str:
     return currentString[2:]
 
 
+# Miscellaneous functions
 def backgroundColour() -> str:
     """
     Simple function to get the background colour of the current theme.
