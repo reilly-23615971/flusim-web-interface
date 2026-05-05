@@ -1253,7 +1253,7 @@ infected again after recovering from a previous infection.
                 loadKey("naturalImmunityDuration", id, 2)
                 st.slider(
                     "Natural Immunity Waning Delay (Months)",
-                    1,
+                    0,
                     12,
                     2,
                     disabled=not waningToggle,
@@ -1263,6 +1263,8 @@ infected again after recovering from a previous infection.
                     help="""
 The number of months after an individual fully recovers from the pathogen
 before they begin losing their immunity, where a month is 30 days.
+
+If this parameter is set to 0, an individual's natural immunity will begin to diminish immediately after they recover from the disease.
                     """,
                 )
                 """
@@ -1410,7 +1412,6 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
             probAsymptomatic = idGet("asymptomaticBoth", id, 0.35)
             scenarioParams.prob_asymptomatic_young = probAsymptomatic
             scenarioParams.prob_asymptomatic = probAsymptomatic
-            scenarioParams.infection_waning_cycle_delay = simLength
 
         # Immunity Waning
         if advanced and idGet("naturalWaningToggle", id, False):

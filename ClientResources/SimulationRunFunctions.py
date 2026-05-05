@@ -223,9 +223,9 @@ simulation.
             )
 
         # Get estimated simulation runtime
-        dayCount = session.get("cycleCount", 360)
+        cycleCount = session.get("cycleCount", 360)
         runCount = session.get("runCount", 24)
-        estimatedTime = runtimeEstimate(dayCount, runCount, scenarioCount + 1)
+        estimatedTime = runtimeEstimate(cycleCount, runCount, scenarioCount + 1)
         st.metric(
             f"Estimated Time to Run Simulation Experiment",
             value=timeString(estimatedTime),
