@@ -207,6 +207,9 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
         middleJoint += "+vaccines"
 
     # Create config object
+    startDay = session.get("startDay", "Monday")
+    if startDay == "Random":
+        startDay = None
     return modelGuideFile(
         name="Flusim Dashboard Simulation",
         description=str(session.sessionID),
@@ -224,14 +227,18 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
                     ),
                     Scenario_Parameter=scenarioParameters(
                         start_day_of_week=(
-                            "Sunday",
-                            "Monday",
-                            "Tuesday",
-                            "Wednesday",
-                            "Thursday",
-                            "Friday",
-                            "Saturday",
-                        ).index(session.get("startDay", "Monday"))
+                            None
+                            if startDay is None
+                            else (
+                                "Sunday",
+                                "Monday",
+                                "Tuesday",
+                                "Wednesday",
+                                "Thursday",
+                                "Friday",
+                                "Saturday",
+                            ).index(session.get("startDay", "Monday"))
+                        )
                     ),
                 ),
             )
@@ -303,16 +310,21 @@ def loadConfig(file: BytesIO):
             session.community = engineSettings.name
 
             engineParams = engineSettings.parameters.Scenario_Parameter
-            if engineParams is not None and engineParams.start_day_of_week is not None:
+            if engineParams is not None:
+                startDay = engineParams.start_day_of_week
                 session.startDay = (
-                    "Sunday",
-                    "Monday",
-                    "Tuesday",
-                    "Wednesday",
-                    "Thursday",
-                    "Friday",
-                    "Saturday",
-                )[engineParams.start_day_of_week]
+                    (
+                        "Sunday",
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday",
+                    )[startDay]
+                    if startDay is not None
+                    else "Random"
+                )
             commandArgs = engineSettings.parameters.Command_Argument
             if commandArgs is not None:
                 session.runCount = commandArgs.n_runs

@@ -143,8 +143,9 @@ def buildDiseaseTab(id: int, advanced: bool = False):
                 result in a new infection. It is analogous to the basic reproduction
                 number ($R_0$), acting as a representation of how often an infected
                 individual will spread the disease to others.
-                - $sym(I_i)$ reduces the likelihood of infection if the infected
-                individual is not showing symptoms. Common respiratory infection
+                - $sym(I_i)$ is equal to 1 when the infected individual is showing
+                symptoms of the infection, but reduces the likelihood of infection
+                if they are not showing symptoms. Common respiratory infection
                 symptoms like sneezing and coughing are effective in spreading
                 the infection to others, so individuals who do not display these
                 symptoms will be less likely to transmit the infection.
@@ -165,6 +166,7 @@ def buildDiseaseTab(id: int, advanced: bool = False):
                 spread more often in households since they are more enclosed than
                 other locations.
             """)
+            # TODO: Mention that kappa changes are advanced-only?
 
             # Beta and symptom multipliers
             # Previous default for beta was 0.11
@@ -320,7 +322,6 @@ the pathogen during the background phase.
                 )
 
             # Dataframe for age-based transmissibility modifiers
-            # TODO: Is this advanced enough to hide?
             st.markdown(
                 "### Age-Specific Infectiousness/Susceptibility",
                 help="""
@@ -331,7 +332,11 @@ will assume a default value of 1 (i.e. no change in probability) if they
 are not specified for a specific age group.
                 """,
             )
-            st.markdown("Double-click a cell in this table to edit its value.")
+            st.markdown("""
+                Double-click a cell in this table to edit its value. Note that
+                any ages not added to this form will use values of $inf(I_i)$
+                and $susc(I_s)$ equal to 1.
+            """)
             loadKey(
                 "transAgeForm",
                 id,
@@ -578,9 +583,8 @@ group to contract the pathogen when interacting with infected individuals.
             """)
 
             # Duration Parameters
+            st.subheader("Infection Life Stages", divider="grey")
             st.markdown("""
-                ### Infection Life Stages
-
                 When an individual in the simulation is infected with a pathogen,
                 the infection does not remain static; it progresses through multiple
                 life stages that affect its transmissibility before the individual
@@ -610,7 +614,7 @@ group to contract the pathogen when interacting with infected individuals.
             loadKey("latencyPeriod", id, 0.5)
             # Previous default was 10
             latencyPeriod = st.slider(
-                "Latency Period Length (Days)",
+                "Latent Period Length (Days)",
                 min_value=0.0,
                 max_value=14.0,
                 value=0.5,
@@ -620,7 +624,7 @@ group to contract the pathogen when interacting with infected individuals.
                 args=["latencyPeriod", id],
                 key=f"_latencyPeriod{id}",
                 help="""
-The length in days of the pathogen's latency period,
+The length in days of the pathogen's latent period,
 i.e. the length of time between a person
 initially being infected by the pathogen and becoming infectious themselves.
                 """,
@@ -774,8 +778,8 @@ the pathogen and being fully recovered/no longer infectious.
 
             # Written period lengths
             st.markdown("""
-                With the parameters defined above, the following time
-                periods can be defined:
+                In addition to these life stages, the infection's life cycle may
+                also be described using the following time periods:
             """)
             totalCol, incubationCol, infectiousCol = st.columns(3)
             totalCol.metric(
@@ -895,7 +899,11 @@ being infectious).
                 allows for variance between different experiment runs using the
                 same parameters.
                         
-                During each cycle of the simulation (i.e. twice per day) within the specified seeding period, infection seeding will directly infect a number of people equal to the seeding rate.
+                During each cycle of the simulation (i.e. twice per day) within
+                the specified seeding period, infection seeding will directly
+                infect a number of people equal to the seeding rate. If the seeding
+                rate is a decimal, the number of infections is chosen randomly
+                each cycle such that it averages out to the desired rate.
             """)
             loadKey("seedRate", id, 0.25)
             # TODO: Elaborate on decimal seeding rate mechanics?
@@ -914,8 +922,9 @@ The average number of individuals that will be infected directly via infection
 seeding each cycle. Note that each day of the simulation is 2 cycles.
 
 If this number is a decimal, the simulation will randomly decide between the two
-closest integers every cycle. For instance, if the seeding rate is 3.2, the
-simulation will infect 3 people 80% of the time and 4 people 20% of the time.
+closest integers every cycle such that the average number of people seeded is the
+desired rate. For instance, if the seeding rate is 3.2, the simulation will infect
+3 people 80% of the time and 4 people 20% of the time.
                 """,
             )
             loadKey("seedPeriod", id, (1, 30))

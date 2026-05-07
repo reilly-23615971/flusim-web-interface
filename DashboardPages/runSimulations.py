@@ -40,7 +40,16 @@ st.markdown("""
 # Global Engine Parameters
 st.header("Simulation Engine Settings")
 
+st.markdown("""
+    These parameters control various universal elements of the simulation engine.
+""")
+
 # Community Selection
+st.markdown("""
+    - The community selection determines the population, demographic distribution
+    and other elements of the community that is simulated in the experiment, chosen
+    from one of two Australian cities.
+""")
 loadKey("community", default="newcastle")
 community = st.selectbox(
     "Simulated Community",
@@ -66,6 +75,11 @@ and has a higher Indigenous population compared to Newcastle.
     """,
 )
 
+st.markdown("""
+    - The length of the simulation indicates how many days that each simulation
+    run should last for. Note that individual simulation runs may end earlier if
+    no infections occur in a given cycle.
+""")
 loadKey("cycleCount", default=360)
 st.slider(
     "Length of Simulation (Days)",
@@ -85,6 +99,13 @@ on Day 120 instead.
     """,
 )
 
+st.markdown("""
+    - The number of simulation runs decides how many times each scenario will be
+    simulated. The results displayed on this dashboard are the median of the results
+    obtained in each simulation run. Running each scenario multiple times utilises
+    the model's stochasticity to generate reliable average values and reduce the
+    likelihood of outliers.
+""")
 loadKey("runCount", default=24)
 st.slider(
     "Number of Simulation Runs",
@@ -102,17 +123,31 @@ simulations but more accurate results.
     """,
 )
 
+st.markdown("""
+    - The starting day of the week determines what day of the week it is on the
+    first day of the experiment. Individuals in the simulation visit different
+    locations on weekends, so this may affect the initial spread of the disease.
+""")
 loadKey("startDay", default="Monday")
 st.radio(
     "Starting Day of the Week",
-    ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"),
+    (
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+        "Random",
+    ),
     index=0,
     horizontal=True,
     key="_startDay",
     on_change=saveKey,
     args=["startDay"],
     help="""
-The day of the week that the first day of the simulation will be.
+The day of the week that the first day of the simulation will be. If this is "Random", the starting day will be chosen randomly for each simulation.
     """,
 )
 
