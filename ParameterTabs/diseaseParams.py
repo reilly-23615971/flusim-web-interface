@@ -126,7 +126,7 @@ def buildDiseaseTab(id: int, advanced: bool = False):
                 interacts with others.
 
                 The probability that an interaction between an infected
-                individual $I_i$ and an uninfected individual $I_s$ with
+                individual $I_i$ and a healthy individual $I_s$ with
                 no immunity to the disease will result in the infection of $I_s$
                 is calculated with the following formula
                 [[1](https://www.doi.org/10.1371/journal.pone.0004005)]:
@@ -138,19 +138,32 @@ def buildDiseaseTab(id: int, advanced: bool = False):
                 $$
 
                 In this formula:
-                - $\\beta$ (beta) is the basic transmission parameter
-                for the pathogen
-                - $sym(I_i)$ is a parameter based on whether or not the
-                infected individual has shown symptoms
-                - $inf(I_i)$ is the infectiousness parameter for the
-                infected individual
-                - $susc(I_s)$ is the susceptibility parameter for the
-                uninfected individual
-                - $\\kappa$ is the location parameter for the area the
-                interaction is occurring in
-
-                The parameters in this section will control the values
-                of each of these parameters under various conditions.
+                - $\\beta$ is the basic transmission probability, which determines
+                the likelihood that any interaction with a healthy individual will
+                result in a new infection. It is analogous to the basic reproduction
+                number ($R_0$), acting as a representation of how often an infected
+                individual will spread the disease to others.
+                - $sym(I_i)$ reduces the likelihood of infection if the infected
+                individual is not showing symptoms. Common respiratory infection
+                symptoms like sneezing and coughing are effective in spreading
+                the infection to others, so individuals who do not display these
+                symptoms will be less likely to transmit the infection.
+                - $inf(I_i)$ is infectiousness, which modifies the likelihood of
+                infection based on how old the infected individual is. People of
+                different ages may be more or less likely to spread the disease;
+                for instance, young children may have less concern for hygiene,
+                resulting in them spreading the infection more often.
+                - $susc(I_s)$ is susceptibility, which modifies the likelihood of
+                infection based on how old the healthy individual is. A person's
+                age may affect how likely they are to catch the infection from
+                others; for instance, seniors often have weaker immune systems
+                that make them more likely to be infected.
+                - $\\kappa$ modifies the likelihood of infection based on whether
+                the interaction takes place in a household, school, workplace or
+                other location. The location of interactions may affect the
+                probability of transmission; for instance, infections typically
+                spread more often in households since they are more enclosed than
+                other locations.
             """)
 
             # Beta and symptom multipliers
@@ -178,7 +191,7 @@ the pathogen in any interaction with infected individuals.
             leftCol, rightCol = st.columns(2)
             loadKey("betaAsymptomatic", id, 0.55)
             leftCol.number_input(
-                "Asymptomatic Transmission Multiplier",
+                "Asymptomatic Transmission ($sym(I_i)$)",
                 min_value=0.00001,
                 max_value=1.0,
                 value=0.55,
@@ -187,8 +200,6 @@ the pathogen in any interaction with infected individuals.
                 on_change=saveKey,
                 args=["betaAsymptomatic", id],
                 key=f"_betaAsymptomatic{id}",
-                # TODO: Say stuff like "If this is 0.5, asymptomatic people
-                # are half as likely to spread the infection"?
                 help="""
 The value of the transmissibility modifier
 $sym(I_i)$ when the infected individual in an
@@ -205,7 +216,7 @@ interacting with asymptomatic individuals.
             )
             loadKey("betaPostSymptomatic", id, 0.55)
             rightCol.number_input(
-                "Post-Symptomatic Transmission Multiplier",
+                "Post-Symptomatic Transmission ($sym(I_i)$)",
                 min_value=0.00001,
                 max_value=1.0,
                 value=0.55,
@@ -229,7 +240,7 @@ individuals.
             if advanced:
                 loadKey("schoolKappa", id, 1.0)
                 leftCol.number_input(
-                    "School Transmission Multiplier",
+                    "School Transmission ($\\kappa$)",
                     min_value=0.00001,
                     max_value=10.0,
                     value=1.0,
@@ -249,7 +260,7 @@ individuals in schools.
                 )
                 loadKey("workKappa", id, 1.0)
                 rightCol.number_input(
-                    "Workplace Transmission Multiplier",
+                    "Workplace Transmission ($\\kappa$)",
                     min_value=0.00001,
                     max_value=10.0,
                     value=1.0,
@@ -269,7 +280,7 @@ individuals in workplaces.
                 )
                 loadKey("householdKappa", id, 2.2)
                 leftCol.number_input(
-                    "Household Transmission Multiplier",
+                    "Household Transmission ($\\kappa$)",
                     min_value=0.00001,
                     max_value=10.0,
                     value=2.2,
@@ -289,7 +300,7 @@ individuals in households.
                 )
                 loadKey("backgroundKappa", id, 1.0)
                 rightCol.number_input(
-                    "Background Contact Transmission Multiplier",
+                    "Background Contact Transmission ($\\kappa$)",
                     min_value=0.00001,
                     max_value=10.0,
                     value=1.0,
@@ -353,7 +364,7 @@ The age group whose infectiousness and susceptibility will be modified.
                         """,
                     ),
                     "Infectiousness": st.column_config.NumberColumn(
-                        "Infectiousness",
+                        "Infectiousness (inf(I\u1d62))",
                         required=True,
                         default=1.0,
                         min_value=0.0,
@@ -365,7 +376,7 @@ the pathogen when interacting with infected individuals in this age group.
                         """,
                     ),
                     "Susceptibility": st.column_config.NumberColumn(
-                        "Susceptibility",
+                        "Susceptibility (susc(I\u209b))",
                         required=True,
                         default=1.0,
                         min_value=0.0,
@@ -570,26 +581,28 @@ group to contract the pathogen when interacting with infected individuals.
             st.markdown("""
                 ### Infection Life Stages
 
-                Pathogens in the simulation have 5 distinct stages in
-                their life cycle:
+                When an individual in the simulation is infected with a pathogen,
+                the infection does not remain static; it progresses through multiple
+                life stages that affect its transmissibility before the individual
+                recovers. The pathogen in the simulation has 5 distinct stages
+                in its life cycle:
 
-                1. Latent: The pathogen is still developing in the body
-                of the infected individual; they do not yet show
-                symptoms and are not infectious.
-                2. Pre-Symptomatic: The pathogen has developed further
-                and the infected individual can now spread the pathogen
-                to others, but they still do not show any symptoms.
-                3. Symptomatic: The infected individual is showing symptoms
-                and thus can be diagnosed.
-                4. Post-Symptomatic: The infected individual's
-                condition has improved enough that they no longer show
-                symptoms of the pathogen, but they are still infectious.
-                5. Recovered: The individual is no longer infectious
-                and has gained an immunity to the pathogen.
-
-                If an infected individual is asymptomatic, the infection will
-                last the same amount of time, but they will not show any symptoms
-                even during the symptomatic phase.
+                1. Latent: The pathogen is still developing in the body of the
+                infected individual; they do not show symptoms and cannot spread
+                the pathogen.
+                2. Pre-Symptomatic: The pathogen has developed further and the
+                infected individual can now spread the pathogen to others, but
+                they still do not show any symptoms and thus have a reduced
+                transmission rate.
+                3. Symptomatic: The infected individual has begun showing symptoms,
+                resulting in a high transmission rate and allowing them to be
+                diagnosed with the pathogen.
+                4. Post-Symptomatic: The infected individual's condition has
+                improved enough that they no longer show symptoms of the pathogen,
+                but they can still spread the infection at a reduced transmission
+                rate.
+                5. Recovered: The individual has recovered from the pathogen and
+                can no longer spread the infection.
 
                 The following parameters configure the length of each
                 stage in the pathogen's life cycle.
@@ -770,6 +783,7 @@ the pathogen and being fully recovered/no longer infectious.
                 dayCount(
                     latencyPeriod + preSymptomPeriod + symptomPeriod + postSymptomPeriod
                 ),
+                delta_description="from infection to recovery",
                 help="""
 The length in days of the pathogen's total lifespan,
 i.e. the length of time between a person
@@ -780,6 +794,7 @@ person being fully recovered/no longer infectious.
             incubationCol.metric(
                 "Incubation Period",
                 dayCount(latencyPeriod + preSymptomPeriod),
+                delta_description="from infection to symptoms",
                 help="""
 The length in days of the pathogen's incubation
 period, i.e. the length of time between a person
@@ -789,6 +804,7 @@ being infected and beginning to show symptoms.
             infectiousCol.metric(
                 "Infectious Period",
                 dayCount(preSymptomPeriod + symptomPeriod + postSymptomPeriod),
+                delta_description="where others may be infected",
                 help="""
 The length in days of the pathogen's infectious
 period, i.e. the length of time during which an
@@ -799,6 +815,16 @@ pathogen to others.
 
             # Asymptomatic params (age-separated if advanced params are enabled)
             st.subheader("Asymptomatic Likelihood", divider="grey")
+            st.markdown("""
+                Whenever an individual is infected with the pathogen, there is
+                a chance that their infection will be asymptomatic. An asymptomatic
+                infection lasts for the same amount of time as a regular infection,
+                but the infected individual will never show symptoms. Since an
+                asymptomatic individual can still spread the infection (albeit at
+                a reduced transmission rate due to the lack of symptoms), this
+                allows the pathogen to continue spreading even when symptomatic
+                individuals take steps to avoid spreading the disease.
+            """)
             if advanced:
                 loadKey("asymptomaticChild", id, 0.35)
                 # TODO: Is this precise enough?
@@ -857,17 +883,22 @@ being infectious).
         "Infection Seeding", key=f"infectionSeedingContainer{id}", on_change="rerun"
     ) as seedingContainer:
         if seedingContainer.open:
-            # Describe what sort of parameters are here
             st.markdown("""
-                These parameters control how infected individuals
-                are directly seeded into the community. Seeding is
-                typically used to kickstart the initial epidemic by
-                ensuring a steady number of people are infected
-                daily.
+                These parameters control how infected individuals are directly
+                seeded into the community. When a simulation experiment begins,
+                everyone within the simulation is healthy. Infection seeding is
+                used to kickstart the spread of the pathogen by randomly selecting
+                individuals to infect. The process of infection seeding
+                represents the introduction of infected individuals from outside
+                the population (e.g. tourists). Additionally, the random nature
+                of infection seeding introduces stochasticity into the model and
+                allows for variance between different experiment runs using the
+                same parameters.
+                        
+                During each cycle of the simulation (i.e. twice per day) within the specified seeding period, infection seeding will directly infect a number of people equal to the seeding rate.
             """)
             loadKey("seedRate", id, 0.25)
-            # TODO: Is this enough/too much precision?
-            # TODO: Change cycle to half-day?
+            # TODO: Elaborate on decimal seeding rate mechanics?
             st.slider(
                 "Infection Seeding Rate (Average Individuals per Cycle)",
                 0.05,
@@ -881,6 +912,10 @@ being infectious).
                 help="""
 The average number of individuals that will be infected directly via infection
 seeding each cycle. Note that each day of the simulation is 2 cycles.
+
+If this number is a decimal, the simulation will randomly decide between the two
+closest integers every cycle. For instance, if the seeding rate is 3.2, the
+simulation will infect 3 people 80% of the time and 4 people 20% of the time.
                 """,
             )
             loadKey("seedPeriod", id, (1, 30))
@@ -917,28 +952,58 @@ set to affect the value on Day 45 will be changed to affect it on Day 30 instead
         on_change="rerun",
     ) as burdenContainer:
         if burdenContainer.open:
-            # Describe what sort of parameters are here
             st.markdown("""
-                These parameters control how likely different health
-                burden outcomes (such as hospitalisation and death) are
-                to occur as a result of the pathogen. These parameters
-                are primarily used in the simulation's post-processing
-                phase; most of these outcomes are not simulated
-                directly, but the probabilities defined here are used
-                in combination with the data from the simulation to
-                generate statistics on how many people were affected by
-                each outcome.
+                These parameters control how likely different health burden outcomes
+                are to occur as a result of the pathogen. Health burden outcomes
+                are adverse consequences that may result from an infection, such
+                as hospitalisation or death. These outcomes are not simulated
+                directly, but are calculated using the infection counts obtained
+                once the simulation is complete. Generally, each health burden
+                outcome follows from the previous outcomes; of all individuals
+                who are diagnosed, only a subset of them will be hospitalised,
+                and only a subset of those who are hospitalised will die. Only
+                symptomatic infections can result in health burden outcomes.
+                        
+                The health burden outcomes that the dashboard can simulate are as follows:
 
-                Note that none of these health burden outcomes are
-                capable of occurring in asymptomatic individuals; the
-                probabilities defined here will only apply to people
-                who are symptomatic.
+                1. Diagnosis: The individual has been formally diagnosed with the
+                pathogen. Not all individuals who show symptoms will be diagnosed,
+                since some people will not mention their infection to any sources
+                that record infection data.
+
+                2. GP Visits: The individual has consulted their general practitioner
+                (GP) regarding the symptoms of the infection.
+
+                3. Hospitalisation: The individual has been admitted to a hospital
+                as a result of the infection.
+
+                4. ICU Visits: The individual has been admitted to the Intensive
+                Care Unit (ICU) of a hospital.
+
+                5. Mortality: The individual has died as a direct result of the
+                infection.
             """)
+            st.info(
+                """
+                    Note that due to the difference in scale between these health
+                    burden outcomes, their occurrence rates are represented in
+                    different ways: 
+                    
+                    - Diagnosis and GP Visits are represented as percentages of
+                    the infected, symptomatic population.
+                    - Hospitalisations and Mortality are represented as the number
+                    of occurrences for every 100,000 infected, symptomatic
+                    individuals in the population.
+                    - ICU Visits are represented as percentages of the hospitalised
+                    population.
+                """,
+                icon=":material/decimal_increase:",
+            )
 
             # Health Burden Outcomes
             loadKey("caseRatio", id, 50.0)
             st.number_input(
-                "Diagnosed Case Rate (% Percentage of Population)",
+                "Diagnosis Rate (% Percentage of Cases)",
                 min_value=0.0,
                 max_value=100.0,
                 value=50.0,
@@ -955,7 +1020,7 @@ diagnosed as a confirmed case of the pathogen.
             )
             loadKey("gpRatio", id, 17.0)
             st.number_input(
-                "GP Visit Rate (% Percentage of Population)",
+                "GP Visit Rate (% Percentage of Cases)",
                 min_value=0.0,
                 max_value=100.0,
                 value=17.0,
@@ -984,7 +1049,7 @@ general practitioner (GP) as a result of the pathogen.
                 args=["hospitalRatio", id],
                 help="""
 The average number of infected individuals who will be admitted to a hospital
-for every 100,000 cases of the pathogen.
+for every 100,000 symptomatic cases of the pathogen.
                 """,
             )
             loadKey("icuRatio", id, 20.0)
@@ -1018,7 +1083,7 @@ a hospital's intensive care unit (ICU) as a result of the pathogen.
                 args=["deathRatio", id],
                 help="""
 The average number of infected individuals who will die for every 100,000
-cases of the pathogen.
+symptomatic cases of the pathogen.
                 """,
             )
 
@@ -1060,7 +1125,7 @@ each age group, overriding the global rate defined above.
                             format_func=lambda x: ageTimeDict[x],  # type: ignore
                             help="""
 An age group that will have a specific mortality rate defined for it,
-overriding the base proportion.
+overriding the base rate.
                             """,
                         ),
                         "Mortality Rate": st.column_config.NumberColumn(
@@ -1226,17 +1291,24 @@ for every 100,000 cases of the pathogen.
             if waningContainer.open:
                 # Describe what sort of parameters are here
                 st.markdown("""
-                    These parameters control how immunity to the pathogen
-                    conferred by having been infected by it in the past
-                    will become less effective over time. Note that
-                    individuals in the simulation are assumed to be
-                    completely immune to the pathogen immediately after
-                    recovering from it; the efficacy before waning is 100%.
+                    Individuals in the simulation are able to become immune to
+                    the pathogen in two different ways: by recovering from the
+                    infection, or by receiving a vaccine. These parameters control
+                    immunity from recovering from the infection, also referred to
+                    as natural immunity. Immunity from receiving a vaccine can be
+                    configured using the parameters in
+                    :primary-badge[:material/vaccines: Vaccination].
+                    
+                    The efficacy of an individual's natural immunity is represented
+                    as the probability that they will remain healthy in the event
+                    that they would be infected. The efficacy of natural immunity
+                    begins at 100% (where the individual will never be infected)
+                    and stays at full effectiveness for the specified waning delay
+                    period. Once this period has elapsed, the efficacy linearly
+                    decreases to its minimum value over the specified waning duration.
+                    If an individual with waned natural immunity is infected again,
+                    their immunity will begin waning from 100% again once they recover.
 
-                    Note that these parameters do not affect immunity to
-                    the pathogen that is obtained from vaccination. This
-                    type of immunity can be configured using the parameters
-                    in :primary-badge[:material/vaccines: Vaccination].
                 """)
                 loadKey("naturalWaningToggle", id, False)
                 waningToggle = st.toggle(
@@ -1308,7 +1380,7 @@ provided by recovering from the pathogen will never diminish.
                 """
                 loadKey("naturalWanedEfficacy", id, 0.5)
                 st.slider(
-                    "Natural Immunity After Waning (Probability)",
+                    "Natural Immunity Minimum Efficacy (Probability)",
                     min_value=0.0,
                     max_value=0.99,
                     value=0.5,
@@ -1331,24 +1403,25 @@ after their immunity is fully waned.
                 """
 
 
-def diseaseDescribe(id: int = 0, advanced: bool = False):
+def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
     """
     Function to describe the current pathogen parameters in natural language.
 
     Parameters:
-        id (int): An integer that will be used to differentiate the parameters in
-            different instances of the tab by adding a number to the Streamlit
+        scenarioID (int): An integer that will be used to differentiate the parameters
+            in different instances of the tab by adding a number to the Streamlit
             session state variables. A value of 0 means that this is the
             baseline scenario and will be treated accordingly.
 
         advanced (bool): Set to `True` to describe more complex parameters like
             location-specific transmission modifiers.
     """
+
     # Transmission
     st.subheader("Infection Transmission")
     st.markdown(f"""
         The probability that an interaction between an infected
-        individual $I_i$ and an uninfected individual $I_s$ with
+        individual $I_i$ and a healthy individual $I_s$ with
         no immunity to the disease will result in the infection of $I_s$
         is calculated with the following formula
         [[1](https://www.doi.org/10.1371/journal.pone.0004005)]:
@@ -1362,7 +1435,7 @@ def diseaseDescribe(id: int = 0, advanced: bool = False):
     transValues, suscValues = {}, {}
     transAgeForm = idGet(
         "transAgeForm",
-        0,
+        scenarioID,
         pd.DataFrame(
             {
                 "Age Group": [None],
@@ -1491,24 +1564,24 @@ def diseaseDescribe(id: int = 0, advanced: bool = False):
         interactions that occur during the background phase (i.e. outside of the
         previous three locations), $\\kappa$ will be equal to {background:.5g}.
     """.format(
-            beta=idGet("beta", 0, 0.0616),
-            asym=idGet("betaAsymptomatic", 0, 0.55),
-            postsym=idGet("betaPostSymptomatic", 0, 0.55),
+            beta=idGet("beta", scenarioID, 0.0616),
+            asym=idGet("betaAsymptomatic", scenarioID, 0.55),
+            postsym=idGet("betaPostSymptomatic", scenarioID, 0.55),
             trans=transString,
             susc=suscString,
-            household=idGet("householdKappa", 0, 2.2),
-            workplace=idGet("workKappa", 0, 1.0),
-            school=idGet("schoolKappa", 0, 1.0),
-            background=idGet("backgroundKappa", 0, 1.0),
+            household=idGet("householdKappa", scenarioID, 2.2),
+            workplace=idGet("workKappa", scenarioID, 1.0),
+            school=idGet("schoolKappa", scenarioID, 1.0),
+            background=idGet("backgroundKappa", scenarioID, 1.0),
         )
     )
 
     # Life Cycle
     st.subheader("Infection Life Cycle")
-    latentPeriod = idGet("latencyPeriod", 0, 0.5)
-    preSymptomPeriod = idGet("preSymptomPeriod", 0, 1.0)
-    symptomPeriod = idGet("symptomPeriod", 0, 2.0)
-    postSymptomPeriod = idGet("postSymptomPeriod", 0, 2.5)
+    latentPeriod = idGet("latencyPeriod", scenarioID, 0.5)
+    preSymptomPeriod = idGet("preSymptomPeriod", scenarioID, 1.0)
+    symptomPeriod = idGet("symptomPeriod", scenarioID, 2.0)
+    postSymptomPeriod = idGet("postSymptomPeriod", scenarioID, 2.5)
     st.markdown(
         """
         When an individual in the simulation is infected with a pathogen, the
@@ -1572,14 +1645,14 @@ def diseaseDescribe(id: int = 0, advanced: bool = False):
             infectious=dayCount(
                 preSymptomPeriod + symptomPeriod + postSymptomPeriod
             ).lower(),
-            youngAsym=idGet("asymptomaticChild", 0, 0.35),
-            oldAsym=idGet("asymptomaticAdult", 0, 0.35),
+            youngAsym=idGet("asymptomaticChild", scenarioID, 0.35),
+            oldAsym=idGet("asymptomaticAdult", scenarioID, 0.35),
         )
     )
 
     # Seeding
     st.subheader("Infection Seeding")
-    seedRate = idGet("seedRate", 0, 0.25)
+    seedRate = idGet("seedRate", scenarioID, 0.25)
     if seedRate.is_integer():
         seedString = f"""
         During each cycle of the simulation (i.e. twice per day), infection
@@ -1595,7 +1668,7 @@ def diseaseDescribe(id: int = 0, advanced: bool = False):
         chance that there will be {-(-seedRate // 1):.0g} seeded
         infection{plural(-(-seedRate // 1))}.
         """
-    startDay, endDay = idGet("seedPeriod", 0, (1, 30))
+    startDay, endDay = idGet("seedPeriod", scenarioID, (1, 30))
     st.markdown("""
         When a simulation experiment begins, everyone within the simulation is
         healthy. Infection seeding is used to kickstart the spread of the pathogen
@@ -1612,7 +1685,7 @@ def diseaseDescribe(id: int = 0, advanced: bool = False):
     st.subheader("Health Burden Outcomes")
     # Get age-specific mortality values
     transValues, suscValues = {}, {}
-    deathRate = idGet("deathRatio", 0, 12.0)
+    deathRate = idGet("deathRatio", scenarioID, 12.0)
     mortString = f"""
            For every 100,000 symptomatic individuals in the simulation, an average
         of {deathRate:.10g} individual{plural(deathRate)} will die.
@@ -1620,7 +1693,7 @@ def diseaseDescribe(id: int = 0, advanced: bool = False):
     if advanced:
         mortAgeForm = idGet(
             "mortAgeForm",
-            0,
+            scenarioID,
             pd.DataFrame(
                 {
                     "Age Group": [None],
@@ -1679,7 +1752,8 @@ def diseaseDescribe(id: int = 0, advanced: bool = False):
         once the simulation is complete. Generally, each health burden outcome
         follows from the previous outcomes; of all individuals who are diagnosed,
         only a subset of them will be hospitalised, and only a subset of those who
-        are hospitalised will die. 
+        are hospitalised will die. Only symptomatic infections can result in health
+        burden outcomes.
         
         The health burden outcomes that the dashboard can simulate are as follows:
 
@@ -1687,8 +1761,8 @@ def diseaseDescribe(id: int = 0, advanced: bool = False):
         Not all individuals who show symptoms will be diagnosed, since some people
         will not mention their infection to any sources that record infection data.
         
-           Every infected, symptomatic individual in the simulation has a
-        {diagnosis:.6g}% chance of being diagnosed.
+           Every symptomatic individual in the simulation has a {diagnosis:.6g}%
+        chance of being diagnosed.
 
         2. GP Visits: The individual has consulted their general practitioner (GP)
         regarding the symptoms of the infection.
@@ -1713,10 +1787,10 @@ def diseaseDescribe(id: int = 0, advanced: bool = False):
         
            {death}
     """.format(
-            diagnosis=idGet("caseRatio", 0, 50.0),
-            gp=idGet("gpRatio", 0, 17.0),
-            hospitalisation=idGet("hospitalRatio", 0, 320.0),
-            icu=idGet("icuRatio", 0, 20.0),
+            diagnosis=idGet("caseRatio", scenarioID, 50.0),
+            gp=idGet("gpRatio", scenarioID, 17.0),
+            hospitalisation=idGet("hospitalRatio", scenarioID, 320.0),
+            icu=idGet("icuRatio", scenarioID, 20.0),
             death=mortString,
         )
     )
@@ -1725,16 +1799,16 @@ def diseaseDescribe(id: int = 0, advanced: bool = False):
     # TODO: Should waning and other advanced params be listed here?
     # TODO: Come up with a more readable way of generating this description
     st.subheader("Natural Immunity")
-    if not (advanced and idGet("naturalWaningToggle", 0, False)):
+    if not (advanced and idGet("naturalWaningToggle", scenarioID, False)):
         waningString = """
         Currently, natural immunity in the simulation lasts indefinitely; once an
         individual has recovered from the disease, they cannot be infected again
         for the remainder of the simulation.
         """
     else:
-        waningDelay = idGet("naturalImmunityDuration", 0, 2)
-        waningDuration = idGet("naturalWaningRate", 0, 6)
-        wanedEfficacy = idGet("naturalWanedEfficacy", 0, 0.5)
+        waningDelay = idGet("naturalImmunityDuration", scenarioID, 2)
+        waningDuration = idGet("naturalWaningRate", scenarioID, 6)
+        wanedEfficacy = idGet("naturalWanedEfficacy", scenarioID, 0.5)
         if waningDelay == 0 and waningDuration == 0:
             if wanedEfficacy == 0:
                 # No immunity
@@ -1764,7 +1838,8 @@ def diseaseDescribe(id: int = 0, advanced: bool = False):
                     # Drop to lower immunity all at once
                     waningString += f"""{waningDelay} month{plural(waningDelay)} ({dayCount(waningDelay * 30).lower()}) after the initial recovery, their natural immunity will wane, become less effective.
 
-        The efficacy of an individual's natural immunity once it wanes is equal to {wanedEfficacy:.0%}. This means that if they would be infected, there is only a {wanedEfficacy:.0%} chance that they will remain healthy; {1 - wanedEfficacy:.0%} of the time, they will successfully be infected. If an individual with waned natural immunity is infected again, their immunity will be back at 100% efficacy once they recover.
+        The efficacy of an individual's natural immunity once it wanes is equal to {wanedEfficacy:.0%}. This means that if they would be infected, there is only a {wanedEfficacy:.0%} chance that they will remain healthy; {1 - wanedEfficacy:.0%} of the time, they will successfully be infected. If an individual with waned natural immunity is infected again, their immunity will begin waning
+        from 100% again once they recover.
                     """
             elif waningDelay == 0:
                 # Immediate waning
@@ -1772,24 +1847,24 @@ def diseaseDescribe(id: int = 0, advanced: bool = False):
                 if wanedEfficacy == 0:
                     waningString += f"""they will have lost their immunity entirely.
 
-        The efficacy of natural immunity linearly decreases from 100% to 0% over the individual's {waningDuration} month waning period. This means that their immunity's efficacy will be at 50% halfway through this period; if they were to be infected at this point, there is a 50% chance for them to remain healthy. If an individual with waned natural immunity is infected again, their immunity will be back at 100% efficacy once they recover.
+        The efficacy of natural immunity linearly decreases from 100% to 0% over the individual's {waningDuration} month waning period. This means that their immunity's efficacy will be at 50% halfway through this period; if they were to be infected at this point, there is a 50% chance for them to remain healthy. If an individual with waned natural immunity is infected again, their immunity will begin waning from 100% again once they recover.
                     """
                 else:
                     waningString += f"""their natural immunity will be at its weakest.
 
-        The efficacy of an individual's natural immunity at its weakest point is equal to {wanedEfficacy:.0%}. This means that if they would be infected, there is only a {wanedEfficacy:.0%} chance that they will remain healthy; {1 - wanedEfficacy:.0%} of the time, they will successfully be infected. The efficacy of natural immunity linearly decreases from 100% to {wanedEfficacy:.0%} over the individual's {waningDuration} month waning period. If an individual with waned natural immunity is infected again, their immunity will be back at 100% efficacy once they recover.
+        The efficacy of an individual's natural immunity at its weakest point is equal to {wanedEfficacy:.0%}. This means that if they would be infected, there is only a {wanedEfficacy:.0%} chance that they will remain healthy; {1 - wanedEfficacy:.0%} of the time, they will successfully be infected. The efficacy of natural immunity linearly decreases from 100% to {wanedEfficacy:.0%} over the individual's {waningDuration} month waning period. If an individual with waned natural immunity is infected again, their immunity will begin waning from 100% again once they recover.
                     """
             else:
                 waningString += f"""{waningDelay} month{plural(waningDelay)} ({dayCount(waningDelay * 30).lower()}) after the initial recovery, their natural immunity will begin to wane, becoming less effective over time. The individual will gradually become more susceptible to infection for {waningDuration} month{plural(waningDuration)} ({dayCount(waningDuration * 30).lower()}), after which """
                 if wanedEfficacy == 0:
                     waningString += f"""they will have lost their immunity entirely.
 
-        The efficacy of natural immunity linearly decreases from 100% to 0% over the individual's {waningDuration} month waning period. This means that their immunity's efficacy will be at 50% halfway through this period; if they were to be infected at this point, there is a 50% chance for them to remain healthy. If an individual with waned natural immunity is infected again, their immunity will be back at 100% efficacy once they recover.
+        The efficacy of natural immunity linearly decreases from 100% to 0% over the individual's {waningDuration} month waning period. This means that their immunity's efficacy will be at 50% halfway through this period; if they were to be infected at this point, there is a 50% chance for them to remain healthy. If an individual with waned natural immunity is infected again, their immunity will begin waning from 100% again once they recover.
                     """
                 else:
                     waningString += f"""their natural immunity will be at its weakest.
 
-        The efficacy of an individual's natural immunity at its weakest point is equal to {wanedEfficacy:.0%}. This means that if they would be infected, there is only a {wanedEfficacy:.0%} chance that they will remain healthy; {1 - wanedEfficacy:.0%} of the time, they will successfully be infected. The efficacy of natural immunity linearly decreases from 100% to {wanedEfficacy:.0%} over the individual's {waningDuration} month waning period. If an individual with waned natural immunity is infected again, their immunity will be back at 100% efficacy once they recover.
+        The efficacy of an individual's natural immunity at its weakest point is equal to {wanedEfficacy:.0%}. This means that if they would be infected, there is only a {wanedEfficacy:.0%} chance that they will remain healthy; {1 - wanedEfficacy:.0%} of the time, they will successfully be infected. The efficacy of natural immunity linearly decreases from 100% to {wanedEfficacy:.0%} over the individual's {waningDuration} month waning period. If an individual with waned natural immunity is infected again, their immunity will begin waning from 100% again once they recover.
                     """
 
     st.markdown(f"""

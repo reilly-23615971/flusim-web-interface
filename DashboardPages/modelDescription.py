@@ -25,13 +25,19 @@ st.markdown("""
     moves to different locations over the course of the simulation.
 
     Time in the simulation is separated into intervals called cycles. Each day
-    of the simulation involves two cycles, one representing the day and one representing the night. In each cycle, the engine updates the locations of
+    of the simulation involves two cycles, one representing the day and one
+    representing the night. In each cycle, the engine updates the locations of
     each individual in the community, then simulates interactions between people
-    in the same location. Additionally, each day cycle is accompanied by the
-    background phase, in which individuals across the community are randomly
-    paired to interact. These background contacts account for any interactions
-    outside of the locations that are built into the simulation, such as those
-    that occur on public transport or in shopping centres.
+    in the same location. Generally, individuals move from their households to
+    work or school during the day cycle, then move back to their households
+    during the night cycle; this behaviour may change depending on the individual's
+    age and the current day of the week.
+            
+    Additionally, each day cycle is accompanied by the background phase, in which
+    individuals across the community are randomly paired to interact. These background
+    contacts account for any interactions outside of the locations that are built
+    into the simulation, such as those that occur on public transport or in shopping
+    centres.
             
     Each individual in the simulation is assigned demographic details determining
     what age group they fall under, whether they are an Indigenous Australian
@@ -42,15 +48,16 @@ st.markdown("""
 
     Individuals can be infected by the pathogen whenever they interact with another
     individual who is already infected. When an individual is infected by the
-    pathogen, the current stage of their infection is tracked alongside their demographic details. As the simulation progresses, the infection will progress
+    pathogen, the current stage of their infection is tracked alongside their
+    demographic details. As the simulation progresses, the infection will progress
     from a dormant state to being fully infectious and symptomatic before
     eventually disappearing once the individual recovers.
 
     The *Flusim* model is stochastic, so it will run multiple simulations
-    for each parameter set. The results of these simulation will be combined
-    to obtain the averaged results for the overall set. In this dashboard,
-    all visualisations use medians for averaging.
+    for each parameter set. The results of these simulations will be averaged
+    to obtain the median results for each set of parameters in the experiment.
 """)
+# TODO: Update when non-median results exist
 
 # TODO: Full parameter templates
 
