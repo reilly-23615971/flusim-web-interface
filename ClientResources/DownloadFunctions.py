@@ -137,7 +137,9 @@ def parameterUpload():
     """
     Dialog wrapper function to upload parameter settings from a JSON file.
     """
-    # TODO: This still blanks the page occasionally
+    # TODO: This still blanks the page occasionally (just displays the following:)
+    # Life Stage	Pre-Symptomatic
+    # Length (Days)	1
     uploadPending = bool(session.get("parameterUpload") is not None)
     st.info(
         body="""
@@ -226,6 +228,7 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
                         n_cycles=session.get("cycleCount", 360) * 2,
                     ),
                     Scenario_Parameter=scenarioParameters(
+                        # TODO: Random complains about being null; check schema
                         start_day_of_week=(
                             None
                             if startDay is None
