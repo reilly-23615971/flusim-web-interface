@@ -1968,7 +1968,7 @@ class Parameters(BaseModel):
         cls, value: Optional[list[Any]], info: ValidationInfo
     ) -> Optional[list[Any]]:
         """
-        Validation function to remove duplicate parameter classes that cover
+        Validation function to detect duplicate parameter classes that cover
         the same element in the simulation (e.g. two `Scenario_Strain` objects
         with the same `StrainId`).
 

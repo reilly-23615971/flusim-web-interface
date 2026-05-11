@@ -3,7 +3,6 @@
 # Page where users can generate tables with infection data
 
 # Imports
-import os
 import logging
 import time
 from typing import Optional
@@ -97,11 +96,9 @@ def generateTable():
                 "run a simulation before attempting to generate a table."
             )
         )
-    # Ensure latest column settings are used
-    # TODO: Check that this loading is fixing the bug it's meant to fix
-    os.write(1, f"Debug Current Form:\n{session.get("healthColumnForm")}\n\n".encode())
-    saveKey("healthColumnForm", dataframe=True)
-    os.write(1, f"Debug New Form:\n{session.get("healthColumnForm")}\n\n".encode())
+    # TODO: Fix bug where latest column settings aren't stored
+    # (add confirmation to generate graph button?
+    # Rerun page before running generateTable somehow?)
 
     scenarioNames = session.get(
         "DataScenarioNames",
