@@ -294,10 +294,10 @@ may be lower if there are an insufficient number of doses available.
                     Please make one of the following changes:
 
                     - Increase Initial Vaccinated Proportion of Population in
-                    :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    :primary-badge[:material/vaccines: Vaccination]
                     to be greater than {100 * targetVaccinated:0.5g}%.
                     - Decrease Target Vaccinated Proportion of Population in
-                    :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    :primary-badge[:material/vaccines: Vaccination]
                     to be lower than {100 * initialVaccinated:0.5g}%.
                 """,
                 False,
@@ -421,13 +421,13 @@ are vaccinated may be lower if there are an insufficient number of doses availab
 
                     - Remove all rows of the Age-Specific
                     Vaccinated Proportion Parameters form in
-                    :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    :primary-badge[:material/vaccines: Vaccination]
                     that have the initial proportion higher than the target proportion.
                     - Decrease the Initial Vaccinated Proportion of Population
-                    column in :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    column in :primary-badge[:material/vaccines: Vaccination]
                     to always be lower than the target proportion.
                     - Increase the Target Vaccinated Proportion of Population
-                    column in :primary-badge[:material/vaccines: Vaccination and NPIs]
+                    column in :primary-badge[:material/vaccines: Vaccination]
                     to always be higher than the initial proportion.
                 """,
                 True,
@@ -1273,10 +1273,10 @@ the pathogen.
                             Please make one of the following changes:
 
                             - Increase Initial Dose Efficacy for the final dose in
-                            :primary-badge[:material/vaccines: Vaccination and NPIs]
+                            :primary-badge[:material/vaccines: Vaccination]
                             to be greater than {100 * primaryWanedEfficacy:0.3g}%.
                             - Decrease Dose Efficacy After Immunity Waning in
-                            :primary-badge[:material/vaccines: Vaccination and NPIs]
+                            :primary-badge[:material/vaccines: Vaccination]
                             to be lower than {100 * finalInitialEfficacy:0.3g}%.
                         """,
                         True,
@@ -1413,7 +1413,7 @@ healthy when exposed to the pathogen.
                             Please modify the Age-Specific Initial Efficacy form
                             for the final vaccine dose alongside the Age-Specific
                             Efficacy After Immunity Waning form
-                            in :primary-badge[:material/vaccines: Vaccination and NPIs]
+                            in :primary-badge[:material/vaccines: Vaccination]
                             such that no age group has its initial efficacy lower
                             than its waned efficacy.
                         """,
@@ -1780,10 +1780,10 @@ pathogen all at once.
                         Please make one of the following changes:
 
                         - Increase Booster Immunity Waning Delay in
-                        :primary-badge[:material/vaccines: Vaccination and NPIs]
+                        :primary-badge[:material/vaccines: Vaccination]
                         to be greater than {boosterDelay}.
                         - Decrease Time Between Booster Doses in
-                        :primary-badge[:material/vaccines: Vaccination and NPIs]
+                        :primary-badge[:material/vaccines: Vaccination]
                         to be lower than {boosterDuration}.
                     """,
                     True,
@@ -1846,10 +1846,10 @@ healthy when exposed to the pathogen.
                         Please make one of the following changes:
 
                         - Increase Initial Booster Efficacy in
-                        :primary-badge[:material/vaccines: Vaccination and NPIs]
+                        :primary-badge[:material/vaccines: Vaccination]
                         to be greater than {100 * boosterWanedEfficacy:0.3g}%.
                         - Decrease Booster Efficacy After Immunity Waning in
-                        :primary-badge[:material/vaccines: Vaccination and NPIs]
+                        :primary-badge[:material/vaccines: Vaccination]
                         to be lower than {100 * boosterBaseEfficacy:0.3g}%.
                     """,
                     True,
@@ -1975,14 +1975,14 @@ healthy when exposed to the pathogen.
                         Please make one of the following changes:
 
                         - Remove all rows of the Age-Specific Booster Efficacies form
-                        in :primary-badge[:material/vaccines: Vaccination and NPIs]
+                        in :primary-badge[:material/vaccines: Vaccination]
                         that have the initial efficacy higher than the efficacy
                         after waning.
                         - Increase the Initial Booster Efficacy column in
-                        :primary-badge[:material/vaccines: Vaccination and NPIs]
+                        :primary-badge[:material/vaccines: Vaccination]
                         to always be higher than the efficacy after waning.
                         - Decrease the Booster Efficacy After Immunity Waning column
-                        in :primary-badge[:material/vaccines: Vaccination and NPIs]
+                        in :primary-badge[:material/vaccines: Vaccination]
                         to always be lower than the initial efficacy.
                     """,
                     True,

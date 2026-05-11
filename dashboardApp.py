@@ -1,6 +1,6 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
-# Main page of dashboard, defining pages & setting universal parameters
+# Main program of dashboard, defining pages & setting universal parameters
 
 
 # Imports

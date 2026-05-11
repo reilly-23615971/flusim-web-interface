@@ -1,6 +1,6 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
-# Page where variables for vaccination and NPIs can be configured
+# Page where additional parameter sets can be added
 
 # Imports
 import logging

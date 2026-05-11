@@ -753,7 +753,7 @@ normal withdrawal rate.
 
                 Please make one of the following changes:
                 - Adjust Increased Work Withdrawal Rate in
-                :primary-badge[:material/vaccines: Vaccination and NPIs]
+                :primary-badge[:material/medical_mask: NPIs]
                 to be greater than {100 * baseAdultWithdrawal:0.3g}%.
                 - Decrease Work Withdrawal Rate in
                 :primary-badge[:material/groups: Community]
@@ -780,7 +780,7 @@ normal withdrawal rate.
 
                 Please make one of the following changes:
                 - Adjust Increased School Withdrawal Rate in
-                :primary-badge[:material/vaccines: Vaccination and NPIs]
+                :primary-badge[:material/medical_mask: NPIs]
                 to be greater than {100 * baseChildWithdrawal:0.3g}%.
                 - Decrease School Withdrawal Rate in
                 :primary-badge[:material/groups: Community]
@@ -956,7 +956,7 @@ overwriting the normal maximum.
 
                 Please make one of the following changes:
                 - Adjust Reduced Work Group Size in
-                :primary-badge[:material/vaccines: Vaccination and NPIs]
+                :primary-badge[:material/medical_mask: NPIs]
                 to be less than {baseGroupSize}.
                 - Increase Maximum Work Group Size in
                 :primary-badge[:material/groups: Community]
@@ -1139,7 +1139,7 @@ effect, overwriting the normal BCC rate.
 
                 Please make one of the following changes:
                 - Adjust Reduced Background Contact Count in
-                :primary-badge[:material/vaccines: Vaccination and NPIs]
+                :primary-badge[:material/medical_mask: NPIs]
                 to be less than {baseBCC}.
                 - Increase Background Contact Count in
                 :primary-badge[:material/groups: Community]
@@ -1293,10 +1293,10 @@ per day goes below this value.
 
                             Please make one of the following changes:
                             - Increase Start Trigger Threshold Rate in
-                            :primary-badge[:material/vaccines: Vaccination and NPIs]
+                            :primary-badge[:material/medical_mask: NPIs]
                             to be more than {rateRelaxThreshold}.
                             - Decrease Relaxation Trigger Threshold Rate in
-                            :primary-badge[:material/vaccines: Vaccination and NPIs]
+                            :primary-badge[:material/medical_mask: NPIs]
                             to be less than {rateStartThreshold}.
                         """,
                         False,
@@ -1366,7 +1366,7 @@ Total") or in each individual school (for
 
                             Please make one of the following changes:
                             - Decrease Start Trigger Case Threshold in
-                            :primary-badge[:material/vaccines: Vaccination and NPIs]
+                            :primary-badge[:material/medical_mask: NPIs]
                             to be less than {population}.
                             - Change the simulated community on the
                             :grey-badge[:material/motion_play: Run Simulations]

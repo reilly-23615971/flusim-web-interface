@@ -1,6 +1,6 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
-# Functions used to generate tables and graphs
+# Functions used to generate and format tables and graphs
 
 # Imports
 import logging

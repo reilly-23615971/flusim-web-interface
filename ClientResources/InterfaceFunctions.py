@@ -1,6 +1,6 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
-# Functions used by the rest of the client application
+# Miscellaneous functions used by the client dashboard
 
 # Imports
 import logging
