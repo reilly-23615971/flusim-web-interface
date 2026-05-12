@@ -1,6 +1,6 @@
 {
     "Scenario_ParameterWithAgePrefix": {
-        "mort": 0.0026
+        "mort": 0.00025
     },
     "Scenario_Parameter": {
         "seed_rate": 0.5,
