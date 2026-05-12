@@ -194,10 +194,8 @@ def plotEpidemic(
         cumulative (bool): Set to `True` when the DataFrame contains
             cumulative data instead of individual data.
 
-        includedScenarios ('all' or list of str): A list of strings containing
-            the names of scenarios that will be included in the table. Can
-            also be the string `all` to indicate that all scenarios should
-            be included.
+        includedScenarios (list of str): A list of strings containing
+            the names of scenarios that will be included in the table.
 
     Returns:
         finalPlot (LayerChart): An Altair plot layering a line graph of the infection
@@ -238,6 +236,7 @@ def plotEpidemic(
     )
     yLabel = f"Total {outcome}:Q" if cumulative else f"{outcome} per Day:Q"
     xLabel, colourLabel = "Days Since First Infection:Q", "Scenario:N"
+    # TODO: Scenario names with periods (.) in them break tooltips? Shows NaN
     tooltipPicker = alt.selection_point(
         fields=[xLabel[:-2]], nearest=True, on="pointerover", empty=False
     )

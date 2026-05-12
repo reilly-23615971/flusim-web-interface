@@ -70,6 +70,8 @@ def runtimeEstimate(days: int, runs: int, scenarios: int) -> int:
     Returns:
         int: The estimated number of seconds the simulation will run for.
     """
+    # TODO: Remake estimates without constant waning
+    # since it results in massive overestimates
     return round((0.0948297101449275 * days - 2.977807971014478) * runs * scenarios)
 
 

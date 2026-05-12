@@ -2120,7 +2120,10 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
 
         # Hospitalisation and ICU ratio
         if {"prob_hospitalisation", "prob_icu"}.intersection(paramDict):
-            hospitalRate, icuRate = paramDict["prob_hospitalisation"], paramDict["prob_icu"]
+            hospitalRate, icuRate = (
+                paramDict["prob_hospitalisation"],
+                paramDict["prob_icu"],
+            )
             if None in {hospitalRate, icuRate} and scenarioID == 0:
                 raise AssertionError(
                     "Hospitalisation and ICU rate parameters were only partially "
@@ -2128,7 +2131,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                 )
 
             # Use baseline values to plug None gaps
-            baseHospitalRate = idGet("hospitalRatio", 0, 640.0)
+            baseHospitalRate = idGet("hospitalRatio", 0, 320.0)
             baseICUProb = idGet("icuRatio", 0, 20.0)
             if hospitalRate is None:
                 hospitalRate = baseHospitalRate / 100000
