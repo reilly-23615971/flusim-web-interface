@@ -679,6 +679,7 @@ add at least one column before attempting to generate a table.
         ageSeparation == "By Column"
         and not healthColumnForm["Age Groups"].fillna(False).all()
     ):
+        # TODO: Make empty age groups default to all instead
         st.error(
             """
             Error: At least one column configured for the table has no age
@@ -720,6 +721,7 @@ Age Group Separation mode before attempting to generate a table.
         """,
             icon=":material/heap_snapshot_multiple:",
         )
+    # TODO: Alert for duplicate columns
 
     oldVarLengthForm = '''for i in range(healthOutcomeRowCount):
         (

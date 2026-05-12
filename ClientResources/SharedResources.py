@@ -177,6 +177,8 @@ triggerConditions = {
 
 # Colour codes for Paul Tol's "bright" colourblind-safe palette
 # (and other pallettes if enough scenarios are created)
+# TODO: Later ones aren't distinct enough;
+# find a larger palette or ditch the early ones
 brightCodes = [
     "#BBBBBB",
     "#4477AA",
