@@ -20,7 +20,7 @@ from ClientResources.InterfaceFunctions import ageRangeCombiner
 from ClientResources.SharedResources import (  # outcomeAdjectives,
     AnalysisFile,
     ageWithTime,
-    brightCodes,
+    mutedCodes,
     communityAgePops,
     tableOutcomes,
 )
@@ -236,7 +236,6 @@ def plotEpidemic(
     )
     yLabel = f"Total {outcome}:Q" if cumulative else f"{outcome} per Day:Q"
     xLabel, colourLabel = "Days Since First Infection:Q", "Scenario:N"
-    # TODO: Scenario names with periods (.) in them break tooltips? Shows NaN
     tooltipPicker = alt.selection_point(
         fields=[xLabel[:-2]], nearest=True, on="pointerover", empty=False
     )
@@ -245,18 +244,18 @@ def plotEpidemic(
     scenarioNames = data["Scenario"].unique()
     orderedScenarios, includedColours = zip(
         *[
-            (name, brightCodes[index])
+            (name, mutedCodes[index])
             for index, name in enumerate(scenarioNames)
             if name in includedScenarios
         ]
     )
 
     # Remove any scenarios/age groups not specified in the data
-    newData = data[data["Scenario"].isin(includedScenarios)]
+    filteredData = data[data["Scenario"].isin(includedScenarios)]
 
     # Plot the line graph itself
     epidemicPlot = (
-        alt.Chart(newData, title=plotTitle)
+        alt.Chart(filteredData, title=plotTitle)
         .mark_line(interpolate="natural")
         .encode(
             x=alt.X(xLabel).scale(
@@ -279,20 +278,26 @@ def plotEpidemic(
         opacity=tooltipCondition.then(alt.value(1)).otherwise(alt.value(0))
     )
 
+    # Internally use indices for tooltips to avoid . or [] causing issues
+    tooltipData = filteredData.copy()
+    tooltipData["Scenario"] = tooltipData["Scenario"].map(includedScenarios.index)
+
     # Plot vertical lines to display tooltips with data from all scenarios
     epidemicRule = (
-        alt.Chart(newData)
-        .transform_pivot(colourLabel[:-2], value=yLabel[:-2], groupby=[xLabel[:-2]])
-        .mark_rule(color="gray")
+        alt.Chart(tooltipData)
+        .transform_pivot("Scenario", value=yLabel[:-2], groupby=[xLabel[:-2]])
+        .mark_rule(color="grey")
         .encode(
             x=xLabel,
             opacity=(tooltipCondition.then(alt.value(0.3)).otherwise(alt.value(0))),
             tooltip=[xLabel]
             + [
                 alt.Tooltip(
-                    scenario, type="quantitative", title=f"{scenario} {outcome}"
+                    str(index),
+                    type="quantitative",
+                    title=f"{scenario} {outcome}",
                 )
-                for scenario in newData["Scenario"].unique()
+                for index, scenario in enumerate(includedScenarios)
             ],
         )
         .add_params(tooltipPicker)

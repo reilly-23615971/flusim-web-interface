@@ -15,7 +15,7 @@ from matplotlib.colors import TwoSlopeNorm, to_hex
 from ClientResources.ParameterFunctions import idGet, loadKey, replaceTableNA, saveKey
 from ClientResources.SharedResources import (
     ageWithTime,
-    brightCodes,
+    mutedCodes,
     tableOutcomes,
     usePresetData,
 )
@@ -245,7 +245,7 @@ def generateTable():
             **{"background-color": "#F7F7F7"}, color="black"  # type: ignore
         )
         # Generate and map scenario colour palette
-        scenarioColourMap = brightCodes[: len(scenarioNames)]
+        scenarioColourMap = mutedCodes[: len(scenarioNames)]
         scenarioColourDictionary = {
             scenario: to_hex(scenarioColourMap[index])
             for index, scenario in enumerate(scenarioNames)

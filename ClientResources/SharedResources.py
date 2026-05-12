@@ -175,28 +175,23 @@ triggerConditions = {
     # "Cases per K-12 School": "per_primary_high_school_cases",
 }
 
-# Colour codes for Paul Tol's "bright" colourblind-safe palette
-# (and other pallettes if enough scenarios are created)
-# TODO: Later ones aren't distinct enough;
-# find a larger palette or ditch the early ones
-brightCodes = [
+# Colour codes for Paul Tol's "muted" colourblind-safe palette
+mutedCodes = [
     "#BBBBBB",
-    "#4477AA",
-    "#EE6677",
-    "#228833",
-    "#CCBB44",
-    "#66CCEE",
-    "#AA3377",
-    "#EE7733",
-    "#CC3311",
-    "#009988",
+    "#CC6677",
     "#332288",
+    "#DDCC77",
+    "#117733",
+    "#88CCEE",
     "#882255",
+    "#44AA99",
+    "#999933",
+    "#AA4499",
 ]
 
-# Extend pallette list if absolutely necessary
-while len(brightCodes) < maxScenarios:
-    brightCodes = brightCodes + brightCodes
+# Extend palette list if absolutely necessary
+while len(mutedCodes) < maxScenarios:
+    mutedCodes = mutedCodes + mutedCodes[1:]
 
 # Queues used to store data from server requests
 resultQueue = Queue[list]()
