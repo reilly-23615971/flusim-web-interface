@@ -98,7 +98,7 @@ def parameterDownload():
     parameter set when clicked. Uses a `st.popover` container due to
     `st.dialog` not working well with `st.download_button`.
     """
-    # TODO: Check if there's errors and don't allow downloading if there are
+    # TODO: Check if there's errors
     # TODO: See if occasional page-blanking bugs can be fixed
     # TODO: Popover is a bit finicky; consider trying dialog or expander again
     with st.popover(
@@ -137,7 +137,7 @@ def parameterUpload():
     """
     Dialog wrapper function to upload parameter settings from a JSON file.
     """
-    # TODO: This still blanks the page occasionally (just displays the following:)
+    # TODO: This still blanks the page occasionally (sometimes displays the following:)
     # Life Stage	Pre-Symptomatic
     # Length (Days)	1
     uploadPending = bool(session.get("parameterUpload") is not None)
@@ -213,7 +213,7 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
     if startDay == "Random":
         startDay = None
     return modelGuideFile(
-        name="Flusim Dashboard Simulation",
+        name="Flusim Web Dashboard Simulation",
         description=str(session.sessionID),
         output_folder="./results/",
         middle_joint=middleJoint,
