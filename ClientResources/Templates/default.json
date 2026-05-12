@@ -77,8 +77,8 @@
     "Scenario_VaccineCoverage": [
         {
             "Age": null,
-            "Initial": 0.295,
-            "Target": 0.295
+            "Initial": 0.233,
+            "Target": 0.233
         },
         {
             "Age": "young_infant",
@@ -87,48 +87,48 @@
         },
         {
             "Age": "infant",
-            "Initial": 0.276,
-            "Target": 0.276
+            "Initial": 0.279,
+            "Target": 0.279
         },
         {
             "Age": "young_child",
-            "Initial": 0.276,
-            "Target": 0.276
+            "Initial": 0.279,
+            "Target": 0.279
         },
         {
             "Age": "child",
-            "Initial": 0.156,
-            "Target": 0.156
+            "Initial": 0.164,
+            "Target": 0.164
         },
         {
             "Age": "adolescent",
-            "Initial": 0.133,
-            "Target": 0.133
+            "Initial": 0.139,
+            "Target": 0.139
         },
         {
             "Age": "young_adult",
-            "Initial": 0.223,
-            "Target": 0.223
+            "Initial": 0.228,
+            "Target": 0.228
         },
         {
             "Age": "adult",
-            "Initial": 0.223,
-            "Target": 0.223
+            "Initial": 0.228,
+            "Target": 0.228
         },
         {
             "Age": "older_adult",
-            "Initial": 0.333,
-            "Target": 0.333
+            "Initial": 0.329,
+            "Target": 0.329
         },
         {
             "Age": "senior",
-            "Initial": 0.617,
-            "Target": 0.617
+            "Initial": 0.619,
+            "Target": 0.619
         },
         {
             "Age": "older_senior",
-            "Initial": 0.617,
-            "Target": 0.617
+            "Initial": 0.619,
+            "Target": 0.619
         }
     ],
     "Scenario_VaccineDose": [
