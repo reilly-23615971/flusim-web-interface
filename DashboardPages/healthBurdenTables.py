@@ -677,23 +677,7 @@ No columns have been configured in the Table Settings menu. Please
 add at least one column before attempting to generate a table.
 """
     else:
-        if (
-            session.get("showAdvanced", False)
-            and any(
-                idGet("naturalWaningToggle", i, False)
-                or (
-                    idGet("vaccineToggle", i, False)
-                    and (
-                        idGet("vaccineWaningToggle", i, False)
-                        or idGet("boosterToggle", i, False)
-                    )
-                )
-                for i in range(session.get("scenarioCount", 0) + 1)
-            )
-            and healthColumnForm["Options"].isin([["Percentage"]]).any()
-        ):
-            # TODO: Make this reflect the sim data's parameters and not
-            # the current parameters since they may differ
+        if session.get("DataHasWaning", False):
             st.warning(
                 """
                     Warning: Columns that display values as percentages without also
@@ -705,14 +689,12 @@ add at least one column before attempting to generate a table.
             )
         # Check for duplicates (lists must be sorted and converted to str)
         dupeColumnForm = healthColumnForm.copy()
-        dupeColumnForm["Options"] = dupeColumnForm["Options"].apply(
-            lambda x: tuple(sorted(x))
-        )
+        dupeColumnForm["Options"] = dupeColumnForm["Options"].apply(lambda x: sorted(x))
         if ageSeparation == "By Column":
             dupeColumnForm["Age Groups"] = dupeColumnForm["Age Groups"].apply(
-                lambda x: tuple(sorted(x))
+                lambda x: sorted(x)
             )
-        if dupeColumnForm.duplicated().any():
+        if dupeColumnForm.astype(str).duplicated().any():
             st.warning(
                 """
                     Warning: Some columns have been given the exact same settings.

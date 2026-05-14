@@ -321,6 +321,17 @@ already busy with a different task.
                     for scenarioID in range(scenarioCount + 1)
                 ]
             )
+            session.PendingDataHasWaning = useAdvanced and any(
+                idGet("naturalWaningToggle", scenarioID, False)
+                or (
+                    idGet("vaccineToggle", scenarioID, False)
+                    and (
+                        idGet("vaccineWaningToggle", scenarioID, False)
+                        or idGet("boosterToggle", scenarioID, False)
+                    )
+                )
+                for scenarioID in range(scenarioCount + 1)
+            )
 
             healthOutcomeStore(
                 "PendingDataHealthOutcomeRates",

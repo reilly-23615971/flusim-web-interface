@@ -168,6 +168,7 @@ def updateData():
                 "Asymptomatic",
                 "HealthOutcomeRates",
                 "MortalityRates",
+                "HasWaning",
             }
             # TODO: Add a check to ensure visualisations can't use the new values
             # while this function is still processing the data
