@@ -81,7 +81,7 @@ st.markdown(f"""
     parameter represents. Hover your mouse over any buttons to show an
     explanation of what that button does. After moving a slider, use
     the left and right arrow keys to fine-tune the parameter's value.
-    """)
+""")
 
 
 '''

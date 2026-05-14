@@ -130,7 +130,7 @@ def generateTable():
     columnDetails = [
         (
             outcome,
-            ageGroups,
+            ageGroups if ageGroups else ageWithTime,
             vaccineStatus if useVaccinationSplit else "All",
             "Percentage" in options,
             "Difference from Baseline" in options,
@@ -327,10 +327,10 @@ st.markdown("""
 
 # Modify CSS to avoid age group names being cut off
 st.html("""
-        <style>
-            .stMultiSelect [data-baseweb=select] span{max-width: 500px;}
-        </style>
-    """)
+    <style>
+        .stMultiSelect [data-baseweb=select] span{max-width: 500px;}
+    </style>
+""")
 
 # Save relevant params as variables to avoid lookups
 disableTable = False
@@ -614,7 +614,8 @@ treatment as a result of the pathogen.
                     help="""
 Select which age groups should be considered for health burdens in this column.
 Multiple age groups can be selected; the column will sum the health burden
-outcomes from all selected age groups.
+outcomes from all selected age groups. If no age groups are selected for a column,
+all age groups will be considered.
                 """,
                 )
             ),
@@ -675,53 +676,63 @@ as the percentage increase/decrease from the baseline value.
 No columns have been configured in the Table Settings menu. Please
 add at least one column before attempting to generate a table.
 """
-    elif (
-        ageSeparation == "By Column"
-        and not healthColumnForm["Age Groups"].fillna(False).all()
-    ):
-        # TODO: Make empty age groups default to all instead
-        st.error(
-            """
-            Error: At least one column configured for the table has no age
-            groups selected for it. If you attempt to generate the table now,
-            these column(s) will be empty. Please select at least one age group
-            for each column via the "Age Groups" setting.
-        """,
-            icon=":material/tab_unselected:",
-        )
-        disableTable = True
-        tableButtonTooltip = """
-Some table columns have no specified age groups. Please select at least one age group
-for each column via the Select Health Burden Columns setting or switch to a different
-Age Group Separation mode before attempting to generate a table.
-        """
-    elif (
-        session.get("showAdvanced", False)
-        and any(
-            idGet("naturalWaningToggle", i, False)
-            or (
-                idGet("vaccineToggle", i, False)
-                and (
-                    idGet("vaccineWaningToggle", i, False)
-                    or idGet("boosterToggle", i, False)
+    else:
+        if (
+            session.get("showAdvanced", False)
+            and any(
+                idGet("naturalWaningToggle", i, False)
+                or (
+                    idGet("vaccineToggle", i, False)
+                    and (
+                        idGet("vaccineWaningToggle", i, False)
+                        or idGet("boosterToggle", i, False)
+                    )
                 )
+                for i in range(session.get("scenarioCount", 0) + 1)
             )
-            for i in range(session.get("scenarioCount", 0) + 1)
+            and healthColumnForm["Options"].isin([["Percentage"]]).any()
+        ):
+            # TODO: Make this reflect the sim data's parameters and not
+            # the current parameters since they may differ
+            st.warning(
+                """
+                    Warning: Columns that display values as percentages without also
+                    displaying differences from baselines may be inaccurate if
+                    reinfection is possible within the simulation. Avoid using columns
+                    with percentage in tables when the simulation enables immunity waning.
+                """,
+                icon=":material/heap_snapshot_multiple:",
+            )
+        # Check for duplicates (lists must be sorted and converted to str)
+        dupeColumnForm = healthColumnForm.copy()
+        dupeColumnForm["Options"] = dupeColumnForm["Options"].apply(
+            lambda x: tuple(sorted(x))
         )
-        and healthColumnForm["Options"].isin([["Percentage"]]).any()
-    ):
-        # TODO: Make this reflect the sim data's parameters and not
-        # the current parameters since they may differ
-        st.warning(
-            """
-            Warning: Columns that display values as percentages without also
-            displaying differences from baselines may be inaccurate if
-            reinfection is possible within the simulation. Avoid using columns
-            with percentage in tables when the simulation enables immunity waning.
-        """,
-            icon=":material/heap_snapshot_multiple:",
-        )
-    # TODO: Alert for duplicate columns
+        if ageSeparation == "By Column":
+            dupeColumnForm["Age Groups"] = dupeColumnForm["Age Groups"].apply(
+                lambda x: tuple(sorted(x))
+            )
+        if dupeColumnForm.duplicated().any():
+            st.warning(
+                """
+                    Warning: Some columns have been given the exact same settings.
+                    Since these columns will have the same name, only one column
+                    will be included in the final table unless you modify the
+                    settings such that they are no longer identical.
+                """,
+                icon=":material/content_copy:",
+            )
+        if (
+            ageSeparation == "By Column"
+            and not healthColumnForm["Age Groups"].fillna(False).all()
+        ):
+            st.info(
+                """
+                    Note: Any columns that do not have any age groups selected
+                    for them will default to displaying all age groups.
+                """,
+                icon=":material/tab_unselected:",
+            )
 
     oldVarLengthForm = '''for i in range(healthOutcomeRowCount):
         (
@@ -982,7 +993,3 @@ Download the above table as a CSV file.
         table in fullscreen; click it again to return to viewing the
         whole dashboard.
     """)
-
-
-# st.header('DEBUG ZONE')
-# session

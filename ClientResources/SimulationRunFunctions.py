@@ -177,7 +177,7 @@ def runSimulationButton():
 With the current parameters, this modelling experiment will use the
 "{session.get('community', 'newcastle').capitalize()}"
 community data to simulate the baseline scenario.
-    """)
+        """)
     else:
         st.markdown(f"""
 With the current parameters, this modelling experiment will use the
@@ -536,10 +536,10 @@ async def runModelStatus(session: ClientSession, simulationID: str, parameterJSO
                             statusQueue.append("Experiment halted due to error")
                             functionLog.error(f"""
 [runModelStatus] Server encountered an error while running the simulation {simulationID}
-                                """)
+                            """)
                             raise Exception("""
 An error occurred while attempting to run the simulation.
-                                """)
+                            """)
                         case _:
                             progress, status = progressDict[simStatus]
                             # Prevent duplicate status messages

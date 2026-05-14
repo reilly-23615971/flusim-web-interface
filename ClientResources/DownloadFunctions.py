@@ -287,7 +287,7 @@ def loadConfig(file: BytesIO):
                 communities in `community_used`. The dashboard currently only
                 supports simulating a single community at a time; please
                 remove any excess communities from the JSON file.
-                """)
+            """)
         if schema.community_used[0] not in communityPopulation:
             raise AssertionError(f"""
                 The selected parameter schema uses the community
@@ -295,7 +295,7 @@ def loadConfig(file: BytesIO):
                 supports `newcastle` and `cairns` as communities; please
                 change the value in the JSON file's `community_used` field to
                 one of these.
-                """)
+            """)
         if schema.community_overrides:
             if len(schema.community_overrides) > 1:
                 raise AssertionError("""
@@ -303,7 +303,7 @@ def loadConfig(file: BytesIO):
                     `community_overrides` sections. The dashboard currently only
                     supports simulating a single community at a time; please
                     remove any excess community override sections from the JSON file.
-                    """)
+                """)
             engineSettings = schema.community_overrides[0]
             session.community = engineSettings.name
 
@@ -345,12 +345,12 @@ def loadConfig(file: BytesIO):
         # Scenario parameters
         if len(schema.simulation_sets) > 1:
             raise AssertionError("""
-                    The selected parameter schema includes multiple
-                    `simulation_sets` objects. Parameter files for the dashboard
-                    put all scenarios in a single set, such that there should
-                    be only one `simulation_sets` object. Please modify the
-                    JSON file so that there is only one `simulation_sets` object.
-                    """)
+                The selected parameter schema includes multiple
+                `simulation_sets` objects. Parameter files for the dashboard
+                put all scenarios in a single set, such that there should
+                be only one `simulation_sets` object. Please modify the
+                JSON file so that there is only one `simulation_sets` object.
+            """)
         simulationList = schema.simulation_sets[0].simulations
         scenarioCount = session.get("scenarioCount", 0)
         # Delete current scenarios in order to start fresh

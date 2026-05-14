@@ -18,7 +18,7 @@ st.markdown("""
     and COVID-19 [[2](https://doi.org/10.1101/2022.03.09.22272170)]. This website
     allows users to easily run the model with specific parameters and visualise
     the results.
-    """)
+""")
 
 st.header("Usage")
 # TODO: Update usage instructions (or just refer to manual)
@@ -33,7 +33,7 @@ st.markdown("""
     to change the parameters used by all simulations, or visit the
     :grey-badge[:material/variable_add: Scenario Parameters] page to specify
     multiple parameter sets to run at the same time.
-    """)
+""")
 st.page_link(
     "DashboardPages/baselineParameters.py",
     label="Go to Baseline Parameters",
@@ -52,7 +52,7 @@ st.markdown("""
     :grey-badge[:material/chart_data: Infection Over Time Graphs] and
     :grey-badge[:material/table_chart_view: Health Burden Tables] pages
     to visualise the results of the simulation.
-    """)
+""")
 
 st.page_link(
     "DashboardPages/infectionOverTimeGraphs.py",

@@ -2976,7 +2976,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             raise AssertionError("""
                 Schema does not include general vaccine coverage
                 proportions for the baseline scenario
-                """)
+            """)
         else:
             baseInitial = idGet("initialVaccinated", 0, 0.0)
             baseTarget = idGet("targetVaccinated", 0, 0.8)

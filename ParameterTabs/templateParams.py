@@ -84,7 +84,7 @@ def scenarioTemplateButton(currentID: int, newID: int):
         templateLog.error("""
 [scenarioTemplateButton] Tried to load baseline scenario as template;
 use resetScenario for that!
-            """)
+        """)
         st.rerun()
     if currentID == newID:
         templateLog.error(
@@ -103,7 +103,7 @@ Are you sure you want to replace the parameter values in the
 with the values from the
 {"baseline scenario" if newID == 0 else f'scenario named "{newName}"'}?
 Note that this will not change the names of either scenario.
-        """)
+    """)
     if currentID == 0:
         st.warning(
             body="""
@@ -149,7 +149,7 @@ def scenarioResetButton(scenarioID: int):
 Are you sure you want to reset the parameter values in the scenario named
 "{session[f"scenarioName{scenarioID}"]}" to the values from the baseline
 scenario? Note that this will not change the scenario's name.
-        """)
+    """)
     if st.button(
         "Confirm",
         key="confirmTemplateButton",

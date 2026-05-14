@@ -76,6 +76,7 @@ parameterGetters = {
 
 # Parameter Models
 # TODO: More validation to ensure the dashboard can use this
+# TODO: Update schema descriptions once dashboard descriptions are finalised
 
 
 # Set of scenario parameters set collectively for all age groups
@@ -2260,7 +2261,7 @@ class modelGuideFile(BaseModel):
                         `community_used`. Ensure the `name` property of each
                         override in `community_overrides` matches a community
                         in `community_used`.
-                        """)
+                    """)
         return self
 
     """
