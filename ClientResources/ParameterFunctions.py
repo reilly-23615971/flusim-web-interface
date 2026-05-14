@@ -30,7 +30,7 @@ session = st.session_state
 # Widget Functions
 def containerSave(
     key: str,
-    scenarioID: int | Literal[""] = "",
+    scenarioID: int = -1,
     containers: set[str] = set(),
     specialContainers: dict[str, str] = {},
 ):
@@ -41,9 +41,9 @@ def containerSave(
     Parameters:
         key (str): The string used to identify the widget.
 
-        scenarioID (int or ""): The integer representing the scenario the widget
-            is part of. Defaults to `""`, allowing for parameters that are not
-            associated with scenarios to be saved.
+        scenarioID (int): The integer representing the scenario the widget
+            is part of. If this is negative, no ID will be added, allowing for
+            parameters that are not associated with scenarios to be saved.
 
         containers (set of str): String used to identify each container to open.
 
@@ -53,19 +53,21 @@ def containerSave(
             for these will replace them with the value of `scenarioID` or the
             value of the widget that is being saved, respectively.
     """
+
+    displayID = scenarioID if scenarioID >= 0 else ""
     saveKey(key, scenarioID)
     for container in containers:
         session[container] = session.get(container)
     for container, value in specialContainers.items():
         session[container] = value.format(
-            id=scenarioID, value=session.get(f"{key}{scenarioID}")
+            id=displayID, value=session.get(f"{key}{displayID}")
         )
 
 
 def saveKey(
     key: str,
-    scenarioID: int | Literal[""] = "",
-    extra: Optional[str] = "",
+    scenarioID: int = -1,
+    extra: Optional[str] = None,
     notScenario=False,
     dataframe=False,
 ):
@@ -75,9 +77,9 @@ def saveKey(
     Parameters:
         key (str): The string used to identify the widget.
 
-        scenarioID (int or ""): The integer representing the scenario the widget
-            is part of. Defaults to `""`, allowing for parameters that are not
-            associated with scenarios to be saved.
+        scenarioID (int): The integer representing the scenario the widget
+            is part of. If this is negative, no ID will be added, allowing for
+            parameters that are not associated with scenarios to be saved.
 
         extra (str, optional): An additional part of the key used to distinguish
             variable-length forms.
@@ -92,9 +94,9 @@ def saveKey(
     # (e.g. by having None/NA cells with the placeholder "Same as baseline")
 
     # Prevent invalid calls after deleting scenarios
-    if not isinstance(scenarioID, str) and scenarioID > session["scenarioCount"]:
+    if scenarioID > session["scenarioCount"]:
         return
-    keyString = f"{key}{scenarioID}{extra}" if extra else f"{key}{scenarioID}"
+    keyString = f"{key}{scenarioID if scenarioID >= 0 else ""}{extra if extra else ""}"
     if dataframe:
         # Load both data and changes
         currentData = session[keyString].copy()
@@ -119,8 +121,8 @@ def saveKey(
     else:
         session[keyString] = session.get(f"_{keyString}")
 
-    # Add to scenario param lists if it's a scenario param (ID != 0 or "")
-    if not notScenario and scenarioID:
+    # Add to scenario param lists if it's a scenario param (ID > 0)
+    if not notScenario and scenarioID > 0:
         if extra:
             session["scenarioSetParamsExtra"][scenarioID].add((key, extra))
         else:
@@ -129,9 +131,9 @@ def saveKey(
 
 def loadKey(
     key: str,
-    scenarioID: int | Literal[""] = "",
+    scenarioID: int = -1,
     default=None,
-    extra: Optional[str] = "",
+    extra: Optional[str] = None,
     noZeroDefault=False,
     dataframe=False,
 ):
@@ -141,9 +143,9 @@ def loadKey(
     Parameters:
         key (str): The string used to identify the widget.
 
-        scenarioID (int or ""): The integer representing the scenario the
-            widget is part of. Defaults to `""`, allowing for parameters that
-            are not associated with scenarios to be saved.
+        scenarioID (int): The integer representing the scenario the widget
+            is part of. If this is negative, no ID will be added, allowing for
+            parameters that are not associated with scenarios to be saved.
 
         default: The value to use if the widget is not present.
 
@@ -156,9 +158,10 @@ def loadKey(
         dataframe (bool): Set to `True` for dataframe widgets that load
             their data differently.
     """
-    keyString = f"{key}{scenarioID}{extra}"
+
+    keyString = f"{key}{scenarioID if scenarioID >= 0 else ""}{extra if extra else ""}"
     hiddenPrefix = "_" if not dataframe else ""
-    if noZeroDefault or isinstance(scenarioID, str):
+    if noZeroDefault or scenarioID < 0:
         session[f"{hiddenPrefix}{keyString}"] = session.get(f"{keyString}", default)
     else:
         session[f"{hiddenPrefix}{keyString}"] = (
@@ -167,7 +170,7 @@ def loadKey(
             else idGet(key, scenarioID, default, extra)
         )
     # Ensure dataframes are properly cleaned up even if never edited
-    if dataframe and scenarioID:
+    if dataframe and scenarioID > 0:
         if extra:
             session["scenarioSetParamsExtra"][scenarioID].add((key, extra))
         else:

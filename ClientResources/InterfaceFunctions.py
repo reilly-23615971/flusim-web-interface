@@ -237,9 +237,8 @@ def saveName(
     Parameters:
         key (str): The string used to identify the name-setting widget.
 
-        scenarioID (int or ""): The integer representing the scenario the widget
-            is naming. Defaults to `""`, allowing for parameters that are not
-            associated with scenarios to be saved.
+        scenarioID (int): The integer representing the scenario the widget
+            is naming.
 
         errorContainer: The container in which to display the error message.
 
