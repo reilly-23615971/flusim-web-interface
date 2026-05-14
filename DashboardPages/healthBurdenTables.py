@@ -91,7 +91,7 @@ def generateTable():
             )
         )
     # TODO: Fix bug where latest column settings aren't stored
-    # (add confirmation to generate graph button?
+    # (add confirmation to generate table button?
     # Rerun page before running generateTable somehow?)
 
     # Debug code for loading data in testing

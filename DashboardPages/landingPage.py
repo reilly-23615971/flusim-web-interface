@@ -49,13 +49,13 @@ st.markdown("""
     - Click the :primary-badge[:material/motion_play: Run Simulation] button in
     the sidebar to run the simulation.
     - Once you've ran a simulation, visit the
-    :grey-badge[:material/chart_data: Infection Over Time Graphs] and
+    :grey-badge[:material/chart_data: Infection Curves] and
     :grey-badge[:material/table_chart_view: Health Burden Tables] pages
     to visualise the results of the simulation.
 """)
 
 st.page_link(
-    "DashboardPages/infectionOverTimeGraphs.py",
+    "DashboardPages/infectionCurves.py",
     label="Go to Infection Curves",
     icon=":material/chart_data:",
 )

@@ -117,8 +117,8 @@ runSimulation = st.Page(
     icon=":material/motion_play:",
 )
 infectionGraphs = st.Page(
-    "DashboardPages/infectionOverTimeGraphs.py",
-    title="Infection Graphs",
+    "DashboardPages/infectionCurves.py",
+    title="Infection Curves",
     icon=":material/chart_data:",
 )
 healthTables = st.Page(

@@ -23,7 +23,7 @@ session = st.session_state
 # Function to generate graph
 def generateGraph():
     """
-    Function to generate an infection-over-time graph with simulation data.
+    Function to generate an infection curve with simulation data.
 
     Raises:
         FileNotFoundError: If there is no data to generate a graph with.
@@ -88,7 +88,7 @@ def generateGraph():
     session.ChartGenerated = True
 
 
-st.title("Infection Over Time Graphs")
+st.title("Infection Curves")
 
 st.markdown("""
     Here you can generate line graphs plotting infection rates over
@@ -126,7 +126,7 @@ if currentDataExists and session.simulationInProgress:
 graphSettings = st.expander("Graph Settings")
 with graphSettings:
     st.markdown("""
-        Use these parameters to configure how the line graph will be generated.
+        Use these parameters to configure how the infection curves will be generated.
         Hover your mouse over the :material/help: help icon next to a
         setting's input field to show an explanation of what that setting
         does. Hover your mouse over any buttons to show an explanation of
@@ -210,7 +210,7 @@ as its own line, showing the infections over time for that scenario.
 
 # Button to generate the graph
 st.button(
-    label="Create Graph",
+    label="Create Infection Curves",
     icon=":material/chart_data:",
     key="generateGraph",
     type="primary",
@@ -232,7 +232,7 @@ No simulations have completed yet, so there is no data to plot.
 # Display the graph itself
 chartData = session.get("InfectionChartData")
 if chartData is not None:
-    st.header("Infection Data Line Graph")
+    st.header("Flusim Infection Curves")
     st.altair_chart(chartData)
 
     @st.fragment()
