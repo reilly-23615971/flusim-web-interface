@@ -152,6 +152,7 @@ The day of the week that the first day of the simulation will be. If this is "Ra
 )
 
 # TODO: Make this an advanced parameter?
+# TODO: Include in schema somehow
 st.markdown("""
     - The scaling population will be used to adjust simulation results for populations larger than the simulated population. For instance, if you simulate Newcastle (whose population is 272,407) and set the scaling population to 544,814, all health burdens will be doubled to make them proportional to the new value.
 """)

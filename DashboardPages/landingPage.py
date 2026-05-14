@@ -9,7 +9,7 @@ import streamlit as st
 st.title("Flusim Web Dashboard")
 
 st.markdown("""
-    The SMRG *Flusim* model, developed by the Software Modelling Research Group
+    The *Flusim* model, developed by the Infectious Disease Modelling Research Group
     at the University of Western Australia, implements a high-performance
     agent-based simulation model to simulate the spread of infectious disease
     in a population. This model has been used to aid in deciding effective
