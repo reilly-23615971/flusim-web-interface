@@ -209,9 +209,25 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
         middleJoint += "+vaccines"
 
     # Create config object
-    startDay = session.get("startDay", "Monday")
-    if startDay == "Random":
-        startDay = None
+    engineParams = Parameters(
+        Command_Argument=commandArgument(
+            n_runs=session.get("runCount", 24),
+            n_cycles=session.get("cycleCount", 360) * 2,
+        )
+    )
+    startDay = session.get("startDay", "Random")
+    if startDay != "Random":
+        engineParams.Scenario_Parameter = scenarioParameters(
+            start_day_of_week=(
+                "Sunday",
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+            ).index(startDay)
+        )
     return modelGuideFile(
         name="Flusim Web Dashboard Simulation",
         description=str(session.sessionID),
@@ -222,28 +238,7 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
         community_overrides=[
             communityOverride(
                 name=session.get("community", "newcastle"),
-                parameters=Parameters(
-                    Command_Argument=commandArgument(
-                        n_runs=session.get("runCount", 24),
-                        n_cycles=session.get("cycleCount", 360) * 2,
-                    ),
-                    Scenario_Parameter=scenarioParameters(
-                        # TODO: Random complains about being null; check schema
-                        start_day_of_week=(
-                            None
-                            if startDay is None
-                            else (
-                                "Sunday",
-                                "Monday",
-                                "Tuesday",
-                                "Wednesday",
-                                "Thursday",
-                                "Friday",
-                                "Saturday",
-                            ).index(session.get("startDay", "Monday"))
-                        )
-                    ),
-                ),
+                parameters=engineParams,
             )
         ],
         # Shared overrides are baseline parameters

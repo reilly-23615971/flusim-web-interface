@@ -128,10 +128,11 @@ st.markdown("""
     first day of the experiment. Individuals in the simulation visit different
     locations on weekends, so this may affect the initial spread of the disease.
 """)
-loadKey("startDay", default="Monday")
+loadKey("startDay", default="Random")
 st.radio(
     "Starting Day of the Week",
     (
+        "Random",
         "Monday",
         "Tuesday",
         "Wednesday",
@@ -139,7 +140,6 @@ st.radio(
         "Friday",
         "Saturday",
         "Sunday",
-        "Random",
     ),
     index=0,
     horizontal=True,
