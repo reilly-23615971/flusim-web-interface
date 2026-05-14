@@ -54,9 +54,8 @@ def asymptomaticSave(
     Parameters:
         key (str): The string used to identify the widget.
 
-        scenarioID (int or ""): The integer representing the scenario the widget
-            is part of. Defaults to `""`, allowing for parameters that are not
-            associated with scenarios to be saved.
+        scenarioID (int): The integer representing the scenario the widget
+            is part of.
 
         direction (str): Either "simpleToAdvanced" or "advancedToSimple", used to
             determine which parameters to propagate values to.

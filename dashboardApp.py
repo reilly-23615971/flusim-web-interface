@@ -160,20 +160,10 @@ def updateData():
     if session.simulationInProgress and (hasResults or hasError):
         if hasResults and not hasError:
             # Reset pending simulation variables
-            pendingData = {
-                "Forms",
-                "Community",
-                "ScenarioNames",
-                "ScenarioCount",
-                "Asymptomatic",
-                "HealthOutcomeRates",
-                "MortalityRates",
-                "HasWaning",
-            }
             # TODO: Add a check to ensure visualisations can't use the new values
             # while this function is still processing the data
-            for name in pendingData:
-                session[f"Data{name}"] = session.get(f"PendingData{name}")
+            simParams = session["pendingSimParams"]
+            session.SimParams = simParams
 
             # Process data and ensure there is no formatting errors
             returnedData = resultQueue.get()
@@ -182,9 +172,11 @@ def updateData():
             # Remove any old session data that is no longer valid
             # TODO: Make more robust when number of returned values can vary more
             scenarioCount = (
-                4 if usePresetData or usePresetParams else session.DataScenarioCount + 1
+                4
+                if usePresetData or usePresetParams
+                else len(simParams["Scenario Names"])
             )
-            dataForms = session.get("DataForms", [])
+            dataForms = simParams["Analysis Formats"]
             if len(dataForms) < 4:
                 session.pop("modelDataAsirVaccinated", None)
 

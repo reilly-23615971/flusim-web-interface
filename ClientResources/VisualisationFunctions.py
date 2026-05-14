@@ -20,8 +20,8 @@ from ClientResources.InterfaceFunctions import ageRangeCombiner
 from ClientResources.SharedResources import (  # outcomeAdjectives,
     AnalysisFile,
     ageWithTime,
-    mutedCodes,
     communityAgePops,
+    mutedCodes,
     tableOutcomes,
 )
 
@@ -167,10 +167,15 @@ def formatEpidemic(
 
         # Reshape data for better Altair usage
         valueLabel = f"Total {outcome}" if cumulative else f"{outcome} per Day"
-
-        return framedData.melt(
+        meltedData = framedData.melt(
             "Days Since First Infection", var_name="Scenario", value_name=valueLabel
         )
+
+        # Scale the data
+        scalingFactor = session.SimParams.get("Scaling Factor", 1.0)
+        meltedData[valueLabel] = meltedData[valueLabel] * scalingFactor
+
+        return meltedData
 
 
 def plotEpidemic(
@@ -355,8 +360,11 @@ def formatAsir(rawCSV: bytes, scenarioNames: list[str]) -> pd.DataFrame:
     )
     framedData.columns = pd.Index(ageWithTotal)
 
-    # Scale the data by symptomatic likelihood
-    asymptomaticChild, asymptomaticAdult = zip(*session.DataAsymptomatic)
+    # Scale the data by population and symptomatic likelihood
+    simParams = session.SimParams
+    populationScale = simParams["Scaling Factor"]
+    framedData.iloc[:, 0:] *= populationScale
+    asymptomaticChild, asymptomaticAdult = zip(*simParams["Asymptomatic Rates"])
     framedData.loc[:, ageWithTime[:6]] = framedData.loc[:, ageWithTime[:6]].mul(
         asymptomaticChild, axis=0
     )
@@ -395,6 +403,9 @@ def scaleAsirColumn(
             health burdens, and the baseline data scaled based on the required
             health burdens.
     """
+    # TODO: see if making rates parameters is more efficient
+    healthRates = session.SimParams["Health Outcome Rates"]
+    mortDict = session.SimParams["Age-Separated Health Outcome Rates"]
     match outcome:
         case "Symptomatic Infections":
             # No scaling necessary
@@ -402,26 +413,24 @@ def scaleAsirColumn(
             scaledBaseline = baselineData.copy()
         case "Deaths":
             # TODO: Update for any other outcomes that become age-specific
-            deathRates = pd.DataFrame(session.DataMortalityRates).T.stack()
+            deathRates = pd.DataFrame(mortDict).T.stack()
             dataIndexValues = pd.MultiIndex.from_frame(data[["Scenario", "Age Group"]])
             scaledColumn = data["Base Values"] * pd.Series(
                 dataIndexValues.map(deathRates), index=data.index  # type: ignore
-            ).fillna(data["Scenario"].map(session["DataHealthOutcomeRates"]["Deaths"]))
+            ).fillna(data["Scenario"].map(healthRates["Deaths"]))
 
-            baselineDeath = session.DataMortalityRates[baselineScenario]
+            baselineDeath = mortDict[baselineScenario]
             scaledBaseline = baselineData * (
                 data["Age Group"]
                 .map(baselineDeath)
-                .fillna(session["DataHealthOutcomeRates"]["Deaths"][baselineScenario])
+                .fillna(healthRates["Deaths"][baselineScenario])
             )
 
         case _:
             scaledColumn = data["Base Values"] * data["Scenario"].map(
-                session["DataHealthOutcomeRates"][outcome]
+                healthRates[outcome]
             )
-            scaledBaseline = baselineData * (
-                session["DataHealthOutcomeRates"][outcome][baselineScenario]
-            )
+            scaledBaseline = baselineData * healthRates[outcome][baselineScenario]
     return scaledColumn.round(), scaledBaseline.round()
 
 
@@ -567,7 +576,7 @@ def generateAsir(
 
     # Useful constants
     fullData = baseData.copy()
-    agePops = communityAgePops[session.DataCommunity]
+    agePops = communityAgePops[session.SimParams["Community"]]
     scenarioCount = len(scenarioNames)
     ageIndices = {
         age: range(index * scenarioCount, (index * scenarioCount) + scenarioCount)

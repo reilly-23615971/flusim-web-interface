@@ -9,6 +9,7 @@ import logging
 import threading
 from datetime import datetime
 from io import BytesIO
+from typing import Any
 from zipfile import ZipFile
 
 import pandas as pd
@@ -33,6 +34,7 @@ from ClientResources.SharedResources import (
     AnalysisFile,
     ageTimeDict,
     ageWithTime,
+    communityPopulation,
     currentProgress,
     errorQueue,
     resultQueue,
@@ -76,24 +78,22 @@ def runtimeEstimate(days: int, runs: int, scenarios: int) -> int:
 
 
 def healthOutcomeStore(
-    singleKey: str, ageKey: str, scenarioNames: list[str], useAges: bool = True
-):
+    scenarioNames: list[str], useAges: bool = True
+) -> tuple[dict, dict]:
     """
     Function to format and store health burden outcome rates for a given set
     of scenarios.
 
     Parameters:
-        singleKey (str): The `st.session_state` key for health burdens that
-            are not age-specific.
-
-        ageKey (str): The `st.session_state` key for health burdens that
-            are age-specific.
-
         scenarioNames (list of str): The names of each scenario defined in
             the simulation.
 
         useAges (Boolean): Set to False to ignore age-specific health burdens
             and define each of their values to be the same baseline value.
+
+    Returns:
+        tuple of dicts: A pair of dictionaries storing the global and age-specific
+            health burden rates.
     """
     # Required values for outcome rates
     icuKey, icuDefault, icuFormat = "icuRatio", 20.0, lambda x: x / 100
@@ -121,7 +121,7 @@ def healthOutcomeStore(
     }
 
     # Deaths (age-specific)
-    """session.PendingDataMortalityRates = {
+    """ageRates = {
         scenarioNames[scenarioID]: {
             idGet("deathAgeGroup", scenarioID, None, f"-{rowID}"): deathFormat(
                 idGet(deathKey, scenarioID, deathDefault, f"-{rowID}")
@@ -157,8 +157,7 @@ def healthOutcomeStore(
             mortAgeDict = {}
         ageRates[name] = {age: baseDeathRate for age in ageWithTime} | mortAgeDict
 
-    session[singleKey] = singleRates
-    session[ageKey] = ageRates
+    return singleRates, ageRates
 
 
 @st.dialog("Run Simulation Experiment", width="large", icon=":material/motion_play:")
@@ -171,8 +170,8 @@ def runSimulationButton():
     runPending = bool(session.get("confirmRunButton"))
 
     # List scenarios
-    scenarioCount = session.get("scenarioCount", 0)
-    if scenarioCount == 0:
+    scenarioCount = session.get("scenarioCount", 0) + 1
+    if scenarioCount == 1:
         st.markdown(f"""
 With the current parameters, this modelling experiment will use the
 "{session.get('community', 'newcastle').capitalize()}"
@@ -182,21 +181,21 @@ community data to simulate the baseline scenario.
         st.markdown(f"""
 With the current parameters, this modelling experiment will use the
 "{session.get('community', 'newcastle').capitalize()}"
-community data to simulate each of the following {scenarioCount + 1} scenarios:
+community data to simulate each of the following {scenarioCount} scenarios:
         """)
-        with st.container() if scenarioCount < 10 else st.expander("Scenario Names"):
+        with st.container() if scenarioCount < 11 else st.expander("Scenario Names"):
             st.markdown(
                 "- Baseline\n"
                 + "\n".join(
                     f"- {session[f'scenarioName{id}']}"
-                    for id in range(1, scenarioCount + 1)
+                    for id in range(1, scenarioCount)
                 )
             )
 
     # Display any errors
     # TODO: Hide scenario errors that are copies of baseline errors
     severeErrorsFound = False
-    for id in range(scenarioCount + 1):
+    for id in range(scenarioCount):
         severeErrorsFound = (
             errorChecker(
                 id,
@@ -227,7 +226,7 @@ simulation.
         # Get estimated simulation runtime
         cycleCount = session.get("cycleCount", 360)
         runCount = session.get("runCount", 24)
-        estimatedTime = runtimeEstimate(cycleCount, runCount, scenarioCount + 1)
+        estimatedTime = runtimeEstimate(cycleCount, runCount, scenarioCount)
         st.metric(
             f"Estimated Time to Run Simulation Experiment",
             value=timeString(estimatedTime),
@@ -269,22 +268,25 @@ already busy with a different task.
 
             # Create JSON for selected parameters
             else:
-                parameterJSON = createConfig(scenarioCount + 1).model_dump_json(
+                parameterJSON = createConfig(scenarioCount).model_dump_json(
                     indent=4, exclude_unset=True  # , exclude_defaults = True
                 )
                 if saveJSON:
                     with open("./savedJSON.json", "w") as file:
                         file.write(parameterJSON)
                 scenarioNames = ["Baseline"] + [
-                    session[f"scenarioName{i}"] for i in range(1, scenarioCount + 1)
+                    session[f"scenarioName{i}"] for i in range(1, scenarioCount)
                 ]
 
             # Save current parameter values that'll be used for
             # visualisation when the user has potentially changed them
+            simParams: dict[str, Any] = {"Scenario Names": scenarioNames}
+            community = session.get("community", "newcastle")
+            simParams["Community"] = community
             useAdvanced = session.get("showAdvanced", False)
             schema = json.loads(parameterJSON)
             if "+vaccine" in schema.get("middle_joint"):
-                session.PendingDataForms = [
+                simParams["Analysis Formats"] = [
                     AnalysisFile(
                         tool="epidemic", names=scenarioNames, useCumulative=True
                     ),
@@ -295,7 +297,7 @@ already busy with a different task.
                     AnalysisFile(tool="asir", names=scenarioNames, vaccinated=True),
                 ]
             else:
-                session.PendingDataForms = [
+                simParams["Analysis Formats"] = [
                     AnalysisFile(
                         tool="epidemic", names=scenarioNames, useCumulative=True
                     ),
@@ -304,24 +306,32 @@ already busy with a different task.
                     ),
                     AnalysisFile(tool="asir", names=scenarioNames),
                 ]
-            session.PendingDataCommunity = session.get("community", "newcastle")
-            session.PendingDataScenarioNames = scenarioNames
-            session.PendingDataScenarioCount = scenarioCount
-            session.PendingDataAsymptomatic = (
+
+            simParams["Scaling Factor"] = (
+                session.get("scalingPopulation", communityPopulation[community])
+                / communityPopulation[community]
+            )
+            simParams["Asymptomatic Rates"] = (
                 [
                     [
                         1 - idGet("asymptomaticChild", scenarioID, 0.35),
                         1 - idGet("asymptomaticAdult", scenarioID, 0.35),
                     ]
-                    for scenarioID in range(scenarioCount + 1)
+                    for scenarioID in range(scenarioCount)
                 ]
                 if useAdvanced
                 else [
                     [1 - idGet("asymptomaticBoth", scenarioID, 0.35)] * 2
-                    for scenarioID in range(scenarioCount + 1)
+                    for scenarioID in range(scenarioCount)
                 ]
             )
-            session.PendingDataHasWaning = useAdvanced and any(
+            healthOutcomeRates, mortalityRates = healthOutcomeStore(
+                scenarioNames,
+                useAges=useAdvanced,
+            )
+            simParams["Health Outcome Rates"] = healthOutcomeRates
+            simParams["Age-Separated Health Outcome Rates"] = mortalityRates
+            simParams["Waning In Simulation"] = useAdvanced and any(
                 idGet("naturalWaningToggle", scenarioID, False)
                 or (
                     idGet("vaccineToggle", scenarioID, False)
@@ -330,15 +340,10 @@ already busy with a different task.
                         or idGet("boosterToggle", scenarioID, False)
                     )
                 )
-                for scenarioID in range(scenarioCount + 1)
+                for scenarioID in range(scenarioCount)
             )
 
-            healthOutcomeStore(
-                "PendingDataHealthOutcomeRates",
-                "PendingDataMortalityRates",
-                scenarioNames,
-                useAges=useAdvanced,
-            )
+            session.pendingSimParams = simParams
 
             # Clear the status queue
             currentProgress.append(0.0)

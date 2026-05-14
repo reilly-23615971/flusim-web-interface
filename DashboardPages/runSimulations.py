@@ -151,6 +151,27 @@ The day of the week that the first day of the simulation will be. If this is "Ra
     """,
 )
 
+# TODO: Make this an advanced parameter?
+st.markdown("""
+    - The scaling population will be used to adjust simulation results for populations larger than the simulated population. For instance, if you simulate Newcastle (whose population is 272,407) and set the scaling population to 544,814, all health burdens will be doubled to make them proportional to the new value.
+""")
+loadKey("scalingPopulation", default=communityPopulation[community])
+st.number_input(
+    "Scaling Population",
+    min_value=1,
+    value=communityPopulation[community],
+    key=f"_scalingPopulation",
+    on_change=saveKey,
+    args=["scalingPopulation"],
+    placeholder="Enter the size of the desired population",
+    help="""
+The size of the population that all simulation results will be scaled to. The
+proportions of the data will not change, but all health burdens will be multiplied
+such that they reflect the values that would be obtained in a simulation whose
+population matches the scaling population.
+        """,
+)
+
 # Buttons to upload simulation parameters
 uploadDownloadBar()
 

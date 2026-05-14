@@ -37,21 +37,23 @@ def generateGraph():
             )
         )
 
-    scenarioNames = session.get(
-        "DataScenarioNames",
-        ["Baseline", "School Closure", "Case Isolation", "Community Contact Reduction"],
-    )
-    scenariosUsed = session.get("chartScenariosToUse", scenarioNames)
     chartType = session.get("chartType", "Cumulative")
-    graphLog.info(f"""
-        [generateGraph] Formatting epidemic data using the scenarios
-        {scenariosUsed} and the data type {chartType}
-    """)
 
     # Debug code for loading data in testing
     if usePresetData:
         # Set default session_state params
-        session.DataCommunity = "newcastle"
+        scenarioNames = [
+            "Baseline",
+            "School Closure",
+            "Case Isolation",
+            "Community Contact Reduction",
+        ]
+        simParams = {
+            "Community": "newcastle",
+            "Scenario Names": scenarioNames,
+            "Scaling Factor": session.get("scalingPopulation", 272407) / 272407,
+        }
+        session.SimParams = simParams
         # Load test data from file
         presetFilename = (
             "./TestData/epidemicMedianCumulative.csv"
@@ -60,13 +62,21 @@ def generateGraph():
         )
         with open(presetFilename, "rb") as csv:
             epidemicData = formatEpidemic(
-                csv.read(), scenarioNames, cumulative=chartType == "Cumulative"
+                csv.read(),
+                scenarioNames,
+                cumulative=chartType == "Cumulative",
             )
     # Load data from session_state
     else:
+        scenarioNames = session.SimParams["Scenario Names"]
         dataVarName = "Cumulative" if chartType == "Cumulative" else "Daily"
         epidemicData = session.get(f"modelDataEpidemic{dataVarName}")
 
+    scenariosUsed = session.get("chartScenariosToUse", scenarioNames)
+    graphLog.info(f"""
+        [generateGraph] Formatting epidemic data using the scenarios
+        {scenariosUsed} and the data type {chartType}
+    """)
     chartData = plotEpidemic(
         epidemicData,  # type: ignore
         includedScenarios=scenariosUsed,
@@ -123,14 +133,14 @@ with graphSettings:
         what that button does.
     """)
 
-    loadKey("chartType", "", "Cumulative", noZeroDefault=True)
+    loadKey("chartType", default="Cumulative")
     chartType = st.selectbox(
         "Chart Type",
         ["Cumulative", "Daily Rate"],
         index=0,
         key="_chartType",
         on_change=saveKey,
-        args=("chartType", ""),
+        args=["chartType"],
         kwargs={"notScenario": True},
         placeholder="Please select a data format",
         help="""
@@ -146,19 +156,25 @@ that occur in each day of the simulation.
     )
 
     # Scenario selection
-    scenarioNames = session.get(
-        "DataScenarioNames",
-        ["Baseline", "School Closure", "Case Isolation", "Community Contact Reduction"],
+    simParams = session.get("SimParams", {})
+    scenarioNames = simParams.get(
+        "Scenario Names",
+        [
+            "Baseline",
+            "School Closure",
+            "Case Isolation",
+            "Community Contact Reduction",
+        ],
     )
     if currentDataExists or usePresetData:
-        loadKey("chartScenariosToUse", "", scenarioNames, noZeroDefault=True)
+        loadKey("chartScenariosToUse", default=scenarioNames)
         scenariosToUse: Optional[list[str]] = st.multiselect(
             "Scenarios to Include in Graph",
             scenarioNames,
             default=scenarioNames,
             key="_chartScenariosToUse",
             on_change=saveKey,
-            args=["chartScenariosToUse", ""],  # type: ignore
+            args=["chartScenariosToUse"],  # type: ignore
             placeholder="Please select at least 1 scenario",
             kwargs={"notScenario": True},
             help="""
