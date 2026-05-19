@@ -20,7 +20,7 @@ usePresetParams = False
 # Toggle to use built-in data instead of model output
 # TODO: Include different types of preset data
 # (e.g. vaccinated vs unvaccinated) for better testing
-usePresetData = True
+usePresetData = False
 
 # Toggle to save the JSON form of parameters as a file
 saveJSON = False
