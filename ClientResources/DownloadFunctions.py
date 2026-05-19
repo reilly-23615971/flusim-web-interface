@@ -228,6 +228,7 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
                 "Saturday",
             ).index(startDay)
         )
+    # TODO: Use new sessionID for each sim to avoid overwriting data
     return modelGuideFile(
         name="Flusim Web Dashboard Simulation",
         description=str(session.sessionID),

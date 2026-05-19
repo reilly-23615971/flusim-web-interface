@@ -20,10 +20,13 @@ usePresetParams = False
 # Toggle to use built-in data instead of model output
 # TODO: Include different types of preset data
 # (e.g. vaccinated vs unvaccinated) for better testing
-usePresetData = False
+usePresetData = True
 
 # Toggle to save the JSON form of parameters as a file
 saveJSON = False
+
+# Toggle to round the values displayed in infection curves/burden tables
+roundResults = True
 
 # Other Constants
 

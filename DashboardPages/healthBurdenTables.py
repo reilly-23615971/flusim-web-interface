@@ -510,6 +510,7 @@ to a different Age Group Separation mode before attempting to generate a table.
         agesToUse = []
 
     # Toggle coloured table cells
+    # TODO: Sometimes this visually appears off despite being on; why?
     colourToggle = st.toggle(
         "Use Colour in Table",
         value=False,

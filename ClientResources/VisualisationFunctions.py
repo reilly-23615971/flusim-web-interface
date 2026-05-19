@@ -22,6 +22,7 @@ from ClientResources.SharedResources import (  # outcomeAdjectives,
     ageWithTime,
     communityAgePops,
     mutedCodes,
+    roundResults,
     tableOutcomes,
 )
 
@@ -161,9 +162,9 @@ def formatEpidemic(
             names=["Days Since First Infection"] + scenarioNames,
         )
         if cumulative:
-            framedData = framedData.ffill().round()
+            framedData = framedData.ffill()
         else:
-            framedData = framedData.fillna(0.0).round()
+            framedData = framedData.fillna(0.0)
 
         # Reshape data for better Altair usage
         valueLabel = f"Total {outcome}" if cumulative else f"{outcome} per Day"
@@ -175,7 +176,10 @@ def formatEpidemic(
         scalingFactor = session.SimParams.get("Scaling Factor", 1.0)
         meltedData[valueLabel] = meltedData[valueLabel] * scalingFactor
 
-        return meltedData
+        if roundResults:
+            return meltedData.round()
+        else:
+            return meltedData
 
 
 def plotEpidemic(
@@ -431,7 +435,10 @@ def scaleAsirColumn(
                 healthRates[outcome]
             )
             scaledBaseline = baselineData * healthRates[outcome][baselineScenario]
-    return scaledColumn.round(), scaledBaseline.round()
+    if roundResults:
+        return scaledColumn.round(), scaledBaseline.round()
+    else:
+        return scaledColumn, scaledBaseline
 
 
 def recalculateTotals(
