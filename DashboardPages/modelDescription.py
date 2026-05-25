@@ -61,19 +61,22 @@ st.markdown("""
 
 st.subheader("Experiment Details")
 st.markdown("""
-    This dashboard operates by communicating with a separate server running the *Flusim* model. Parameter values selected by the user are sent from the dashboard to the server, which uses them to configure the simulation. Once the simulation has ran, the server extracts results such as infections per day and sends them back to the dashboard. Finally, the dashboard uses these results alongside additional parameters set by the user to generate health burden outcomes and visualisations of the results. The image below visualises this process of conducting simulation experiments.
+    This dashboard operates by communicating with a separate server running the *Flusim* model. Parameter values selected by the user are sent from the dashboard to the server, which uses them to configure the *Flusim* simulation model. Once the simulation has ran, the server extracts results such as infections per day and sends them back to the dashboard. Finally, the dashboard uses these results alongside additional parameters set by the user to generate health burden outcomes and visualisations of the results. The image below visualises this process of conducting simulation experiments.
 """)
 st.image(
     "/app/static/modelDiagram.png",
     width="stretch",
     caption="""
 A simplified diagram of how a simulation experiment is conducted. Disease
-and vaccination parameters from the dashboard are sent to the server and
-used alongside census data to initialise individual-based simulation models.
-These models return disease-specific outcomes (such as the total number
-of infections) to the dashboard, which combines these outcomes with
-user-specified health burden parameters to generate health burden outcomes
-such as GP visits and deaths.
+and vaccination parameters from the dashboard are sent to the server program, which
+hosts the *Flusim* individual-based simulation model. This model is comprised of
+several pre-built elements, including the population contact network based on census
+data, influenza transmission procedures and disease-associated vaccination strategies.
+The model is used to run the simulations specified by the dashboard parameters;
+after this, the server extracts simulation outcomes like total infections from
+the model. Once the server has returned these simulation outcomes, the dashboard
+combines them with user-specified health burden parameters to generate health burden
+outcomes such as GP visits and deaths.
     """,
 )
 

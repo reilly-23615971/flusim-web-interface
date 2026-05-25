@@ -160,7 +160,10 @@ def formatEpidemic(
             BytesIO(rawCSV),
             header=0,
             names=["Days Since First Infection"] + scenarioNames,
+            dtype=defaultdict(lambda: np.float64, {0: int}),  # type: ignore
         )
+
+        # Fill null values
         if cumulative:
             framedData = framedData.ffill()
         else:
@@ -176,6 +179,7 @@ def formatEpidemic(
         scalingFactor = session.SimParams.get("Scaling Factor", 1.0)
         meltedData[valueLabel] = meltedData[valueLabel] * scalingFactor
 
+        # Round results if necessary
         if roundResults:
             return meltedData.round()
         else:
