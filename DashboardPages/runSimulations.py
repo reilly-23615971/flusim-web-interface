@@ -9,7 +9,12 @@ import streamlit as st
 
 # from streamlit_push_notifications import send_push, send_alert
 from ClientResources.DownloadFunctions import uploadDownloadBar
-from ClientResources.ParameterFunctions import loadKey, saveKey, timeScaleChange
+from ClientResources.ParameterFunctions import (
+    containerSave,
+    loadKey,
+    saveKey,
+    timeScaleChange,
+)
 from ClientResources.SharedResources import (
     communityPopulation,
     currentProgress,
@@ -43,6 +48,23 @@ st.header("Simulation Engine Settings")
 st.markdown("""
     These parameters control various universal elements of the simulation engine.
 """)
+
+# Advanced parameters toggle
+# TODO: Move advanced parameters to either the sidebar or a separate settings page
+loadKey("showAdvanced", default=False, noZeroDefault=True)
+containersToOpen: set[str] = {"paramTabs0"}
+showAdvanced = st.toggle(
+    "Show Advanced Parameters",
+    False,
+    key="_showAdvanced",
+    on_change=containerSave,
+    args=["showAdvanced"],
+    kwargs={"containers": containersToOpen},
+    help="""
+Toggle whether to display parameters that control more fine-grain aspects
+of the simulation environment, such as scaling population.
+    """,
+)
 
 # Community Selection
 st.markdown("""
@@ -123,55 +145,54 @@ simulations but more accurate results.
     """,
 )
 
-st.markdown("""
-    - The starting day of the week determines what day of the week it is on the
-    first day of the experiment. Individuals in the simulation visit different
-    locations on weekends, so this may affect the initial spread of the disease.
-""")
-loadKey("startDay", default="Random")
-st.radio(
-    "Starting Day of the Week",
-    (
-        "Random",
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday",
-    ),
-    index=0,
-    horizontal=True,
-    key="_startDay",
-    on_change=saveKey,
-    args=["startDay"],
-    help="""
-The day of the week that the first day of the simulation will be. If this is "Random", the starting day will be chosen randomly for each simulation.
-    """,
-)
-
-# TODO: Make this an advanced parameter?
-# TODO: Include in schema somehow
-st.markdown("""
-    - The scaling population will be used to adjust simulation results for populations larger than the simulated population. For instance, if you simulate Newcastle (whose population is 272,407) and set the scaling population to 544,814, all health burdens will be doubled to make them proportional to the new value.
-""")
-loadKey("scalingPopulation", default=communityPopulation[community])
-st.number_input(
-    "Scaling Population",
-    min_value=1,
-    value=communityPopulation[community],
-    key=f"_scalingPopulation",
-    on_change=saveKey,
-    args=["scalingPopulation"],
-    placeholder="Enter the size of the desired population",
-    help="""
-The size of the population that all simulation results will be scaled to. The
-proportions of the data will not change, but all health burdens will be multiplied
-such that they reflect the values that would be obtained in a simulation whose
-population matches the scaling population.
+if showAdvanced:
+    st.markdown("""
+        - The starting day of the week determines what day of the week it is on the
+        first day of the experiment. Individuals in the simulation visit different
+        locations on weekends, so this may affect the initial spread of the disease.
+    """)
+    loadKey("startDay", default="Random")
+    st.radio(
+        "Starting Day of the Week",
+        (
+            "Random",
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
+        ),
+        index=0,
+        horizontal=True,
+        key="_startDay",
+        on_change=saveKey,
+        args=["startDay"],
+        help="""
+    The day of the week that the first day of the simulation will be. If this is "Random", the starting day will be chosen randomly for each simulation.
         """,
-)
+    )
+
+    st.markdown("""
+        - The scaling population will be used to adjust simulation results for populations larger than the simulated population. For instance, if you simulate Newcastle (whose population is 272,407) and set the scaling population to 544,814, all health burdens will be doubled to make them proportional to the new value.
+    """)
+    loadKey("scalingPopulation", default=communityPopulation[community])
+    st.number_input(
+        "Scaling Population",
+        min_value=1,
+        value=communityPopulation[community],
+        key=f"_scalingPopulation",
+        on_change=saveKey,
+        args=["scalingPopulation"],
+        placeholder="Enter the size of the desired population",
+        help="""
+    The size of the population that all simulation results will be scaled to. The
+    proportions of the data will not change, but all health burdens will be multiplied
+    such that they reflect the values that would be obtained in a simulation whose
+    population matches the scaling population.
+            """,
+    )
 
 # Buttons to upload simulation parameters
 uploadDownloadBar()

@@ -69,7 +69,6 @@ sessionParameters = {
     "simulationInProgress": False,
     "keepProgressBar": False,
     "scenarioCount": 0,
-    "sessionID": int(datetime.now().timestamp()),
     "scenarioSetParamsExtra": {},
     "scenarioSetParams": {},
     "activeErrors": {0: {}},

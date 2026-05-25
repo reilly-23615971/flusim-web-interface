@@ -2,6 +2,8 @@
 # Developed by Reilly Evans
 # Defines structure of model configuration guide JSON files
 
+# TODO: Format descriptions to not be string tuples
+
 # Imports
 import logging
 from operator import attrgetter
@@ -85,14 +87,11 @@ class ageScenarioParameters(BaseModel):
         title="Transmission",
         default=None,
         ge=0.0,
-        description=(
-            (
-                "The probability of transmission for all age groups will "
-                "be multiplied by this value; the higher this is, the more "
-                "likely it is that infected individuals will spread the "
-                "pathogen to others."
-            )
-        ),
+        description="""
+The probability of transmission for all age groups will be multiplied by this
+value; the higher this is, the more likely it is that infected individuals will
+spread the pathogen to others.
+        """,
     )
     susc: Optional[float] = Field(
         title="Susceptibility",
@@ -1526,6 +1525,27 @@ class scenarioParameters(BaseModel):
                 "old will die as a result of the pathogen."
             )
         ),
+    )
+    # TODO: Move dashboard-only params like these and prob_icu to a separate class
+    scaling_population: Optional[int] = Field(
+        title="Scaling Population",
+        gt=0,
+        default=None,
+        description="""
+The population size that the simulation results should reflect. Once the
+simulation is complete, all results will be multiplied by the ratio between
+this value and the size of the simulated population. This parameter is not used
+in the simulation itself, but is included to aid in dashboard functions.
+        """,
+    )
+    show_advanced_parameters: Optional[bool] = Field(
+        title="Show Advanced Parameters",
+        default=False,
+        description="""
+Toggles whether more complex parameters should be displayed on the dashboard.
+This parameter is not used in the simulation itself, but is included to aid in
+dashboard functions.
+        """,
     )
 
     class Config:

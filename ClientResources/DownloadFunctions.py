@@ -6,6 +6,7 @@
 import logging
 import time
 from copy import deepcopy
+from datetime import datetime
 from io import BytesIO
 from typing import Optional
 
@@ -208,17 +209,16 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
     if useVaccines:
         middleJoint += "+vaccines"
 
-    # Create config object
-    engineParams = Parameters(
-        Command_Argument=commandArgument(
-            n_runs=session.get("runCount", 24),
-            n_cycles=session.get("cycleCount", 360) * 2,
+    # Set up engine parameters
+    community = session.get("community", "newcastle")
+    globalScenarioParams = scenarioParameters(show_advanced_parameters=useAdvanced)
+    if useAdvanced:
+        globalScenarioParams.scaling_population = session.get(
+            "scalingPopulation", communityPopulation[community]
         )
-    )
-    startDay = session.get("startDay", "Random")
-    if startDay != "Random":
-        engineParams.Scenario_Parameter = scenarioParameters(
-            start_day_of_week=(
+        startDay = session.get("startDay", "Random")
+        if startDay != "Random":
+            globalScenarioParams.start_day_of_week = (
                 "Sunday",
                 "Monday",
                 "Tuesday",
@@ -227,14 +227,22 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
                 "Friday",
                 "Saturday",
             ).index(startDay)
-        )
-    # TODO: Use new sessionID for each sim to avoid overwriting data
+    engineParams = Parameters(
+        Command_Argument=commandArgument(
+            n_runs=session.get("runCount", 24),
+            n_cycles=session.get("cycleCount", 360) * 2,
+        ),
+        Scenario_Parameter=globalScenarioParams,
+    )
+    sessionID = int(datetime.now().timestamp())
+
+    # Create config object
     return modelGuideFile(
         name="Flusim Web Dashboard Simulation",
-        description=str(session.sessionID),
+        description=str(sessionID),
         output_folder="./results/",
         middle_joint=middleJoint,
-        community_used=[session.get("community", "newcastle")],
+        community_used=[community],
         # Community overrides are global parameters e.g. number of runs
         community_overrides=[
             communityOverride(
@@ -247,7 +255,7 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
         simulation_sets=[
             simulationSet(
                 name="Dashboard Simulation Set",
-                version=session.sessionID,
+                version=sessionID,
                 simulations=[simulation(name="Baseline")]
                 + [
                     simulation(
@@ -310,7 +318,7 @@ def loadConfig(file: BytesIO):
 
             engineParams = engineSettings.parameters.Scenario_Parameter
             if engineParams is not None:
-                startDay = engineParams.start_day_of_week
+                session.showAdvanced = bool(engineParams.show_advanced_parameters)
                 session.startDay = (
                     (
                         "Sunday",
@@ -320,10 +328,16 @@ def loadConfig(file: BytesIO):
                         "Thursday",
                         "Friday",
                         "Saturday",
-                    )[startDay]
-                    if startDay is not None
+                    )[engineParams.start_day_of_week]
+                    if engineParams.start_day_of_week is not None
                     else "Random"
                 )
+                session.scalingPopulation = (
+                    engineParams.scaling_population
+                    if engineParams.scaling_population is not None
+                    else communityPopulation[engineSettings.name]
+                )
+
             commandArgs = engineSettings.parameters.Command_Argument
             if commandArgs is not None:
                 session.runCount = commandArgs.n_runs
@@ -335,6 +349,7 @@ def loadConfig(file: BytesIO):
 
         # Baseline parameters
         # TODO: Improve robustness of LoadSchema functions with invalid data
+        # TODO: Load/detect advanced parameter toggle
         if schema.shared_overrides is not None:
             baselineParams = schema.shared_overrides.parameters
             diseaseLoadSchema(baselineParams, 0)
