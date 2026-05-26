@@ -1668,13 +1668,13 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
         {"person" if seedRate == 1 else "people"}.
         """
     else:
+        lowSeed, highSeed = int(seedRate), -(-seedRate // 1)
         seedString = f"""
         During each cycle of the simulation (i.e. twice per day), infection
         seeding will infect an average of {seedRate:.3g} random people. The
-        number of infections will always be either {int(seedRate):.0g} or
-        {-(-seedRate // 1):.0g} each cycle; there is a {seedRate % 1:.0%}
-        chance that there will be {-(-seedRate // 1):.0g} seeded
-        infection{plural(-(-seedRate // 1))}.
+        number of infections will always be either {lowSeed:.0g} or
+        {highSeed:.0g} each cycle; there is a {seedRate % 1:.0%} chance that
+        there will be {highSeed:.0g} seeded infection{plural(highSeed)}.
         """
     startDay, endDay = idGet("seedPeriod", scenarioID, (1, 30))
     st.markdown("""
@@ -2169,6 +2169,8 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
 
         # Period definitions
         # TODO: Handle baseline validation errors better
+        # TODO: There might be some issues here; check to see if
+        # decimals are getting ignored by the strict sliders
         if {
             "infection_waned_protection",
             "infection_waning_rate_per_cycle",
@@ -2329,7 +2331,8 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                     },
                 ),
             )
-
+        # TODO: Mort rates (and probably others) get float imprecision;
+        # see if some 6 decimal place rounding will help
         mortParams = {
             p.removesuffix("_mort"): v * 100000 if v is not None else None
             for p, v in paramDict.items()

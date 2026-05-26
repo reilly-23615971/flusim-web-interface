@@ -9,7 +9,7 @@ import numpy as np
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import dayCount
+from ClientResources.InterfaceFunctions import plural
 from ClientResources.ModelSchema import Parameters, scenarioParameters
 from ClientResources.ParameterFunctions import (
     idGet,
@@ -126,6 +126,7 @@ as public transport.
         # Other Community Parameters
         st.subheader("Advanced Community Settings", divider="grey")
 
+        # TODO: Default to 0
         loadKey("diagnosisDelay", id, 1)
         st.slider(
             "Case Diagnosis Delay (Days)",
@@ -212,6 +213,146 @@ The maximum size of groups within workplaces in the simulation.
         )
 
 
+def communityDescribe(scenarioID: int = 0, advanced: bool = False):
+    """
+    Function to describe the current community parameters in natural language.
+
+    Parameters:
+        scenarioID (int): An integer that will be used to differentiate the parameters
+            in different instances of the tab by adding a number to the Streamlit
+            session state variables. A value of 0 means that this is the
+            baseline scenario and will be treated accordingly.
+
+        advanced (bool): Set to `True` to describe more complex parameters like
+            child supervision rate.
+    """
+
+    # Withdrawal
+    st.subheader("Withdrawal Rates")
+    st.markdown(
+        """
+        Most individuals in the simulation will attend a school or workplace every
+        day from Monday to Friday. However, if an individual shows symptoms of
+        the pathogen, they may instead remain at home to avoid infecting others.
+        
+        Children attending schools have a {child:.0%} chance of staying home if
+        they are symptomatic. Adults (and adolescents) attending work have a
+        {adult:.0%} chance of staying home if they are symptomatic.
+        """.format(
+            child=idGet("withdrawalSchool", scenarioID, 0.9),
+            adult=idGet("withdrawalWork", scenarioID, 0.5),
+        )
+    )
+
+    # BCC and Group Size
+    st.subheader("Contact Between Individuals")
+    bccRate = idGet("bccRate", scenarioID, 4.0)
+    if bccRate.is_integer():
+        bccString = f"""
+        During the simulation's background phase (i.e. once per day), every
+        individual who did not stay at home that day will interact with
+        {bccRate:.0g} random {"person" if bccRate == 1 else "people"}.
+        """
+    else:
+        lowBCC, highBCC = int(bccRate), -(-bccRate // 1)
+        bccString = f"""
+        During the simulation's background phase (i.e. once per day), every
+        individual who did not stay at home that day will interact with an
+        average of {bccRate:.3g} random people. The number of interactions will
+        always be either {lowBCC:.0g} or {highBCC:.0g} for each individual;
+        there is a {bccRate % 1:.0%} chance that an individual will interact
+        with {highBCC:.0g} {"person" if bccRate == 1 else "people"}.
+        """
+    st.markdown(
+        """
+        To give the pathogen opportunities to spread, the model simulates
+        interactions between individuals in the same location every cycle.
+        However, in real life, a person may only regularly interact with a small
+        group of people at a given location; for instance, children in schools
+        may only interact with their close friends, while employees may not
+        interact with people in other departments even if they work in the same
+        building. To recreate this behaviour in the simulation, the people in
+        each location are divided into several subgroups who can only interact
+        with other members of their subgroup.
+
+        Children in schools can form groups with up to {school} people; actual
+        classes in the school may have more people, but students will not interact
+        with more than {school} people within their class enough to spread the
+        disease. Individuals in workplaces can form work groups with up to {work}
+        people.
+        
+        In addition to interacting with people in the same location as them,
+        individuals will also interact with random people anywhere in the simulation.
+        These background contacts account for any interactions outside of the
+        locations that are built into the simulation, such as those that occur
+        on public transport or in shopping centres.
+                
+        {bcc}
+        """.format(
+            school=idGet("maxClassSize", scenarioID, 10) if advanced else 10,
+            work=idGet("maxWorkGroupSize", scenarioID, 10) if advanced else 10,
+            bcc=bccString,
+        )
+    )
+
+    # Other Community Parameters
+    st.subheader("Other Community Parameters")
+    diagnosisDelay = idGet("diagnosisDelay", scenarioID, 1) if advanced else 1
+    if diagnosisDelay > 0:
+        # TODO: Note that delay may affect deployment of NPIs if they exist
+        diagnosisString = f"""
+        When an individual begins to show symptoms of the pathogen, they will not
+        be diagnosed immediately. The individual will only be counted as a
+        diagnosed case of the infection {diagnosisDelay}
+        day{plural(diagnosisDelay)} after they begin to show symptoms. This
+        means that non-pharmaceutical interventions that come into effect based
+        on the number of diagnosed cases will take longer to start than if there
+        was no delay.
+        """
+    else:
+        diagnosisString = f"""
+        When an individual begins to show symptoms of the pathogen, they will
+        immediately be counted as a diagnosed case of the infection. The model
+        possesses the ability to add a delay between the onset of symptoms and
+        official diagnosis; however, currently this delay is set to 0 days.
+        """
+    childSupervision = idGet("childSupervision", scenarioID, 1.0)
+    if childSupervision == 1:
+        supervisionString = """
+        While the locations that individuals go to are mostly determined independently
+        of other people, an exception is made when a child would be left alone
+        in a household. If every adult in a household is going to another location
+        but a child in the same household is staying at home, one of the adults
+        will also stay at home to ensure the child is not unsupervised.
+        """
+    elif childSupervision > 0:
+        supervisionString = f"""
+        While the locations that individuals go to are mostly determined independently
+        of other people, an exception is made when a child would be left alone
+        in a household. If every adult in a household is going to another location
+        but a child in the same household is staying at home, there is a
+        {childSupervision:.0%} chance that one of the adults will also stay at
+        home to ensure the child is not unsupervised.
+        """
+    else:
+        supervisionString = f"""
+        The locations that individuals go to are determined independently of other
+        people in the simulation. The model possesses the ability to allow adults
+        to stay home if children would be left unsupervised in their household;
+        however, currently the chance of this occurring is set to 0%.
+        """
+    st.markdown(
+        """
+        {diagnosis}
+
+        {supervision}
+        """.format(
+            diagnosis=diagnosisString,
+            supervision=supervisionString,
+        )
+    )
+
+
 def communitySaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
     """
     Function to populate the Pydantic model schema with community parameters
@@ -295,7 +436,7 @@ def communityLoadSchema(schema: Parameters, scenarioID: int = 0):
         "prob_withdrawal": ("withdrawalWork", lambda x: x),
         "prob_school_withdrawal": ("withdrawalSchool", lambda x: x),
         "background_contact_count": ("bccRate", lambda x: x),
-        "diagnosis_delay": ("diagnosisDelay", lambda x: x // 2),
+        "diagnosis_delay": ("diagnosisDelay", lambda x: round(x / 2, 1)),
         "prob_child_supervision": ("childSupervision", lambda x: x),
         "max_class_size": ("maxClassSize", lambda x: x),
         "max_workgroup_size": ("maxWorkGroupSize", lambda x: x),

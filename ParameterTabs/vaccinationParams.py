@@ -685,10 +685,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
             st.markdown("""
                 These parameters control the properties of the main
                 schedule of vaccines that will be administered to
-                individuals within the simulation. Each vaccine in
-                the schedule can have its own efficacy values set,
-                since in many cases multiple doses are required to
-                achieve maximum immunity to the pathogen.
+                individuals within the simulation.
             """)
 
             # Single vs multi-dose vaccine

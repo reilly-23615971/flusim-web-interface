@@ -5,6 +5,7 @@
 # Imports
 import streamlit as st
 
+from ParameterTabs.communityParams import communityDescribe
 from ParameterTabs.diseaseParams import diseaseDescribe
 
 # Store st.session_state as variable for efficiency
@@ -113,5 +114,9 @@ with st.expander(
     "Pathogen-Related Parameters", expanded=True, icon=":material/coronavirus:"
 ):
     diseaseDescribe(0, advanced=showAdvanced)
+with st.expander(
+    "Community-Related Parameters", expanded=True, icon=":material/groups:"
+):
+    communityDescribe(0, advanced=showAdvanced)
 
 st.markdown("Other parameters coming soon!")

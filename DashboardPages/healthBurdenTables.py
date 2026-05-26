@@ -665,6 +665,7 @@ add at least one column before attempting to generate a table.
 """
     else:
         if simParams.get("Waning In Simulation"):
+            # TODO: Also check for percentage without baseline diff
             st.warning(
                 """
                     Warning: Columns that display values as percentages without also
@@ -681,6 +682,10 @@ add at least one column before attempting to generate a table.
             dupeColumnForm["Age Groups"] = dupeColumnForm["Age Groups"].apply(
                 lambda x: sorted(x)
             )
+        else:
+            dupeColumnForm = dupeColumnForm.drop("Age Groups")
+        if not (currentDataUsesVaccines or usePresetData):
+            dupeColumnForm = dupeColumnForm.drop("Vaccination Status")
         if dupeColumnForm.astype(str).duplicated().any():
             st.warning(
                 """
@@ -904,6 +909,7 @@ tableConfig = session.get("HealthOutcomeTableConfig")
 if tableData is not None:
     st.header("Health Burden Outcome Table")
     # TODO: Fix columns being deselected when changing column settings
+    # TODO: No more scientific notation
     st.dataframe(
         tableData,
         height="auto",
