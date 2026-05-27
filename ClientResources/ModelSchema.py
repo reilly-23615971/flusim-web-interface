@@ -2,8 +2,6 @@
 # Developed by Reilly Evans
 # Defines structure of model configuration guide JSON files
 
-# TODO: Format descriptions to not be string tuples
-
 # Imports
 import logging
 from operator import attrgetter
