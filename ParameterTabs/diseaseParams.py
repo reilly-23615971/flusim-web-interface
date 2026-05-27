@@ -2103,13 +2103,19 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
     # Global Age Parameters
     schemaAge = schema.Scenario_ParameterWithAgePrefix
     if schemaAge is not None:
-        newMort = schemaAge.mort * 100000 if schemaAge.mort is not None else None
+        newMort = (
+            round(schemaAge.mort * 100000, 6) if schemaAge.mort is not None else None
+        )
         updateParamFromSchema("deathRatio", newMort, scenarioID)
 
     # Dashboard Parameters
     schemaDash = schema.Dashboard_Parameter
     if schemaDash is not None:
-        newGP = schemaDash.prob_gp * 100 if schemaDash.prob_gp is not None else None
+        newGP = (
+            round(schemaDash.prob_gp * 100, 6)
+            if schemaDash.prob_gp is not None
+            else None
+        )
         updateParamFromSchema("gpRatio", newGP, scenarioID)
         icuRate = schemaDash.prob_icu
     else:
@@ -2122,7 +2128,6 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
         paramDict = {p: v for p, v in vars(schemaParameters).items() if v is not None}
 
         # Use dictionary to convert schema parameters into dashboard values
-        # TODO: Address any float rounding errors caused by health burden rates
         paramConvert = {
             "seed_rate": ("seedRate", lambda x: x),
             "beta_asymptomatic": ("betaAsymptomatic", lambda x: x),
@@ -2133,8 +2138,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             "kappa_background": ("backgroundKappa", lambda x: x),
             "prob_asymptomatic": ("asymptomaticAdult", lambda x: x),
             "prob_asymptomatic_young": ("asymptomaticChild", lambda x: x),
-            "prob_diagnosis": ("caseRatio", lambda x: x * 100),
-            "prob_gp": ("gpRatio", lambda x: x * 100),
+            "prob_diagnosis": ("caseRatio", lambda x: round(x * 100, 6)),
             "infection_waning_cycle_delay": (
                 "naturalImmunityDuration",
                 lambda x: x // 60,
@@ -2162,8 +2166,12 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                 icuRate = hospitalRate * baseICUProb / 100
 
             # Calculate ICU proportion
-            updateParamFromSchema("hospitalRatio", hospitalRate * 100000, scenarioID)
-            updateParamFromSchema("icuRatio", icuRate * 100 / hospitalRate, scenarioID)
+            updateParamFromSchema(
+                "hospitalRatio", round(hospitalRate * 100000, 6), scenarioID
+            )
+            updateParamFromSchema(
+                "icuRatio", round(icuRate * 100 / hospitalRate, 6), scenarioID
+            )
 
         # Advanced parameter differences
         if "prob_asymptomatic" in paramDict:

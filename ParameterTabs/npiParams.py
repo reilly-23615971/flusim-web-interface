@@ -1416,6 +1416,10 @@ def npiSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
         # Advanced parameter differences
         if advanced:
             # Social Distancing
+            # TODO: Pandemic alert might be necessary for SD to have an effect
+            # Also, Adult might be the only age group to care about SD
+            # due to the KLUDGE SD code being commented out
+            # TODO: Test in simulation and remove if necessary
             if socialDistanceToggle:
                 ageScenarioParams = (
                     schema.Scenario_ParameterWithAgePrefix
@@ -1595,6 +1599,7 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
         # TODO: Is 0.0 global SD with nonzero age SD a feasible simulation?
         # Consider adding another dummy parameter to modelSchema
         # if you need a better way to check if SD is disabled
+        # (pandemic alert could be one method of doing so)
         compliance = schemaAge.social_distance
         if compliance is not None and compliance > 0.0:
             useSocialDistancing = True
