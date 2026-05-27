@@ -28,6 +28,7 @@ from ClientResources.ModelSchema import (
     Parameters,
     commandArgument,
     communityOverride,
+    dashboardParameters,
     modelGuideFile,
     overrideParams,
     scenarioParameters,
@@ -123,9 +124,9 @@ included in this file.
             """)
             st.download_button(
                 "Confirm",
-                createConfig(session.get("scenarioCount", 0) + 1).model_dump_json(
-                    indent=4, exclude_unset=True
-                ),
+                createConfig(
+                    session.get("scenarioCount", 0) + 1, includeDashboard=True
+                ).model_dump_json(indent=4, exclude_unset=True),
                 f"FlusimParameterSettings_{time.strftime('%Y.%m.%d_%I.%M.%S%p')}.json",
                 mime="application/json",
                 key="parameterDownloadConfirm",
@@ -176,17 +177,21 @@ simulation engine settings) will be replaced with the values in the uploaded fil
         loadConfig(uploadedParameters)
 
 
-def createConfig(scenarioCount: int) -> modelGuideFile:
+def createConfig(scenarioCount: int, includeDashboard: bool = False) -> modelGuideFile:
     """
     Function to generate a JSON config file using the selected parameters.
 
     Parameters:
         scenarioCount (int): The number of scenarios to define in the config.
 
+        includeDashboard (bool): Set to `True` to include dashboard-exclusive
+            parameters like scaling population in the generated schema.
+
     Returns:
         modelGuideFile: A Pydantic object storing the selected parameters
             in a format that can be converted into JSON easily.
     """
+
     # Set up schema objects
     session = st.session_state
     scenarioParams = [Parameters() for _ in range(scenarioCount)]
@@ -197,7 +202,7 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
     useVaccines = False
     useAdvanced = session.get("showAdvanced", False)
     for id, scenario in enumerate(scenarioParams):
-        diseaseSaveSchema(scenario, id, useAdvanced)
+        diseaseSaveSchema(scenario, id, useAdvanced, includeDashboard)
         communitySaveSchema(scenario, id, useAdvanced)
         useVaccines = vaccineSaveSchema(scenario, id, useAdvanced) or useVaccines
         npiSaveSchema(scenario, id, useAdvanced)
@@ -211,29 +216,33 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
 
     # Set up engine parameters
     community = session.get("community", "newcastle")
-    globalScenarioParams = scenarioParameters(show_advanced_parameters=useAdvanced)
-    if useAdvanced:
-        globalScenarioParams.scaling_population = session.get(
-            "scalingPopulation", communityPopulation[community]
-        )
-        startDay = session.get("startDay", "Random")
-        if startDay != "Random":
-            globalScenarioParams.start_day_of_week = (
-                "Sunday",
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-            ).index(startDay)
     engineParams = Parameters(
         Command_Argument=commandArgument(
             n_runs=session.get("runCount", 24),
             n_cycles=session.get("cycleCount", 360) * 2,
-        ),
-        Scenario_Parameter=globalScenarioParams,
+        )
     )
+    if includeDashboard:
+        dashboardParams = dashboardParameters(show_advanced_parameters=useAdvanced)
+        if useAdvanced:
+            dashboardParams.scaling_population = session.get(
+                "scalingPopulation", communityPopulation[community]
+            )
+        engineParams.Dashboard_Parameter = dashboardParams
+    if useAdvanced:
+        startDay = session.get("startDay", "Random")
+        if startDay != "Random":
+            engineParams.Scenario_Parameter = scenarioParameters(
+                start_day_of_week=(
+                    "Sunday",
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                ).index(startDay)
+            )
     sessionID = int(datetime.now().timestamp())
 
     # Create config object
@@ -316,9 +325,17 @@ def loadConfig(file: BytesIO):
             engineSettings = schema.community_overrides[0]
             session.community = engineSettings.name
 
+            dashboardSettings = engineSettings.parameters.Dashboard_Parameter
+            if dashboardSettings is not None:
+                session.showAdvanced = bool(dashboardSettings.show_advanced_parameters)
+                session.scalingPopulation = (
+                    dashboardSettings.scaling_population
+                    if dashboardSettings.scaling_population is not None
+                    else communityPopulation[engineSettings.name]
+                )
+
             engineParams = engineSettings.parameters.Scenario_Parameter
             if engineParams is not None:
-                session.showAdvanced = bool(engineParams.show_advanced_parameters)
                 session.startDay = (
                     (
                         "Sunday",
@@ -332,14 +349,10 @@ def loadConfig(file: BytesIO):
                     if engineParams.start_day_of_week is not None
                     else "Random"
                 )
-                session.scalingPopulation = (
-                    engineParams.scaling_population
-                    if engineParams.scaling_population is not None
-                    else communityPopulation[engineSettings.name]
-                )
 
             commandArgs = engineSettings.parameters.Command_Argument
             if commandArgs is not None:
+                # TODO: Make sure these don't mess with the sliders when None
                 session.runCount = commandArgs.n_runs
                 session.cycleCount = (
                     commandArgs.n_cycles // 2
@@ -418,7 +431,9 @@ def loadConfig(file: BytesIO):
     st.rerun()
 
 
-def createTemplate(scenarioID: int, includeInterventions: bool = True) -> Parameters:
+def createTemplate(
+    scenarioID: int, includeInterventions: bool = True, includeDashboard: bool = False
+) -> Parameters:
     """
     Function to generate a JSON config object from a single scenario's parameters.
 
@@ -427,6 +442,9 @@ def createTemplate(scenarioID: int, includeInterventions: bool = True) -> Parame
 
         includeInterventions (bool): Set to True to not include any vaccination or
             NPI parameters in the template, such as when performing R0 analysis.
+
+        includeDashboard (bool): Set to `True` to include dashboard-exclusive
+            parameters like GP rate in the generated schema.
 
     Returns:
         Parameters: A Pydantic object storing the template parameters
@@ -438,7 +456,7 @@ def createTemplate(scenarioID: int, includeInterventions: bool = True) -> Parame
     useAdvanced = session.get("showAdvanced", False)
     template = Parameters()
 
-    diseaseSaveSchema(template, scenarioID, useAdvanced)
+    diseaseSaveSchema(template, scenarioID, useAdvanced, includeDashboard)
     communitySaveSchema(template, scenarioID, useAdvanced)
     if includeInterventions:
         vaccineSaveSchema(template, scenarioID, useAdvanced)

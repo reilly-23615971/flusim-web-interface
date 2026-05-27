@@ -455,6 +455,31 @@ def ageCast(x: str) -> Literal[
 
 
 # Miscellaneous functions
+def schemaRemoveBaseline(scenario: Any, baseline: Any):
+    """
+    Function to remove any parameters from a scenario that are already represented in the baseline scenario.
+
+    Parameters:
+        scenario: The object containing the scenario parameters.
+
+        baseline: The object containing the baseline parameters to remove from
+            the scenario object.
+
+    Returns:
+        Any: The scenario object, with any attributes shared with the baseline
+            having been removed.
+
+    Raises:
+        TypeError: If scenario and baseline are not part of the same object class.
+    """
+    if not (type(scenario) is type(baseline)):
+        raise TypeError("scenario and baseline should be the same type")
+    # TODO: Add params to force keep/delete specific attributes in scenario
+    for param, value in vars(baseline).items():
+        if hasattr(scenario, param) and getattr(scenario, param, None) == value:
+            delattr(scenario, param)
+
+
 def backgroundColour() -> str:
     """
     Simple function to get the background colour of the current theme.

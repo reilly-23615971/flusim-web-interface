@@ -81,6 +81,43 @@ parameterGetters = {
 # TODO: Update schema descriptions once dashboard descriptions are finalised
 
 
+# Set of parameters used exclusively by the dashboard
+class dashboardParameters(BaseModel):
+    prob_icu: Optional[Probability] = Field(
+        title="ICU Visit Probability",
+        default=0.0005,
+        description="""
+The probability of an infected individual visiting a hospital's Intensive Care
+Unit as a result of the pathogen.
+        """,
+    )
+    prob_gp: Optional[Probability] = Field(
+        title="GP Visit Probability",
+        default=0.17,
+        description="""
+The probability of an infected individual visiting a general practitioner
+regarding symptoms of the pathogen.
+        """,
+    )
+    scaling_population: Optional[int] = Field(
+        title="Scaling Population",
+        gt=0,
+        default=None,
+        description="""
+The population size that the simulation results should reflect. Once the
+simulation is complete, all results will be multiplied by the ratio between
+this value and the size of the simulated population.
+        """,
+    )
+    show_advanced_parameters: Optional[bool] = Field(
+        title="Show Advanced Parameters",
+        default=False,
+        description="""
+Toggles whether more complex parameters should be displayed on the dashboard.
+        """,
+    )
+
+
 # Set of scenario parameters set collectively for all age groups
 class ageScenarioParameters(BaseModel):
     trans: Optional[float] = Field(
@@ -353,18 +390,6 @@ class scenarioParameters(BaseModel):
             )
         ),
     )
-    prob_icu: Optional[Probability] = Field(
-        title="ICU Visit Probability",
-        default=0.0005,
-        description=(
-            (
-                "The probability of an infected individual visiting a hospital's "
-                "Intensive Care Unit as a result of the pathogen. This parameter "
-                "is not used in the simulation itself, but is included to aid in "
-                "dashboard functions."
-            )
-        ),
-    )
     prob_diagnosis: Optional[Probability] = Field(
         title="Diagnosis Probability",
         default=0.5,
@@ -372,18 +397,6 @@ class scenarioParameters(BaseModel):
             (
                 "The probability of an infected individual being formally "
                 "diagnosed as a case after becoming symptomatic."
-            )
-        ),
-    )
-    prob_gp: Optional[Probability] = Field(
-        title="GP Visit Probability",
-        default=0.17,
-        description=(
-            (
-                "The probability of an infected individual visiting a general "
-                "practitioner regarding symptoms of the pathogen. This parameter "
-                "is not used in the simulation itself, but is included to aid in "
-                "dashboard functions."
             )
         ),
     )
@@ -1526,27 +1539,6 @@ class scenarioParameters(BaseModel):
             )
         ),
     )
-    # TODO: Move dashboard-only params like these and prob_icu to a separate class
-    scaling_population: Optional[int] = Field(
-        title="Scaling Population",
-        gt=0,
-        default=None,
-        description="""
-The population size that the simulation results should reflect. Once the
-simulation is complete, all results will be multiplied by the ratio between
-this value and the size of the simulated population. This parameter is not used
-in the simulation itself, but is included to aid in dashboard functions.
-        """,
-    )
-    show_advanced_parameters: Optional[bool] = Field(
-        title="Show Advanced Parameters",
-        default=False,
-        description="""
-Toggles whether more complex parameters should be displayed on the dashboard.
-This parameter is not used in the simulation itself, but is included to aid in
-dashboard functions.
-        """,
-    )
 
     class Config:
         validate_assignment = True
@@ -1856,6 +1848,14 @@ class Parameters(BaseModel):
         title="Command Arguments",
         default=None,
         description=("Parameters passed to the simulation on the command line."),
+    )
+    Dashboard_Parameter: Optional[dashboardParameters] = Field(
+        title="Dashboard Parameters",
+        default=None,
+        description="""
+Parameters not used by the simulation itself, but which are used by the dashboard
+to aid in tasks such as settings configuration or health burden calculation.
+        """,
     )
     Scenario_ParameterWithAgePrefix: Optional[ageScenarioParameters] = Field(
         title="Age-Based Scenario Parameters",

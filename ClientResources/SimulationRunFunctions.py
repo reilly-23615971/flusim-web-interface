@@ -268,7 +268,9 @@ already busy with a different task.
 
             # Create JSON for selected parameters
             else:
-                parameterJSON = createConfig(scenarioCount).model_dump_json(
+                parameterJSON = createConfig(
+                    scenarioCount, includeDashboard=False
+                ).model_dump_json(
                     indent=4, exclude_unset=True  # , exclude_defaults = True
                 )
                 if saveJSON:

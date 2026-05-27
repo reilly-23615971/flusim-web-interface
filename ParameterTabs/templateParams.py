@@ -118,7 +118,7 @@ Note that this will not change the names of either scenario.
         icon="spinner" if templatePending else None,
         disabled=templatePending,
     ):
-        template = createTemplate(newID)
+        template = createTemplate(newID, includeDashboard=True)
         loadTemplate(currentID, template)
         st.rerun()
 

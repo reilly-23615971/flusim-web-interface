@@ -22,6 +22,7 @@ from ClientResources.InterfaceFunctions import (
 from ClientResources.ModelSchema import (
     Parameters,
     ageScenarioParameters,
+    dashboardParameters,
     scenarioParameters,
     strainParameters,
 )
@@ -1885,7 +1886,12 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
     """)
 
 
-def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
+def diseaseSaveSchema(
+    schema: Parameters,
+    id: int = 0,
+    advanced: bool = False,
+    includeDashboard: bool = False,
+):
     """
     Function to populate the Pydantic model schema with pathogen parameters
     using scenario differentiation.
@@ -1901,6 +1907,9 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
 
         advanced (bool): Set to `True` to account for more complex parameters like
             location-specific transmission modifiers.
+
+        includeDashboard (bool): Set to `True` to include dashboard-exclusive
+            parameters like GP rate in the generated schema.
     """
     # TODO: avoid adding parameters unchanged from the baseline for scenario efficiency
     try:
@@ -2001,12 +2010,8 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
         ) * 2
         # Health Burden Outcomes
         scenarioParams.prob_diagnosis = round(idGet("caseRatio", id, 50.0) / 100, 6)
-        scenarioParams.prob_gp = round(idGet("gpRatio", id, 17.0) / 100, 6)
         hospitalRate = idGet("hospitalRatio", id, 320.0) / 100000
         scenarioParams.prob_hospitalisation = round(hospitalRate, 10)
-        scenarioParams.prob_icu = round(
-            hospitalRate * idGet("icuRatio", id, 20.0) / 100, 10
-        )
         # Age-Specific Parameters
         transAgeForm = idGet(
             "transAgeForm",
@@ -2048,6 +2053,19 @@ def diseaseSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
             )"""
         # Save the updated parameters
         schema.Scenario_Parameter = scenarioParams
+
+        # Dashboard Parameters
+        if includeDashboard:
+            dashboardParams = (
+                schema.Dashboard_Parameter
+                if schema.Dashboard_Parameter
+                else dashboardParameters()
+            )
+            dashboardParams.prob_gp = round(idGet("gpRatio", id, 17.0) / 100, 6)
+            dashboardParams.prob_icu = round(
+                hospitalRate * idGet("icuRatio", id, 20.0) / 100, 10
+            )
+            schema.Dashboard_Parameter = dashboardParams
     except (ValueError, ValidationError) as e:
         diseaseLog.error(
             (
@@ -2088,6 +2106,15 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
         newMort = schemaAge.mort * 100000 if schemaAge.mort is not None else None
         updateParamFromSchema("deathRatio", newMort, scenarioID)
 
+    # Dashboard Parameters
+    schemaDash = schema.Dashboard_Parameter
+    if schemaDash is not None:
+        newGP = schemaDash.prob_gp * 100 if schemaDash.prob_gp is not None else None
+        updateParamFromSchema("gpRatio", newGP, scenarioID)
+        icuRate = schemaDash.prob_icu
+    else:
+        icuRate = None
+
     # General Scenario Parameters
     schemaParameters = schema.Scenario_Parameter
     if schemaParameters is not None:
@@ -2118,11 +2145,8 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             updateParamFromSchema(key, formatFunc(paramDict[parameter]), scenarioID)
 
         # Hospitalisation and ICU ratio
-        if {"prob_hospitalisation", "prob_icu"}.intersection(paramDict):
-            hospitalRate, icuRate = (
-                paramDict["prob_hospitalisation"],
-                paramDict["prob_icu"],
-            )
+        if "prob_hospitalisation" in paramDict or icuRate is not None:
+            hospitalRate = paramDict["prob_hospitalisation"]
             if None in {hospitalRate, icuRate} and scenarioID == 0:
                 raise AssertionError(
                     "Hospitalisation and ICU rate parameters were only partially "
