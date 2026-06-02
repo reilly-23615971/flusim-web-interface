@@ -683,9 +683,9 @@ add at least one column before attempting to generate a table.
                 lambda x: sorted(x)
             )
         else:
-            dupeColumnForm = dupeColumnForm.drop("Age Groups")
+            dupeColumnForm = dupeColumnForm.drop("Age Groups", errors="ignore")
         if not (currentDataUsesVaccines or usePresetData):
-            dupeColumnForm = dupeColumnForm.drop("Vaccination Status")
+            dupeColumnForm = dupeColumnForm.drop("Vaccination Status", errors="ignore")
         if dupeColumnForm.astype(str).duplicated().any():
             st.warning(
                 """
