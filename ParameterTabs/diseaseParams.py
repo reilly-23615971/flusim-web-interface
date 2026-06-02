@@ -4,7 +4,7 @@
 
 # Imports
 import logging
-from typing import Literal
+from typing import Literal, Optional
 
 import altair as alt
 import pandas as pd
@@ -18,6 +18,7 @@ from ClientResources.InterfaceFunctions import (
     dualError,
     paramError,
     plural,
+    schemaRemoveBaseline,
 )
 from ClientResources.ModelSchema import (
     Parameters,
@@ -1097,6 +1098,7 @@ symptomatic cases of the pathogen.
             )
 
             # Dataframe for age-based mortality (if advanced params are enabled)
+            # TODO: Add thousands separators/ban scientific notation from all tables
             if advanced:
                 st.markdown(
                     "### Age-Specific Mortality Rate",
@@ -1143,7 +1145,7 @@ overriding the base rate.
                             default=deathRate,
                             min_value=0.0,
                             max_value=100000.0,
-                            format="%0.5g",
+                            format="%0.8g",
                             help="""
 The average number of infected individuals in this age group who will die
 for every 100,000 cases of the pathogen.
@@ -1890,6 +1892,7 @@ def diseaseSaveSchema(
     schema: Parameters,
     id: int = 0,
     advanced: bool = False,
+    baseline: Optional[Parameters] = None,
     includeDashboard: bool = False,
 ):
     """
@@ -1907,6 +1910,11 @@ def diseaseSaveSchema(
 
         advanced (bool): Set to `True` to account for more complex parameters like
             location-specific transmission modifiers.
+
+        baseline (Parameters, optional): A Pydantic model representing the parameters
+            set for the baseline scenario. When `id` is not 0, this will be used
+            to omit parameters that are already set in the baseline from the final
+            scenario.
 
         includeDashboard (bool): Set to `True` to include dashboard-exclusive
             parameters like GP rate in the generated schema.
@@ -1936,9 +1944,8 @@ def diseaseSaveSchema(
             if schema.Scenario_ParameterWithAgePrefix
             else ageScenarioParameters()
         )
-        deathRate = round(idGet("deathRatio", id, 12.0) / 100000, 10)
-        ageScenarioParams.mort = deathRate
-        schema.Scenario_ParameterWithAgePrefix = ageScenarioParams
+        globalDeathRate = round(idGet("deathRatio", id, 12.0) / 100000, 10)
+        ageScenarioParams.mort = globalDeathRate
 
         # Scenario Parameters
         scenarioParams = (
@@ -1963,7 +1970,7 @@ def diseaseSaveSchema(
                 pd.DataFrame(
                     {
                         "Age Group": [None],
-                        "Mortality Rate": [deathRate],
+                        "Mortality Rate": [globalDeathRate],
                     },
                 ),
             )
@@ -1972,7 +1979,9 @@ def diseaseSaveSchema(
                 mortAgeForm["Mortality Rate"],
             ):
                 if age:
-                    setattr(scenarioParams, f"{age}_mort", round(mort / 100000, 10))
+                    roundedMort = round(mort / 100000, 10)
+                    if roundedMort != globalDeathRate:
+                        setattr(scenarioParams, f"{age}_mort", round(mort / 100000, 10))
         else:
             probAsymptomatic = idGet("asymptomaticBoth", id, 0.35)
             scenarioParams.prob_asymptomatic_young = probAsymptomatic
@@ -2030,8 +2039,10 @@ def diseaseSaveSchema(
             transAgeForm["Susceptibility"],
         ):
             if age:
-                setattr(scenarioParams, f"{age}_trans", trans)
-                setattr(scenarioParams, f"{age}_susc", susc)
+                if trans != 1.0:
+                    setattr(scenarioParams, f"{age}_trans", trans)
+                if susc != 1.0:
+                    setattr(scenarioParams, f"{age}_susc", susc)
         """
         for i in range(session.get(f"transRowCount{id}", 0)):
             varAgeGroup = ageCategories[session[f"transAgeGroup{id}-{i}"]]
@@ -2049,22 +2060,36 @@ def diseaseSaveSchema(
             setattr(
                 scenarioParams,
                 f"{ageCategories[session[f'deathAgeGroup{id}-{i}']]}_mort",
-                idGet("deathRatio", id, deathRate, f"-{i}"),
+                idGet("deathRatio", id, globalDeathRate, f"-{i}"),
             )"""
-        # Save the updated parameters
-        schema.Scenario_Parameter = scenarioParams
 
         # Dashboard Parameters
+        dashboardParams = (
+            schema.Dashboard_Parameter
+            if schema.Dashboard_Parameter
+            else dashboardParameters()
+        )
         if includeDashboard:
-            dashboardParams = (
-                schema.Dashboard_Parameter
-                if schema.Dashboard_Parameter
-                else dashboardParameters()
-            )
             dashboardParams.prob_gp = round(idGet("gpRatio", id, 17.0) / 100, 6)
             dashboardParams.prob_icu = round(
                 hospitalRate * idGet("icuRatio", id, 20.0) / 100, 10
             )
+
+        # Save the updated parameters
+        # TODO: Does anything need to be passed to defaults?
+        if id > 0 and baseline is not None:
+            schemaRemoveBaseline(
+                ageScenarioParams, baseline.Scenario_ParameterWithAgePrefix
+            )
+            schemaRemoveBaseline(scenarioParams, baseline.Scenario_Parameter)
+            if includeDashboard:
+                schemaRemoveBaseline(dashboardParams, baseline.Dashboard_Parameter)
+
+        if ageScenarioParams:
+            schema.Scenario_ParameterWithAgePrefix = ageScenarioParams
+        if scenarioParams:
+            schema.Scenario_Parameter = scenarioParams
+        if includeDashboard and dashboardParams:
             schema.Dashboard_Parameter = dashboardParams
     except (ValueError, ValidationError) as e:
         diseaseLog.error(
@@ -2102,21 +2127,18 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
 
     # Global Age Parameters
     schemaAge = schema.Scenario_ParameterWithAgePrefix
-    if schemaAge is not None:
-        newMort = (
-            round(schemaAge.mort * 100000, 6) if schemaAge.mort is not None else None
+    if schemaAge is not None and schemaAge.mort is not None:
+        updateParamFromSchema(
+            "deathRatio", round(schemaAge.mort * 100000, 6), scenarioID
         )
-        updateParamFromSchema("deathRatio", newMort, scenarioID)
 
     # Dashboard Parameters
     schemaDash = schema.Dashboard_Parameter
     if schemaDash is not None:
-        newGP = (
-            round(schemaDash.prob_gp * 100, 6)
-            if schemaDash.prob_gp is not None
-            else None
-        )
-        updateParamFromSchema("gpRatio", newGP, scenarioID)
+        if schemaDash.prob_gp is not None:
+            updateParamFromSchema(
+                "gpRatio", round(schemaDash.prob_gp * 100, 6), scenarioID
+            )
         icuRate = schemaDash.prob_icu
     else:
         icuRate = None
@@ -2185,6 +2207,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             < simLength
         ):
             updateParamFromSchema("naturalWaningToggle", True, scenarioID)"""
+        # TODO: Work out if this works well with only scenario changes
         updateParamFromSchema(
             "naturalWaningToggle",
             bool(
@@ -2352,7 +2375,8 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             for age in transAges:
                 transValue = transParams.get(age, 1.0)
                 suscValue = suscParams.get(age, 1.0)
-                transTable.loc[transTable.shape[0]] = [age, transValue, suscValue]
+                if transValue != 1.0 or suscValue != 1.0:
+                    transTable.loc[transTable.shape[0]] = [age, transValue, suscValue]
             updateTableFromSchema(
                 "transAgeForm",
                 transTable,
@@ -2365,15 +2389,14 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                     },
                 ),
             )
-        # TODO: Mort rates (and probably others) get float imprecision;
-        # see if some 6 decimal place rounding will help
         mortParams = {
-            p.removesuffix("_mort"): v * 100000 if v is not None else None
+            p.removesuffix("_mort"): round(v * 100000, 6) if v is not None else None
             for p, v in paramDict.items()
             if p.endswith("_mort")
         }
         if mortParams:
             # Age-specific mortality
+            # TODO: Should age mort be ignored if it's equal to global mort?
             mortTable = pd.DataFrame(columns=("Age Group", "Mortality Rate"))
             for param, value in mortParams.items():
                 mortTable.loc[mortTable.shape[0]] = [param, value]

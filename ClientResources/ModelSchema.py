@@ -81,6 +81,8 @@ parameterGetters = {
 
 # Set of parameters used exclusively by the dashboard
 class dashboardParameters(BaseModel):
+    # TODO: Convert prob_icu to be a multiplier rather than the exact rate
+    # to mitigate imprecision caused by multiplication
     prob_icu: Optional[Probability] = Field(
         title="ICU Visit Probability",
         default=0.0005,
@@ -114,6 +116,12 @@ this value and the size of the simulated population.
 Toggles whether more complex parameters should be displayed on the dashboard.
         """,
     )
+
+    def __bool__(self):
+        """
+        False only if all attributes are None; used for finding empty param sets
+        """
+        return any(x is not None for x in self.__dict__.values())
 
 
 # Set of scenario parameters set collectively for all age groups
@@ -150,6 +158,12 @@ The probability of complying with social distancing procedures for all age group
         default=None,
         description="The probability of dying from the infection for all age groups.",
     )
+
+    def __bool__(self):
+        """
+        False only if all attributes are None; used for finding empty param sets
+        """
+        return any(x is not None for x in self.__dict__.values())
 
     class Config:
         validate_assignment = True
@@ -1242,6 +1256,12 @@ result of the pathogen.
         """,
     )
 
+    def __bool__(self):
+        """
+        False only if all attributes are None; used for finding empty param sets
+        """
+        return any(x is not None for x in self.__dict__.values())
+
     class Config:
         validate_assignment = True
 
@@ -1921,12 +1941,13 @@ community in `community_used`.
         Function that ensures the baseline scenario's parameters are all
         included in JSON serialisations.
         """
-        # TODO: Test these params (besides start day of week) to see which are
+        # TODO: Test scenario params (besides start day of week) to see which are
         # totally unused and which can be added to the dashboard
         # also vaccination_trigger and friends,
         # plus age_social_distance that isn't Adult
         excludedParams = {
             "parameters": {
+                "Dashboard_Parameter": {"show_advanced_parameters"},
                 "Scenario_Parameter": {
                     "start_day_of_week",
                     "kappa_adult_education",
@@ -1948,7 +1969,8 @@ community in `community_used`.
                     "work_nonattendance_delay",
                     "work_nonattendance_duration",
                     "vaccination_priority",
-                }
+                    "withdrawal_period",
+                },
             }
         }
         return value.model_dump(exclude_none=True, exclude=excludedParams)

@@ -698,12 +698,13 @@ def generateAsir(
         # TODO: Either fix or disable just proportion
         if proportion and not baselineDifference:
             # Get required total population
+            scalingFactor = session.SimParams.get("Scaling Factor", 1.0)
             if ageSeparation == "By Column":
-                populationColumn: int | pd.Series = sum(
+                populationColumn: int | pd.Series = scalingFactor * sum(
                     agePops[age] for age in ageGroups
                 )
             else:
-                populationColumn = fullData["Age Group"].map(agePops)
+                populationColumn = fullData["Age Group"].map(agePops) * scalingFactor
             currentColumn /= populationColumn
             columnName += " (%)"
             '''columnConfig[columnName] = st.column_config.Column(

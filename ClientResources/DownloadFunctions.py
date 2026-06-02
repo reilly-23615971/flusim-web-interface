@@ -142,6 +142,7 @@ def parameterUpload():
     # TODO: This still blanks the page occasionally (sometimes displays the following:)
     # Life Stage	Pre-Symptomatic
     # Length (Days)	1
+    # TODO: Streamlit 1.58 might have fixed this; consider updating on forge
     uploadPending = bool(session.get("parameterUpload") is not None)
     st.info(
         body="""
@@ -202,7 +203,8 @@ def createConfig(scenarioCount: int, includeDashboard: bool = False) -> modelGui
     useVaccines = False
     useAdvanced = session.get("showAdvanced", False)
     for id, scenario in enumerate(scenarioParams):
-        diseaseSaveSchema(scenario, id, useAdvanced, includeDashboard)
+        baseline = scenarioParams[0] if id != 0 else None
+        diseaseSaveSchema(scenario, id, useAdvanced, baseline, includeDashboard)
         communitySaveSchema(scenario, id, useAdvanced)
         useVaccines = vaccineSaveSchema(scenario, id, useAdvanced) or useVaccines
         npiSaveSchema(scenario, id, useAdvanced)
@@ -390,6 +392,7 @@ def loadConfig(file: BytesIO):
         for scenarioID, scenario in enumerate(simulationList):
             if scenarioID != 0:
                 addScenario()
+                # TODO: Make sure names are unique (either here or in the schema)
                 updateParamFromSchema("scenarioName", scenario.name, scenarioID)
                 if scenario.override_setting:
                     scenarioParams = scenario.override_setting.parameters
@@ -455,8 +458,13 @@ def createTemplate(
     session = st.session_state
     useAdvanced = session.get("showAdvanced", False)
     template = Parameters()
+    baseline = (
+        createTemplate(0, includeInterventions, includeDashboard)
+        if scenarioID > 0
+        else None
+    )
 
-    diseaseSaveSchema(template, scenarioID, useAdvanced, includeDashboard)
+    diseaseSaveSchema(template, scenarioID, useAdvanced, baseline, includeDashboard)
     communitySaveSchema(template, scenarioID, useAdvanced)
     if includeInterventions:
         vaccineSaveSchema(template, scenarioID, useAdvanced)

@@ -2542,6 +2542,7 @@ def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -
             direct vs. indirect protection calculations.
     """
     # TODO: Make code clearer (split up advanced section if needed)
+    # TODO: Avoid saving default row values to schema (or loading them)
 
     # Load reused parameters immediately to save time
     vaccineToggle = idGet("vaccineToggle", id, False)

@@ -626,6 +626,7 @@ individuals who had not received vaccines in the simulation.
                 """,
                 )
             ),
+            # TODO: These options are appearing out of order; listify?
             "Options": st.column_config.MultiselectColumn(
                 "Options",
                 default=[],
@@ -909,7 +910,7 @@ tableConfig = session.get("HealthOutcomeTableConfig")
 if tableData is not None:
     st.header("Health Burden Outcome Table")
     # TODO: Fix columns being deselected when changing column settings
-    # TODO: No more scientific notation
+    # TODO: No more scientific notation, yes more thousands separators
     st.dataframe(
         tableData,
         height="auto",
