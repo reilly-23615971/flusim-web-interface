@@ -2170,7 +2170,9 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                 "hospitalRatio", round(hospitalRate * 100000, 6), scenarioID
             )
             updateParamFromSchema(
-                "icuRatio", round(icuRate * 100 / hospitalRate, 6), scenarioID
+                "icuRatio",
+                round(icuRate * 100 / hospitalRate, 6) if hospitalRate > 0.0 else 0.0,
+                scenarioID,
             )
 
         # Advanced parameter differences

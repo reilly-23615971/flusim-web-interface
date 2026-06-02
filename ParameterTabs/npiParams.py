@@ -1104,7 +1104,7 @@ the day on which BCC will return to normal.
         bccReducedRate = st.slider(
             "Reduced Background Contact Count (Interactions per Person per Day)",
             min_value=0.0,
-            max_value=8.0,
+            max_value=10.0,
             value=0.2,
             step=0.05,
             disabled=not useBCCToggle,
