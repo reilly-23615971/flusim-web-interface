@@ -620,24 +620,8 @@ def generateAsir(
     # Generate config data for Streamlit display
     percentCols, differenceCols = set(), set()
     columnConfig = {}
-    # TODO: Reintegrate descriptions if desired (and possible for non-index)
-    columnConfig["Scenario Name"] = st.column_config.TextColumn(
-        pinned=True,
-        #         help="""
-        # The scenario that each row's data originates from. 'Baseline'
-        # refers to the scenario using the base parameters at the
-        # Baseline Parameters page, while additional scenarios use the
-        # names given to them at the Scenario Parameters page.
-        #     """,
-    )
-    columnConfig["Age Group"] = st.column_config.TextColumn(
-        pinned=True,
-        #         help="""
-        # The age range of the individuals that each row's data is derived from.
-        # 'Total' includes the entire population of the simulation, at all ages;
-        # other age groups list the age range they cover as part of their name.
-        #     """,
-    )
+    columnConfig["Scenario Name"] = st.column_config.TextColumn(pinned=True)
+    columnConfig["Age Group"] = st.column_config.TextColumn(pinned=True)
 
     # Prepare burden-scaled columns beforehand for efficiency
     requiredOutcomes = {outcome for outcome, _, _, _, _ in columns}
@@ -707,25 +691,10 @@ def generateAsir(
                 populationColumn = fullData["Age Group"].map(agePops) * scalingFactor
             currentColumn /= populationColumn
             columnName += " (%)"
-            '''columnConfig[columnName] = st.column_config.Column(
-                help=f"""
-The proportion of the total {vaccineDescriptions[vaccineStatus]}population
-(within a given scenario{' and age group' if includedAges else ''})
-that was {outcomeDescriptions[outcome]}, as a percentage.
-            """
-            )'''
             percentCols.add(columnName)
         elif not proportion and baselineDifference:
             currentColumn = currentColumn - columnBaselines
             columnName += " (Difference from Baseline)"
-            '''columnConfig[columnName] = st.column_config.Column(
-                help=f"""
-The difference between the number of {vaccineDescriptions[vaccineStatus]}people
-who were {outcomeDescriptions[outcome]} within a given scenario and the number
-of {vaccineDescriptions[vaccineStatus]}people who were {outcomeDescriptions[outcome]}
-within the baseline scenario{' (within a given age group)' if includedAges else ''}.
-            """
-            )'''
             differenceCols.add(columnName)
         elif proportion and baselineDifference:
             currentColumn = currentColumn - columnBaselines
@@ -734,25 +703,8 @@ within the baseline scenario{' (within a given age group)' if includedAges else 
                 columnBaselines != 0, other=np.nan
             )
             columnName += " (% Difference from Baseline)"
-            '''columnConfig[columnName] = st.column_config.Column(
-                help=f"""
-The difference between the number of {vaccineDescriptions[vaccineStatus]}people
-who were {outcomeDescriptions[outcome]} within a given scenario and the number
-of {vaccineDescriptions[vaccineStatus]}people who were {outcomeDescriptions[outcome]}
-within the baseline scenario{' (within a given age group)' if includedAges else ''},
-as a percentage.
-            """
-            )'''
             percentCols.add(columnName)
             differenceCols.add(columnName)
-        '''else:
-            columnConfig[columnName] = st.column_config.Column(
-                help=f"""
-The number of {vaccineDescriptions[vaccineStatus]}people (within a given
-scenario{' and age group' if includedAges else ''}) who were
-{outcomeDescriptions[outcome]}.
-            """
-            )'''
 
         # Formally create the column
         fullData[columnName] = currentColumn

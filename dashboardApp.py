@@ -180,8 +180,6 @@ def updateData():
                 session.pop("modelDataAsirVaccinated", None)
 
             # Format data
-            # TODO: Consider creating vaccinated/unvaccinated asir dataframes
-            # here rather than in generateAsir
             formattedData = [formatData(d, f) for d, f in zip(returnedData, dataForms)]
 
             # Check for any errors in the data

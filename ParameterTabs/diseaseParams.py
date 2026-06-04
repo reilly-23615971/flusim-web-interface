@@ -832,7 +832,6 @@ pathogen to others.
             """)
             if advanced:
                 loadKey("asymptomaticChild", id, 0.35)
-                # TODO: Is this precise enough?
                 st.slider(
                     "Probability of Young (0-24) Asymptomatic Case",
                     min_value=0.0,
@@ -1807,7 +1806,6 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
     )
 
     # Waning
-    # TODO: Should waning and other advanced params be listed here?
     # TODO: Come up with a more readable way of generating this description
     st.subheader("Natural Immunity")
     if not (advanced and idGet("naturalWaningToggle", scenarioID, False)):
@@ -1919,7 +1917,6 @@ def diseaseSaveSchema(
         includeDashboard (bool): Set to `True` to include dashboard-exclusive
             parameters like GP rate in the generated schema.
     """
-    # TODO: avoid adding parameters unchanged from the baseline for scenario efficiency
     try:
         # Validate parameters
         if not isinstance(schema, Parameters):
@@ -1931,7 +1928,6 @@ def diseaseSaveSchema(
         preSymptomPeriod = idGet("preSymptomPeriod", id, 1.0)
         symptomPeriod = idGet("symptomPeriod", id, 2.0)
         postSymptomPeriod = idGet("postSymptomPeriod", id, 2.5)
-        simLength = session.get("cycleCount", 360) * 2
 
         # Strain Parameters
         schema.Scenario_Strain = [
@@ -1978,10 +1974,9 @@ def diseaseSaveSchema(
                 mortAgeForm["Age Group"],
                 mortAgeForm["Mortality Rate"],
             ):
-                if age:
-                    roundedMort = round(mort / 100000, 10)
-                    if roundedMort != globalDeathRate:
-                        setattr(scenarioParams, f"{age}_mort", round(mort / 100000, 10))
+                roundedMort = round(mort / 100000, 10)
+                if age and roundedMort != globalDeathRate:
+                    setattr(scenarioParams, f"{age}_mort", roundedMort)
         else:
             probAsymptomatic = idGet("asymptomaticBoth", id, 0.35)
             scenarioParams.prob_asymptomatic_young = probAsymptomatic
@@ -1999,8 +1994,9 @@ def diseaseSaveSchema(
                 1.0 if waningRate == 0 else (1.0 - wanedEfficacy) / waningRate
             )
         else:
-            # Set immunity delay to length of simulation, effectively disabling it
-            scenarioParams.infection_waning_cycle_delay = simLength
+            # Set immunity delay to 99999, effectively disabling it
+            # TODO: Make sure simulation accepts delays this high
+            scenarioParams.infection_waning_cycle_delay = 99999
         # Infection Seeding
         scenarioParams.seed_rate = idGet("seedRate", id, 0.25)
         scenarioParams.seeding_start_cycle = (seedPeriod[0] - 1) * 2
@@ -2063,6 +2059,23 @@ def diseaseSaveSchema(
                 idGet("deathRatio", id, globalDeathRate, f"-{i}"),
             )"""
 
+        # Save the updated parameters, removing redundant baseline values
+        ageTableParams = set().union(
+            *[{f"{age}_trans", f"{age}_susc", f"{age}_mort"} for age in ageTimeDict]
+        )
+        if id > 0 and baseline is not None:
+            schemaRemoveBaseline(
+                ageScenarioParams, baseline.Scenario_ParameterWithAgePrefix
+            )
+            schemaRemoveBaseline(
+                scenarioParams, baseline.Scenario_Parameter, ignore=ageTableParams
+            )
+
+        if ageScenarioParams:
+            schema.Scenario_ParameterWithAgePrefix = ageScenarioParams
+        if scenarioParams:
+            schema.Scenario_Parameter = scenarioParams
+
         # Dashboard Parameters
         dashboardParams = (
             schema.Dashboard_Parameter
@@ -2074,23 +2087,10 @@ def diseaseSaveSchema(
             dashboardParams.prob_icu = round(
                 hospitalRate * idGet("icuRatio", id, 20.0) / 100, 10
             )
-
-        # Save the updated parameters
-        # TODO: Does anything need to be passed to defaults?
-        if id > 0 and baseline is not None:
-            schemaRemoveBaseline(
-                ageScenarioParams, baseline.Scenario_ParameterWithAgePrefix
-            )
-            schemaRemoveBaseline(scenarioParams, baseline.Scenario_Parameter)
-            if includeDashboard:
+            if id > 0 and baseline is not None:
                 schemaRemoveBaseline(dashboardParams, baseline.Dashboard_Parameter)
-
-        if ageScenarioParams:
-            schema.Scenario_ParameterWithAgePrefix = ageScenarioParams
-        if scenarioParams:
-            schema.Scenario_Parameter = scenarioParams
-        if includeDashboard and dashboardParams:
-            schema.Dashboard_Parameter = dashboardParams
+            if dashboardParams:
+                schema.Dashboard_Parameter = dashboardParams
     except (ValueError, ValidationError) as e:
         diseaseLog.error(
             (
@@ -2207,28 +2207,19 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             < simLength
         ):
             updateParamFromSchema("naturalWaningToggle", True, scenarioID)"""
-        # TODO: Work out if this works well with only scenario changes
-        updateParamFromSchema(
-            "naturalWaningToggle",
-            bool(
-                paramDict.get(
-                    "infection_waning_cycle_delay",
-                    (
-                        idGet("naturalImmunityDuration", 0, 2) * 60
-                        if scenarioID
-                        else 99999
-                    ),
-                )
-                < simLength * 2
-            ),
-            scenarioID,
-        )
+
+        # Natural immunity waning
+        if "infection_waning_cycle_delay" in paramDict:
+            useWaning = paramDict["infection_waning_cycle_delay"] != 99999
+        else:
+            useWaning = idGet("naturalWaningToggle", 0, False)
+        updateParamFromSchema("naturalWaningToggle", useWaning, scenarioID)
 
         # Period definitions
         # TODO: Handle baseline validation errors better
         # TODO: There might be some issues here; check to see if
         # decimals are getting ignored by the strict sliders
-        if {
+        if useWaning and {
             "infection_waned_protection",
             "infection_waning_rate_per_cycle",
         }.intersection(paramDict):
@@ -2353,6 +2344,11 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             )
 
         # Tables
+
+        # Age-specific transmission
+        transTable = pd.DataFrame(
+            columns=("Age Group", "Infectiousness", "Susceptibility")
+        )
         transParams = {
             p.removesuffix("_trans"): v
             for p, v in paramDict.items()
@@ -2363,51 +2359,45 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             for p, v in paramDict.items()
             if p.endswith("_susc")
         }
-        if transParams or suscParams:
-            # Age-specific transmission
-            transTable = pd.DataFrame(
-                columns=("Age Group", "Infectiousness", "Susceptibility")
-            )
-            transAges = sorted(
-                set(transParams.keys()) | set(suscParams.keys()),
-                key=lambda x: list(ageTimeDict).index(x),
-            )
-            for age in transAges:
-                transValue = transParams.get(age, 1.0)
-                suscValue = suscParams.get(age, 1.0)
-                if transValue != 1.0 or suscValue != 1.0:
-                    transTable.loc[transTable.shape[0]] = [age, transValue, suscValue]
-            updateTableFromSchema(
-                "transAgeForm",
-                transTable,
-                scenarioID,
-                pd.DataFrame(
-                    {
-                        "Age Group": [None],
-                        "Infectiousness": [1.0],
-                        "Susceptibility": [1.0],
-                    },
-                ),
-            )
+        transAges = sorted(
+            set(transParams.keys()) | set(suscParams.keys()),
+            key=lambda x: list(ageTimeDict).index(x),
+        )
+        for age in transAges:
+            transValue = transParams.get(age, 1.0)
+            suscValue = suscParams.get(age, 1.0)
+            if transValue != 1.0 or suscValue != 1.0:
+                transTable.loc[transTable.shape[0]] = [age, transValue, suscValue]
+        updateTableFromSchema(
+            "transAgeForm",
+            transTable,
+            scenarioID,
+            pd.DataFrame(
+                {
+                    "Age Group": [None],
+                    "Infectiousness": [1.0],
+                    "Susceptibility": [1.0],
+                },
+            ),
+        )
+
+        # Age-specific mortality
+        mortTable = pd.DataFrame(columns=("Age Group", "Mortality Rate"))
         mortParams = {
             p.removesuffix("_mort"): round(v * 100000, 6) if v is not None else None
             for p, v in paramDict.items()
             if p.endswith("_mort")
         }
-        if mortParams:
-            # Age-specific mortality
-            # TODO: Should age mort be ignored if it's equal to global mort?
-            mortTable = pd.DataFrame(columns=("Age Group", "Mortality Rate"))
-            for param, value in mortParams.items():
-                mortTable.loc[mortTable.shape[0]] = [param, value]
-            updateTableFromSchema(
-                "mortAgeForm",
-                mortTable,
-                scenarioID,
-                pd.DataFrame(
-                    {
-                        "Age Group": [None],
-                        "Mortality Rate": [idGet("deathRatio", scenarioID, 12.0)],
-                    },
-                ),
-            )
+        for param, value in mortParams.items():
+            mortTable.loc[mortTable.shape[0]] = [param, value]
+        updateTableFromSchema(
+            "mortAgeForm",
+            mortTable,
+            scenarioID,
+            pd.DataFrame(
+                {
+                    "Age Group": [None],
+                    "Mortality Rate": [idGet("deathRatio", scenarioID, 12.0)],
+                },
+            ),
+        )

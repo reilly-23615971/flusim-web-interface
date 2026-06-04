@@ -142,7 +142,6 @@ def parameterUpload():
     # TODO: This still blanks the page occasionally (sometimes displays the following:)
     # Life Stage	Pre-Symptomatic
     # Length (Days)	1
-    # TODO: Streamlit 1.58 might have fixed this; consider updating on forge
     uploadPending = bool(session.get("parameterUpload") is not None)
     st.info(
         body="""
@@ -364,7 +363,6 @@ def loadConfig(file: BytesIO):
 
         # Baseline parameters
         # TODO: Improve robustness of LoadSchema functions with invalid data
-        # TODO: Load/detect advanced parameter toggle
         if schema.shared_overrides is not None:
             baselineParams = schema.shared_overrides.parameters
             diseaseLoadSchema(baselineParams, 0)

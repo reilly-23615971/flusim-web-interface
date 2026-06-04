@@ -53,6 +53,7 @@ st.markdown("""
 uploadDownloadBar()
 
 # Fragment to display errors
+# TODO: Errors aren't removed from here when fixed until page rerun
 errorChecker(0, "Errors in Baseline Scenario")
 
 # Advanced parameters toggle

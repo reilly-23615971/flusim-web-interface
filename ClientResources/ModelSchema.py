@@ -75,7 +75,6 @@ parameterGetters = {
 
 
 # Parameter Models
-# TODO: More validation to ensure the dashboard can use this
 # TODO: Update schema descriptions once dashboard descriptions are finalised
 
 

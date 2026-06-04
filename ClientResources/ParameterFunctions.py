@@ -403,7 +403,7 @@ def updateTableFromSchema(
 ):
     """
     Function to update tables in the dashboard using one constructed from a
-    schema, accounting for the default table style and baseline inheritance.
+    schema, accounting for the default table style.
 
     Parameters:
         key (str): The string used to identify the table.
@@ -418,11 +418,8 @@ def updateTableFromSchema(
         extra (str, optional): An additional part of the key used to distinguish
             variable-length forms.
     """
-    scenarioDefault = (
-        defaultTable if scenarioID == 0 else idGet(key, 0, defaultTable, extra)
-    )
     session[f"{key}{scenarioID}{extra if extra else ""}"] = (
-        scenarioDefault if newTable.empty else newTable.reset_index(drop=True)
+        defaultTable if newTable.empty else newTable.reset_index(drop=True)
     )
     # Add to scenario parameters for ease of deletion
     if scenarioID:

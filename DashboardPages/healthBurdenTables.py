@@ -626,11 +626,10 @@ individuals who had not received vaccines in the simulation.
                 """,
                 )
             ),
-            # TODO: These options are appearing out of order; listify?
             "Options": st.column_config.MultiselectColumn(
                 "Options",
                 default=[],
-                options={"Percentage", "Difference from Baseline"},
+                options=["Percentage", "Difference from Baseline"],
                 color="auto",
                 help="""
 Select any number of options here to modify how the column will be displayed.

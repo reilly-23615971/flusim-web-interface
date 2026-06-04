@@ -6,7 +6,7 @@
 import logging
 import re
 from functools import partial
-from typing import Any, Callable, Literal, Optional, cast
+from typing import Any, Callable, Literal, cast
 
 import numpy as np
 import streamlit as st
@@ -120,9 +120,8 @@ def errorChecker(scenarioID: int, name: str = "Errors in Current Scenario"):
     Returns:
         bool: Returns `True` if at least one error was run-blocking and
             `False` otherwise.
-
-
     """
+    # TODO: Consider removing the run_every parameter and defragmenting tabs
     severeErrorsFound = False
     if session["activeErrors"].get(scenarioID, False):
         with st.status(label=name, state="error"):
@@ -455,7 +454,12 @@ def ageCast(x: str) -> Literal[
 
 
 # Miscellaneous functions
-def schemaRemoveBaseline(scenario: Any, baseline: Any, defaults: dict[str, Any] = {}):
+def schemaRemoveBaseline(
+    scenario: Any,
+    baseline: Any,
+    ignore: set[str] = set(),
+    defaults: dict[str, Any] = {},
+):
     """
     Function to remove any parameters from a scenario that are already represented in the baseline scenario.
 
@@ -464,6 +468,9 @@ def schemaRemoveBaseline(scenario: Any, baseline: Any, defaults: dict[str, Any] 
 
         baseline: The object containing the baseline parameters to remove from
             the scenario object.
+
+        ignore (set of str): A set specifying parameters that should
+            never be removed from `scenario` even if they are present in `baseline`.
 
         defaults (dict): A dictionary specifying parameters that should
             default to a specific value if they are present in the `baseline` but
@@ -476,15 +483,15 @@ def schemaRemoveBaseline(scenario: Any, baseline: Any, defaults: dict[str, Any] 
     Raises:
         TypeError: If scenario and baseline are not part of the same object class.
     """
+
     if baseline is None:
         return
     if not (type(scenario) is type(baseline)):
         raise TypeError("scenario and baseline should be the same type")
-    # TODO: Add params to force keep/delete specific attributes in scenario
     for param, value in vars(baseline).items():
         if param in defaults and not hasattr(scenario, param):
             setattr(scenario, param, defaults[param])
-        if getattr(scenario, param, float("nan")) == value:
+        if getattr(scenario, param, float("nan")) == value and param not in ignore:
             delattr(scenario, param)
 
 

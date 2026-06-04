@@ -127,12 +127,12 @@ as public transport.
         st.subheader("Advanced Community Settings", divider="grey")
 
         # TODO: Default to 0
-        loadKey("diagnosisDelay", id, 1)
+        loadKey("diagnosisDelay", id, 0)
         st.slider(
             "Case Diagnosis Delay (Days)",
             min_value=0.0,
             max_value=14.0,
-            value=1.0,
+            value=0.0,
             step=0.5,
             format="%f Day(s)",
             on_change=saveKey,
@@ -297,7 +297,7 @@ def communityDescribe(scenarioID: int = 0, advanced: bool = False):
 
     # Other Community Parameters
     st.subheader("Other Community Parameters")
-    diagnosisDelay = idGet("diagnosisDelay", scenarioID, 1) if advanced else 1
+    diagnosisDelay = idGet("diagnosisDelay", scenarioID, 0) if advanced else 0
     if diagnosisDelay > 0:
         # TODO: Note that delay may affect deployment of NPIs if they exist
         diagnosisString = f"""
@@ -388,7 +388,7 @@ def communitySaveSchema(schema: Parameters, id: int = 0, advanced: bool = False)
 
         # The Rest
         if advanced:
-            scenarioParams.diagnosis_delay = idGet("diagnosisDelay", id, 1) * 2
+            scenarioParams.diagnosis_delay = idGet("diagnosisDelay", id, 0) * 2
             scenarioParams.prob_child_supervision = idGet("childSupervision", id, 1.0)
             # scenarioParams.max_class_count = idGet("maxClassCount", id, 1)
             scenarioParams.max_class_size = idGet("maxClassSize", id, 10)
