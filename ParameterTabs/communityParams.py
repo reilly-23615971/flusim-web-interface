@@ -4,12 +4,17 @@
 
 # Imports
 import logging
+from typing import Optional
 
 import numpy as np
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import plural
+from ClientResources.InterfaceFunctions import (
+    plural,
+    schemaRemoveBaseline,
+    schemaUpdate,
+)
 from ClientResources.ModelSchema import Parameters, scenarioParameters
 from ClientResources.ParameterFunctions import (
     idGet,
@@ -353,7 +358,12 @@ def communityDescribe(scenarioID: int = 0, advanced: bool = False):
     )
 
 
-def communitySaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
+def communitySaveSchema(
+    schema: Parameters,
+    id: int = 0,
+    advanced: bool = False,
+    baseline: Optional[Parameters] = None,
+):
     """
     Function to populate the Pydantic model schema with community parameters
     using scenario differentiation.
@@ -369,18 +379,21 @@ def communitySaveSchema(schema: Parameters, id: int = 0, advanced: bool = False)
 
         advanced (bool): Set to `True` to show more complex parameters like
             child supervision rate.
+
+        baseline (Parameters, optional): A Pydantic model representing the parameters
+            set for the baseline scenario. When `id` is not 0, this will be used
+            to omit parameters that are already set in the baseline from the final
+            scenario.
     """
+
     try:
         # Validate parameters
         if not isinstance(schema, Parameters):
             raise ValueError("schema should be a Parameters object")
 
         # Scenario Parameters
-        scenarioParams = (
-            schema.Scenario_Parameter
-            if schema.Scenario_Parameter
-            else scenarioParameters()
-        )
+        scenarioParams = scenarioParameters()
+
         # Withdrawals and Contact
         scenarioParams.prob_withdrawal = idGet("withdrawalWork", id, 0.5)
         scenarioParams.prob_school_withdrawal = idGet("withdrawalSchool", id, 0.9)
@@ -402,8 +415,11 @@ def communitySaveSchema(schema: Parameters, id: int = 0, advanced: bool = False)
                 'maxChurchGroupSize', id, 10
             )
             """
-        # Save the updated params
-        schema.Scenario_Parameter = scenarioParams
+        # Save the updated parameters, removing redundant baseline values
+        if id > 0 and baseline is not None:
+            schemaRemoveBaseline(scenarioParams, baseline.Scenario_Parameter)
+        schemaUpdate(schema, "Scenario_Parameter", scenarioParams)
+
     except (ValueError, ValidationError) as e:
         communityLog.error(
             (

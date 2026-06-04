@@ -19,6 +19,7 @@ from ClientResources.InterfaceFunctions import (
     paramError,
     plural,
     schemaRemoveBaseline,
+    schemaUpdate,
 )
 from ClientResources.ModelSchema import (
     Parameters,
@@ -1918,6 +1919,7 @@ def diseaseSaveSchema(
             parameters like GP rate in the generated schema.
     """
     try:
+        # schema = baseSchema.model_copy()
         # Validate parameters
         if not isinstance(schema, Parameters):
             raise ValueError("schema should be a Parameters object")
@@ -1930,25 +1932,24 @@ def diseaseSaveSchema(
         postSymptomPeriod = idGet("postSymptomPeriod", id, 2.5)
 
         # Strain Parameters
-        schema.Scenario_Strain = [
-            strainParameters(StrainId=0, Beta=idGet("beta", id, 0.0616))
-        ]
+        beta = idGet("beta", id, 0.0616)
+        baseBeta = (
+            baseline.Scenario_Strain[0].Beta
+            if baseline is not None and baseline.Scenario_Strain is not None
+            else None
+        )
+        if baseBeta is None or baseBeta != beta:  # type: ignore
+            schema.Scenario_Strain = [
+                strainParameters(StrainId=0, Beta=idGet("beta", id, 0.0616))
+            ]
 
         # Scenario Parameters With Age Prefix
-        ageScenarioParams = (
-            schema.Scenario_ParameterWithAgePrefix
-            if schema.Scenario_ParameterWithAgePrefix
-            else ageScenarioParameters()
-        )
+        ageScenarioParams = ageScenarioParameters()
         globalDeathRate = round(idGet("deathRatio", id, 12.0) / 100000, 10)
         ageScenarioParams.mort = globalDeathRate
 
         # Scenario Parameters
-        scenarioParams = (
-            schema.Scenario_Parameter
-            if schema.Scenario_Parameter
-            else scenarioParameters()
-        )
+        scenarioParams = scenarioParameters()
 
         # Advanced parameter differences
         if advanced:
@@ -2070,18 +2071,11 @@ def diseaseSaveSchema(
             schemaRemoveBaseline(
                 scenarioParams, baseline.Scenario_Parameter, ignore=ageTableParams
             )
-
-        if ageScenarioParams:
-            schema.Scenario_ParameterWithAgePrefix = ageScenarioParams
-        if scenarioParams:
-            schema.Scenario_Parameter = scenarioParams
+        schemaUpdate(schema, "Scenario_ParameterWithAgePrefix", ageScenarioParams)
+        schemaUpdate(schema, "Scenario_Parameter", scenarioParams)
 
         # Dashboard Parameters
-        dashboardParams = (
-            schema.Dashboard_Parameter
-            if schema.Dashboard_Parameter
-            else dashboardParameters()
-        )
+        dashboardParams = dashboardParameters()
         if includeDashboard:
             dashboardParams.prob_gp = round(idGet("gpRatio", id, 17.0) / 100, 6)
             dashboardParams.prob_icu = round(
@@ -2089,8 +2083,7 @@ def diseaseSaveSchema(
             )
             if id > 0 and baseline is not None:
                 schemaRemoveBaseline(dashboardParams, baseline.Dashboard_Parameter)
-            if dashboardParams:
-                schema.Dashboard_Parameter = dashboardParams
+            schemaUpdate(schema, "Dashboard_Parameter", dashboardParams)
     except (ValueError, ValidationError) as e:
         diseaseLog.error(
             (

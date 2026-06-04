@@ -454,6 +454,26 @@ def ageCast(x: str) -> Literal[
 
 
 # Miscellaneous functions
+def schemaUpdate(schema: Any, paramGroup: str, newParams: Any):
+    """
+    Function to update a parameter object with new schema values
+
+    Parameters:
+        schema: The object holding the current parameters.
+
+        paramGroup (str): The name of the group of parameters to be updated.
+
+        newParams: The object containing the new parameter values.
+    """
+    if newParams:
+        if getattr(schema, paramGroup, None) is None:
+            setattr(schema, paramGroup, newParams)
+        else:
+            getattr(schema, paramGroup).__dict__.update(
+                newParams.model_dump(exclude_unset=True)
+            )
+
+
 def schemaRemoveBaseline(
     scenario: Any,
     baseline: Any,

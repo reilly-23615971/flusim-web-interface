@@ -204,7 +204,7 @@ def createConfig(scenarioCount: int, includeDashboard: bool = False) -> modelGui
     for id, scenario in enumerate(scenarioParams):
         baseline = scenarioParams[0] if id != 0 else None
         diseaseSaveSchema(scenario, id, useAdvanced, baseline, includeDashboard)
-        communitySaveSchema(scenario, id, useAdvanced)
+        communitySaveSchema(scenario, id, useAdvanced, baseline)
         useVaccines = vaccineSaveSchema(scenario, id, useAdvanced) or useVaccines
         npiSaveSchema(scenario, id, useAdvanced)
         if useAdvanced:
@@ -262,6 +262,7 @@ def createConfig(scenarioCount: int, includeDashboard: bool = False) -> modelGui
         ],
         # Shared overrides are baseline parameters
         shared_overrides=overrideParams(parameters=scenarioParams[0]),
+        # TODO: Omit override_setting from scenarios with identical params to baseline
         simulation_sets=[
             simulationSet(
                 name="Dashboard Simulation Set",
@@ -463,7 +464,7 @@ def createTemplate(
     )
 
     diseaseSaveSchema(template, scenarioID, useAdvanced, baseline, includeDashboard)
-    communitySaveSchema(template, scenarioID, useAdvanced)
+    communitySaveSchema(template, scenarioID, useAdvanced, baseline)
     if includeInterventions:
         vaccineSaveSchema(template, scenarioID, useAdvanced)
         npiSaveSchema(template, scenarioID, useAdvanced)
