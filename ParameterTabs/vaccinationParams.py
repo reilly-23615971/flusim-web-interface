@@ -4,16 +4,24 @@
 
 # Imports
 import logging
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import ageCast, paramError, trigCast
+from ClientResources.InterfaceFunctions import (
+    ageCast,
+    paramError,
+    schemaRemoveBaseline,
+    schemaUpdate,
+    trigCast,
+)
 from ClientResources.ModelSchema import (
     EfficacyValue,
     Parameters,
+    dashboardParameters,
     scenarioParameters,
     vaccineCoverage,
     vaccineDose,
@@ -141,26 +149,182 @@ will be vaccinated against the pathogen.
                 vaccines are administered and what proportion of the
                 population is already vaccinated.
             """)
-            # TODO: Option to disable live vaccination entirely? Another radio?
-            # TODO: Get data for a more accurate default
-            loadKey("firstDoseRate", id, 300)
-            st.number_input(
-                "Vaccination Rate (Vaccinations per Day)",
-                min_value=1,
-                value=300,
-                key=f"_firstDoseRate{id}",
-                placeholder="Enter a whole number of people",
-                on_change=saveKey,
-                args=["firstDoseRate", id],
-                disabled=not useVaccinesToggle,
-                help="""
+            # TODO: Integrate vaccine distribution and make sure the radio button works
+            if advanced:
+                loadKey("vaccineDistribution", id, default="Static Proportions")
+                vaccineDistribution = st.radio(
+                    "Vaccine Distribution",
+                    options=["Static Proportions", "Live Distribution"],
+                    captions=[
+                        "Vaccination status will not change",
+                        "New individuals will be vaccinated throughout the experiment",
+                    ],
+                    key="_vaccineDistribution",
+                    on_change=saveKey,
+                    args=["vaccineDistribution", id],
+                    disabled=not useVaccinesToggle,
+                    help="""
+    Select how vaccines will be distributed throughout the population.
+    ### Options:
+    - Static Proportions: A set proportion of the population will be vaccinated at
+    the beginning of the simulation, with no additional vaccinations being made. This
+    setting should be used for infections that are regularly vaccinated against, such
+    as influenza.
+    - Live Distribution: New individuals will be vaccinated throughout the duration
+    of the simulation experiment at a regular rate. This setting should be used for
+    recent infections where vaccines are either actively in development or not yet
+    widely distributed, such as SARS-CoV-2.
+                    """,
+                )
+                staticVaccination = vaccineDistribution == "Static Proportions"
+            else:
+                staticVaccination = True
+
+            # Vaccinated Proportions
+            if staticVaccination:
+                # Single vaccination proportion
+                loadKey("initialVaccinated", id, 0.0)
+                initialVaccinated = st.number_input(
+                    "Vaccinated Population (% Percentage)",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=0.0,
+                    step=0.001,
+                    format="%0.5g",
+                    key=f"_initialVaccinated{id}",
+                    on_change=saveKey,
+                    args=["initialVaccinated", id],
+                    disabled=not useVaccinesToggle,
+                    help="""
+The percentage of the population that will be vaccinated against the pathogen.
+                    """,
+                )
+                targetVaccinated = max(initialVaccinated, 0.8)
+
+            else:
+                # Initial and target proportions
+                leftCol, rightCol = st.columns(2)
+                loadKey("initialVaccinated", id, 0.0)
+                initialVaccinated = leftCol.number_input(
+                    "Initial Vaccinated Population (% Percentage)",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=0.0,
+                    step=0.001,
+                    format="%0.5g",
+                    key=f"_initialVaccinated{id}",
+                    on_change=saveKey,
+                    args=["initialVaccinated", id],
+                    disabled=not useVaccinesToggle,
+                    help="""
+The percentage of the population that will already be vaccinated against the
+pathogen at the beginning of the simulation.
+                    """,
+                )
+                '''
+                initialVaccinated = st.slider(
+                    "Initial Vaccinated Proportion of Population",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=0.0,
+                    step=0.001,
+                    format="percent",
+                    key=f"_initialVaccinated{id}",
+                    on_change=saveKey,
+                    args=["initialVaccinated", id],
+                    disabled=not useVaccinesToggle,
+                    help="""
+    The percentage of the population that will
+    already be vaccinated against the pathogen at
+    the beginning of the simulation.
+                    """,
+                )
+                targetVaccinated = st.slider(
+                    "Target Vaccinated Proportion of Population",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=0.8,
+                    step=0.001,
+                    format="percent",
+                    key=f"_targetVaccinated{id}",
+                    on_change=saveKey,
+                    args=["targetVaccinated", id],
+                    disabled=not useVaccinesToggle,
+                    help="""
+    The percentage of the population that will be targeted by the vaccine schedule
+    in the simulation. The actual proportion of the population that is vaccinated
+    may be lower if there are an insufficient number of doses available.
+                    """,
+                )
+                '''
+                loadKey("targetVaccinated", id, 0.8)
+                targetVaccinated = rightCol.number_input(
+                    "Target Vaccinated Population (% Percentage)",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=0.8,
+                    step=0.001,
+                    format="%0.5g",
+                    key=f"_targetVaccinated{id}",
+                    on_change=saveKey,
+                    args=["targetVaccinated", id],
+                    disabled=not useVaccinesToggle,
+                    help="""
+The percentage of the population that will be targeted by the vaccine schedule
+in the simulation. The actual percentage that is vaccinated may be lower if
+there are an insufficient number of doses available.
+                    """,
+                )
+
+                # Show error if initial proportion is above target
+                paramError(
+                    "vaccineTargetAlreadyFulfilled",
+                    id,
+                    lambda: useVaccinesToggle and initialVaccinated > targetVaccinated,
+                    f"""
+                        Warning: The target vaccinated proportion of
+                        population in the {
+                            'baseline scenario' if id == 0
+                            else f'scenario named "{
+                                session[f'scenarioName{id}']
+                            }"'
+                        } is
+                        {100 * targetVaccinated:0.5g}% of the
+                        population, but the initial vaccinated
+                        proportion is {100 * initialVaccinated:0.5g}%. As
+                        such, the target proportion will already be met,
+                        and no new vaccinations will occur.
+
+                        Please make one of the following changes:
+
+                        - Increase Initial Vaccinated Proportion of Population in
+                        :primary-badge[:material/vaccines: Vaccination]
+                        to be greater than {100 * targetVaccinated:0.5g}%.
+                        - Decrease Target Vaccinated Proportion of Population in
+                        :primary-badge[:material/vaccines: Vaccination]
+                        to be lower than {100 * initialVaccinated:0.5g}%.
+                    """,
+                    False,
+                )
+
+                # Other live distribution parameters
+                # TODO: Get data for a more accurate default
+                loadKey("firstDoseRate", id, 300)
+                st.number_input(
+                    "Vaccination Rate (Vaccinations per Day)",
+                    min_value=1,
+                    value=300,
+                    key=f"_firstDoseRate{id}",
+                    placeholder="Enter a whole number of people",
+                    on_change=saveKey,
+                    args=["firstDoseRate", id],
+                    disabled=not useVaccinesToggle,
+                    help="""
 The number of unvaccinated individuals who will
 receive the first dose of the vaccine each day.
-                """,
-            )
-
-            # Limited Dose Parameters (if advanced parameters are enabled)
-            if advanced:
+                    """,
+                )
+                # Limited Dose Parameters (if advanced parameters are enabled)
                 loadKey("limitDosesToggle", id, False)
                 limitDosesToggle = st.toggle(
                     "Enable Limited Number of Vaccine Doses",
@@ -196,109 +360,6 @@ Individuals who have already received the first dose of the vaccine will still
 receive future doses regardless of the remaining dose count.
                         """,
                     )
-            leftCol, rightCol = st.columns(2)
-            loadKey("initialVaccinated", id, 0.0)
-            initialVaccinated = leftCol.number_input(
-                "Initial Vaccinated Population (% Percentage)",
-                min_value=0.0,
-                max_value=1.0,
-                value=0.0,
-                step=0.001,
-                format="%0.5g",
-                key=f"_initialVaccinated{id}",
-                on_change=saveKey,
-                args=["initialVaccinated", id],
-                disabled=not useVaccinesToggle,
-                help="""
-The percentage of the population that will already be vaccinated against the
-pathogen at the beginning of the simulation.
-                """,
-            )
-            '''
-            initialVaccinated = st.slider(
-                "Initial Vaccinated Proportion of Population",
-                min_value=0.0,
-                max_value=1.0,
-                value=0.0,
-                step=0.001,
-                format="percent",
-                key=f"_initialVaccinated{id}",
-                on_change=saveKey,
-                args=["initialVaccinated", id],
-                disabled=not useVaccinesToggle,
-                help="""
-The percentage of the population that will
-already be vaccinated against the pathogen at
-the beginning of the simulation.
-                """,
-            )
-            targetVaccinated = st.slider(
-                "Target Vaccinated Proportion of Population",
-                min_value=0.0,
-                max_value=1.0,
-                value=0.8,
-                step=0.001,
-                format="percent",
-                key=f"_targetVaccinated{id}",
-                on_change=saveKey,
-                args=["targetVaccinated", id],
-                disabled=not useVaccinesToggle,
-                help="""
-The percentage of the population that will be targeted by the vaccine schedule
-in the simulation. The actual proportion of the population that is vaccinated
-may be lower if there are an insufficient number of doses available.
-                """,
-            )
-            '''
-            loadKey("targetVaccinated", id, 0.8)
-            targetVaccinated = rightCol.number_input(
-                "Target Vaccinated Population (% Percentage)",
-                min_value=0.0,
-                max_value=1.0,
-                value=0.8,
-                step=0.001,
-                format="%0.5g",
-                key=f"_targetVaccinated{id}",
-                on_change=saveKey,
-                args=["targetVaccinated", id],
-                disabled=not useVaccinesToggle,
-                help="""
-The percentage of the population that will be targeted by the vaccine schedule
-in the simulation. The actual percentage that is vaccinated may be lower if
-there are an insufficient number of doses available.
-                """,
-            )
-
-            # Show error if initial proportion is above target
-            paramError(
-                "vaccineTargetAlreadyFulfilled",
-                id,
-                lambda: useVaccinesToggle and initialVaccinated > targetVaccinated,
-                f"""
-                    Warning: The target vaccinated proportion of
-                    population in the {
-                        'baseline scenario' if id == 0
-                        else f'scenario named "{
-                            session[f'scenarioName{id}']
-                        }"'
-                    } is
-                    {100 * targetVaccinated:0.5g}% of the
-                    population, but the initial vaccinated
-                    proportion is {100 * initialVaccinated:0.5g}%. As
-                    such, the target proportion will already be met,
-                    and no new vaccinations will occur.
-
-                    Please make one of the following changes:
-
-                    - Increase Initial Vaccinated Proportion of Population in
-                    :primary-badge[:material/vaccines: Vaccination]
-                    to be greater than {100 * targetVaccinated:0.5g}%.
-                    - Decrease Target Vaccinated Proportion of Population in
-                    :primary-badge[:material/vaccines: Vaccination]
-                    to be lower than {100 * initialVaccinated:0.5g}%.
-                """,
-                False,
-            )
 
             # Store age-based proportion values for error checking
             # vacAgeInitials, vacAgeTargets = {}, {}
@@ -326,6 +387,16 @@ defined above.
                 ),
                 dataframe=True,
             )
+            # Set N/A values from hidden columns to the current default
+            if not staticVaccination:
+                session[f"vacPropAgeForm{id}"] = replaceTableNA(
+                    session[f"vacPropAgeForm{id}"],
+                    {
+                        "Target Vaccinated Proportion": max(
+                            initialVaccinated, targetVaccinated
+                        ),
+                    },
+                )
             vacPropAgeForm = st.data_editor(
                 session[f"vacPropAgeForm{id}"],
                 height="content",
@@ -348,32 +419,48 @@ overriding the base proportions.
                         """,
                     ),
                     "Initial Vaccinated Proportion": st.column_config.NumberColumn(
-                        "Initial Vaccinated Population (% Percentage)",
+                        (
+                            "Vaccinated Population (% Percentage)"
+                            if staticVaccination
+                            else "Initial Vaccinated Population (%)"
+                        ),
                         required=True,
                         default=initialVaccinated,
                         min_value=0.0,
                         max_value=1.0,
                         format="percent",
-                        help="""
+                        help=(
+                            """
+The percentage of individuals in this age group that will be vaccinated against
+the pathogen.
+                        """
+                            if staticVaccination
+                            else """
 The percentage of individuals in this age group that will already be
 vaccinated against the pathogen at the beginning of the simulation.
-                        """,
+                        """
+                        ),
                     ),
-                    "Target Vaccinated Proportion": st.column_config.NumberColumn(
-                        "Target Vaccinated Population (% Percentage)",
-                        required=True,
-                        default=targetVaccinated,
-                        min_value=0.0,
-                        max_value=1.0,
-                        format="percent",
-                        help="""
+                    "Target Vaccinated Proportion": (
+                        None
+                        if staticVaccination
+                        else st.column_config.NumberColumn(
+                            "Target Vaccinated Population (%)",
+                            required=True,
+                            default=targetVaccinated,
+                            min_value=0.0,
+                            max_value=1.0,
+                            format="percent",
+                            help="""
 The percentage of individuals in this age group that will be targeted by the
 vaccine schedule in the simulation. The actual proportion of individuals that
 are vaccinated may be lower if there are an insufficient number of doses available.
                         """,
+                        )
                     ),
                 },
             )
+            # TODO: Remove references to proportion from error messages
             paramError(
                 "vacPropAgeFormDuplicates",
                 id,
@@ -396,7 +483,8 @@ are vaccinated may be lower if there are an insufficient number of doses availab
             paramError(
                 "vacPropAgeFormTargetAlreadyFulfilled",
                 id,
-                lambda: np.any(
+                lambda: not staticVaccination
+                and np.any(
                     vacPropAgeForm["Initial Vaccinated Proportion"]
                     > vacPropAgeForm["Target Vaccinated Proportion"]
                 ),
@@ -1709,12 +1797,14 @@ for individual age groups in the simulation, overriding the efficacy defined abo
                     ),
                     dataframe=True,
                 )
-                baseEfficacyData = replaceTableNA(
-                    session[f"vacSingleEfficacyAgeForm{id}"],
-                    {"Vaccine Efficacy After Waning": primaryWanedEfficacy},
-                )
+                # Set N/A values from hidden columns to the current default
+                if waningToggle:
+                    session[f"vacSingleEfficacyAgeForm{id}"] = replaceTableNA(
+                        session[f"vacSingleEfficacyAgeForm{id}"],
+                        {"Vaccine Efficacy After Waning": primaryWanedEfficacy},
+                    )
                 vacEfficacyAgeForm = st.data_editor(
-                    baseEfficacyData,
+                    session[f"vacSingleEfficacyAgeForm{id}"],
                     height="content",
                     num_rows="dynamic",
                     key=f"_vacSingleEfficacyAgeForm{id}",
@@ -2520,7 +2610,13 @@ that they will remain healthy when exposed to the pathogen.
     # TODO: Reintegrate trigger thresholds when vaccines care about them
 
 
-def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -> bool:
+def vaccineSaveSchema(
+    schema: Parameters,
+    id: int = 0,
+    advanced: bool = False,
+    baseline: Optional[Parameters] = None,
+    includeDashboard: bool = False,
+) -> bool:
     """
     Function to populate the Pydantic model schema with vaccination parameters
     using scenario differentiation.
@@ -2537,10 +2633,19 @@ def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -
         advanced (bool): Set to `True` to show more complex parameters like
             individual vaccine dose efficacies.
 
+        baseline (Parameters, optional): A Pydantic model representing the parameters
+            set for the baseline scenario. When `id` is not 0, this will be used
+            to omit parameters that are already set in the baseline from the final
+            scenario.
+
+        includeDashboard (bool): Set to `True` to include the dashboard-exclusive
+            vaccine distribution parameter.
+
     Returns:
         bool: `True` if vaccines were used in the scenario, permitting
             direct vs. indirect protection calculations.
     """
+
     # TODO: Make code clearer (split up advanced section if needed)
     # TODO: Avoid saving default row values to schema (or loading them)
 
@@ -2560,6 +2665,7 @@ def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -
 
         if vaccineToggle:
             # Initialising Scenario Parameters
+            # TODO: Use schemaUpdate instead
             scenarioParams = (
                 schema.Scenario_Parameter
                 if schema.Scenario_Parameter
@@ -2567,6 +2673,19 @@ def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -
             )
 
             # Vaccination Coverage
+            liveDistribution = (
+                False
+                if not advanced
+                else idGet("vaccineDistribution", id, "Static Proportions")
+                == "Live Distribution"
+            )
+            if includeDashboard:
+                dashboardParams = dashboardParameters()
+                dashboardParams.live_vaccine_distribution = liveDistribution
+                if id > 0 and baseline is not None:
+                    schemaRemoveBaseline(dashboardParams, baseline.Dashboard_Parameter)
+                schemaUpdate(schema, "Dashboard_Parameter", dashboardParams)
+
             vacPropAgeForm = idGet(
                 "vacPropAgeForm",
                 id,
@@ -2580,10 +2699,16 @@ def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -
             )
             schema.Scenario_VaccineCoverage = [
                 vaccineCoverage(
-                    Age=None, Initial=initialProportion, Target=targetProportion
+                    Age=None,
+                    Initial=initialProportion,
+                    Target=targetProportion if liveDistribution else initialProportion,
                 )
             ] + [
-                vaccineCoverage(Age=age, Initial=initial, Target=target)
+                vaccineCoverage(
+                    Age=age,
+                    Initial=initial,
+                    Target=target if liveDistribution else initial,
+                )
                 for age, initial, target in zip(
                     vacPropAgeForm["Age Group"],
                     vacPropAgeForm["Initial Vaccinated Proportion"],
@@ -2609,19 +2734,19 @@ def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -
             scenarioParams.vaccination_relaxation = trigCast("Always")
 
             # Ensure doses do not exceed the integer limit
-            scenarioParams.vaccine_doses = min(
-                (
-                    idGet("initialDoseReserve", id, 0)
-                    if advanced and idGet("limitDosesToggle", id, False)
-                    else 99999999
-                ),
-                2000000000,
+            scenarioParams.vaccine_doses = (
+                min(idGet("initialDoseReserve", id, 0), 2000000000)
+                if liveDistribution and idGet("limitDosesToggle", id, False)
+                else 99999999
             )
-            scenarioParams.vaccination_first_dose_rate = min(
-                idGet("firstDoseRate", id, 300), 2000000000
+            scenarioParams.vaccination_first_dose_rate = (
+                min(idGet("firstDoseRate", id, 300), 2000000000)
+                if liveDistribution
+                else 99999999
             )
 
             # Save the program parameters
+            # TODO: Baseline deduplication
             schema.Scenario_Parameter = scenarioParams
 
             # Vaccine Doses and Efficacy
@@ -2888,6 +3013,7 @@ def vaccineSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False) -
                 ]
 
             # Save efficacy and dose parameters
+            # TODO: Baseline deduplication for VaccineDose if possible
             schema.Scenario_VaccineDoseEfficacy = efficacyParams
             schema.Scenario_VaccineDose = doseParams
     except (ValueError, ValidationError) as e:
@@ -2915,8 +3041,6 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             session state variables. A value of 0 means that this is the
             baseline scenario and will be treated accordingly.
     """
-    # Load sim length early
-    simLength = session.get("cycleCount", 360)
 
     # Keep track of whether vaccines/boosters have showed up
     # TODO: Distinguish between scenario with vaccines disabled and
@@ -2943,6 +3067,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
     schemaDose = schema.Scenario_VaccineDose
     schemaEfficacy = schema.Scenario_VaccineDoseEfficacy
     schemaCoverage = schema.Scenario_VaccineCoverage
+    schemaDash = schema.Dashboard_Parameter
     missingParams = (
         params is None for params in (schemaDose, schemaEfficacy, schemaCoverage)
     )
@@ -2951,6 +3076,25 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             Vaccination parameters were only partially defined
             for the baseline scenario
         """)
+
+    # Dashboard Parameters
+    if schemaDash is not None:
+        liveDistribution = schemaDash.live_vaccine_distribution
+        if liveDistribution is not None:
+            updateParamFromSchema(
+                "vaccineDistribution",
+                "Live Distribution" if liveDistribution else "Static Proportions",
+                scenarioID,
+            )
+    elif scenarioID == 0:
+        raise AssertionError("""
+            Schema does not include vaccination distribution
+            information for the baseline scenario
+        """)
+    else:
+        liveDistribution = (
+            idGet("vaccineDistribution", 0, "Static Proportions") == "Live Distribution"
+        )
 
     # Vaccine Coverage Parameters
     if schemaCoverage is not None:
@@ -3098,10 +3242,10 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             baseWaned = baseEfficacy.WanedEfficacy
             updateParamFromSchema("primaryWanedEfficacy", baseWaned, scenarioID)
         elif scenarioID == 0:
-            raise AssertionError(
-                "Schema does not include general primary vaccine efficacy "
-                "proportions for the baseline scenario"
-            )
+            raise AssertionError("""
+                Schema does not include general primary vaccine efficacy
+                proportions for the baseline scenario
+            """)
         else:
             baseFull = [
                 idGet("primaryBaseEfficacy", 0, 0.5, f"-{i}")
@@ -3205,10 +3349,10 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             baseBoostWaned = baseBoostEfficacy.WanedEfficacy
             updateParamFromSchema("boosterWanedEfficacy", baseBoostWaned, scenarioID)
         elif useBoosters and scenarioID == 0:
-            raise AssertionError(
-                "Schema does not include general booster vaccine efficacy "
-                "proportions for the baseline scenario"
-            )
+            raise AssertionError("""
+                Schema does not include general booster vaccine efficacy
+                proportions for the baseline scenario
+            """)
         else:
             baseBoostFull = idGet("boosterBaseEfficacy", 0, 0.9)
             baseBoostWaned = idGet("boosterWanedEfficacy", 0, 0.6)
@@ -3276,16 +3420,16 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
     # TODO: Make sure unset values are not used
     schemaParameters = schema.Scenario_Parameter
     if schemaParameters is not None:
-        firstDoseRate = schemaParameters.vaccination_first_dose_rate
-        doseCount = schemaParameters.vaccine_doses
-        if doseCount is not None or firstDoseRate is not None:
-            limitedDoses = bool(
-                doseCount is not None
-                and doseCount
-                < communityPopulation[session.get("community", "newcastle")]
-            )
-            updateParamFromSchema("limitDosesToggle", limitedDoses, scenarioID)
-            if limitedDoses:
+        # TODO: Add other vaccine stuff if it's made configurable on the dashboard
+
+        # Dose Rate
+        if liveDistribution:
+            firstDoseRate = schemaParameters.vaccination_first_dose_rate
+            doseCount = schemaParameters.vaccine_doses
+            if doseCount is not None:
+                updateParamFromSchema(
+                    "limitDosesToggle", doseCount != 99999999, scenarioID
+                )
                 updateParamFromSchema("initialDoseReserve", doseCount, scenarioID)
-        if firstDoseRate is not None:
-            updateParamFromSchema("firstDoseRate", firstDoseRate, scenarioID)
+            if firstDoseRate is not None:
+                updateParamFromSchema("firstDoseRate", firstDoseRate, scenarioID)

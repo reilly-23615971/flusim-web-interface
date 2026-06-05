@@ -501,12 +501,10 @@ def deleteFormRow(deletedRowIndex, rowCounter, inputPrefixes, minRows=0):
     # we\'re modifying the values ')
     # Make sure there's at least 1 row remaining
     if numberOfRows <= minRows:
-        raise ValueError(
-            (
-                "Tried to delete a row from a form that "
-                "already has the minimum number of rows."
-            )
-        )
+        raise ValueError("""
+            Tried to delete a row from a form that already has the minimum
+            number of rows.
+        """)
 
     # Shift any rows below the deleted one up
     for row in range(deletedRowIndex, numberOfRows - 1):

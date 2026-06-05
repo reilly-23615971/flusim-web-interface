@@ -124,23 +124,16 @@ def formatEpidemic(
             isinstance(name, str) for name in scenarioNames
         ):
             raise ValueError(
-                (
-                    "scenarioNames should be a list of "
-                    f"strings; was {type(scenarioNames)}."
-                )
+                f"scenarioNames should be a list of strings; was {type(scenarioNames)}."
             )
         if not scenarioNames:
             raise ValueError("scenarioNames should not be empty.")
         if outcomeName not in tableOutcomes:
-            raise ValueError(
-                (
-                    'outcome should be either "Symptomatic Infections", '
-                    "Diagnosed Cases",
-                    "Hospitalisations",
-                    "ICU Visits",
-                    "" f'"GP Visits", or "Deaths"; was "{outcomeName}".',
-                )
-            )
+            raise ValueError(f"""
+                outcome should be either "Symptomatic Infections", "Diagnosed
+                Cases", "Hospitalisations", "ICU Visits", "GP Visits", or "Deaths";
+                was "{outcomeName}".
+            """)
     except Exception as e:
         functionLog.error(
             (
@@ -224,13 +217,11 @@ def plotEpidemic(
         if not isinstance(data, pd.DataFrame):
             raise ValueError(f"data should be a DataFrame, was {type(data)}")
         if outcomeName not in tableOutcomes:
-            raise ValueError(
-                (
-                    'outcome should be either "Symptomatic Infections", '
-                    '"Diagnosed Cases", "Hospitalisations", "ICU Visits", '
-                    f'"GP Visits", or "Deaths"; was "{outcomeName}".'
-                )
-            )
+            raise ValueError(f"""
+                outcome should be either "Symptomatic Infections", "Diagnosed
+                Cases", "Hospitalisations", "ICU Visits", "GP Visits", or "Deaths";
+                was "{outcomeName}".
+            """)
     except Exception as e:
         functionLog.error(
             (
@@ -344,10 +335,7 @@ def formatAsir(rawCSV: bytes, scenarioNames: list[str]) -> pd.DataFrame:
             isinstance(name, str) for name in scenarioNames
         ):
             raise ValueError(
-                (
-                    "scenarioNames should be a list of "
-                    f"strings; was {type(scenarioNames)}."
-                )
+                f"scenarioNames should be a list of strings; was {type(scenarioNames)}."
             )
     except Exception as e:
         functionLog.error(
@@ -553,10 +541,7 @@ def generateAsir(
             isinstance(name, str) for name in scenarioNames
         ):
             raise ValueError(
-                (
-                    "scenarioNames should be a list of "
-                    f"strings; was {type(scenarioNames)}."
-                )
+                f"scenarioNames should be a list of strings; was {type(scenarioNames)}."
             )
         if not columns:
             raise ValueError("columns should not be empty.")

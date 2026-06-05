@@ -108,6 +108,14 @@ distancing compliance is set to 0 but age-specific distancing likelihoods are
 positive.
         """,
     )
+    live_vaccine_distribution: Optional[bool] = Field(
+        title="Live Vaccine Distribution",
+        default=False,
+        description="""
+Toggles whether vaccination should only occur before the experiment begins
+or should occur throughout the experiment.
+        """,
+    )
     scaling_population: Optional[int] = Field(
         title="Scaling Population",
         gt=0,
@@ -125,12 +133,6 @@ this value and the size of the simulated population.
 Toggles whether more complex parameters should be displayed on the dashboard.
         """,
     )
-
-    def __bool__(self):
-        """
-        False only if all attributes are None; used for finding empty param sets
-        """
-        return any(x is not None for x in self.__dict__.values())
 
 
 # Set of scenario parameters set collectively for all age groups
@@ -168,12 +170,6 @@ The probability of complying with social distancing procedures for all age group
         default=None,
         description="The probability of dying from the infection for all age groups.",
     )
-
-    def __bool__(self):
-        """
-        False only if all attributes are None; used for finding empty param sets
-        """
-        return any(x is not None for x in self.__dict__.values())
 
     class Config:
         validate_assignment = True
@@ -1265,12 +1261,6 @@ The probability that an individual who is over 80 years old will die as a
 result of the pathogen.
         """,
     )
-
-    def __bool__(self):
-        """
-        False only if all attributes are None; used for finding empty param sets
-        """
-        return any(x is not None for x in self.__dict__.values())
 
     class Config:
         validate_assignment = True

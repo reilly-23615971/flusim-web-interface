@@ -2075,8 +2075,8 @@ def diseaseSaveSchema(
         schemaUpdate(schema, "Scenario_Parameter", scenarioParams)
 
         # Dashboard Parameters
-        dashboardParams = dashboardParameters()
         if includeDashboard:
+            dashboardParams = dashboardParameters()
             dashboardParams.prob_gp = round(idGet("gpRatio", id, 17.0) / 100, 6)
             dashboardParams.prob_icu = round(
                 hospitalRate * idGet("icuRatio", id, 20.0) / 100, 10
@@ -2168,10 +2168,10 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
         if "prob_hospitalisation" in paramDict or icuRate is not None:
             hospitalRate = paramDict.get("prob_hospitalisation")
             if None in {hospitalRate, icuRate} and scenarioID == 0:
-                raise AssertionError(
-                    "Hospitalisation and ICU rate parameters were only partially "
-                    "defined for the baseline scenario"
-                )
+                raise AssertionError("""
+                    Hospitalisation and ICU rate parameters were only partially
+                    defined for the baseline scenario
+                """)
 
             # Use baseline values to plug None gaps
             baseHospitalRate = idGet("hospitalRatio", 0, 320.0)
@@ -2217,10 +2217,10 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             wanedEfficacy = schemaParameters.infection_waned_protection
             waningRate = schemaParameters.infection_waning_rate_per_cycle
             if None in {wanedEfficacy, waningRate} and scenarioID == 0:
-                raise AssertionError(
-                    "Waning efficacy parameters were only partially "
-                    "defined for the baseline scenario"
-                )
+                raise AssertionError("""
+                    Waning efficacy parameters were only partially
+                    defined for the baseline scenario
+                """)
 
             # Use baseline values to plug None gaps
             baseWanedEfficacy = idGet("naturalWanedEfficacy", 0, 0.5)
@@ -2251,10 +2251,10 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             seedStart = schemaParameters.seeding_start_cycle
             seedLength = schemaParameters.seeding_duration
             if None in {seedStart, seedLength} and scenarioID == 0:
-                raise AssertionError(
-                    "Infection seeding period parameters were only partially "
-                    "defined for the baseline scenario"
-                )
+                raise AssertionError("""
+                    Infection seeding period parameters were only partially
+                    defined for the baseline scenario
+                """)
 
             # Use baseline values to plug None gaps
             basePeriodStart, basePeriodEnd = idGet("seedPeriod", 0, (1, 30))
@@ -2292,10 +2292,10 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                 }
                 and scenarioID == 0
             ):
-                raise AssertionError(
-                    "Infection life cycle parameters were only partially "
-                    "defined for the baseline scenario"
-                )
+                raise AssertionError("""
+                    Infection life cycle parameters were only partially 
+                    defined for the baseline scenario
+                """)
 
             # Use baseline values to plug None gaps
             baseLatency = idGet("latencyPeriod", 0, 0.5)

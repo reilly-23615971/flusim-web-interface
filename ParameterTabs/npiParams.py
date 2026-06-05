@@ -1718,10 +1718,10 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
             if npiDelay is not None or npiDuration is not None:
                 # Ensure baseline has all values
                 if None in {npiDelay, npiDuration} and scenarioID == 0:
-                    raise AssertionError(
-                        f"{npi} activation period parameters were only partially "
-                        "defined for the baseline scenario"
-                    )
+                    raise AssertionError(f"""
+                        {npi} activation period parameters were only partially
+                        defined for the baseline scenario
+                    """)
                 # Use baseline values to plug None gaps
                 basePeriodStart, basePeriodEnd = idGet(f"{prefix}Period", 0, (1, 60))
                 if npiDelay is None:
