@@ -98,6 +98,16 @@ The probability of an infected individual visiting a general practitioner
 regarding symptoms of the pathogen.
         """,
     )
+    enable_social_distancing: Optional[bool] = Field(
+        title="Enable Social Distancing",
+        default=False,
+        description="""
+Toggles whether social distancing should be enabled or disabled on the
+dashboard. Required to distinguish between situations where global social
+distancing compliance is set to 0 but age-specific distancing likelihoods are
+positive.
+        """,
+    )
     scaling_population: Optional[int] = Field(
         title="Scaling Population",
         gt=0,
@@ -145,6 +155,7 @@ value; the higher this is, the more likely it is that uninfected individuals
 will catch the pathogen from others.
         """,
     )
+    # TODO: This may not actually be a probability
     social_distance: Optional[Probability] = Field(
         title="Social Distancing Compliance",
         default=None,
@@ -1616,6 +1627,8 @@ receives, and how often they are administered.
         """
         Function to ensure that age fields where `None` is meaningful are never omitted
         """
+        if value is None:
+            return None
         return [item.model_dump(exclude_none=False) for item in value]
 
     @field_validator(
@@ -1832,6 +1845,30 @@ the simulations, after the middle joint.
         else:
             return value
 
+    @field_validator("simulations", mode="after")
+    @classmethod
+    def noDuplicateNames(cls, value: list[simulation]) -> list[simulation]:
+        """
+        Validation function to detect duplicate simulation names within the same set.
+
+        Raises:
+            AssertionError: If there are duplicate simulation names.
+        """
+        try:
+            simulationNames = [sim.name for sim in value]
+            if [
+                name for name in set(simulationNames) if simulationNames.count(name) > 1
+            ]:
+                raise AssertionError("""
+The Flusim configuration file defined multiple simulations with the same name.
+For the sake of clarity, ensure each simulation object has a unique name within
+a given simulation set.
+                """)
+            return value
+        except AssertionError as e:
+            validationLog.error(f"[simulationSet] Encountered {type(e).__name__}: {e}")
+            raise e
+
 
 # Model for the full configuration JSON file
 class modelGuideFile(BaseModel):
@@ -1940,6 +1977,8 @@ community in `community_used`.
         Function that ensures the baseline scenario's parameters are all
         included in JSON serialisations.
         """
+        if value is None:
+            return None
         # TODO: Test scenario params (besides start day of week) to see which are
         # totally unused and which can be added to the dashboard
         # also vaccination_trigger and friends,
@@ -1984,4 +2023,6 @@ community in `community_used`.
         """
         Function that ensures non-baseline parameters can default to baseline values.
         """
+        if value is None:
+            return None
         return [item.model_dump(exclude_unset=True) for item in value]
