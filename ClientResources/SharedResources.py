@@ -170,6 +170,7 @@ npiCamel = ("schoolClosure", "withdrawalIncrease", "reducedGroup", "bcc")
 
 # Tuple holding the possible trigger conditions for NPIs
 triggerConditions = {
+    "None": "none",
     "Always": "timed",
     "Timed": "timed",
     "Community Case Rate": "community_rate",

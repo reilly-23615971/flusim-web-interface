@@ -4,15 +4,22 @@
 
 # Imports
 import logging
+from typing import Optional
 
 import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import paramError, trigCast
+from ClientResources.InterfaceFunctions import (
+    paramError,
+    schemaRemoveBaseline,
+    schemaUpdate,
+    trigCast,
+)
 from ClientResources.ModelSchema import (
     Parameters,
     ageScenarioParameters,
+    dashboardParameters,
     scenarioParameters,
 )
 from ClientResources.ParameterFunctions import (
@@ -77,7 +84,7 @@ def buildNPITab(id: int, advanced: bool = False):
     # Use function to recalculate remaining group parameters
     getRemainingGroups(ageGroupSets, ageCategories.keys())"""
     simLength = session.get("cycleCount", 360)
-    triggerNames = list(triggerConditions.keys())
+    triggerNames = list(triggerConditions.keys())[1:]
 
     # Tab Content
     st.header("Non-Pharmaceutical Intervention Parameters")
@@ -183,6 +190,7 @@ with social distancing interventions in the simulation.
                 """,
             )
             # Age-specific social distancing compliance (if advanced params enabled)
+            # TODO: Check sim for social distance nuance
             if advanced:
                 st.markdown(
                     "### Age-Specific Social Distancing Compliance",
@@ -1378,7 +1386,13 @@ Total") or in each individual school (for
                     )
 
 
-def npiSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
+def npiSaveSchema(
+    schema: Parameters,
+    id: int = 0,
+    advanced: bool = False,
+    baseline: Optional[Parameters] = None,
+    includeDashboard: bool = False,
+):
     """
     Function to populate the Pydantic model schema with NPI parameters
     using scenario differentiation.
@@ -1394,41 +1408,43 @@ def npiSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
 
         advanced (bool): Set to `True` to show more complex parameters like
             NPI trigger thresholds.
+
+        baseline (Parameters, optional): A Pydantic model representing the parameters
+            set for the baseline scenario. When `id` is not 0, this will be used
+            to omit parameters that are already set in the baseline from the final
+            scenario.
+
+        includeDashboard (bool): Set to `True` to include the dashboard-exclusive
+            social distancing toggle parameter.
     """
-
-    # TODO: Make code clearer (split up advanced section if needed)
-
-    # Load reused parameters immediately to save time
-    socialDistanceToggle = idGet("socialDistancingToggle", id, False)
-    socialCompliance = idGet("socialDistancingCompliance", id, 0.9)
     try:
         # Validate parameters
         if not isinstance(schema, Parameters):
             raise ValueError("schema should be a Parameters object")
 
         # Initialising Scenario Parameters
-        scenarioParams = (
-            schema.Scenario_Parameter
-            if schema.Scenario_Parameter
-            else scenarioParameters()
-        )
+        scenarioParams = scenarioParameters()
 
-        # Advanced parameter differences
+        # Social Distancing
+        # TODO: Pandemic alert might be necessary for SD to have an effect
+        # Also, Adult might be the only age group to care about SD
+        # due to the KLUDGE SD code being commented out
+        # TODO: Test in simulation and remove if necessary
+        socialDistanceToggle = idGet("socialDistancingToggle", id, False)
+        socialCompliance = idGet("socialDistancingCompliance", id, 0.9)
+
+        dashboardParams = dashboardParameters()
+        if includeDashboard:
+            dashboardParams.enable_social_distancing = socialDistanceToggle
+            if id > 0 and baseline is not None:
+                schemaRemoveBaseline(dashboardParams, baseline.Dashboard_Parameter)
+            schemaUpdate(schema, "Dashboard_Parameter", dashboardParams)
+        if socialDistanceToggle:
+            scenarioParams.social_distance_compliance = socialCompliance
         if advanced:
-            # Social Distancing
-            # TODO: Pandemic alert might be necessary for SD to have an effect
-            # Also, Adult might be the only age group to care about SD
-            # due to the KLUDGE SD code being commented out
-            # TODO: Test in simulation and remove if necessary
+            ageScenarioParams = ageScenarioParameters()
             if socialDistanceToggle:
-                ageScenarioParams = (
-                    schema.Scenario_ParameterWithAgePrefix
-                    if schema.Scenario_ParameterWithAgePrefix
-                    else ageScenarioParameters()
-                )
                 ageScenarioParams.social_distance = socialCompliance
-                schema.Scenario_ParameterWithAgePrefix = ageScenarioParams
-
                 distanceAgeForm = idGet(
                     "distanceAgeForm",
                     id,
@@ -1454,8 +1470,16 @@ def npiSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                         ]}_social_distance",
                         idGet("socialCompliance", id, socialCompliance, f"-{i}"),
                     )"""
+            else:
+                ageScenarioParams.social_distance = 0.0
+            # Save age-specific parameters
+            if id > 0 and baseline is not None:
+                schemaRemoveBaseline(
+                    ageScenarioParams, baseline.Scenario_ParameterWithAgePrefix
+                )
+            schemaUpdate(schema, "Scenario_ParameterWithAgePrefix", ageScenarioParams)
 
-            # Triggers
+            # Miscellaneous advanced trigger parameters
             scenarioParams.class_dismissal = idGet("classDismissal", id, False)
             scenarioParams.case_trigger_threshold = idGet(
                 "caseTotalThreshold", id, 1000
@@ -1488,6 +1512,8 @@ def npiSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                 scenarioParams.school_closure_duration = (
                     schoolPeriod[1] - schoolPeriod[0] + 1
                 ) * 2
+        else:
+            scenarioParams.school_closure_trigger = trigCast("None")
         # Withdrawal Increase
         if idGet("withdrawalIncreaseToggle", id, False):
             scenarioParams.increased_withdrawal = idGet(
@@ -1514,6 +1540,8 @@ def npiSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                 scenarioParams.withdrawal_increase_duration = (
                     withdrawalPeriod[1] - withdrawalPeriod[0] + 1
                 ) * 2
+        else:
+            scenarioParams.withdrawal_increase_trigger = trigCast("None")
         # Reduced Group Size
         if idGet("reducedGroupToggle", id, False):
             scenarioParams.reduced_workgroup_size = idGet("reducedGroupSize", id, 5)
@@ -1533,6 +1561,8 @@ def npiSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                 scenarioParams.reduced_workgroup_duration = (
                     reducedGroupPeriod[1] - reducedGroupPeriod[0] + 1
                 ) * 2
+        else:
+            scenarioParams.reduced_workgroup_trigger = trigCast("None")
         # BCC Reduction
         if idGet("bccToggle", id, False):
             scenarioParams.bcc_reduction = idGet("bccReducedRate", id, 0.2) / idGet(
@@ -1550,13 +1580,18 @@ def npiSaveSchema(schema: Parameters, id: int = 0, advanced: bool = False):
                 scenarioParams.bcc_reduction_duration = (
                     bccPeriod[1] - bccPeriod[0] + 1
                 ) * 2
+        else:
+            scenarioParams.bcc_reduction_trigger = trigCast("None")
         # Other NPIs
-        if socialDistanceToggle:
-            scenarioParams.social_distance_compliance = socialCompliance
         scenarioParams.diagnosed_case_isolation = idGet("caseIsolation", id, False)
 
-        # Save the updated parameters
-        schema.Scenario_Parameter = scenarioParams
+        # Save the updated parameters, removing redundant baseline values
+        distanceTableParams = {f"{age}_social_distance" for age in ageTimeDict}
+        if id > 0 and baseline is not None:
+            schemaRemoveBaseline(
+                scenarioParams, baseline.Scenario_Parameter, ignore=distanceTableParams
+            )
+        schemaUpdate(schema, "Scenario_Parameter", scenarioParams)
     except (ValueError, ValidationError) as e:
         npiLog.error(
             (
@@ -1584,31 +1619,26 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
     # Load sim length early
     simLength = session.get("cycleCount", 360)
 
-    # Keep track of whether any toggle-controlled parameters have shown up
-    useSocialDistancing = False
-    useNPIs = {
-        "schoolClosure": False,
-        "withdrawalIncrease": False,
-        "reducedGroup": False,
-        "bcc": False,
-    }
+    # Dashboard Parameters
+    schemaDash = schema.Dashboard_Parameter
+    if schemaDash is not None and schemaDash.enable_social_distancing is not None:
+        updateParamFromSchema(
+            "socialDistancingToggle",
+            schemaDash.enable_social_distancing,
+            scenarioID,
+        )
 
     # Global Age Parameters
     schemaAge = schema.Scenario_ParameterWithAgePrefix
-    if schemaAge is not None:
-        # TODO: Is 0.0 global SD with nonzero age SD a feasible simulation?
-        # Consider adding another dummy parameter to modelSchema
-        # if you need a better way to check if SD is disabled
-        # (pandemic alert could be one method of doing so)
-        compliance = schemaAge.social_distance
-        if compliance is not None and compliance > 0.0:
-            useSocialDistancing = True
-        updateParamFromSchema("socialDistancingCompliance", compliance, scenarioID)
+    if schemaAge is not None and schemaAge.social_distance is not None:
+        updateParamFromSchema(
+            "socialDistancingCompliance", schemaAge.social_distance, scenarioID
+        )
 
     # General Scenario Parameters
     schemaParameters = schema.Scenario_Parameter
     if schemaParameters is not None:
-        paramDict = {p: v for p, v in vars(schemaParameters).items() if v is not None}
+        paramDict = schemaParameters.model_dump(exclude_unset=True, exclude_none=True)
         paramConvert = {
             "class_dismissal": "classDismissal",
             "case_trigger_threshold": "caseTotalThreshold",
@@ -1623,15 +1653,25 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
         }
         simpleParams = {p: key for p, key in paramConvert.items() if p in paramDict}
         for parameter, key in simpleParams.items():
-            if parameter in paramDict:
-                updateParamFromSchema(key, paramDict[parameter], scenarioID)
+            updateParamFromSchema(key, paramDict[parameter], scenarioID)
 
         # BCC Reduction
-        updateParamFromSchema(
-            "bccReducedRate",
-            paramDict.get("bcc_reduction", 0.05) * idGet("bccRate", scenarioID, 4.0),
-            scenarioID,
-        )
+        if "bcc_reduction" in paramDict:
+            updateParamFromSchema(
+                "bccReducedRate",
+                paramDict["bcc_reduction"] * idGet("bccRate", scenarioID, 4.0),
+                scenarioID,
+            )
+        elif scenarioID != 0:
+            scenarioBCCRate = idGet("bccRate", scenarioID, 4.0)
+            baselineBCCRate = idGet("bccRate", 0, 4.0)
+            if scenarioBCCRate != baselineBCCRate:
+                bccRatio = idGet("bccReducedRate", 0, 0.05) / baselineBCCRate
+                updateParamFromSchema(
+                    "bccReducedRate",
+                    round(scenarioBCCRate * bccRatio, 8),
+                    scenarioID,
+                )
 
         # NPI periods
         npiPrefixes = {
@@ -1648,22 +1688,40 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
             "per_school_cases": "Cases per School",
         }
         for npi, prefix in npiPrefixes.items():
-            # Relaxation always matches start on dashboard, so don't look for it
-            startTrigger = paramDict.get(f"{npi}_trigger", "none")
-            npiDelay = paramDict.get(f"{npi}_delay", 0)
-            npiDuration = paramDict.get(f"{npi}_duration", 0)
-            if startTrigger != "none":
-                useNPIs[prefix] = True
+            npiDelay = paramDict.get(f"{npi}_delay")
+            npiDuration = paramDict.get(f"{npi}_duration")
 
-                # Triggers
-                if npiDelay == 0 and npiDuration > simLength * 2:
+            # Triggers
+            # Relaxation always matches start on dashboard, so don't look for it
+            startTrigger = paramDict.get(f"{npi}_trigger")
+            if startTrigger is not None:
+                updateParamFromSchema(
+                    f"{prefix}Toggle", startTrigger != "none", scenarioID
+                )
+                if startTrigger == "timed" and npiDelay == 0 and npiDuration == 99999:
                     updateParamFromSchema(f"{prefix}Trigger", "Always", scenarioID)
                 elif startTrigger != "none":
                     updateParamFromSchema(
                         f"{prefix}Trigger", triggerDict[startTrigger], scenarioID
                     )
+            # Disambiguate between Timed and Always via baseline trigger
+            elif scenarioID != 0:
+                baselineTrigger = idGet(f"{prefix}Trigger", 0, None)
+                if baselineTrigger == "Timed" and npiDuration == 99999:
+                    updateParamFromSchema(f"{prefix}Trigger", "Always", scenarioID)
+                elif baselineTrigger == "Always" and (
+                    npiDelay not in {None, 0} or npiDuration not in {None, 99999}
+                ):
+                    updateParamFromSchema(f"{prefix}Trigger", "Timed", scenarioID)
 
-                # Periods
+            # Periods
+            if npiDelay is not None or npiDuration is not None:
+                # Ensure baseline has all values
+                if None in {npiDelay, npiDuration} and scenarioID == 0:
+                    raise AssertionError(
+                        f"{npi} activation period parameters were only partially "
+                        "defined for the baseline scenario"
+                    )
                 # Use baseline values to plug None gaps
                 basePeriodStart, basePeriodEnd = idGet(f"{prefix}Period", 0, (1, 60))
                 if npiDelay is None:
@@ -1678,11 +1736,6 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
                     f"{prefix}Period", (npiPeriodStart, npiPeriodEnd), scenarioID
                 )
 
-        # Social distancing toggle
-        useSocialDistancing = useSocialDistancing or bool(
-            paramDict.get("social_distance_compliance", 0.0) > 0.0
-        )
-
         # Social Distancing Table
         distanceParams = {
             p.removesuffix("_social_distance"): v
@@ -1690,7 +1743,6 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
             if p.endswith("_social_distance")
         }
         if distanceParams:
-            useSocialDistancing = True
             distanceTable = pd.DataFrame(
                 columns=("Age Group", "Social Distancing Compliance")
             )
@@ -1711,10 +1763,3 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
                     },
                 ),
             )
-
-        # Final Toggles
-        # TODO: Ensure that toggles being disabled is distinguishable from
-        # parameters being unchanged from baselines
-        updateParamFromSchema("socialDistancingToggle", useSocialDistancing, scenarioID)
-        for prefix, value in useNPIs.items():
-            updateParamFromSchema(f"{prefix}Toggle", value, scenarioID)

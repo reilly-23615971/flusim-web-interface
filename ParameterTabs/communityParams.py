@@ -460,8 +460,10 @@ def communityLoadSchema(schema: Parameters, scenarioID: int = 0):
     # Only include non-None params that fit this tab
     validParams = {
         p: v
-        for p, v in vars(schemaParameters).items()
-        if v is not None and p in paramConvert.keys()
+        for p, v in schemaParameters.model_dump(
+            exclude_unset=True, exclude_none=True
+        ).items()
+        if p in paramConvert.keys()
     }
     for parameter, value in validParams.items():
         key, formatFunc = paramConvert[parameter]

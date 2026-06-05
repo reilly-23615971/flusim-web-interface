@@ -2140,7 +2140,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
     schemaParameters = schema.Scenario_Parameter
     if schemaParameters is not None:
         simLength = session.get("cycleCount", 360)
-        paramDict = {p: v for p, v in vars(schemaParameters).items() if v is not None}
+        paramDict = schemaParameters.model_dump(exclude_unset=True, exclude_none=True)
 
         # Use dictionary to convert schema parameters into dashboard values
         paramConvert = {
@@ -2164,8 +2164,9 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             updateParamFromSchema(key, formatFunc(paramDict[parameter]), scenarioID)
 
         # Hospitalisation and ICU ratio
+        # TODO: If ICU is changed to a multiplier these can be migrated to paramConvert
         if "prob_hospitalisation" in paramDict or icuRate is not None:
-            hospitalRate = paramDict["prob_hospitalisation"]
+            hospitalRate = paramDict.get("prob_hospitalisation")
             if None in {hospitalRate, icuRate} and scenarioID == 0:
                 raise AssertionError(
                     "Hospitalisation and ICU rate parameters were only partially "
@@ -2190,23 +2191,18 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                 scenarioID,
             )
 
-        # Advanced parameter differences
+        # Simple asymptomatic probability
         if "prob_asymptomatic" in paramDict:
             updateParamFromSchema(
                 "asymptomaticBoth", schemaParameters.prob_asymptomatic, scenarioID
             )
-        """if (
-            paramDict.get("infection_waning_cycle_delay", 99999)
-            < simLength
-        ):
-            updateParamFromSchema("naturalWaningToggle", True, scenarioID)"""
 
         # Natural immunity waning
         if "infection_waning_cycle_delay" in paramDict:
             useWaning = paramDict["infection_waning_cycle_delay"] != 99999
+            updateParamFromSchema("naturalWaningToggle", useWaning, scenarioID)
         else:
             useWaning = idGet("naturalWaningToggle", 0, False)
-        updateParamFromSchema("naturalWaningToggle", useWaning, scenarioID)
 
         # Period definitions
         # TODO: Handle baseline validation errors better

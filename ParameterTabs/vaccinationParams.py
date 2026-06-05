@@ -3273,6 +3273,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
         )
 
     # General Scenario Parameters
+    # TODO: Make sure unset values are not used
     schemaParameters = schema.Scenario_Parameter
     if schemaParameters is not None:
         firstDoseRate = schemaParameters.vaccination_first_dose_rate

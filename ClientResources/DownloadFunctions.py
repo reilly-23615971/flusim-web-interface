@@ -199,14 +199,17 @@ def createConfig(scenarioCount: int, includeDashboard: bool = False) -> modelGui
     # Populate parameters with session_state values
     # TODO: Make sure scenario parameters don't include baseline defaults
     # (particularly with variable-length forms)
+    # TODO: Add setting that forces tables to have baseline duplicates removed
+    # (for sending to the server, not for downloading)
     useVaccines = False
     useAdvanced = session.get("showAdvanced", False)
+
     for id, scenario in enumerate(scenarioParams):
         baseline = scenarioParams[0] if id != 0 else None
         diseaseSaveSchema(scenario, id, useAdvanced, baseline, includeDashboard)
         communitySaveSchema(scenario, id, useAdvanced, baseline)
         useVaccines = vaccineSaveSchema(scenario, id, useAdvanced) or useVaccines
-        npiSaveSchema(scenario, id, useAdvanced)
+        npiSaveSchema(scenario, id, useAdvanced, baseline, includeDashboard)
         if useAdvanced:
             dynamicSaveSchema(scenario, id)
 
@@ -467,7 +470,7 @@ def createTemplate(
     communitySaveSchema(template, scenarioID, useAdvanced, baseline)
     if includeInterventions:
         vaccineSaveSchema(template, scenarioID, useAdvanced)
-        npiSaveSchema(template, scenarioID, useAdvanced)
+        npiSaveSchema(template, scenarioID, useAdvanced, baseline, includeDashboard)
     if useAdvanced:
         dynamicSaveSchema(template, scenarioID)
     return template

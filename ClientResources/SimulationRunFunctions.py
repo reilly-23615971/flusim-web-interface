@@ -270,9 +270,7 @@ already busy with a different task.
             else:
                 parameterJSON = createConfig(
                     scenarioCount, includeDashboard=False
-                ).model_dump_json(
-                    indent=4, exclude_unset=True  # , exclude_defaults = True
-                )
+                ).model_dump_json(indent=4, exclude_unset=True)
                 if saveJSON:
                     with open("./savedJSON.json", "w") as file:
                         file.write(parameterJSON)

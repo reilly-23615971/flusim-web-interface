@@ -465,13 +465,13 @@ def schemaUpdate(schema: Any, paramGroup: str, newParams: Any):
 
         newParams: The object containing the new parameter values.
     """
-    if newParams:
+    newParamsDict = newParams.model_dump(exclude_unset=True)
+    if newParamsDict:
         if getattr(schema, paramGroup, None) is None:
             setattr(schema, paramGroup, newParams)
         else:
-            getattr(schema, paramGroup).__dict__.update(
-                newParams.model_dump(exclude_unset=True)
-            )
+            newSchema = getattr(schema, paramGroup).model_copy(update=newParamsDict)
+            setattr(schema, paramGroup, newSchema)
 
 
 def schemaRemoveBaseline(
