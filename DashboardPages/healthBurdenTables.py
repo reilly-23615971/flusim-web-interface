@@ -122,7 +122,7 @@ def generateTable():
                 ]
                 if useAdvanced
                 else [
-                    [1 - idGet("asymptomaticBoth", scenarioID, 0.35)] * 2
+                    [1 - idGet("asymptomaticAdult", scenarioID, 0.35)] * 2
                     for scenarioID in range(4)
                 ]
             ),

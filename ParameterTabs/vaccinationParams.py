@@ -884,6 +884,7 @@ pathogen all at once.
                 # primAgeInitials = {}
 
                 # Modifiable-length field for each primary dose
+                # TODO: Consider tabs over containers
                 st.markdown(f"""
                     ### Individual Dose Efficacies
 
@@ -2018,6 +2019,7 @@ healthy when exposed to the pathogen.
                 '''
 
     # Booster Parameters (if advanced parameters are enabled)
+    # TODO: This is a wall of sliders; see if layout can be broken up somehow
     if advanced:
         with st.expander(
             "Booster Vaccines", key=f"boosterContainer{id}", on_change="rerun"

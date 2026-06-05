@@ -46,33 +46,6 @@ diseaseLog = logging.getLogger(__name__)
 session = st.session_state
 
 
-def asymptomaticSave(
-    key: str,
-    scenarioID: int,
-    direction: Literal["simpleToAdvanced", "advancedToSimple"],
-):
-    """
-    Wrapper for `saveKey` that keeps asymptomatic probabilities synced.
-
-    Parameters:
-        key (str): The string used to identify the widget.
-
-        scenarioID (int): The integer representing the scenario the widget
-            is part of.
-
-        direction (str): Either "simpleToAdvanced" or "advancedToSimple", used to
-            determine which parameters to propagate values to.
-    """
-    saveKey(key, scenarioID)
-    match direction:
-        case "simpleToAdvanced":
-            simpleProb = idGet(key, scenarioID, 0.35)
-            session[f"asymptomaticChild{scenarioID}"] = simpleProb
-            session[f"asymptomaticAdult{scenarioID}"] = simpleProb
-        case "advancedToSimple":
-            session[f"asymptomaticBoth{scenarioID}"] = idGet(key, scenarioID, 0.35)
-
-
 @st.fragment
 def buildDiseaseTab(id: int, advanced: bool = False):
     """
@@ -855,8 +828,8 @@ pathogen despite being infectious).
                     max_value=1.0,
                     value=0.35,
                     format="percent",
-                    on_change=asymptomaticSave,
-                    args=["asymptomaticAdult", id, "advancedToSimple"],
+                    on_change=saveKey,
+                    args=["asymptomaticAdult", id],
                     key=f"_asymptomaticAdult{id}",
                     help="""
 The probability that an infected adult (over 24 years old) in the
@@ -865,16 +838,16 @@ pathogen despite being infectious).
                     """,
                 )
             else:
-                loadKey("asymptomaticBoth", id, 0.35)
+                loadKey("asymptomaticAdult", id, 0.35)
                 st.slider(
                     "Probability of Asymptomatic Case",
                     min_value=0.0,
                     max_value=1.0,
                     value=0.35,
                     format="percent",
-                    on_change=asymptomaticSave,
-                    args=["asymptomaticBoth", id, "simpleToAdvanced"],
-                    key=f"_asymptomaticBoth{id}",
+                    on_change=saveKey,
+                    args=["asymptomaticAdult", id],
+                    key=f"_asymptomaticAdult{id}",
                     help="""
 The probability that an infected individual in the simulation will be
 asymptomatic (i.e. they never show any symptoms of the pathogen despite
@@ -1979,7 +1952,7 @@ def diseaseSaveSchema(
                 if age and roundedMort != globalDeathRate:
                     setattr(scenarioParams, f"{age}_mort", roundedMort)
         else:
-            probAsymptomatic = idGet("asymptomaticBoth", id, 0.35)
+            probAsymptomatic = idGet("asymptomaticAdult", id, 0.35)
             scenarioParams.prob_asymptomatic_young = probAsymptomatic
             scenarioParams.prob_asymptomatic = probAsymptomatic
 
@@ -2189,12 +2162,6 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                 "icuRatio",
                 round(icuRate * 100 / hospitalRate, 6) if hospitalRate > 0.0 else 0.0,
                 scenarioID,
-            )
-
-        # Simple asymptomatic probability
-        if "prob_asymptomatic" in paramDict:
-            updateParamFromSchema(
-                "asymptomaticBoth", schemaParameters.prob_asymptomatic, scenarioID
             )
 
         # Natural immunity waning
