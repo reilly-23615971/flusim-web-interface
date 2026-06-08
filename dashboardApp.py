@@ -110,6 +110,11 @@ scenarioParameters = st.Page(
     title="Scenario Parameters",
     icon=":material/variable_add:",
 )
+r0Calculation = st.Page(
+    "DashboardPages/r0Configuration.py",
+    title="$R_0$ Configuration",
+    icon=":material/partner_exchange:",
+)
 runSimulation = st.Page(
     "DashboardPages/runSimulations.py",
     title="Run Simulations",
@@ -133,7 +138,7 @@ pages = {
         baselineParameters,
         scenarioParameters,
     ],
-    "Conducting Experiments": [runSimulation],
+    "Conducting Experiments": [r0Calculation, runSimulation],
     "Results Visualisation": [infectionGraphs, healthTables],
 }
 

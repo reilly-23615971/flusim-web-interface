@@ -2137,7 +2137,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             "prob_diagnosis": ("caseRatio", lambda x: round(x * 100, 6)),
             "infection_waning_cycle_delay": (
                 "naturalImmunityDuration",
-                lambda x: x // 60,
+                lambda x: x // 60 if x != 99999 else None,
             ),
         }
         simpleParams = {p: v for p, v in paramConvert.items() if p in paramDict}
