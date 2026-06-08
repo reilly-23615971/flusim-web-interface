@@ -553,8 +553,16 @@ async def runModelStatus(session: ClientSession, simulationID: str, parameterJSO
                             functionLog.error(f"""
 [runModelStatus] Server encountered an error while running the simulation {simulationID}
                             """)
-                            raise Exception("""
+                            raise RuntimeError("""
 An error occurred while attempting to run the simulation.
+                            """)
+                        case "shutdown":
+                            statusQueue.append("Server shut down before experiment could finish")
+                            functionLog.error(f"""
+[runModelStatus] Server shut down while running the simulation {simulationID}
+                            """)
+                            raise PythonFinalizationError("""
+The simulation server shut down while attempting to run the simulation.
                             """)
                         case _:
                             progress, status = progressDict[simStatus]
@@ -759,6 +767,13 @@ The simulation server did not return any readable files. Ensure your
 parameters do not result in a simulation where nobody is infected and try again.
             """
             errorIcon = "unknown_document"
+        case PythonFinalizationError():
+            errorShort = "Server shut down while running simulation"
+            errorBody = """
+The simulation server shut down while the simulation experiment was
+running. Please try again later once the simulation server is restarted.
+            """
+            errorIcon = "power_off"
         case _:
             errorShort = "Error occurred when running simulation"
             errorBody = """
