@@ -78,6 +78,7 @@ except ImportError:
     importlib.reload(importlib.import_module("streamlit_notify"))
     import streamlit_notify as stn  # type: ignore
 
+from ClientResources.DownloadFunctions import createTemplate
 from ClientResources.SharedResources import serverUrl
 
 
@@ -86,13 +87,12 @@ def testCalc():
     Barebones test for R0 calculation.
     """
     # Load debug parameters from file
-    with open("ClientResources/defaultParams.guide.json", "r") as f:
-        defaultParams = modelGuideFile.model_validate_json(f.read())
+    defaultParams = createTemplate(0, includeInterventions=False, includeDashboard=False)
 
     # Save current parameter values that'll be used for
     # visualisation when the user has potentially changed them
     calibrationParams = communityOverride(
-        name="newcastle", parameters=defaultParams.shared_overrides.parameters  # type: ignore
+        name="newcastle", parameters=defaultParams
     )
     schema = calibrationParams.model_dump_json(indent=4, exclude_unset=True)
 
