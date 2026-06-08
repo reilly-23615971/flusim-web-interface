@@ -530,7 +530,7 @@ async def runModelStatus(session: ClientSession, simulationID: str, parameterJSO
                 "Extracting age-based infections...",
             ),
         }
-    async with session.ws_connect(f"/runModel/status/{simulationID}") as ws:
+    async with session.ws_connect(f"/status/{simulationID}") as ws:
         async for msg in ws:
             match msg.type:
                 case WSMsgType.TEXT:
@@ -646,7 +646,7 @@ async def runModelCancel(simulationID: str):
     # Send DELETE request to server with parameters
     functionLog.info(f"[runModelCancel] Cancelling sim {simulationID}...")
     async with ClientSession(base_url=serverUrl) as session:
-        async with session.delete(f"runModel/cancel/{simulationID}"):
+        async with session.delete(f"cancel/{simulationID}"):
             functionLog.info(
                 f"[runModelCancel] Sim {simulationID} successfully cancelled."
             )
