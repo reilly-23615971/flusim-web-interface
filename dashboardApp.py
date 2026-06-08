@@ -111,8 +111,8 @@ scenarioParameters = st.Page(
     icon=":material/variable_add:",
 )
 r0Calculation = st.Page(
-    "DashboardPages/r0Configuration.py",
-    title="$R_0$ Configuration",
+    "DashboardPages/r0Calibration.py",
+    title="$R_0$ Calibration",
     icon=":material/partner_exchange:",
 )
 runSimulation = st.Page(
