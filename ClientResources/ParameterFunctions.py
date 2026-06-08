@@ -4,10 +4,21 @@
 
 # Imports
 import logging
+import time
 from typing import Any, Callable, Literal, Optional
 
 import pandas as pd
 import streamlit as st
+
+# Reload streamlit_notify if it fails the first time
+try:
+    import streamlit_notify as stn
+except ImportError:
+    import importlib
+
+    time.sleep(0.01)
+    importlib.reload(importlib.import_module("streamlit_notify"))
+    import streamlit_notify as stn  # type: ignore
 
 # Logging
 paramFunctionLog = logging.getLogger(__name__)
@@ -19,7 +30,7 @@ session = st.session_state
 # Widget Functions
 def containerSave(
     key: str,
-    scenarioID: int | Literal[""] = "",
+    scenarioID: int = -1,
     containers: set[str] = set(),
     specialContainers: dict[str, str] = {},
 ):
@@ -30,9 +41,9 @@ def containerSave(
     Parameters:
         key (str): The string used to identify the widget.
 
-        scenarioID (int or ""): The integer representing the scenario the widget
-            is part of. Defaults to `""`, allowing for parameters that are not
-            associated with scenarios to be saved.
+        scenarioID (int): The integer representing the scenario the widget
+            is part of. If this is negative, no ID will be added, allowing for
+            parameters that are not associated with scenarios to be saved.
 
         containers (set of str): String used to identify each container to open.
 
@@ -42,19 +53,21 @@ def containerSave(
             for these will replace them with the value of `scenarioID` or the
             value of the widget that is being saved, respectively.
     """
+
+    displayID = scenarioID if scenarioID >= 0 else ""
     saveKey(key, scenarioID)
     for container in containers:
         session[container] = session.get(container)
     for container, value in specialContainers.items():
         session[container] = value.format(
-            id=scenarioID, value=session.get(f"{key}{scenarioID}")
+            id=displayID, value=session.get(f"{key}{displayID}")
         )
 
 
 def saveKey(
     key: str,
-    scenarioID: int | Literal[""] = "",
-    extra: Optional[str] = "",
+    scenarioID: int = -1,
+    extra: Optional[str] = None,
     notScenario=False,
     dataframe=False,
 ):
@@ -64,9 +77,9 @@ def saveKey(
     Parameters:
         key (str): The string used to identify the widget.
 
-        scenarioID (int or ""): The integer representing the scenario the widget
-            is part of. Defaults to `""`, allowing for parameters that are not
-            associated with scenarios to be saved.
+        scenarioID (int): The integer representing the scenario the widget
+            is part of. If this is negative, no ID will be added, allowing for
+            parameters that are not associated with scenarios to be saved.
 
         extra (str, optional): An additional part of the key used to distinguish
             variable-length forms.
@@ -81,9 +94,9 @@ def saveKey(
     # (e.g. by having None/NA cells with the placeholder "Same as baseline")
 
     # Prevent invalid calls after deleting scenarios
-    if not isinstance(scenarioID, str) and scenarioID > session["scenarioCount"]:
+    if scenarioID > session["scenarioCount"]:
         return
-    keyString = f"{key}{scenarioID}{extra}" if extra else f"{key}{scenarioID}"
+    keyString = f"{key}{scenarioID if scenarioID >= 0 else ""}{extra if extra else ""}"
     if dataframe:
         # Load both data and changes
         currentData = session[keyString].copy()
@@ -108,8 +121,8 @@ def saveKey(
     else:
         session[keyString] = session.get(f"_{keyString}")
 
-    # Add to scenario param lists if it's a scenario param (ID != 0 or "")
-    if not notScenario and scenarioID:
+    # Add to scenario param lists if it's a scenario param (ID > 0)
+    if not notScenario and scenarioID > 0:
         if extra:
             session["scenarioSetParamsExtra"][scenarioID].add((key, extra))
         else:
@@ -118,9 +131,9 @@ def saveKey(
 
 def loadKey(
     key: str,
-    scenarioID: int | Literal[""] = "",
+    scenarioID: int = -1,
     default=None,
-    extra: Optional[str] = "",
+    extra: Optional[str] = None,
     noZeroDefault=False,
     dataframe=False,
 ):
@@ -130,9 +143,9 @@ def loadKey(
     Parameters:
         key (str): The string used to identify the widget.
 
-        scenarioID (int or ""): The integer representing the scenario the
-            widget is part of. Defaults to `""`, allowing for parameters that
-            are not associated with scenarios to be saved.
+        scenarioID (int): The integer representing the scenario the widget
+            is part of. If this is negative, no ID will be added, allowing for
+            parameters that are not associated with scenarios to be saved.
 
         default: The value to use if the widget is not present.
 
@@ -145,9 +158,10 @@ def loadKey(
         dataframe (bool): Set to `True` for dataframe widgets that load
             their data differently.
     """
-    keyString = f"{key}{scenarioID}{extra}"
+
+    keyString = f"{key}{scenarioID if scenarioID >= 0 else ""}{extra if extra else ""}"
     hiddenPrefix = "_" if not dataframe else ""
-    if noZeroDefault or isinstance(scenarioID, str):
+    if noZeroDefault or scenarioID < 0:
         session[f"{hiddenPrefix}{keyString}"] = session.get(f"{keyString}", default)
     else:
         session[f"{hiddenPrefix}{keyString}"] = (
@@ -156,7 +170,7 @@ def loadKey(
             else idGet(key, scenarioID, default, extra)
         )
     # Ensure dataframes are properly cleaned up even if never edited
-    if dataframe and scenarioID:
+    if dataframe and scenarioID > 0:
         if extra:
             session["scenarioSetParamsExtra"][scenarioID].add((key, extra))
         else:
@@ -166,43 +180,56 @@ def loadKey(
 # List of parameters that will be affected by changing cycleCount
 # TODO: Add additional parameters or devise a way to automate their addition
 timeParamList = [
-    "seedPeriod",
-    "schoolClosurePeriod",
-    "withdrawalIncreasePeriod",
-    "reducedGroupPeriod",
-    "bccPeriod",
+    ("seedPeriod", "Infection Seeding Time Period"),
+    ("schoolClosurePeriod", "School Closure Time Period"),
+    ("withdrawalIncreasePeriod", "Withdrawal Increase Time Period"),
+    ("reducedGroupPeriod", "Reduced Group Size Time Period"),
+    ("bccPeriod", "BCC Reduction Time Period"),
 ]
 
 # List of parameters that modify dynamic parameter forms when changed
 dynamicParamList = {
-    "seedPeriod": "seedTimeForm",
-    "schoolClosurePeriod": "closeTimeForm",
-    "bccPeriod": "bccTimeForm",
+    "seedPeriod": ("seedTimeForm", "Infection Seeding Rate"),
+    "schoolClosurePeriod": ("closeTimeForm", "School Closure Compliance"),
+    "bccPeriod": ("bccTimeForm", "Reduced Background Contact Count"),
 }
 
 
-# TODO: Notify users if parameters are changed when cycle count is adjusted
 def timeScaleChange():
     """
     Function to update the ranges of time-based parameters.
     """
     saveKey("cycleCount")
     newLength = session["cycleCount"]
+    changedList = []
     for id in range(session["scenarioCount"] + 1):
-        for key in timeParamList:
+        for key, name in timeParamList:
             fullKey = f"{key}{id}"
-            if session.get(fullKey, None):
+            oldValue = session.get(fullKey, None)
+            if oldValue is not None:
+                if oldValue[1] > newLength:
+                    changedList.append(name)
                 session[fullKey] = (
-                    min(session[fullKey][0], newLength),
-                    min(session[fullKey][1], newLength),
+                    min(oldValue[0], newLength),
+                    min(oldValue[1], newLength),
                 )
-    for param, form in dynamicParamList.items():
-        dynamicScaleChange(param, form, 0, noSave=True)
+    for param, (form, name) in dynamicParamList.items():
+        dynamicScaleChange(param, form, name, 0, noSave=True)
+    if changedList:
+        # TODO: Note which scenario these were present in
+        stn.toast(
+            f"""
+These parameters were above the new simulation length,
+so they have been reduced:\n""" + "\n".join(f"- {name}" for name in changedList),
+            icon=":material/timer_arrow_down:",
+            duration="infinite",
+        )
 
 
 def dynamicScaleChange(
     key: str,
     formKey: str,
+    paramName: str,
     scenarioID: int,
     condition: Optional[Callable[[], bool]] = None,
     noSave=False,
@@ -217,6 +244,9 @@ def dynamicScaleChange(
         formKey (str): The identifier used to distinguish the form
             whose ranges must be updated.
 
+        paramName (str): The name of the parameter, to display in messages
+            indicating that something has changed.
+
         scenarioID (int): The integer representing the scenario the widget
             is part of.
 
@@ -227,30 +257,50 @@ def dynamicScaleChange(
         noSave (bool): Set to `True` if running this function from a different
             page where saving the widget value would instead set it to `None`.
     """
+
     if not noSave:
         saveKey(key, scenarioID)
     if condition is None or condition():
+        hasChanged = False
         newMin, newMax = idGet(key, scenarioID, (1, 720))
         if scenarioID == 0:
             # Check all scenarios if the baseline was modified
             for id in range(session["scenarioCount"] + 1):
                 fullKey = f"{formKey}{id}"
                 scenarioMin, scenarioMax = idGet(key, id, (newMin, newMax))
-                if session.get(fullKey, None) is not None:
-                    form = session[fullKey]
-                    form["Day to Update Parameter"] = form[
-                        "Day to Update Parameter"
-                    ].clip(lower=scenarioMin, upper=scenarioMax)
+                form = session.get(fullKey, None)
+                if form is not None and not form.empty:
+                    newDays = form["Day to Update Parameter"].clip(
+                        lower=scenarioMin, upper=scenarioMax
+                    )
+                    if not newDays.equals(form["Day to Update Parameter"]):
+                        hasChanged = True
+                    form["Day to Update Parameter"] = newDays
                     session[fullKey] = form
         else:
             # Only update the relevant scenario
             fullKey = f"{formKey}{scenarioID}"
             form = session.get(fullKey, None)
             if form is not None and not form.empty:
-                form["Day to Update Parameter"] = form["Day to Update Parameter"].clip(
+                newDays = form["Day to Update Parameter"].clip(
                     lower=newMin, upper=newMax
                 )
+                if not newDays.equals(form["Day to Update Parameter"]):
+                    hasChanged = True
+                form["Day to Update Parameter"] = newDays
                 session[fullKey] = form
+
+        # Notify any changes
+        if hasChanged:
+            stn.toast(
+                f"""
+Some of the dynamic update points for {paramName} were outside
+of the new period where {paramName.rsplit(' ', 1)[0]} is active.
+They have been adjusted to fit the new period.
+            """,
+                icon=":material/timer_arrow_down:",
+                duration="infinite",
+            )
 
 
 def idGet(key: str, scenarioID: int, defaultValue, extra: Optional[str] = None):
@@ -353,7 +403,7 @@ def updateTableFromSchema(
 ):
     """
     Function to update tables in the dashboard using one constructed from a
-    schema, accounting for the default table style and baseline inheritance.
+    schema, accounting for the default table style.
 
     Parameters:
         key (str): The string used to identify the table.
@@ -368,11 +418,8 @@ def updateTableFromSchema(
         extra (str, optional): An additional part of the key used to distinguish
             variable-length forms.
     """
-    scenarioDefault = (
-        defaultTable if scenarioID == 0 else idGet(key, 0, defaultTable, extra)
-    )
     session[f"{key}{scenarioID}{extra if extra else ""}"] = (
-        scenarioDefault if newTable.empty else newTable.reset_index(drop=True)
+        defaultTable if newTable.empty else newTable.reset_index(drop=True)
     )
     # Add to scenario parameters for ease of deletion
     if scenarioID:
@@ -454,12 +501,10 @@ def deleteFormRow(deletedRowIndex, rowCounter, inputPrefixes, minRows=0):
     # we\'re modifying the values ')
     # Make sure there's at least 1 row remaining
     if numberOfRows <= minRows:
-        raise ValueError(
-            (
-                "Tried to delete a row from a form that "
-                "already has the minimum number of rows."
-            )
-        )
+        raise ValueError("""
+            Tried to delete a row from a form that already has the minimum
+            number of rows.
+        """)
 
     # Shift any rows below the deleted one up
     for row in range(deletedRowIndex, numberOfRows - 1):

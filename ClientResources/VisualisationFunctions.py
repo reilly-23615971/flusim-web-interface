@@ -1,6 +1,6 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
-# Functions used by tables and graphs
+# Functions used to generate and format tables and graphs
 
 # Imports
 import logging
@@ -16,12 +16,13 @@ import pandas as pd
 import streamlit as st
 from streamlit.elements.lib.column_types import ColumnConfig
 
+from ClientResources.InterfaceFunctions import ageRangeCombiner
 from ClientResources.SharedResources import (  # outcomeAdjectives,
     AnalysisFile,
-    ageRangeCombiner,
     ageWithTime,
-    brightCodes,
     communityAgePops,
+    mutedCodes,
+    roundResults,
     tableOutcomes,
 )
 
@@ -52,7 +53,7 @@ vaccineDescriptions = {
 ageWithTotal = ["Total"] + ageWithTime
 
 
-def formatData(data: bytes, settings: AnalysisFile) -> tuple[pd.DataFrame, str]:
+def formatData(data: bytes, settings: AnalysisFile) -> pd.DataFrame:
     """
     Wrapper function to perform the correct formatting process on CSV data.
 
@@ -63,25 +64,17 @@ def formatData(data: bytes, settings: AnalysisFile) -> tuple[pd.DataFrame, str]:
 
     Returns:
         DataFrame: The formatted data.
-
-        str: A string identifying what sort of data was formatted.
     """
-    # TODO: Axe typeTag since updateData can access the data forms directly
     if settings.tool == "epidemic":
-        typeTag = "Cumulative" if settings.useCumulative else "Daily"
-        return (
-            formatEpidemic(
-                data,
-                settings.names,
-                settings.outcome,
-                settings.useCumulative,
-                settings.splitByAge,
-            ),
-            f"Epidemic{typeTag}",
+        return formatEpidemic(
+            data,
+            settings.names,
+            settings.outcome,
+            settings.useCumulative,
+            settings.splitByAge,
         )
     elif settings.tool == "asir":
-        typeTag = "Vaccinated" if settings.vaccinatedOnly else "Full"
-        return formatAsir(data, settings.names), f"Asir{typeTag}"
+        return formatAsir(data, settings.names)
     else:
         raise ValueError(
             "Analysis tool was unrecognised; should be 'epidemic' or 'asir'"
@@ -131,23 +124,16 @@ def formatEpidemic(
             isinstance(name, str) for name in scenarioNames
         ):
             raise ValueError(
-                (
-                    "scenarioNames should be a list of "
-                    f"strings; was {type(scenarioNames)}."
-                )
+                f"scenarioNames should be a list of strings; was {type(scenarioNames)}."
             )
         if not scenarioNames:
             raise ValueError("scenarioNames should not be empty.")
         if outcomeName not in tableOutcomes:
-            raise ValueError(
-                (
-                    'outcome should be either "Symptomatic Infections", '
-                    "Diagnosed Cases",
-                    "Hospitalisations",
-                    "ICU Visits",
-                    "" f'"GP Visits", or "Deaths"; was "{outcomeName}".',
-                )
-            )
+            raise ValueError(f"""
+                outcome should be either "Symptomatic Infections", "Diagnosed
+                Cases", "Hospitalisations", "ICU Visits", "GP Visits", or "Deaths";
+                was "{outcomeName}".
+            """)
     except Exception as e:
         functionLog.error(
             (
@@ -167,25 +153,37 @@ def formatEpidemic(
             BytesIO(rawCSV),
             header=0,
             names=["Days Since First Infection"] + scenarioNames,
+            dtype=defaultdict(lambda: np.float64, {0: int}),  # type: ignore
         )
+
+        # Fill null values
         if cumulative:
-            framedData = framedData.ffill().round()
+            framedData = framedData.ffill()
         else:
-            framedData = framedData.fillna(0.0).round()
+            framedData = framedData.fillna(0.0)
 
         # Reshape data for better Altair usage
         valueLabel = f"Total {outcome}" if cumulative else f"{outcome} per Day"
-
-        return framedData.melt(
+        meltedData = framedData.melt(
             "Days Since First Infection", var_name="Scenario", value_name=valueLabel
         )
+
+        # Scale the data
+        scalingFactor = session.SimParams.get("Scaling Factor", 1.0)
+        meltedData[valueLabel] = meltedData[valueLabel] * scalingFactor
+
+        # Round results if necessary
+        if roundResults:
+            return meltedData.round()
+        else:
+            return meltedData
 
 
 def plotEpidemic(
     data: pd.DataFrame,
+    includedScenarios: list[str],
     outcomeName: str = "Symptomatic Infections",
     cumulative=False,
-    includedScenarios: list[str] | Literal["all"] = "all",
 ) -> alt.LayerChart:
     """
     Function to create an Altair line graph of time-series data obtained
@@ -202,10 +200,8 @@ def plotEpidemic(
         cumulative (bool): Set to `True` when the DataFrame contains
             cumulative data instead of individual data.
 
-        includedScenarios ('all' or list of str): A list of strings containing
-            the names of scenarios that will be included in the table. Can
-            also be the string `all` to indicate that all scenarios should
-            be included.
+        includedScenarios (list of str): A list of strings containing
+            the names of scenarios that will be included in the table.
 
     Returns:
         finalPlot (LayerChart): An Altair plot layering a line graph of the infection
@@ -221,13 +217,11 @@ def plotEpidemic(
         if not isinstance(data, pd.DataFrame):
             raise ValueError(f"data should be a DataFrame, was {type(data)}")
         if outcomeName not in tableOutcomes:
-            raise ValueError(
-                (
-                    'outcome should be either "Symptomatic Infections", '
-                    '"Diagnosed Cases", "Hospitalisations", "ICU Visits", '
-                    f'"GP Visits", or "Deaths"; was "{outcomeName}".'
-                )
-            )
+            raise ValueError(f"""
+                outcome should be either "Symptomatic Infections", "Diagnosed
+                Cases", "Hospitalisations", "ICU Visits", "GP Visits", or "Deaths";
+                was "{outcomeName}".
+            """)
     except Exception as e:
         functionLog.error(
             (
@@ -237,6 +231,7 @@ def plotEpidemic(
         )
         raise e
     outcome = "Infections"  # TODO: placeholder until other burdens can be graphed
+
     # Define reusable chart components
     plotTitle = (
         f"Cumulative Median {outcome} Over Time"
@@ -251,17 +246,20 @@ def plotEpidemic(
     legendPicker = alt.selection_point(fields=[colourLabel[:-2]], bind="legend")
     tooltipCondition = alt.when(tooltipPicker)
     scenarioNames = data["Scenario"].unique()
+    orderedScenarios, includedColours = zip(
+        *[
+            (name, mutedCodes[index])
+            for index, name in enumerate(scenarioNames)
+            if name in includedScenarios
+        ]
+    )
 
     # Remove any scenarios/age groups not specified in the data
-    # TODO: Affect the legend as well, preferably without affecting the colours
-    if includedScenarios != "all":
-        newData = data[data["Scenario"].isin(includedScenarios)]
-    else:
-        newData = data
+    filteredData = data[data["Scenario"].isin(includedScenarios)]
 
     # Plot the line graph itself
     epidemicPlot = (
-        alt.Chart(newData, title=plotTitle)
+        alt.Chart(filteredData, title=plotTitle)
         .mark_line(interpolate="natural")
         .encode(
             x=alt.X(xLabel).scale(
@@ -270,7 +268,7 @@ def plotEpidemic(
             ),
             y=yLabel,
             color=alt.Color(colourLabel).scale(
-                domain=list(scenarioNames), range=brightCodes[: len(scenarioNames)]
+                domain=orderedScenarios, range=includedColours
             ),
             opacity=(
                 alt.when(legendPicker).then(alt.value(1)).otherwise(alt.value(0.2))
@@ -284,20 +282,26 @@ def plotEpidemic(
         opacity=tooltipCondition.then(alt.value(1)).otherwise(alt.value(0))
     )
 
+    # Internally use indices for tooltips to avoid . or [] causing issues
+    tooltipData = filteredData.copy()
+    tooltipData["Scenario"] = tooltipData["Scenario"].map(includedScenarios.index)
+
     # Plot vertical lines to display tooltips with data from all scenarios
     epidemicRule = (
-        alt.Chart(newData)
-        .transform_pivot(colourLabel[:-2], value=yLabel[:-2], groupby=[xLabel[:-2]])
-        .mark_rule(color="gray")
+        alt.Chart(tooltipData)
+        .transform_pivot("Scenario", value=yLabel[:-2], groupby=[xLabel[:-2]])
+        .mark_rule(color="grey")
         .encode(
             x=xLabel,
             opacity=(tooltipCondition.then(alt.value(0.3)).otherwise(alt.value(0))),
             tooltip=[xLabel]
             + [
                 alt.Tooltip(
-                    scenario, type="quantitative", title=f"{scenario} {outcome}"
+                    str(index),
+                    type="quantitative",
+                    title=f"{scenario} {outcome}",
                 )
-                for scenario in newData["Scenario"].unique()
+                for index, scenario in enumerate(includedScenarios)
             ],
         )
         .add_params(tooltipPicker)
@@ -331,10 +335,7 @@ def formatAsir(rawCSV: bytes, scenarioNames: list[str]) -> pd.DataFrame:
             isinstance(name, str) for name in scenarioNames
         ):
             raise ValueError(
-                (
-                    "scenarioNames should be a list of "
-                    f"strings; was {type(scenarioNames)}."
-                )
+                f"scenarioNames should be a list of strings; was {type(scenarioNames)}."
             )
     except Exception as e:
         functionLog.error(
@@ -355,8 +356,11 @@ def formatAsir(rawCSV: bytes, scenarioNames: list[str]) -> pd.DataFrame:
     )
     framedData.columns = pd.Index(ageWithTotal)
 
-    # Scale the data by symptomatic likelihood
-    asymptomaticChild, asymptomaticAdult = zip(*session.DataAsymptomatic)
+    # Scale the data by population and symptomatic likelihood
+    simParams = session.SimParams
+    populationScale = simParams["Scaling Factor"]
+    framedData.iloc[:, 0:] *= populationScale
+    asymptomaticChild, asymptomaticAdult = zip(*simParams["Asymptomatic Rates"])
     framedData.loc[:, ageWithTime[:6]] = framedData.loc[:, ageWithTime[:6]].mul(
         asymptomaticChild, axis=0
     )
@@ -395,6 +399,9 @@ def scaleAsirColumn(
             health burdens, and the baseline data scaled based on the required
             health burdens.
     """
+    # TODO: see if making rates parameters is more efficient
+    healthRates = session.SimParams["Health Outcome Rates"]
+    mortDict = session.SimParams["Age-Separated Health Outcome Rates"]
     match outcome:
         case "Symptomatic Infections":
             # No scaling necessary
@@ -402,27 +409,28 @@ def scaleAsirColumn(
             scaledBaseline = baselineData.copy()
         case "Deaths":
             # TODO: Update for any other outcomes that become age-specific
-            deathRates = pd.DataFrame(session.DataMortalityRates).T.stack()
+            deathRates = pd.DataFrame(mortDict).T.stack()
             dataIndexValues = pd.MultiIndex.from_frame(data[["Scenario", "Age Group"]])
             scaledColumn = data["Base Values"] * pd.Series(
                 dataIndexValues.map(deathRates), index=data.index  # type: ignore
-            ).fillna(data["Scenario"].map(session["DataHealthOutcomeRates"]["Deaths"]))
+            ).fillna(data["Scenario"].map(healthRates["Deaths"]))
 
-            baselineDeath = session.DataMortalityRates[baselineScenario]
+            baselineDeath = mortDict[baselineScenario]
             scaledBaseline = baselineData * (
                 data["Age Group"]
                 .map(baselineDeath)
-                .fillna(session["DataHealthOutcomeRates"]["Deaths"][baselineScenario])
+                .fillna(healthRates["Deaths"][baselineScenario])
             )
 
         case _:
             scaledColumn = data["Base Values"] * data["Scenario"].map(
-                session["DataHealthOutcomeRates"][outcome]
+                healthRates[outcome]
             )
-            scaledBaseline = baselineData * (
-                session["DataHealthOutcomeRates"][outcome][baselineScenario]
-            )
-    return scaledColumn.round(), scaledBaseline.round()
+            scaledBaseline = baselineData * healthRates[outcome][baselineScenario]
+    if roundResults:
+        return scaledColumn.round(), scaledBaseline.round()
+    else:
+        return scaledColumn, scaledBaseline
 
 
 def recalculateTotals(
@@ -523,11 +531,9 @@ def generateAsir(
         ValueError: If `scenarioNames` is not a list of strings or columns
             are not formatted correctly.
     """
-    # TODO: More options
     # TODO: Improve efficiency (don't calculate age rows if ageSeparation isn't By Row)
 
     # Validate parameters
-    # TODO: Update to account for expanded parameters
     try:
         if not scenarioNames:
             raise ValueError("scenarioNames should not be empty.")
@@ -535,10 +541,7 @@ def generateAsir(
             isinstance(name, str) for name in scenarioNames
         ):
             raise ValueError(
-                (
-                    "scenarioNames should be a list of "
-                    f"strings; was {type(scenarioNames)}."
-                )
+                f"scenarioNames should be a list of strings; was {type(scenarioNames)}."
             )
         if not columns:
             raise ValueError("columns should not be empty.")
@@ -569,7 +572,7 @@ def generateAsir(
 
     # Useful constants
     fullData = baseData.copy()
-    agePops = communityAgePops[session.DataCommunity]
+    agePops = communityAgePops[session.SimParams["Community"]]
     scenarioCount = len(scenarioNames)
     ageIndices = {
         age: range(index * scenarioCount, (index * scenarioCount) + scenarioCount)
@@ -602,24 +605,8 @@ def generateAsir(
     # Generate config data for Streamlit display
     percentCols, differenceCols = set(), set()
     columnConfig = {}
-    # TODO: Reintegrate descriptions if desired (and possible for non-index)
-    columnConfig["Scenario Name"] = st.column_config.TextColumn(
-        pinned=True,
-        #         help="""
-        # The scenario that each row's data originates from. 'Baseline'
-        # refers to the scenario using the base parameters at the
-        # Baseline Parameters page, while additional scenarios use the
-        # names given to them at the Scenario Parameters page.
-        #     """,
-    )
-    columnConfig["Age Group"] = st.column_config.TextColumn(
-        pinned=True,
-        #         help="""
-        # The age range of the individuals that each row's data is derived from.
-        # 'Total' includes the entire population of the simulation, at all ages;
-        # other age groups list the age range they cover as part of their name.
-        #     """,
-    )
+    columnConfig["Scenario Name"] = st.column_config.TextColumn(pinned=True)
+    columnConfig["Age Group"] = st.column_config.TextColumn(pinned=True)
 
     # Prepare burden-scaled columns beforehand for efficiency
     requiredOutcomes = {outcome for outcome, _, _, _, _ in columns}
@@ -678,36 +665,21 @@ def generateAsir(
 
         # Apply proportion/difference modifications
         # TODO: Either fix or disable just proportion
-        # TODO: See if there's a better way to handle the 2 booleans
         if proportion and not baselineDifference:
             # Get required total population
+            scalingFactor = session.SimParams.get("Scaling Factor", 1.0)
             if ageSeparation == "By Column":
-                populationColumn: int | pd.Series = sum(
+                populationColumn: int | pd.Series = scalingFactor * sum(
                     agePops[age] for age in ageGroups
                 )
             else:
-                populationColumn = fullData["Age Group"].map(agePops)
+                populationColumn = fullData["Age Group"].map(agePops) * scalingFactor
             currentColumn /= populationColumn
             columnName += " (%)"
-            '''columnConfig[columnName] = st.column_config.Column(
-                help=f"""
-The proportion of the total {vaccineDescriptions[vaccineStatus]}population
-(within a given scenario{' and age group' if includedAges else ''})
-that was {outcomeDescriptions[outcome]}, as a percentage.
-            """
-            )'''
             percentCols.add(columnName)
         elif not proportion and baselineDifference:
             currentColumn = currentColumn - columnBaselines
             columnName += " (Difference from Baseline)"
-            '''columnConfig[columnName] = st.column_config.Column(
-                help=f"""
-The difference between the number of {vaccineDescriptions[vaccineStatus]}people
-who were {outcomeDescriptions[outcome]} within a given scenario and the number
-of {vaccineDescriptions[vaccineStatus]}people who were {outcomeDescriptions[outcome]}
-within the baseline scenario{' (within a given age group)' if includedAges else ''}.
-            """
-            )'''
             differenceCols.add(columnName)
         elif proportion and baselineDifference:
             currentColumn = currentColumn - columnBaselines
@@ -716,25 +688,8 @@ within the baseline scenario{' (within a given age group)' if includedAges else 
                 columnBaselines != 0, other=np.nan
             )
             columnName += " (% Difference from Baseline)"
-            '''columnConfig[columnName] = st.column_config.Column(
-                help=f"""
-The difference between the number of {vaccineDescriptions[vaccineStatus]}people
-who were {outcomeDescriptions[outcome]} within a given scenario and the number
-of {vaccineDescriptions[vaccineStatus]}people who were {outcomeDescriptions[outcome]}
-within the baseline scenario{' (within a given age group)' if includedAges else ''},
-as a percentage.
-            """
-            )'''
             percentCols.add(columnName)
             differenceCols.add(columnName)
-        '''else:
-            columnConfig[columnName] = st.column_config.Column(
-                help=f"""
-The number of {vaccineDescriptions[vaccineStatus]}people (within a given
-scenario{' and age group' if includedAges else ''}) who were
-{outcomeDescriptions[outcome]}.
-            """
-            )'''
 
         # Formally create the column
         fullData[columnName] = currentColumn

@@ -23,37 +23,35 @@ session = st.session_state
 # Function to generate graph
 def generateGraph():
     """
-    Function to generate an infection-over-time graph with simulation data.
+    Function to generate an infection curve with simulation data.
 
     Raises:
         FileNotFoundError: If there is no data to generate a graph with.
     """
     # Throw error if no data is present
     if not usePresetData and not (session.get("modelDataEpidemicDaily") is not None):
-        raise FileNotFoundError(
-            (
-                "No simulation epidemic data was available to plot; please "
-                "run a simulation before attempting to generate a table."
-            )
-        )
+        raise FileNotFoundError("""
+            No simulation epidemic data was available to plot; please run a
+            simulation before attempting to generate a table.
+        """)
 
-    scenarioNames = session.get(
-        "DataScenarioNames",
-        ["Baseline", "School Closure", "Case Isolation", "Community Contact Reduction"],
-    )
-    scenariosUsed = session.get("chartScenariosToUse", "all")
     chartType = session.get("chartType", "Cumulative")
-    graphLog.info(
-        f"""
-        [generateGraph] Formatting epidemic data using the scenarios
-        {scenariosUsed} and the data type {chartType}
-    """
-    )
 
     # Debug code for loading data in testing
     if usePresetData:
         # Set default session_state params
-        session.DataCommunity = "newcastle"
+        scenarioNames = [
+            "Baseline",
+            "School Closure",
+            "Case Isolation",
+            "Community Contact Reduction",
+        ]
+        simParams = {
+            "Community": "newcastle",
+            "Scenario Names": scenarioNames,
+            "Scaling Factor": session.get("scalingPopulation", 272407) / 272407,
+        }
+        session.SimParams = simParams
         # Load test data from file
         presetFilename = (
             "./TestData/epidemicMedianCumulative.csv"
@@ -62,17 +60,25 @@ def generateGraph():
         )
         with open(presetFilename, "rb") as csv:
             epidemicData = formatEpidemic(
-                csv.read(), scenarioNames, cumulative=chartType == "Cumulative"
+                csv.read(),
+                scenarioNames,
+                cumulative=chartType == "Cumulative",
             )
     # Load data from session_state
     else:
+        scenarioNames = session.SimParams["Scenario Names"]
         dataVarName = "Cumulative" if chartType == "Cumulative" else "Daily"
         epidemicData = session.get(f"modelDataEpidemic{dataVarName}")
 
+    scenariosUsed = session.get("chartScenariosToUse", scenarioNames)
+    graphLog.info(f"""
+        [generateGraph] Formatting epidemic data using the scenarios
+        {scenariosUsed} and the data type {chartType}
+    """)
     chartData = plotEpidemic(
         epidemicData,  # type: ignore
-        cumulative=chartType == "Cumulative",
         includedScenarios=scenariosUsed,
+        cumulative=chartType == "Cumulative",
     )
 
     # Save the generated graph
@@ -80,14 +86,12 @@ def generateGraph():
     session.ChartGenerated = True
 
 
-st.title("Infection Over Time Graphs")
+st.title("Infection Curves")
 
-st.markdown(
-    """
+st.markdown("""
     Here you can generate line graphs plotting infection rates over
     time for different scenarios in the most recently run simulation.
-"""
-)
+""")
 
 # Check if there is data to tabulate
 chartErrorContainer = st.container()
@@ -119,24 +123,22 @@ if currentDataExists and session.simulationInProgress:
 
 graphSettings = st.expander("Graph Settings")
 with graphSettings:
-    st.markdown(
-        """
-        Use these parameters to configure how the line graph will be generated.
+    st.markdown("""
+        Use these parameters to configure how the infection curves will be generated.
         Hover your mouse over the :material/help: help icon next to a
         setting's input field to show an explanation of what that setting
         does. Hover your mouse over any buttons to show an explanation of
         what that button does.
-    """
-    )
+    """)
 
-    loadKey("chartType", "", "Cumulative", noZeroDefault=True)
+    loadKey("chartType", default="Cumulative")
     chartType = st.selectbox(
         "Chart Type",
         ["Cumulative", "Daily Rate"],
         index=0,
         key="_chartType",
         on_change=saveKey,
-        args=("chartType", ""),
+        args=["chartType"],
         kwargs={"notScenario": True},
         placeholder="Please select a data format",
         help="""
@@ -152,19 +154,25 @@ that occur in each day of the simulation.
     )
 
     # Scenario selection
-    scenarioNames = session.get(
-        "DataScenarioNames",
-        ["Baseline", "School Closure", "Case Isolation", "Community Contact Reduction"],
+    simParams = session.get("SimParams", {})
+    scenarioNames = simParams.get(
+        "Scenario Names",
+        [
+            "Baseline",
+            "School Closure",
+            "Case Isolation",
+            "Community Contact Reduction",
+        ],
     )
     if currentDataExists or usePresetData:
-        loadKey("chartScenariosToUse", "", scenarioNames, noZeroDefault=True)
+        loadKey("chartScenariosToUse", default=scenarioNames)
         scenariosToUse: Optional[list[str]] = st.multiselect(
             "Scenarios to Include in Graph",
             scenarioNames,
             default=scenarioNames,
             key="_chartScenariosToUse",
             on_change=saveKey,
-            args=["chartScenariosToUse", ""],  # type: ignore
+            args=["chartScenariosToUse"],  # type: ignore
             placeholder="Please select at least 1 scenario",
             kwargs={"notScenario": True},
             help="""
@@ -200,7 +208,7 @@ as its own line, showing the infections over time for that scenario.
 
 # Button to generate the graph
 st.button(
-    label="Create Graph",
+    label="Create Infection Curves",
     icon=":material/chart_data:",
     key="generateGraph",
     type="primary",
@@ -222,7 +230,7 @@ No simulations have completed yet, so there is no data to plot.
 # Display the graph itself
 chartData = session.get("InfectionChartData")
 if chartData is not None:
-    st.header("Infection Data Line Graph")
+    st.header("Flusim Infection Curves")
     st.altair_chart(chartData)
 
     @st.fragment()
@@ -290,8 +298,7 @@ graph.
     infectionDataDownload()
 
     st.subheader("Using the Graph")
-    st.markdown(
-        """
+    st.markdown("""
         - Hover your mouse over a point on the graph to display a
         tooltip, which lists the infection values for each scenario on
         the corresponding day.
@@ -310,5 +317,4 @@ graph.
         of additional options. With these options you can download the
         graph as an image file or access the Vega source data for the
         graph.
-    """
-    )
+    """)

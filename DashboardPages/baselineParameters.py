@@ -1,6 +1,6 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
-# Page where variables for vaccination and NPIs can be configured
+# Page where baseline parameter values can be set
 
 # Imports
 import logging
@@ -13,7 +13,9 @@ from ClientResources.ParameterFunctions import containerSave, loadKey
 from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.diseaseParams import buildDiseaseTab
 from ParameterTabs.dynamicParams import buildDynamicTab
-from ParameterTabs.vaccinationNPIParams import buildVaccinationNPITab
+from ParameterTabs.npiParams import buildNPITab
+from ParameterTabs.templateParams import buildTemplateTab
+from ParameterTabs.vaccinationParams import buildVaccinationTab
 
 # from streamlit_push_notifications import send_push, send_alert
 
@@ -29,8 +31,7 @@ session = st.session_state
 
 st.title("Baseline Parameters")
 
-st.markdown(
-    """
+st.markdown("""
     This page allows for configuring the parameters that will be used
     as a baseline for the simulation.
 
@@ -46,13 +47,13 @@ st.markdown(
     different values defined at the
     :grey-badge[:material/variable_add: Scenario Parameters]
     page, overwriting these base values.
-"""
-)
+""")
 
 # Buttons to upload simulation parameters
 uploadDownloadBar()
 
 # Fragment to display errors
+# TODO: Errors aren't removed from here when fixed until page rerun
 errorChecker(0, "Errors in Baseline Scenario")
 
 # Advanced parameters toggle
@@ -72,31 +73,28 @@ dynamic parameter updates.
     """,
 )
 
-# TODO: Consider having a tab for templates that load parameters for
-# specific stuff (e.g. influenza, NPI presets)
-# TODO: Check studies for better parameter defaults/ranges
-# TODO: Check parameters where slider is bad for selecting and either
-# change scale or switch to number input
-
 # Create tabs for each category of parameters
-# TODO: :material/pattern: for the template tab
 if showAdvanced:
-    (diseaseTab, communityTab, interventionTab, dynamicTab) = st.tabs(
+    diseaseTab, communityTab, vaccineTab, npiTab, dynamicTab, templateTab = st.tabs(
         [
             ":material/coronavirus: Pathogen",
             ":material/groups: Community",
-            ":material/vaccines: Vaccination and NPIs",
+            ":material/vaccines: Vaccination",
+            ":material/medical_mask: NPIs",
             ":material/manage_history: Dynamic",
+            ":material/list_alt: Templates",
         ],
         on_change="rerun",
         key="paramTabs0",
     )
 else:
-    (diseaseTab, communityTab, interventionTab) = st.tabs(
+    diseaseTab, communityTab, vaccineTab, npiTab, templateTab = st.tabs(
         [
             ":material/coronavirus: Pathogen",
             ":material/groups: Community",
-            ":material/vaccines: Vaccination and NPIs",
+            ":material/vaccines: Vaccination",
+            ":material/medical_mask: NPIs",
+            ":material/list_alt: Templates",
         ],
         on_change="rerun",
         key="paramTabs0",
@@ -107,7 +105,10 @@ if diseaseTab.open:
 if communityTab.open:
     with communityTab:
         buildCommunityTab(0, showAdvanced)
-if interventionTab.open:
+if vaccineTab.open:
+    with vaccineTab:
+        buildVaccinationTab(0, showAdvanced)
+if npiTab.open:
     containersToOpen |= {
         "npiContainer0",
         "schoolClosureContainer0",
@@ -115,8 +116,11 @@ if interventionTab.open:
         "workGroupContainer0",
         "bccContainer0",
     }
-    with interventionTab:
-        buildVaccinationNPITab(0, showAdvanced)
+    with npiTab:
+        buildNPITab(0, showAdvanced)
 if showAdvanced and dynamicTab.open:  # type: ignore
     with dynamicTab:  # type: ignore
         buildDynamicTab(0)
+if templateTab.open:
+    with templateTab:
+        buildTemplateTab(0)

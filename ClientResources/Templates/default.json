@@ -1,0 +1,217 @@
+{
+    "Scenario_ParameterWithAgePrefix": {
+        "mort": 0.00025
+    },
+    "Scenario_Parameter": {
+        "seed_rate": 0.5,
+        "seeding_duration": 720,
+        "seeding_start_cycle": 0,
+        "beta_asymptomatic": 0.5,
+        "beta_post_symptomatic": 0.5,
+        "kappa_household": 2.2,
+        "kappa_child_education": 1.0,
+        "kappa_workplace": 1.0,
+        "kappa_background": 1.0,
+        "prob_asymptomatic": 0.77,
+        "prob_asymptomatic_young": 0.77,
+        "transmissibility_delay": 1,
+        "symptom_latency": 3,
+        "generation_time": 7,
+        "infection_duration": 12,
+        "prob_withdrawal": 0.5,
+        "prob_school_withdrawal": 0.9,
+        "prob_hospitalisation": 0.0064,
+        "prob_icu": 0.00128,
+        "prob_diagnosis": 0.5,
+        "prob_gp": 0.17,
+        "prob_child_supervision": 1.0,
+        "background_contact_count": 4.0,
+        "max_class_size": 10,
+        "max_workgroup_size": 10,
+        "diagnosis_delay": 0,
+        "case_trigger_threshold": 1000,
+        "rate_trigger_threshold": 15,
+        "rate_relaxation_threshold": 10,
+        "maximum_trigger_count": 250,
+        "social_distance_compliance": 0.0,
+        "diagnosed_case_isolation": false,
+        "class_dismissal": false,
+        "infection_waning_cycle_delay": 720,
+        "infection_waning_rate_per_cycle": 0.005,
+        "infection_waned_protection": 0.5,
+        "school_closure_compliance": 0.5,
+        "school_closure_trigger": "none",
+        "school_closure_relaxation": "none",
+        "school_closure_duration": 720,
+        "school_closure_delay": 0,
+        "withdrawal_increase_trigger": "none",
+        "withdrawal_increase_relaxation": "none",
+        "withdrawal_increase_delay": 0,
+        "withdrawal_increase_duration": 720,
+        "increased_withdrawal": 0.9,
+        "increased_withdrawal_child": 1.0,
+        "reduced_workgroup_size": 5,
+        "reduced_workgroup_trigger": "none",
+        "reduced_workgroup_relaxation": "none",
+        "reduced_workgroup_delay": 0,
+        "reduced_workgroup_duration": 720,
+        "bcc_reduction": 0.5,
+        "bcc_reduction_trigger": "none",
+        "bcc_reduction_relaxation": "none",
+        "bcc_reduction_delay": 0,
+        "bcc_reduction_duration": 720,
+        "vaccine_doses": 9999999,
+        "vaccination_first_dose_rate": 300,
+        "vaccination_trigger": "timed",
+        "vaccination_relaxation": "timed",
+        "vaccination_delay": 0,
+        "vaccination_duration": 720
+    },
+    "Scenario_Strain": [
+        {
+            "StrainId": 0,
+            "Beta": 0.0616,
+            "SeedingWeight": 1
+        }
+    ],
+    "Scenario_VaccineCoverage": [
+        {
+            "Age": null,
+            "Initial": 0.233,
+            "Target": 0.233
+        },
+        {
+            "Age": "young_infant",
+            "Initial": 0.0,
+            "Target": 0.0
+        },
+        {
+            "Age": "infant",
+            "Initial": 0.279,
+            "Target": 0.279
+        },
+        {
+            "Age": "young_child",
+            "Initial": 0.279,
+            "Target": 0.279
+        },
+        {
+            "Age": "child",
+            "Initial": 0.164,
+            "Target": 0.164
+        },
+        {
+            "Age": "adolescent",
+            "Initial": 0.139,
+            "Target": 0.139
+        },
+        {
+            "Age": "young_adult",
+            "Initial": 0.228,
+            "Target": 0.228
+        },
+        {
+            "Age": "adult",
+            "Initial": 0.228,
+            "Target": 0.228
+        },
+        {
+            "Age": "older_adult",
+            "Initial": 0.329,
+            "Target": 0.329
+        },
+        {
+            "Age": "senior",
+            "Initial": 0.619,
+            "Target": 0.619
+        },
+        {
+            "Age": "older_senior",
+            "Initial": 0.619,
+            "Target": 0.619
+        }
+    ],
+    "Scenario_VaccineDose": [
+                {
+            "DoseType": "primary",
+            "Count": 1,
+            "DoseSpacingCycles": 120,
+            "WaningDelay": 720,
+            "WaningRatePerCycle": 0.0
+        }
+    ],
+    "Scenario_VaccineDoseEfficacy": [
+        {
+            "DoseType": "primary",
+            "Age": null,
+            "Efficacy": [
+                0.54
+            ],
+            "WanedEfficacy": 0.0
+        },
+        {
+            "DoseType": "primary",
+            "Age": "infant",
+            "Efficacy": [
+                0.55
+            ],
+            "WanedEfficacy": 0.0
+        },
+        {
+            "DoseType": "primary",
+            "Age": "young_child",
+            "Efficacy": [
+                0.55
+            ],
+            "WanedEfficacy": 0.0
+        },
+        {
+            "DoseType": "primary",
+            "Age": "child",
+            "Efficacy": [
+                0.67
+            ],
+            "WanedEfficacy": 0.0
+        },
+        {
+            "DoseType": "primary",
+            "Age": "adolescent",
+            "Efficacy": [
+                0.67
+            ],
+            "WanedEfficacy": 0.0
+        },
+        {
+            "DoseType": "primary",
+            "Age": "young_adult",
+            "Efficacy": [
+                0.58
+            ],
+            "WanedEfficacy": 0.0
+        },
+        {
+            "DoseType": "primary",
+            "Age": "older_adult",
+            "Efficacy": [
+                0.49
+            ],
+            "WanedEfficacy": 0.0
+        },
+        {
+            "DoseType": "primary",
+            "Age": "senior",
+            "Efficacy": [
+                0.47
+            ],
+            "WanedEfficacy": 0.0
+        },
+        {
+            "DoseType": "primary",
+            "Age": "older_senior",
+            "Efficacy": [
+                0.47
+            ],
+            "WanedEfficacy": 0.0
+        }
+    ]
+}

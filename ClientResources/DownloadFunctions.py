@@ -6,18 +6,29 @@
 import logging
 import time
 from copy import deepcopy
+from datetime import datetime
 from io import BytesIO
 from typing import Optional
 
 import streamlit as st
-import streamlit_notify as stn  # type: ignore
 from pydantic import ValidationError
+
+# Reload streamlit_notify if it fails the first time
+try:
+    import streamlit_notify as stn
+except ImportError:
+    import importlib
+
+    time.sleep(0.01)
+    importlib.reload(importlib.import_module("streamlit_notify"))
+    import streamlit_notify as stn  # type: ignore
 
 from ClientResources.InterfaceFunctions import uniqueName, validationErrorFormatting
 from ClientResources.ModelSchema import (
     Parameters,
     commandArgument,
     communityOverride,
+    dashboardParameters,
     modelGuideFile,
     overrideParams,
     scenarioParameters,
@@ -41,8 +52,13 @@ from ParameterTabs.dynamicParams import (
     dynamicLoadSchema,
     dynamicSaveSchema,
 )
-from ParameterTabs.vaccinationNPIParams import (
-    buildVaccinationNPITab,
+from ParameterTabs.npiParams import (
+    buildNPITab,
+    npiLoadSchema,
+    npiSaveSchema,
+)
+from ParameterTabs.vaccinationParams import (
+    buildVaccinationTab,
     vaccineLoadSchema,
     vaccineSaveSchema,
 )
@@ -84,7 +100,7 @@ def parameterDownload():
     parameter set when clicked. Uses a `st.popover` container due to
     `st.dialog` not working well with `st.download_button`.
     """
-    # TODO: Check if there's errors and don't allow downloading if there are
+    # TODO: Check if there's errors
     # TODO: See if occasional page-blanking bugs can be fixed
     # TODO: Popover is a bit finicky; consider trying dialog or expander again
     with st.popover(
@@ -101,18 +117,16 @@ included in this file.
         """,
     ) as pop:
         if pop.open:
-            st.markdown(
-                """
+            st.markdown("""
                 Would you like to download the currently selected parameter settings
                 as a JSON file? This will allow you to load the settings onto the
                 dashboard at a later date instead of manually setting them again.
-            """
-            )
+            """)
             st.download_button(
                 "Confirm",
-                createConfig(session.get("scenarioCount", 0) + 1).model_dump_json(
-                    indent=4, exclude_unset=True
-                ),
+                createConfig(
+                    session.get("scenarioCount", 0) + 1, includeDashboard=True
+                ).model_dump_json(indent=4, exclude_unset=True),
                 f"FlusimParameterSettings_{time.strftime('%Y.%m.%d_%I.%M.%S%p')}.json",
                 mime="application/json",
                 key="parameterDownloadConfirm",
@@ -125,6 +139,9 @@ def parameterUpload():
     """
     Dialog wrapper function to upload parameter settings from a JSON file.
     """
+    # TODO: This still blanks the page occasionally (sometimes displays the following:)
+    # Life Stage	Pre-Symptomatic
+    # Length (Days)	1
     uploadPending = bool(session.get("parameterUpload") is not None)
     st.info(
         body="""
@@ -160,17 +177,21 @@ simulation engine settings) will be replaced with the values in the uploaded fil
         loadConfig(uploadedParameters)
 
 
-def createConfig(scenarioCount: int) -> modelGuideFile:
+def createConfig(scenarioCount: int, includeDashboard: bool = False) -> modelGuideFile:
     """
     Function to generate a JSON config file using the selected parameters.
 
     Parameters:
         scenarioCount (int): The number of scenarios to define in the config.
 
+        includeDashboard (bool): Set to `True` to include dashboard-exclusive
+            parameters like scaling population in the generated schema.
+
     Returns:
         modelGuideFile: A Pydantic object storing the selected parameters
             in a format that can be converted into JSON easily.
     """
+
     # Set up schema objects
     session = st.session_state
     scenarioParams = [Parameters() for _ in range(scenarioCount)]
@@ -178,57 +199,77 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
     # Populate parameters with session_state values
     # TODO: Make sure scenario parameters don't include baseline defaults
     # (particularly with variable-length forms)
+    # TODO: Add setting that forces tables to have baseline duplicates removed
+    # (for sending to the server, not for downloading)
     useVaccines = False
     useAdvanced = session.get("showAdvanced", False)
+
     for id, scenario in enumerate(scenarioParams):
-        diseaseSaveSchema(scenario, id, useAdvanced)
-        communitySaveSchema(scenario, id, useAdvanced)
+        baseline = scenarioParams[0] if id != 0 else None
+        diseaseSaveSchema(scenario, id, useAdvanced, baseline, includeDashboard)
+        communitySaveSchema(scenario, id, useAdvanced, baseline)
         useVaccines = vaccineSaveSchema(scenario, id, useAdvanced) or useVaccines
+        npiSaveSchema(scenario, id, useAdvanced, baseline, includeDashboard)
         if useAdvanced:
             dynamicSaveSchema(scenario, id)
 
     # Use middle joint to control options
-    # TODO: Account for more conditionals
     middleJoint = "-dashboard"
     if useVaccines:
         middleJoint += "+vaccines"
 
+    # Set up engine parameters
+    community = session.get("community", "newcastle")
+    engineParams = Parameters(
+        Command_Argument=commandArgument(
+            n_runs=session.get("runCount", 24),
+            n_cycles=session.get("cycleCount", 360) * 2,
+        )
+    )
+    if includeDashboard:
+        dashboardParams = dashboardParameters(show_advanced_parameters=useAdvanced)
+        if useAdvanced:
+            dashboardParams.scaling_population = session.get(
+                "scalingPopulation", communityPopulation[community]
+            )
+        engineParams.Dashboard_Parameter = dashboardParams
+    if useAdvanced:
+        startDay = session.get("startDay", "Random")
+        if startDay != "Random":
+            engineParams.Scenario_Parameter = scenarioParameters(
+                start_day_of_week=(
+                    "Sunday",
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                ).index(startDay)
+            )
+    sessionID = int(datetime.now().timestamp())
+
     # Create config object
     return modelGuideFile(
-        name="Flusim Dashboard Simulation",
-        description=str(session.sessionID),
+        name="Flusim Web Dashboard Simulation",
+        description=str(sessionID),
         output_folder="./results/",
         middle_joint=middleJoint,
-        community_used=[session.get("community", "newcastle")],
+        community_used=[community],
         # Community overrides are global parameters e.g. number of runs
         community_overrides=[
             communityOverride(
                 name=session.get("community", "newcastle"),
-                parameters=Parameters(
-                    Command_Argument=commandArgument(
-                        n_runs=session.get("runCount", 24),
-                        n_cycles=session.get("cycleCount", 360) * 2,
-                    ),
-                    Scenario_Parameter=scenarioParameters(
-                        start_day_of_week=(
-                            "Sunday",
-                            "Monday",
-                            "Tuesday",
-                            "Wednesday",
-                            "Thursday",
-                            "Friday",
-                            "Saturday",
-                        ).index(session.get("startDay", "Monday"))
-                    ),
-                ),
+                parameters=engineParams,
             )
         ],
         # Shared overrides are baseline parameters
         shared_overrides=overrideParams(parameters=scenarioParams[0]),
+        # TODO: Omit override_setting from scenarios with identical params to baseline
         simulation_sets=[
             simulationSet(
                 name="Dashboard Simulation Set",
-                version=session.sessionID,
+                version=sessionID,
                 simulations=[simulation(name="Baseline")]
                 + [
                     simulation(
@@ -245,70 +286,78 @@ def createConfig(scenarioCount: int) -> modelGuideFile:
 def loadConfig(file: BytesIO):
     """
     Function to read a JSON config file and set the dashboard's parameters
-    to correspond to it [in progress].
+    to correspond to it.
 
     Parameters:
-        file (bytes): The JSON file containing the parameter settings.
+        file (BytesIO): The JSON file containing the parameter settings.
     """
     try:
         schema = modelGuideFile.model_validate_json(file.read())
     except ValidationError as e:
-        # TODO: Process the full message to show the issues with the loaded file
         validationErrorFormatting(e)
         return
 
     # Save a backup of st.session_state to ensure changes aren't left unfinished
     backupSession = deepcopy(dict(session))
 
-    # Simulation engine settings
     # TODO: More error checks for parameter values allowed by the
     # simulation engine but not the dashboard
     try:
+        # Simulation engine settings
         if len(schema.community_used) > 1:
-            raise AssertionError(
-                """
+            raise AssertionError("""
                 The selected parameter schema includes multiple
                 communities in `community_used`. The dashboard currently only
                 supports simulating a single community at a time; please
                 remove any excess communities from the JSON file.
-                """
-            )
+            """)
         if schema.community_used[0] not in communityPopulation:
-            raise AssertionError(
-                f"""
+            raise AssertionError(f"""
                 The selected parameter schema uses the community
                 "{schema.community_used[0]}". The dashboard currently only
                 supports `newcastle` and `cairns` as communities; please
                 change the value in the JSON file's `community_used` field to
                 one of these.
-                """
-            )
+            """)
         if schema.community_overrides:
             if len(schema.community_overrides) > 1:
-                raise AssertionError(
-                    """
+                raise AssertionError("""
                     The selected parameter schema includes multiple
                     `community_overrides` sections. The dashboard currently only
                     supports simulating a single community at a time; please
                     remove any excess community override sections from the JSON file.
-                    """
-                )
+                """)
             engineSettings = schema.community_overrides[0]
             session.community = engineSettings.name
 
+            dashboardSettings = engineSettings.parameters.Dashboard_Parameter
+            if dashboardSettings is not None:
+                session.showAdvanced = bool(dashboardSettings.show_advanced_parameters)
+                session.scalingPopulation = (
+                    dashboardSettings.scaling_population
+                    if dashboardSettings.scaling_population is not None
+                    else communityPopulation[engineSettings.name]
+                )
+
             engineParams = engineSettings.parameters.Scenario_Parameter
-            if engineParams is not None and engineParams.start_day_of_week is not None:
+            if engineParams is not None:
                 session.startDay = (
-                    "Sunday",
-                    "Monday",
-                    "Tuesday",
-                    "Wednesday",
-                    "Thursday",
-                    "Friday",
-                    "Saturday",
-                )[engineParams.start_day_of_week]
+                    (
+                        "Sunday",
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday",
+                    )[engineParams.start_day_of_week]
+                    if engineParams.start_day_of_week is not None
+                    else "Random"
+                )
+
             commandArgs = engineSettings.parameters.Command_Argument
             if commandArgs is not None:
+                # TODO: Make sure these don't mess with the sliders when None
                 session.runCount = commandArgs.n_runs
                 session.cycleCount = (
                     commandArgs.n_cycles // 2
@@ -323,19 +372,18 @@ def loadConfig(file: BytesIO):
             diseaseLoadSchema(baselineParams, 0)
             communityLoadSchema(baselineParams, 0)
             vaccineLoadSchema(baselineParams, 0)
+            npiLoadSchema(baselineParams, 0)
             dynamicLoadSchema(baselineParams, 0)
 
         # Scenario parameters
         if len(schema.simulation_sets) > 1:
-            raise AssertionError(
-                """
-                    The selected parameter schema includes multiple
-                    `simulation_sets` objects. Parameter files for the dashboard
-                    put all scenarios in a single set, such that there should
-                    be only one `simulation_sets` object. Please modify the
-                    JSON file so that there is only one `simulation_sets` object.
-                    """
-            )
+            raise AssertionError("""
+                The selected parameter schema includes multiple
+                `simulation_sets` objects. Parameter files for the dashboard
+                put all scenarios in a single set, such that there should
+                be only one `simulation_sets` object. Please modify the
+                JSON file so that there is only one `simulation_sets` object.
+            """)
         simulationList = schema.simulation_sets[0].simulations
         scenarioCount = session.get("scenarioCount", 0)
         # Delete current scenarios in order to start fresh
@@ -346,28 +394,31 @@ def loadConfig(file: BytesIO):
         for scenarioID, scenario in enumerate(simulationList):
             if scenarioID != 0:
                 addScenario()
+                # TODO: Make sure names are unique (either here or in the schema)
                 updateParamFromSchema("scenarioName", scenario.name, scenarioID)
                 if scenario.override_setting:
                     scenarioParams = scenario.override_setting.parameters
                     diseaseLoadSchema(scenarioParams, scenarioID)
                     communityLoadSchema(scenarioParams, scenarioID)
                     vaccineLoadSchema(scenarioParams, scenarioID)
+                    npiLoadSchema(scenarioParams, scenarioID)
                     dynamicLoadSchema(scenarioParams, scenarioID)
         # Load tabs briefly to initialise errors
+        useAdvanced = session.get("showAdvanced", False)
         placeholderContainer = st.empty()
         for testID in range(scenarioCount + 1):
             # TODO: Find a less hacky way to initialise errors
             with placeholderContainer.popover(
                 "Loading parameters...", icon="spinner", disabled=True
             ):
-                buildDiseaseTab(testID, True)
-                buildCommunityTab(testID, True)
-                buildVaccinationNPITab(testID, True)
+                buildDiseaseTab(testID, useAdvanced)
+                buildCommunityTab(testID, useAdvanced)
+                buildVaccinationTab(testID, useAdvanced)
+                buildNPITab(testID, useAdvanced)
                 buildDynamicTab(testID)
 
-    except ValidationError as e:
-        # TODO: See if it's possible/worthwhile to give
-        # different errors different icons
+    except AssertionError as e:
+        # TODO: Give the errors icons and titles once updated to Streamlit 1.57
         st.error(body=e, icon=":material/error:")
 
         # Restore session state
@@ -380,6 +431,127 @@ def loadConfig(file: BytesIO):
     stn.toast(
         "Parameters successfully uploaded!",
         icon=":material/download_done:",
+        duration="short",
+    )
+    st.rerun()
+
+
+def createTemplate(
+    scenarioID: int, includeInterventions: bool = True, includeDashboard: bool = False
+) -> Parameters:
+    """
+    Function to generate a JSON config object from a single scenario's parameters.
+
+    Parameters:
+        scenarioID (int): The ID representing the scenario to make a template from.
+
+        includeInterventions (bool): Set to True to not include any vaccination or
+            NPI parameters in the template, such as when performing R0 analysis.
+
+        includeDashboard (bool): Set to `True` to include dashboard-exclusive
+            parameters like GP rate in the generated schema.
+
+    Returns:
+        Parameters: A Pydantic object storing the template parameters
+            in a format that can be loaded easily.
+    """
+
+    # Set up schema objects
+    session = st.session_state
+    useAdvanced = session.get("showAdvanced", False)
+    template = Parameters()
+    baseline = (
+        createTemplate(0, includeInterventions, includeDashboard)
+        if scenarioID > 0
+        else None
+    )
+
+    diseaseSaveSchema(template, scenarioID, useAdvanced, baseline, includeDashboard)
+    communitySaveSchema(template, scenarioID, useAdvanced, baseline)
+    if includeInterventions:
+        vaccineSaveSchema(template, scenarioID, useAdvanced)
+        npiSaveSchema(template, scenarioID, useAdvanced, baseline, includeDashboard)
+    if useAdvanced:
+        dynamicSaveSchema(template, scenarioID)
+    return template
+
+
+def loadTemplate(
+    scenarioID: int, template: Parameters | str, templateName: Optional[str] = None
+):
+    """
+    Function to set a single scenario's parameters to match a given template.
+
+    Parameters:
+        scenarioID (int): The ID representing the scenario to make a template from.
+
+        template (Parameters or str): Either the object containing the parameters
+            to initialise in the selected scenario, or the path to the file
+            containing said parameters.
+
+        templateName (str, optional): The name of the template being applied.
+    """
+    if not isinstance(template, Parameters):
+        try:
+            with open(template, "r") as file:
+                templateData = Parameters.model_validate_json(file.read())
+        except FileNotFoundError as e:
+            downloadLog.error(f"[loadTemplate] Template file not found: {e}")
+            raise e
+        except ValidationError as e:
+            downloadLog.error(
+                f"[loadTemplate] Template file had validation errors: {e}"
+            )
+            raise e
+    else:
+        templateData = template
+
+    # Save a backup of st.session_state to ensure changes aren't left unfinished
+    backupSession = deepcopy(dict(session))
+
+    try:
+        # Load the parameters
+        if scenarioID != 0:
+            resetScenario(scenarioID, loud=False)
+        diseaseLoadSchema(templateData, scenarioID)
+        communityLoadSchema(templateData, scenarioID)
+        vaccineLoadSchema(templateData, scenarioID)
+        npiLoadSchema(templateData, scenarioID)
+        dynamicLoadSchema(templateData, scenarioID)
+
+        # Load tabs briefly to initialise errors
+        # TODO: Find a less hacky way to initialise errors
+        useAdvanced = session.get("showAdvanced", False)
+        placeholderContainer = st.empty()
+        with placeholderContainer.popover(
+            "Loading parameters...", icon="spinner", disabled=True
+        ):
+            buildDiseaseTab(scenarioID, useAdvanced)
+            buildCommunityTab(scenarioID, useAdvanced)
+            buildVaccinationTab(scenarioID, useAdvanced)
+            buildNPITab(scenarioID, useAdvanced)
+            buildDynamicTab(scenarioID)
+            if scenarioID == 0:
+                for testID in range(1, session.get("scenarioCount", 0) + 1):
+                    buildDiseaseTab(testID, useAdvanced)
+                    buildCommunityTab(testID, useAdvanced)
+                    buildVaccinationTab(testID, useAdvanced)
+                    buildNPITab(testID, useAdvanced)
+                    buildDynamicTab(testID)
+
+    except AssertionError as e:
+        st.error(body=e, icon=":material/error:")
+
+        # Restore session state
+        # TODO: Make sure this can't overrule simulation results or other changes
+        # that may occur between starting the upload process and an error occurring
+        session.clear()
+        session.update(backupSession)
+        return
+
+    stn.toast(
+        body="Template successfully loaded!",
+        icon=":material/list_alt_check:",
         duration="short",
     )
     st.rerun()
@@ -459,7 +631,7 @@ def deleteScenario(scenarioID: int, openTab: Optional[str] = None):
     session["scenarioCount"] -= 1
 
     # Open the scenario taking the deleted one's place
-    # TODO: If programmatic anchor tags are possible,
+    # TODO: If programmatic anchor tags are possible (append to URL?),
     # move user to the top of the tab container
     if openTab is not None:
         if scenarioCount > 1:
@@ -467,3 +639,24 @@ def deleteScenario(scenarioID: int, openTab: Optional[str] = None):
             session[openTab] = f"**#{openCount}** {session[f"scenarioName{openCount}"]}"
             session.tabReloader = not session.get("tabReloader", False)
         stn.toast("Scenario removed!", icon=":material/delete:")
+
+
+def resetScenario(scenarioID: int, loud: bool = True):
+    """
+    Function that resets all parameters in a scenario to their baseline values.
+
+    Parameters:
+        scenarioID (int): The ID representing the scenario to be reset.
+
+        loud (bool): Set to true to show a notification upon resetting.
+    """
+    # Delete scenario parameters (excluding the name)
+    for param in session["scenarioSetParams"][scenarioID] - {"scenarioName"}:
+        del session[f"{param}{scenarioID}"]
+    for param, extra in session["scenarioSetParamsExtra"][scenarioID]:
+        del session[f"{param}{scenarioID}{extra}"]
+    session["scenarioSetParams"][scenarioID] = set()
+    session["scenarioSetParamsExtra"][scenarioID] = set()
+    session["activeErrors"][scenarioID] = session["activeErrors"][0]
+    if loud:
+        stn.toast("Scenario reset!", icon=":material/settings_backup_restore:")

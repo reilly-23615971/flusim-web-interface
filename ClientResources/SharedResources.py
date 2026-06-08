@@ -4,11 +4,9 @@
 
 # Imports
 import logging
-import re
+from collections import deque
 from queue import Queue
-from typing import List, Literal
-
-import streamlit as st
+from typing import List, Literal, Optional
 
 # Logging
 sharedLog = logging.getLogger(__name__)
@@ -27,16 +25,42 @@ usePresetData = False
 # Toggle to save the JSON form of parameters as a file
 saveJSON = False
 
+# Toggle to round the values displayed in infection curves/burden tables
+roundResults = True
+
 # Other Constants
 
 # Maximum number of additional scenarios
 maxScenarios = 30
 
+# Change this constant to affect the scenario/analysis progress bar split
+splitPoint = 0.65
+
 # URLs where client/server is located (change to hosted URLs)
 clientUrl = "http://localhost:8501/"
 serverUrl = "http://127.0.0.1:8000/"
-# Queue used to store CSV data from completed server requests
-resultQueue = Queue[tuple]()
+
+# Dictionary holding templates and their details
+templateDict = {
+    "Influenza": (
+        "microbiology",
+        "ClientResources/Templates/default.json",
+        """
+Parameters simulating an influenza outbreak with an existing vaccinated population.
+        """,
+    ),
+    "COVID-19": (
+        "coronavirus",
+        "ClientResources/Templates/covid.json",
+        """
+Parameters simulating a SARS-CoV-2 Delta outbreak with moderate NPIs enabled.
+        """,
+        # R0 is 6; should that be mentioned?
+        # TODO: Replace increased withdrawal in COVID template
+        # with workplace nonattendance when it's added again
+    ),
+}
+
 
 # Dictionary holding ordinal strings for variable-length forms
 ordinals = {
@@ -111,95 +135,6 @@ communityAgePops = {
     },
 }
 
-
-def ageRangeString(lower: int | float, upper: int | float) -> str:
-    """
-    Simple function to format 2 numbers as an age range, accounting for
-    unbound ends and rendering decimal values as months.
-
-    Parameters:
-        lower (int or float): The lower bound of the range.
-
-        lower (int or float): The upper bound of the range.
-
-    Returns:
-        str: The string representation of the specified range.
-    """
-    if upper > 250:
-        # Use a + for ranges large enough to be uncapped
-        return f"{lower}+"
-    elif (isinstance(lower, float) or isinstance(upper, float)) and upper < 9:
-        # Use months if it's more readable that way
-        return "{low}-{high} Months".format(
-            low=round(lower * 12), high=round((upper if upper < 1 else upper - 1) * 12)
-        )
-    else:
-        return f"{lower}-{upper - 1}"
-
-
-def ageRangeCombiner(ages: list[str]) -> str:
-    """
-    Function to convert a list of age brackets into a single string
-    concisely listing them all.
-
-    Parameters:
-        ages (list of str): The age groups to combine.
-
-    Returns:
-        str: The string representation of the specified age groups.
-    """
-    # Immediate end conditions
-    if len(ages) == 1:
-        return (
-            "All Ages" if ages[0] == "Total" else re.findall(r"\((.*?)\)", ages[0])[0]
-        )
-    if set(ages) == set(ageWithTime):
-        return "All Ages"
-
-    # Dictionaries to get the starts/ends of each age bracket
-    ageStarts = {
-        "Young Infant (0-6 Months)": 0,
-        "Infant (7-24 Months)": 0.5,
-        "Young Child (3-5 Years)": 3,
-        "Child (6-12 Years)": 6,
-        "Adolescent (13-17 Years)": 13,
-        "Young Adult (18-24 Years)": 18,
-        "Adult (25-44 Years)": 25,
-        "Older Adult (45-64 Years)": 45,
-        "Senior (65-79 Years)": 65,
-        "Older Senior (80+ Years)": 80,
-    }
-    ageEnds = {
-        "Young Infant (0-6 Months)": 0.5,
-        "Infant (7-24 Months)": 3,
-        "Young Child (3-5 Years)": 6,
-        "Child (6-12 Years)": 13,
-        "Adolescent (13-17 Years)": 18,
-        "Young Adult (18-24 Years)": 25,
-        "Adult (25-44 Years)": 45,
-        "Older Adult (45-64 Years)": 65,
-        "Senior (65-79 Years)": 80,
-        "Older Senior (80+ Years)": 999,
-    }
-
-    # Sort the ages
-    ageList = ages.copy()
-    ageList.sort(key=lambda x: ageStarts[x])
-
-    # Iteratively identify continuous age blocks and display as string
-    currentStart, currentEnd = ageStarts[ageList[0]], ageEnds[ageList[0]]
-    currentString = ""
-    for age in ageList[1:]:
-        if ageStarts[age] == currentEnd:
-            currentEnd = ageEnds[age]
-        else:
-            currentString += f", {ageRangeString(currentStart, currentEnd)}"
-            currentStart, currentEnd = ageStarts[age], ageEnds[age]
-    currentString += f", {ageRangeString(currentStart, currentEnd)}"
-    currentString += " Years" if currentString[-6:] != "Months" else ""
-    return currentString[2:]
-
-
 # Set containing health outcomes selectable for tables
 tableOutcomes = (
     "Symptomatic Infections",
@@ -220,28 +155,9 @@ outcomeAdjectives = {
     "Deaths": "Dead",
 }
 
-# Dictionary getting session_state variables for outcome rates
-outcomeRateVariables = {
-    "Diagnosed Cases": "caseRatio",
-    "GP Visits": "gpRatio",
-    "Hospitalisations": "hospitalRatio",
-    "ICU Visits": "icuRatio",
-    "Deaths": "deathRatio",
-}
-
-# Default values for rates
-outcomeRateDefaults = {
-    "Diagnosed Cases": 0.5,
-    "GP Visits": 0.17,
-    "Hospitalisations": 0.00316133,
-    "ICU Visits": 0.00063227,
-    "Deaths": 0.000115077,
-}
-
-
 # Tuple holding the names of the different possible NPIs
 npis = (
-    "Vaccination",
+    # "Vaccination",
     "School Closure",
     "Withdrawal Increase",
     "Reduced Group Size",
@@ -249,10 +165,12 @@ npis = (
 )
 
 # Tuple holding the camelCase names of NPIs for anchor tags and the like
-npiCamel = ("vaccination", "schoolClosure", "withdrawalIncrease", "reducedGroup", "bcc")
+npiCamel = ("schoolClosure", "withdrawalIncrease", "reducedGroup", "bcc")
+# "vaccination",
 
 # Tuple holding the possible trigger conditions for NPIs
 triggerConditions = {
+    "None": "none",
     "Always": "timed",
     "Timed": "timed",
     "Community Case Rate": "community_rate",
@@ -261,47 +179,36 @@ triggerConditions = {
     # "Cases per K-12 School": "per_primary_high_school_cases",
 }
 
-
-# Simple function to get theme colours
-# Change these values if background colour changes
-def backgroundColour() -> str:
-    """
-    Simple function to get the background colour of the current theme.
-
-    Returns:
-        str: The hex code representing the background colour as a string.
-    """
-    return "#0F1116" if st.context.theme.type == "dark" else "#FFFFFF"
-
-
-# Colour codes for Paul Tol's "bright" colourblind-safe palette
-# (and other pallettes if enough scenarios are created)
-brightCodes = (
+# Colour codes for Paul Tol's "muted" colourblind-safe palette
+mutedCodes = [
     "#BBBBBB",
-    "#4477AA",
-    "#EE6677",
-    "#228833",
-    "#CCBB44",
-    "#66CCEE",
-    "#AA3377",
-    "#EE7733",
-    "#CC3311",
-    "#009988",
+    "#CC6677",
     "#332288",
+    "#DDCC77",
+    "#117733",
+    "#88CCEE",
     "#882255",
-)
+    "#44AA99",
+    "#999933",
+    "#AA4499",
+]
 
-# Extend pallette list if absolutely necessary
-while len(brightCodes) < maxScenarios:
-    brightCodes = brightCodes + brightCodes  # type: ignore
+# Extend palette list if absolutely necessary
+while len(mutedCodes) < maxScenarios:
+    mutedCodes = mutedCodes + mutedCodes[1:]
+
+# Queues used to store data from server requests
+resultQueue = Queue[list]()
+errorQueue = Queue[tuple[str, str, str, Optional[Exception]]]()
+currentProgress = deque[float](maxlen=1)
+statusQueue = list[str]()
 
 
 class AnalysisFile:
     """
-    Class for analysis file parameters
+    Class for descriptions of analysis files and what data they hold
     """
 
-    # TODO: Flesh out docstrings
     def __init__(
         self,
         tool: Literal["epidemic", "asir"],
@@ -325,7 +232,9 @@ class AnalysisFile:
         if tool == "epidemic":
             self.useCumulative = kwargs.get("useCumulative", False)
             self.splitByAge = kwargs.get("splitByAge", False)
+            self.dataTag = f"Epidemic{"Cumulative" if self.useCumulative else "Daily"}"
         if tool == "asir":
             self.useProportion = kwargs.get("useProportion", False)
             self.differenceType = kwargs.get("differenceType", "")
             self.vaccinatedOnly = kwargs.get("vaccinated", False)
+            self.dataTag = f"Asir{"Vaccinated" if self.vaccinatedOnly else "Full"}"

@@ -1,120 +1,122 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
-# Page describing the Flusim model itself (and potentially other info)
+# Page describing the Flusim model and its parameters
 
 # Imports
 import streamlit as st
 
+from ParameterTabs.communityParams import communityDescribe
+from ParameterTabs.diseaseParams import diseaseDescribe
+
+# Store st.session_state as variable for efficiency
+session = st.session_state
+
 # Create page
-st.title("Flusim Infection Model Dashboard")
+st.title("Model Description")
+st.markdown("""
+    This page provides an overview of how the *Flusim* model operates and what parameters it utilises.
+""")
 
-st.markdown(
-    """
-    The SMRG Flusim model, developed by the Software Modelling Research Group
-    at the University of Western Australia, implements a high-performance
-    agent-based simulation model to simulate the spread of infectious disease
-    in a population. This model has been used to aid in deciding effective
-    policy for respiratory viruses such as influenza
-    [[1](https://doi.org/10.1586/eri.10.136)]
-    and COVID-19 [[2](https://doi.org/10.1101/2022.03.09.22272170)]. This website
-    allows users to easily run the model with specific parameters and visualise
-    the results.
-    """
-)
 
-st.header("Usage")
-# TODO: Update usage instructions (or just refer to manual)
-# TODO: Replace buttons with proper st.link_buttons
-
-st.markdown(
-    """
-    - Use the sidebar on the left of the screen to navigate between the different
-    pages. (If you can't see the sidebar, click the
-    :material/keyboard_double_arrow_right: button at the top-left of the page
-    to make it visible.)
-    - Visit the :grey-badge[:material/variable_insert: Baseline Parameters] page
-    to change the parameters used by all simulations, or visit the
-    :grey-badge[:material/variable_add: Scenario Parameters] page to specify
-    multiple parameter sets to run at the same time.
-    """
-)
-
-if st.button("Go to Baseline Parameters", icon=":material/variable_insert:"):
-    st.switch_page(
-        st.Page(
-            "DashboardPages/baselineParameters.py",
-            title="Baseline Parameters",
-            icon=":material/variable_insert:",
-        )
-    )
-if st.button("Go to Scenario Parameters", icon=":material/variable_add:"):
-    st.switch_page(
-        st.Page(
-            "DashboardPages/scenarioParameters.py",
-            title="Scenario Parameters",
-            icon=":material/variable_add:",
-        )
-    )
-
-st.markdown(
-    """
-    - Click the :primary-badge[:material/motion_play: Run Simulation] button in
-    the sidebar to run the simulation.
-    - Once you've ran a simulation, visit the
-    :grey-badge[:material/chart_data: Infection Over Time Graphs] and
-    :grey-badge[:material/table_chart_view: Health Burden Tables] pages
-    to visualise the results of the simulation.
-    """
-)
-
-if st.button("Go to Infection Over Time Graphs", icon=":material/chart_data:"):
-    st.switch_page(
-        st.Page(
-            "DashboardPages/infectionOverTimeGraphs.py",
-            title="Infection Over Time Graphs",
-            icon=":material/chart_data:",
-        )
-    )
-if st.button("Go to Health Burden Tables", icon=":material/table_chart_view:"):
-    st.switch_page(
-        st.Page(
-            "DashboardPages/healthBurdenTables.py",
-            title="Health Burden Tables",
-            icon=":material/table_chart_view:",
-        )
-    )
-
-st.header("Model Details")
-
-st.markdown(
-    """
-
+st.subheader("Model Overview")
+st.markdown("""
     The *Flusim* simulation model is designed to be a lifelike simulation of
     respiratory disease mechanics in Australia. As an individual-based model,
     it simulates each individual in the population as a distinct agent, which
-    moves to different locations over the course of the simulation. Individuals
-    are assigned demographics such as age and pregnancy status; these affect
-    which locations they go to, what interventions apply to them and how
-    susceptible they are to the pathogen.
+    moves to different locations over the course of the simulation.
 
-    When an individual is infected by the pathogen, the current stage of their
-    infection is tracked alongside them. As the simulation progresses, the
-    individual will go from dormant to infectious and symptomatic before
-    eventually recovering. Individuals who have recovered from the pathogen
-    gain an immunity to being reinfected.
+    Time in the simulation is separated into intervals called cycles. Each day
+    of the simulation involves two cycles, one representing the day and one
+    representing the night. In each cycle, the engine updates the locations of
+    each individual in the community, then simulates interactions between people
+    in the same location. Generally, individuals move from their households to
+    work or school during the day cycle, then move back to their households
+    during the night cycle; this behaviour may change depending on the individual's
+    age and the current day of the week.
+            
+    Additionally, each day cycle is accompanied by the background phase, in which
+    individuals across the community are randomly paired to interact. These background
+    contacts account for any interactions outside of the locations that are built
+    into the simulation, such as those that occur on public transport or in shopping
+    centres.
+            
+    Each individual in the simulation is assigned demographic details determining
+    what age group they fall under, whether they are an Indigenous Australian
+    and whether they are pregnant. These details affect which locations the
+    individual goes to; children will always attend schools while adults go to
+    workplaces instead. Demographics also control what interventions apply to
+    each person and how susceptible they are to the pathogen.
 
-    When an infectious individual is in a given location, there is a chance
-    that non-immune uninfected individuals in the same location will catch the
-    pathogen. This probability is dependent on the location as well as the
-    demographics of both the infected and healthy individuals in the interaction.
-    In addition to these interactions, each individual will interact with other
-    randomly selected individuals in each step of the simulation. These
-    background contacts account for locations that are not simulated directly
-    in the simulation, such as shopping centres or sporting events.
+    Individuals can be infected by the pathogen whenever they interact with another
+    individual who is already infected. When an individual is infected by the
+    pathogen, the current stage of their infection is tracked alongside their
+    demographic details. As the simulation progresses, the infection will progress
+    from a dormant state to being fully infectious and symptomatic before
+    eventually disappearing once the individual recovers.
 
     The *Flusim* model is stochastic, so it will run multiple simulations
-    for each parameter set. The results of these simulation will be combined
-    to obtain the averaged results for the overall set. In this dashboard,
-    all visualisations use medians for averaging.
-    """
+    for each parameter set. The results of these simulations will be averaged
+    to obtain the median results for each set of parameters in the experiment.
+""")
+# TODO: Update when non-median results exist
+
+st.subheader("Experiment Details")
+st.markdown("""
+    This dashboard operates by communicating with a separate server running the *Flusim* model. Parameter values selected by the user are sent from the dashboard to the server, which uses them to configure the *Flusim* simulation model. Once the simulation has ran, the server extracts results such as infections per day and sends them back to the dashboard. Finally, the dashboard uses these results alongside additional parameters set by the user to generate health burden outcomes and visualisations of the results. The image below visualises this process of conducting simulation experiments.
+""")
+st.image(
+    "/app/static/modelDiagram.png",
+    width="stretch",
+    caption="""
+A simplified diagram of how a simulation experiment is conducted. Disease
+and vaccination parameters from the dashboard are sent to the server program, which
+hosts the *Flusim* individual-based simulation model. This model is comprised of
+several pre-built elements, including the population contact network based on census
+data, influenza transmission procedures and disease-associated vaccination strategies.
+The model is used to run the simulations specified by the dashboard parameters;
+after this, the server extracts simulation outcomes like total infections from
+the model. Once the server has returned these simulation outcomes, the dashboard
+combines them with user-specified health burden parameters to generate health burden
+outcomes such as GP visits and deaths.
+    """,
 )
+
+# TODO: Full parameter templates
+
+st.subheader("Parameter Descriptions")
+st.markdown("""
+    Below is a description of the different parameters that
+    are used to control the behaviour of the simulation.
+    To edit the values used for these parameters, visit the
+    :primary-badge[:material/variable_insert: Baseline Parameters] page.
+""")
+errors = session["activeErrors"].get(0, {})
+if errors:
+    st.warning("""
+        There are currently errors present in the parameter values used in the
+        simulation. As a result, these descriptions of the parameters may describe
+        unintended or invalid behaviour. If you are familiar with the parameters
+        on this dashboard, it is recommended that you resolve these errors
+        before reading.
+    """)
+st.page_link(
+    "DashboardPages/baselineParameters.py",
+    label="Go to Baseline Parameters",
+    icon=":material/variable_insert:",
+)
+
+# TODO: Engine settings?
+
+showAdvanced = session.get("showAdvanced", False)
+
+# Pathogen Parameters
+with st.expander(
+    "Pathogen-Related Parameters", expanded=True, icon=":material/coronavirus:"
+):
+    diseaseDescribe(0, advanced=showAdvanced)
+with st.expander(
+    "Community-Related Parameters", expanded=True, icon=":material/groups:"
+):
+    communityDescribe(0, advanced=showAdvanced)
+
+st.markdown("Other parameters coming soon!")
