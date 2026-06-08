@@ -1508,7 +1508,7 @@ def npiSaveSchema(
             scenarioParams.school_closure_relaxation = trigCast(schoolTrigger)
             if schoolTrigger == "Always":
                 scenarioParams.school_closure_delay = 0
-                scenarioParams.school_closure_duration = 99999
+                scenarioParams.school_closure_duration = 9999
             elif schoolTrigger == "Timed":
                 schoolPeriod = [
                     i - 1 for i in idGet("schoolClosurePeriod", id, (1, 60))
@@ -1536,7 +1536,7 @@ def npiSaveSchema(
             scenarioParams.withdrawal_increase_relaxation = trigCast(withdrawalTrigger)
             if withdrawalTrigger == "Always":
                 scenarioParams.withdrawal_increase_delay = 0
-                scenarioParams.withdrawal_increase_duration = 99999
+                scenarioParams.withdrawal_increase_duration = 9999
             elif withdrawalTrigger == "Timed":
                 withdrawalPeriod = [
                     i - 1 for i in idGet("withdrawalIncreasePeriod", id, (1, 60))
@@ -1557,7 +1557,7 @@ def npiSaveSchema(
             scenarioParams.reduced_workgroup_relaxation = trigCast(reducedGroupTrigger)
             if reducedGroupTrigger == "Always":
                 scenarioParams.reduced_workgroup_delay = 0
-                scenarioParams.reduced_workgroup_duration = 99999
+                scenarioParams.reduced_workgroup_duration = 9999
             elif reducedGroupTrigger == "Timed":
                 reducedGroupPeriod = [
                     i - 1 for i in idGet("reducedGroupPeriod", id, (1, 60))
@@ -1578,7 +1578,7 @@ def npiSaveSchema(
             scenarioParams.bcc_reduction_relaxation = trigCast(bccTrigger)
             if bccTrigger == "Always":
                 scenarioParams.bcc_reduction_delay = 0
-                scenarioParams.bcc_reduction_duration = 99999
+                scenarioParams.bcc_reduction_duration = 9999
             elif bccTrigger == "Timed":
                 bccPeriod = [i - 1 for i in idGet("bccPeriod", id, (1, 60))]
                 scenarioParams.bcc_reduction_delay = bccPeriod[0] * 2
@@ -1703,7 +1703,7 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
                 updateParamFromSchema(
                     f"{prefix}Toggle", startTrigger != "none", scenarioID
                 )
-                if startTrigger == "timed" and npiDelay == 0 and npiDuration == 99999:
+                if startTrigger == "timed" and npiDelay == 0 and npiDuration == 9999:
                     updateParamFromSchema(f"{prefix}Trigger", "Always", scenarioID)
                 elif startTrigger != "none":
                     updateParamFromSchema(
@@ -1712,10 +1712,10 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
             # Disambiguate between Timed and Always via baseline trigger
             elif scenarioID != 0:
                 baselineTrigger = idGet(f"{prefix}Trigger", 0, None)
-                if baselineTrigger == "Timed" and npiDuration == 99999:
+                if baselineTrigger == "Timed" and npiDuration == 9999:
                     updateParamFromSchema(f"{prefix}Trigger", "Always", scenarioID)
                 elif baselineTrigger == "Always" and (
-                    npiDelay not in {None, 0} or npiDuration not in {None, 99999}
+                    npiDelay not in {None, 0} or npiDuration not in {None, 9999}
                 ):
                     updateParamFromSchema(f"{prefix}Trigger", "Timed", scenarioID)
 
