@@ -2666,14 +2666,6 @@ def vaccineSaveSchema(
             raise ValueError("schema should be a Parameters object")
 
         if vaccineToggle:
-            # Initialising Scenario Parameters
-            # TODO: Use schemaUpdate instead
-            scenarioParams = (
-                schema.Scenario_Parameter
-                if schema.Scenario_Parameter
-                else scenarioParameters()
-            )
-
             # Vaccination Coverage
             liveDistribution = (
                 False
@@ -2728,7 +2720,9 @@ def vaccineSaveSchema(
                 for i in range(session.get(f"vacAgeRowCount{id}", 0))
             ]"""
 
-            # Vaccination Programs
+            # Scenario Parameters
+            scenarioParams = scenarioParameters()
+
             # TODO: See if these can be reintegrated onto the dashboard
             scenarioParams.vaccination_delay = 0
             scenarioParams.vaccination_duration = 2500
@@ -2747,8 +2741,9 @@ def vaccineSaveSchema(
                 else 99999999
             )
 
-            # Save the program parameters
-            # TODO: Baseline deduplication
+            if id > 0 and baseline is not None:
+                schemaRemoveBaseline(scenarioParams, baseline.Scenario_Parameter)
+            schemaUpdate(schema, "Scenario_Parameter", scenarioParams)
             schema.Scenario_Parameter = scenarioParams
 
             # Vaccine Doses and Efficacy
@@ -3015,7 +3010,7 @@ def vaccineSaveSchema(
                 ]
 
             # Save efficacy and dose parameters
-            # TODO: Baseline deduplication for VaccineDose if possible
+            # TODO: Rework baseline deduplication to make it feasible to do for vaccines
             schema.Scenario_VaccineDoseEfficacy = efficacyParams
             schema.Scenario_VaccineDose = doseParams
     except (ValueError, ValidationError) as e:

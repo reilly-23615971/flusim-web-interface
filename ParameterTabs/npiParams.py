@@ -1431,7 +1431,7 @@ def npiSaveSchema(
         # due to the KLUDGE SD code being commented out
         # TODO: Test in simulation and remove if necessary
         socialDistanceToggle = idGet("socialDistancingToggle", id, False)
-        socialCompliance = idGet("socialDistancingCompliance", id, 0.9)
+        globalCompliance = idGet("socialDistancingCompliance", id, 0.9)
 
         dashboardParams = dashboardParameters()
         if includeDashboard:
@@ -1440,27 +1440,32 @@ def npiSaveSchema(
                 schemaRemoveBaseline(dashboardParams, baseline.Dashboard_Parameter)
             schemaUpdate(schema, "Dashboard_Parameter", dashboardParams)
         if socialDistanceToggle:
-            scenarioParams.social_distance_compliance = socialCompliance
+            scenarioParams.social_distance_compliance = globalCompliance
         if advanced:
             ageScenarioParams = ageScenarioParameters()
             if socialDistanceToggle:
-                ageScenarioParams.social_distance = socialCompliance
+                ageScenarioParams.social_distance = globalCompliance
                 distanceAgeForm = idGet(
                     "distanceAgeForm",
                     id,
                     pd.DataFrame(
                         {
                             "Age Group": [None],
-                            "Social Distancing Compliance": [socialCompliance],
+                            "Social Distancing Compliance": [globalCompliance],
                         },
                     ),
                 )
-                for age, comp in zip(
-                    distanceAgeForm["Age Group"],
-                    distanceAgeForm["Social Distancing Compliance"],
-                ):
-                    if age:
-                        setattr(scenarioParams, f"{age}_social_distance", comp)
+                for age in ageTimeDict:
+                    if age in distanceAgeForm["Age Group"].values:
+                        compliance = distanceAgeForm.loc[
+                            distanceAgeForm["Age Group"] == age,
+                            "Social Distancing Compliance",
+                        ].item()
+                        setattr(scenarioParams, f"{age}_social_distance", compliance)
+                    else:
+                        setattr(
+                            scenarioParams, f"{age}_social_distance", globalCompliance
+                        )
                 """
                 for i in range(session.get(f"socialRowCount{id}", 0)):
                     setattr(
@@ -1468,7 +1473,7 @@ def npiSaveSchema(
                         f"{ageCategories[session[
                         f'socialAgeGroup{id}-{i}']
                         ]}_social_distance",
-                        idGet("socialCompliance", id, socialCompliance, f"-{i}"),
+                        idGet("socialCompliance", id, globalCompliance, f"-{i}"),
                     )"""
             else:
                 ageScenarioParams.social_distance = 0.0

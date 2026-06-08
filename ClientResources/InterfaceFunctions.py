@@ -503,13 +503,13 @@ def schemaRemoveBaseline(
     Raises:
         TypeError: If scenario and baseline are not part of the same object class.
     """
-
     if baseline is None:
         return
     if not (type(scenario) is type(baseline)):
         raise TypeError("scenario and baseline should be the same type")
+
     for param, value in vars(baseline).items():
-        if param in defaults and not hasattr(scenario, param):
+        if param in defaults and getattr(scenario, param, None) is None:
             setattr(scenario, param, defaults[param])
         if getattr(scenario, param, float("nan")) == value and param not in ignore:
             delattr(scenario, param)

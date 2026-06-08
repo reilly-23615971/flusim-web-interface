@@ -1944,13 +1944,14 @@ def diseaseSaveSchema(
                     },
                 ),
             )
-            for age, mort in zip(
-                mortAgeForm["Age Group"],
-                mortAgeForm["Mortality Rate"],
-            ):
-                roundedMort = round(mort / 100000, 10)
-                if age and roundedMort != globalDeathRate:
-                    setattr(scenarioParams, f"{age}_mort", roundedMort)
+            for age in ageTimeDict:
+                if age in mortAgeForm["Age Group"].values:
+                    mort = mortAgeForm.loc[
+                        mortAgeForm["Age Group"] == age, "Mortality Rate"
+                    ].item()
+                    setattr(scenarioParams, f"{age}_mort", round(mort / 100000, 10))
+                else:
+                    setattr(scenarioParams, f"{age}_mort", globalDeathRate)
         else:
             probAsymptomatic = idGet("asymptomaticAdult", id, 0.35)
             scenarioParams.prob_asymptomatic_young = probAsymptomatic
@@ -2003,16 +2004,15 @@ def diseaseSaveSchema(
                 },
             ),
         )
-        for age, trans, susc in zip(
-            transAgeForm["Age Group"],
-            transAgeForm["Infectiousness"],
-            transAgeForm["Susceptibility"],
-        ):
-            if age:
-                if trans != 1.0:
-                    setattr(scenarioParams, f"{age}_trans", trans)
-                if susc != 1.0:
-                    setattr(scenarioParams, f"{age}_susc", susc)
+        # TODO: Make sure there's no chance of this getting duplicate rows
+        for age in ageTimeDict:
+            if age in transAgeForm["Age Group"].values:
+                ageRow = transAgeForm.loc[transAgeForm["Age Group"] == age]
+                setattr(scenarioParams, f"{age}_trans", ageRow["Infectiousness"].item())
+                setattr(scenarioParams, f"{age}_susc", ageRow["Susceptibility"].item())
+            else:
+                setattr(scenarioParams, f"{age}_trans", 1.0)
+                setattr(scenarioParams, f"{age}_susc", 1.0)
         """
         for i in range(session.get(f"transRowCount{id}", 0)):
             varAgeGroup = ageCategories[session[f"transAgeGroup{id}-{i}"]]
@@ -2034,10 +2034,17 @@ def diseaseSaveSchema(
             )"""
 
         # Save the updated parameters, removing redundant baseline values
+        # TODO: Find a better way to prevent needing to include every table age
+        # (maybe omit all ages if they're empty/unchanged from baseline?)
         ageTableParams = set().union(
             *[{f"{age}_trans", f"{age}_susc", f"{age}_mort"} for age in ageTimeDict]
         )
-        if id > 0 and baseline is not None:
+        """ageTableParams = {}
+        for age in ageTimeDict:
+            ageTableParams[f"{age}_trans"] = 1.0
+            ageTableParams[f"{age}_susc"] = 1.0
+            ageTableParams[f"{age}_mort"] = globalDeathRate"""
+        if baseline is not None and id > 0:
             schemaRemoveBaseline(
                 ageScenarioParams, baseline.Scenario_ParameterWithAgePrefix
             )
@@ -2094,9 +2101,10 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
     # Global Age Parameters
     schemaAge = schema.Scenario_ParameterWithAgePrefix
     if schemaAge is not None and schemaAge.mort is not None:
-        updateParamFromSchema(
-            "deathRatio", round(schemaAge.mort * 100000, 6), scenarioID
-        )
+        deathRate = round(schemaAge.mort * 100000, 6)
+        updateParamFromSchema("deathRatio", deathRate, scenarioID)
+    else:
+        deathRate = idGet("deathRatio", 0, 12.0)
 
     # Dashboard Parameters
     schemaDash = schema.Dashboard_Parameter
@@ -2315,6 +2323,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             for p, v in paramDict.items()
             if p.endswith("_susc")
         }
+        # TODO: Leave table to inherit baseline if ages are unchanged
         transAges = sorted(
             set(transParams.keys()) | set(suscParams.keys()),
             key=lambda x: list(ageTimeDict).index(x),
@@ -2345,7 +2354,8 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             if p.endswith("_mort")
         }
         for param, value in mortParams.items():
-            mortTable.loc[mortTable.shape[0]] = [param, value]
+            if value != deathRate:
+                mortTable.loc[mortTable.shape[0]] = [param, value]
         updateTableFromSchema(
             "mortAgeForm",
             mortTable,
