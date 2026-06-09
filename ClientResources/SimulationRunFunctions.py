@@ -703,7 +703,7 @@ async def taskStatus(
                     # Prevent duplicate status messages
                     if message not in simStatusQueue:
                         progressValue.append(progress)
-                        statusQueue.append(status)
+                        statusQueue.append(message)
                     # End the websocket if certain statuses are returned
                     match status:
                         case "completed":
