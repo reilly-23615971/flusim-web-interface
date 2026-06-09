@@ -198,10 +198,18 @@ while len(mutedCodes) < maxScenarios:
     mutedCodes = mutedCodes + mutedCodes[1:]
 
 # Queues used to store data from server requests
-resultQueue = Queue[list]()
-errorQueue = Queue[tuple[str, str, str, Optional[Exception]]]()
-currentProgress = deque[float](maxlen=1)
-statusQueue = list[str]()
+
+# Simulations
+simResultQueue = Queue[list]()
+simErrorQueue = Queue[tuple[str, str, str, Optional[Exception]]]()
+simCurrentProgress = deque[float](maxlen=1)
+simStatusQueue = list[str]()
+
+# R0 Calculation
+calcResultQueue = Queue[list]()
+calcErrorQueue = Queue[tuple[str, str, str, Optional[Exception]]]()
+calcCurrentProgress = deque[float](maxlen=1)
+calcStatusQueue = list[str]()
 
 
 class AnalysisFile:

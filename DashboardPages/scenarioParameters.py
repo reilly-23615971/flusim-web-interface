@@ -47,6 +47,7 @@ def deleteScenarioDialog(scenarioID: int):
         scenario will erase any unique parameter values set for it. Are
         you sure you want to remove this scenario?
     """)
+    # TODO: Note that deletion doesn't affect active simulations
     if st.button(
         "Confirm",
         key="confirmDeleteButton",

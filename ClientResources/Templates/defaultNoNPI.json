@@ -1,0 +1,40 @@
+{
+    "Scenario_ParameterWithAgePrefix": {
+        "mort": 0.00025
+    },
+    "Scenario_Parameter": {
+        "seed_rate": 0.5,
+        "seeding_duration": 720,
+        "seeding_start_cycle": 0,
+        "beta_asymptomatic": 0.5,
+        "beta_post_symptomatic": 0.5,
+        "kappa_household": 2.2,
+        "kappa_child_education": 1.0,
+        "kappa_workplace": 1.0,
+        "kappa_background": 1.0,
+        "prob_asymptomatic": 0.77,
+        "prob_asymptomatic_young": 0.77,
+        "transmissibility_delay": 1,
+        "symptom_latency": 3,
+        "generation_time": 7,
+        "infection_duration": 12,
+        "prob_withdrawal": 0.5,
+        "prob_school_withdrawal": 0.9,
+        "prob_hospitalisation": 0.0064,
+        "prob_icu": 0.00128,
+        "prob_diagnosis": 0.5,
+        "prob_gp": 0.17,
+        "prob_child_supervision": 1.0,
+        "background_contact_count": 4.0,
+        "max_class_size": 10,
+        "max_workgroup_size": 10,
+        "diagnosis_delay": 0
+    },
+    "Scenario_Strain": [
+        {
+            "StrainId": 0,
+            "Beta": 0.0616,
+            "SeedingWeight": 1
+        }
+    ]
+}

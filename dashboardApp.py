@@ -24,9 +24,9 @@ except ImportError:
 
 from ClientResources.InterfaceFunctions import timeString
 from ClientResources.SharedResources import (
-    currentProgress,
-    errorQueue,
-    resultQueue,
+    simCurrentProgress,
+    simErrorQueue,
+    simResultQueue,
     usePresetData,
     usePresetParams,
 )
@@ -67,6 +67,7 @@ session = st.session_state
 # aren't mixed up by the server
 sessionParameters = {
     "simulationInProgress": False,
+    "calculationInProgress": False,
     "keepProgressBar": False,
     "scenarioCount": 0,
     "scenarioSetParamsExtra": {},
@@ -160,7 +161,7 @@ def updateData():
     """
     Fragment to regularly check if model results have been received yet.
     """
-    hasResults, hasError = not resultQueue.empty(), not errorQueue.empty()
+    hasResults, hasError = not simResultQueue.empty(), not simErrorQueue.empty()
     if session.simulationInProgress and (hasResults or hasError):
         if hasResults and not hasError:
             # Reset pending simulation variables
@@ -170,7 +171,7 @@ def updateData():
             session.SimParams = simParams
 
             # Process data and ensure there is no formatting errors
-            returnedData = resultQueue.get()
+            returnedData = simResultQueue.get()
             appLog.info(f"[updateData] Processing the following data:\n{returnedData}")
 
             # Remove any old session data that is no longer valid
@@ -189,7 +190,7 @@ def updateData():
 
             # Check for any errors in the data
             if any(len(data) == 0 for data in formattedData):
-                errorQueue.put(
+                simErrorQueue.put(
                     (
                         "Simulation results were empty",
                         """
@@ -206,7 +207,7 @@ Please make sure your parameters do not possess any errors and try again.
                 and len(data["Scenario"].value_counts()) != scenarioCount
                 for data, form in zip(formattedData, dataForms)
             ):
-                errorQueue.put(
+                simErrorQueue.put(
                     (
                         "Some scenarios were not run properly",
                         """
@@ -235,8 +236,8 @@ ensure all scenarios do not possess any errors and try again.
                 session.ChartGenerated = False
         if hasError:
             # Notify user of errors, but leave displaying them to runSimulations
-            session["simulationError"] = errorQueue.get()
-            currentProgress.append(-1.0)
+            session["simulationError"] = simErrorQueue.get()
+            simCurrentProgress.append(-1.0)
             notifyToast(
                 """
 Simulation encountered an error; see

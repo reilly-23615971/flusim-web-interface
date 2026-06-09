@@ -35,13 +35,13 @@ from ClientResources.SharedResources import (
     ageTimeDict,
     ageWithTime,
     communityPopulation,
-    currentProgress,
-    errorQueue,
-    resultQueue,
+    simCurrentProgress,
+    simErrorQueue,
+    simResultQueue,
     saveJSON,
     serverUrl,
     splitPoint,
-    statusQueue,
+    simStatusQueue,
     usePresetParams,
 )
 
@@ -346,9 +346,9 @@ already busy with a different task.
             session.pendingSimParams = simParams
 
             # Clear the status queue
-            currentProgress.append(0.0)
-            statusQueue.clear()
-            statusQueue.append("Connecting to server...")
+            simCurrentProgress.append(0.0)
+            simStatusQueue.clear()
+            simStatusQueue.append("Connecting to server...")
             session["simulationError"] = None
 
             # Make the model call
@@ -399,7 +399,7 @@ def stopSimulationButton():
             "stop_circle",
             None,
         )
-        currentProgress.append(-1.0)
+        simCurrentProgress.append(-1.0)
 
         # Stop the runModel thread
         cancelSimThread.set()
@@ -543,13 +543,13 @@ async def runModelStatus(session: ClientSession, simulationID: str, parameterJSO
                         case "completed":
                             # Download the analysis files
                             simData = await runModelDownload(simulationID)
-                            resultQueue.put(simData)
-                            currentProgress.append(1.0)
-                            statusQueue.append("Simulation complete!")
+                            simResultQueue.put(simData)
+                            simCurrentProgress.append(1.0)
+                            simStatusQueue.append("Simulation complete!")
                             return
                         case "error":
                             # TODO: Better error handling
-                            statusQueue.append("Experiment halted due to error")
+                            simStatusQueue.append("Experiment halted due to error")
                             functionLog.error(f"""
 [runModelStatus] Server encountered an error while running the simulation {simulationID}
                             """)
@@ -557,7 +557,9 @@ async def runModelStatus(session: ClientSession, simulationID: str, parameterJSO
 An error occurred while attempting to run the simulation.
                             """)
                         case "shutdown":
-                            statusQueue.append("Server shut down before experiment could finish")
+                            simStatusQueue.append(
+                                "Server shut down before experiment could finish"
+                            )
                             functionLog.error(f"""
 [runModelStatus] Server shut down while running the simulation {simulationID}
                             """)
@@ -567,14 +569,14 @@ The simulation server shut down while attempting to run the simulation.
                         case _:
                             progress, status = progressDict[simStatus]
                             # Prevent duplicate status messages
-                            if status not in statusQueue:
-                                currentProgress.append(progress)
-                                statusQueue.append(status)
+                            if status not in simStatusQueue:
+                                simCurrentProgress.append(progress)
+                                simStatusQueue.append(status)
                 case WSMsgType.CLOSE:
                     if msg.data == 1008:
                         raise RuntimeError("Websocket with requested ID not found")
                 case WSMsgType.ERROR:
-                    statusQueue.append("Error: Server websocket had issues")
+                    simStatusQueue.append("Error: Server websocket had issues")
                     socketError = ws.exception()
                     if socketError is not None:
                         raise socketError
@@ -784,4 +786,4 @@ try again later.
 
     # Add to the queue
     functionLog.error(f"[runModel] {errorShort}: {e}")
-    errorQueue.put((errorShort, errorBody, errorIcon, e))
+    simErrorQueue.put((errorShort, errorBody, errorIcon, e))

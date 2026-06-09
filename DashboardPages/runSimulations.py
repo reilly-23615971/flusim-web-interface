@@ -10,15 +10,14 @@ import streamlit as st
 # from streamlit_push_notifications import send_push, send_alert
 from ClientResources.DownloadFunctions import uploadDownloadBar
 from ClientResources.ParameterFunctions import (
-    containerSave,
     loadKey,
     saveKey,
     timeScaleChange,
 )
 from ClientResources.SharedResources import (
     communityPopulation,
-    currentProgress,
-    statusQueue,
+    simCurrentProgress,
+    simStatusQueue,
 )
 from ClientResources.SimulationRunFunctions import (
     runSimulationButton,
@@ -52,14 +51,12 @@ st.markdown("""
 # Advanced parameters toggle
 # TODO: Move advanced parameters to either the sidebar or a separate settings page
 loadKey("showAdvanced", default=False, noZeroDefault=True)
-containersToOpen: set[str] = {"paramTabs0"}
 showAdvanced = st.toggle(
     "Show Advanced Parameters",
     False,
     key="_showAdvanced",
-    on_change=containerSave,
+    on_change=saveKey,
     args=["showAdvanced"],
-    kwargs={"containers": containersToOpen},
     help="""
 Toggle whether to display parameters that control more fine-grain aspects
 of the simulation environment, such as scaling population.
@@ -215,10 +212,7 @@ st.button(
     help=(
         """
 Send a request to the *Flusim* model server to run the model
-with the specified parameters. Once the request has been made,
-you will be unable to run the model again until it completes,
-so make sure you have configured your parameters to appropriate
-values before clicking.
+with the specified parameters.
         """
         if not simulationInProgress
         else """
@@ -236,7 +230,7 @@ def simulationProgressBar():
     """
     # TODO: Display how long each step took
     try:
-        progress = currentProgress[0]
+        progress = simCurrentProgress[0]
     except IndexError:
         progress = 0.0
     if progress < 0.0:
@@ -254,7 +248,7 @@ def simulationProgressBar():
         simStatus = st.status(
             label="Experiment stopped due to error (click for more info)", state="error"
         )
-        for newStatus in statusQueue:
+        for newStatus in simStatusQueue:
             simStatus.write(newStatus)
         simStatus.error(f"Error: {errorBody}", icon=f":material/{errorIcon}:")
         if errorObject is not None:
@@ -262,13 +256,13 @@ def simulationProgressBar():
     else:
         st.progress(
             progress,
-            statusQueue[-1] if statusQueue else "Initialising parameters...",
+            simStatusQueue[-1] if simStatusQueue else "Initialising parameters...",
         )
         simStatus = st.status(
             "Experiment in progress..." if progress < 1.0 else "Experiment complete!",
             state="running" if progress < 1.0 else "complete",
         )
-        for newStatus in statusQueue:
+        for newStatus in simStatusQueue:
             simStatus.write(newStatus)
 
 
