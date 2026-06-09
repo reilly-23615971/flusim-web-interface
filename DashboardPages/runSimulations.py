@@ -416,7 +416,7 @@ def stopSimulationButton():
         # Stop the runModel thread
         simCancelFlag.set()
         session.simulationInProgress = False
-        session.keepProgressBar = True
+        session.showSimProgress = True
 
         # Generate popup to let the user know it's cancelled
         stn.toast(
@@ -660,7 +660,7 @@ def simulationProgressBar():
             simStatus.write(newStatus)
 
 
-if simulationInProgress or session.keepProgressBar:
+if simulationInProgress or session.showSimProgress:
     simulationProgressBar()
 
 # Stop Simulation Button

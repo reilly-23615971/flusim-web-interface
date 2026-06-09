@@ -206,7 +206,7 @@ simCurrentProgress = deque[float](maxlen=1)
 simStatusQueue = list[str]()
 
 # R0 Calculation
-calcResultQueue = Queue[list]()
+calcResultQueue = Queue[dict]()
 calcErrorQueue = Queue[tuple[str, str, str, Optional[Exception]]]()
 calcCurrentProgress = deque[float](maxlen=1)
 calcStatusQueue = list[str]()

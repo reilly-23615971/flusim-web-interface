@@ -8,6 +8,7 @@ import logging
 import os
 from datetime import datetime
 from functools import partial
+from typing import Any
 
 import streamlit as st
 
@@ -24,6 +25,9 @@ except ImportError:
 
 from ClientResources.InterfaceFunctions import timeString
 from ClientResources.SharedResources import (
+    calcCurrentProgress,
+    calcErrorQueue,
+    calcResultQueue,
     simCurrentProgress,
     simErrorQueue,
     simResultQueue,
@@ -68,7 +72,8 @@ session = st.session_state
 sessionParameters = {
     "simulationInProgress": False,
     "calculationInProgress": False,
-    "keepProgressBar": False,
+    "showSimProgress": False,
+    "showCalcProgress": False,
     "scenarioCount": 0,
     "scenarioSetParamsExtra": {},
     "scenarioSetParams": {},
@@ -157,13 +162,15 @@ st.sidebar.link_button(
 
 # TODO: Fix the "fragment no longer exists" issues
 @st.fragment(run_every=1)
-def updateData():
+def updateData() -> None:
     """
-    Fragment to regularly check if model results have been received yet.
+    Fragment to regularly check if server results have been received yet.
     """
-    hasResults, hasError = not simResultQueue.empty(), not simErrorQueue.empty()
-    if session.simulationInProgress and (hasResults or hasError):
-        if hasResults and not hasError:
+    resultsObtained = False
+    # Simulation Results
+    simHasResults, simHasError = not simResultQueue.empty(), not simErrorQueue.empty()
+    if session.simulationInProgress and (simHasResults or simHasError):
+        if simHasResults and not simHasError:
             # Reset pending simulation variables
             # TODO: Add a check to ensure visualisations can't use the new values
             # while this function is still processing the data
@@ -201,7 +208,7 @@ Please make sure your parameters do not possess any errors and try again.
                         None,
                     )
                 )
-                hasError = True
+                simHasError = True
             elif any(
                 form.tool == "epidemic"
                 and len(data["Scenario"].value_counts()) != scenarioCount
@@ -218,7 +225,7 @@ ensure all scenarios do not possess any errors and try again.
                         None,
                     )
                 )
-                hasError = True
+                simHasError = True
             else:
                 # Save the data to st.session_state
                 for data, form in zip(formattedData, dataForms):
@@ -234,7 +241,7 @@ ensure all scenarios do not possess any errors and try again.
                 )
                 appLog.info("[updateData] Data processing is complete.")
                 session.ChartGenerated = False
-        if hasError:
+        if simHasError:
             # Notify user of errors, but leave displaying them to runSimulations
             session["simulationError"] = simErrorQueue.get()
             simCurrentProgress.append(-1.0)
@@ -248,7 +255,58 @@ Simulation encountered an error; see
 
         # Re-enable running new simulations and using their data
         session.simulationInProgress = False
-        session.keepProgressBar = True
+        session.showSimProgress = True
+
+        resultsObtained = True
+
+    # R0 Calculation Results
+    calcHasResults, calcHasError = (
+        not calcResultQueue.empty(),
+        not calcErrorQueue.empty(),
+    )
+    if session.calculationInProgress and (calcHasResults or calcHasError):
+        if calcHasResults and not calcHasError:
+            # Get calculation results
+            calculationData: dict[str, Any] = calcResultQueue.get()
+            appLog.info(
+                f"[updateData] Obtained the following calculation data:\n{calculationData}"
+            )
+            r0 = calculationData["r0"]
+            lowCI, highCI = calculationData["interval"]
+            scenarioName = session.get("calcScenarioName")
+            session["r0Calculation"] = r0
+            session["r0CalculationInterval"] = (lowCI, highCI)
+
+            # session.calculationEndTime = datetime.now()
+            # totalTime = session.calculationEndTime - session.calculationStartTime
+            # formattedTime = timeString(totalTime.total_seconds())
+            notifyToast(
+                f"""
+$R_0$ for {scenarioName} is {r0} with a 95% confidence interval of [{lowCI}, {highCI}]
+                """,
+                icon=":material/calculate:",
+            )
+            appLog.info("[updateData] R0 calculation is complete.")
+        if calcHasError:
+            # Notify user of errors, but leave displaying them to runSimulations
+            session["calculationError"] = calcErrorQueue.get()
+            calcCurrentProgress.append(-1.0)
+            notifyToast(
+                """
+$R_0$ calculation encountered an error; see
+:primary-badge[:material/partner_exchange: $R_0$ Calibration] for more.
+                """,
+                icon=":material/error:",
+            )
+
+        # Re-enable running new simulations and using their data
+        session.calculationInProgress = False
+        session.showCalcProgress = True
+
+        resultsObtained = True
+
+    # Rerun if results have been updated
+    if resultsObtained:
         st.rerun()
 
 

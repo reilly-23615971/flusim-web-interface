@@ -93,7 +93,7 @@ def calculateR0Button() -> None:
             useInterventions = session.get("rCalculateInterventionsToggle", False)
             community = session.get("community", "newcastle")
 
-            # Load debug parameters from file
+            # Load JSON
             if usePresetParams:
                 filename = f"default{"NoNPI" if useInterventions else ""}.json"
                 with open(f"ClientResources/Templates/{filename}", "r") as f:
@@ -102,20 +102,10 @@ def calculateR0Button() -> None:
                 params = createTemplate(
                     scenarioID, includeInterventions=False, includeDashboard=False
                 )
-
-            # Save current parameter values that'll be used for
-            # visualisation when the user has potentially changed them
             schema = communityOverride(
                 name=community, parameters=params
             ).model_dump_json(indent=4, exclude_unset=True)
-
-            # Save current parameter values that'll be used for
-            # visualisation when the user has potentially changed them
-            calcParams: dict[str, Any] = {"Scenario": scenarioName}
-            calcParams["Community"] = community
-            calcParams["Interventions In Simulation"] = useInterventions
-
-            session.pendingCalcParams = calcParams
+            session.calcScenarioName = scenarioName
 
             # Prepare model call parameters
             statusParams = {
@@ -159,6 +149,56 @@ def calculateR0Button() -> None:
                 icon=":material/calculate:",
             )
             st.rerun()
+
+
+@st.dialog("Cancel $R_0$ Calculation", width="large", icon=":material/stop_circle:")
+def stopCalculationButton():
+    """
+    Callback function for the Calculate R0 button, opening a dialog window
+    before cancelling the currently pending analysis.
+    """
+    # Disable button if it's taking a while to run
+    cancelPending = bool(session.get("confirmCalcCancelButton"))
+
+    st.warning(
+        "Are you sure you want to stop calculating $R_0$?",
+        icon=":material/warning:",
+    )
+
+    if st.button(
+        "Confirm",
+        key="confirmCalcCancelButton",
+        icon="spinner" if cancelPending else None,
+        disabled=cancelPending,
+    ):
+        # Exit immediately if there's nothing to stop
+        if not session.calculationInProgress:
+            stn.toast(
+                "$R_0$ is not currently being calculated; there's nothing to cancel.",
+                icon=":material/stop:",
+            )
+            st.rerun()
+
+        # Display as error on the progress bar
+        session["calculationError"] = (
+            "Calculation cancelled",
+            "The calculation was manually cancelled by the user.",
+            "stop_circle",
+            None,
+        )
+        calcCurrentProgress.append(-1.0)
+
+        # Stop the runModel thread
+        calcCancelFlag.set()
+        session.calculationInProgress = False
+        session.showCalcProgress = True
+
+        # Generate popup to let the user know it's cancelled
+        stn.toast(
+            "The calculation has been cancelled.",
+            icon=":material/stop_circle:",
+        )
+        st.rerun()
 
 
 # Page Content
@@ -289,3 +329,61 @@ before running another one.
         """
     ),
 )
+
+
+@st.fragment(run_every=1)
+def showCalcResults():
+    """
+    Fragment to display any errors that occur when calculating R0
+    """
+    try:
+        progress = calcCurrentProgress[0]
+    except IndexError:
+        progress = 0.0
+    if progress < 0.0:
+        # Display errors that have occurred alongside progress
+        errorTitle, errorBody, errorIcon, errorObject = session.get(
+            "calculationError",
+            (
+                "Error occurred when calculating $R_0$",
+                "An unspecified error has occurred while calculating $R_0$.",
+                "error",
+                None,
+            ),
+        )
+        st.progress(1.0, f":red[:material/error:] {errorTitle}")
+        simStatus = st.status(
+            label="Calculation stopped due to error (click for more info)",
+            state="error",
+        )
+        simStatus.error(f"Error: {errorBody}", icon=f":material/{errorIcon}:")
+        if errorObject is not None:
+            simStatus.exception(errorObject)
+    else:
+        scenarioName = session["calcScenarioName"]
+        r0 = session["r0Calculation"]
+        lowCI, highCI = session["r0CalculationInterval"]
+        st.metric(
+            f"Basic Reproduction Number ($R_0$) for {scenarioName}",
+            r0,
+            delta_description=f"95% Confidence Interval: [{lowCI}, {highCI}]",
+            help="""
+The basic reproduction number is the average number of new infections that will
+be caused by a single infected individual over the lifespan of their infection.
+            """,
+        )
+
+
+if session.showCalcProgress:
+    showCalcResults()
+
+# Stop Simulation Button
+if calculationInProgress:
+    st.button(
+        label="Cancel $R_0$ Calculation",
+        on_click=stopCalculationButton,
+        key="_stopCalc",
+        type="primary",
+        icon=":material/stop_circle:",
+        help="Stop calculating $R_0$.",
+    )
