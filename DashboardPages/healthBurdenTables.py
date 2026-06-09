@@ -12,6 +12,7 @@ import pandas as pd
 import streamlit as st
 from matplotlib.colors import TwoSlopeNorm, to_hex
 
+from ClientResources.InterfaceFunctions import healthOutcomeStore
 from ClientResources.ParameterFunctions import idGet, loadKey, replaceTableNA, saveKey
 from ClientResources.SharedResources import (
     ageWithTime,
@@ -19,7 +20,6 @@ from ClientResources.SharedResources import (
     tableOutcomes,
     usePresetData,
 )
-from ClientResources.SimulationRunFunctions import healthOutcomeStore
 from ClientResources.VisualisationFunctions import formatAsir, generateAsir
 
 # Logging

@@ -9,11 +9,12 @@ from functools import partial
 from typing import Any, Callable, Literal, cast
 
 import numpy as np
+import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.ParameterFunctions import containerSave
-from ClientResources.SharedResources import ageWithTime, triggerConditions
+from ClientResources.ParameterFunctions import containerSave, idGet
+from ClientResources.SharedResources import ageTimeDict, ageWithTime, triggerConditions
 
 # Logging
 functionLog = logging.getLogger(__name__)
@@ -220,6 +221,89 @@ def trigCast(x: str) -> Literal[
         ],
         triggerConditions[x],
     )
+
+
+def healthOutcomeStore(
+    scenarioNames: list[str], useAges: bool = True
+) -> tuple[dict, dict]:
+    """
+    Function to format and store health burden outcome rates for a given set
+    of scenarios.
+
+    Parameters:
+        scenarioNames (list of str): The names of each scenario defined in
+            the simulation.
+
+        useAges (Boolean): Set to False to ignore age-specific health burdens
+            and define each of their values to be the same baseline value.
+
+    Returns:
+        tuple of dicts: A pair of dictionaries storing the global and age-specific
+            health burden rates.
+    """
+    # Required values for outcome rates
+    icuKey, icuDefault, icuFormat = "icuRatio", 20.0, lambda x: x / 100
+    deathKey, deathDefault, deathFormat = "deathRatio", 12.0, lambda x: x / 100000
+    outcomeRates = {
+        "Diagnosed Cases": ("caseRatio", 50.0, lambda x: x / 100),
+        "GP Visits": ("gpRatio", 17.0, lambda x: x / 100),
+        "Hospitalisations": ("hospitalRatio", 320.0, lambda x: x / 100000),
+        "Deaths": (deathKey, deathDefault, deathFormat),
+    }
+
+    # Basic rates (not age-specific)
+    singleRates = {}
+    for outcome, (key, default, formatFunc) in outcomeRates.items():
+        singleRates[outcome] = {
+            scenario: formatFunc(idGet(key, i, default))
+            for i, scenario in enumerate(scenarioNames)
+        }
+
+    # ICU (dependent on hospitalisation)
+    singleRates["ICU Visits"] = {
+        scenario: singleRates["Hospitalisations"][scenario]
+        * icuFormat(idGet(icuKey, i, icuDefault))
+        for i, scenario in enumerate(scenarioNames)
+    }
+
+    # Deaths (age-specific)
+    """ageRates = {
+        scenarioNames[scenarioID]: {
+            idGet("deathAgeGroup", scenarioID, None, f"-{rowID}"): deathFormat(
+                idGet(deathKey, scenarioID, deathDefault, f"-{rowID}")
+            )
+            for rowID in range(idGet("deathRowCount", scenarioID, 0))
+        }
+        for scenarioID in range(scenarioCount + 1)
+    }"""
+    ageRates = {}
+    for scenarioID, name in enumerate(scenarioNames):
+        baseDeathRate = deathFormat(idGet(deathKey, scenarioID, deathDefault))
+        if useAges:
+            mortAgeForm = idGet(
+                "mortAgeForm",
+                scenarioID,
+                pd.DataFrame(
+                    {
+                        "Age Group": [None],
+                        "Mortality Rate": [baseDeathRate],
+                    },
+                ),
+            ).copy()
+            mortAgeForm["Mortality Rate"] = mortAgeForm["Mortality Rate"].apply(
+                deathFormat
+            )
+            mortAgeDict = (
+                mortAgeForm.dropna()
+                .replace({"Age Group": ageTimeDict})
+                .set_index("Age Group")["Mortality Rate"]
+                .to_dict()
+            )
+        else:
+            mortAgeDict = {}
+        ageRates[name] = {age: baseDeathRate for age in ageWithTime} | mortAgeDict
+
+    return singleRates, ageRates
 
 
 # Scenario name functions
