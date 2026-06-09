@@ -6,15 +6,23 @@
 import asyncio
 import json
 import logging
-import threading
+from collections import deque
 from datetime import datetime
 from io import BytesIO
-from typing import Any
+from queue import Queue
+from threading import Event, Thread
+from typing import Any, Literal, overload
 from zipfile import ZipFile
 
 import pandas as pd
 import streamlit as st
-from aiohttp import ClientConnectorError, ClientResponseError, ClientSession, WSMsgType
+from aiohttp import (
+    ClientConnectorError,
+    ClientResponseError,
+    ClientSession,
+    WSMessageTypeError,
+    WSMsgType,
+)
 
 # Reload streamlit_notify if it fails the first time
 try:
@@ -35,13 +43,13 @@ from ClientResources.SharedResources import (
     ageTimeDict,
     ageWithTime,
     communityPopulation,
+    saveJSON,
+    serverUrl,
     simCurrentProgress,
     simErrorQueue,
     simResultQueue,
-    saveJSON,
-    serverUrl,
-    splitPoint,
     simStatusQueue,
+    splitPoint,
     usePresetParams,
 )
 
@@ -51,7 +59,7 @@ functionLog = logging.getLogger(__name__)
 # Store st.session_state as variable for efficiency
 session = st.session_state
 
-cancelSimThread = threading.Event()
+cancelSimThread = Event()
 
 
 def runtimeEstimate(days: int, runs: int, scenarios: int) -> int:
@@ -160,8 +168,83 @@ def healthOutcomeStore(
     return singleRates, ageRates
 
 
+def runModelProgress(
+    scenarioNames: list[str], useVaccines: bool = False
+) -> dict[str, tuple[float, str]]:
+    """
+    Function to generate the status dictionary used for the simulation progress bar.
+
+    Parameters:
+        scenarioNames (list of str): The names of the scenarios in the simulation.
+
+        useVaccines (bool): Set to `True` to add an extra status point for
+            vaccine-based infections.
+
+    Returns:
+        dict: A dictionary matching short status strings to tuples containing
+            a float (the percentage of the progress bar to fill) and a string
+            (the description of the step represented by this status)
+    """
+    # TODO: Include client side processing like formatAsir in this progress
+    # TODO: Fake mid-simulation progress with estimated times
+    progressDict = {
+        "start": (0.01, "Initialising parameters..."),
+        "generatingConfig": (0.02, "Preparing simulation engine..."),
+        "zippingAnalysis": (0.98, "Compiling results..."),
+        "completed": (1.0, "Simulation complete!"),
+        "error": (-1.0, "Experiment halted due to error"),
+        "shutdown": (-1.0, "Server shut down before experiment could finish"),
+    }
+
+    # Scenario status
+    scenarioSegments = (splitPoint - 0.02) / len(scenarioNames)
+    progressDict |= {
+        f"runningSim{i}": (
+            scenarioSegments * i + 0.02,
+            f'Running scenario "{name}"...',
+        )
+        for i, name in enumerate(scenarioNames)
+    }
+    # Analysis status
+    # Note that ASIR gets twice the progress length as epidemic
+    if useVaccines:
+        analysisSegments = (1 - splitPoint - 0.02) / 6
+        progressDict |= {
+            "toolboxAnalysis0": (
+                splitPoint,
+                "Extracting cumulative infections...",
+            ),
+            "toolboxAnalysis1": (
+                analysisSegments + splitPoint,
+                "Extracting daily infections...",
+            ),
+            "toolboxAnalysis2": (
+                3 * analysisSegments + splitPoint,
+                "Extracting age-based infections...",
+            ),
+            "toolboxAnalysis3": (
+                5 * analysisSegments + splitPoint,
+                "Extracting vaccine-based infections...",
+            ),
+        }
+    else:
+        analysisSegments = (1 - splitPoint - 0.02) / 4
+        progressDict |= {
+            "toolboxAnalysis0": (splitPoint, "Extracting cumulative infections..."),
+            "toolboxAnalysis1": (
+                analysisSegments + splitPoint,
+                "Extracting daily infections...",
+            ),
+            "toolboxAnalysis2": (
+                3 * analysisSegments + splitPoint,
+                "Extracting age-based infections...",
+            ),
+        }
+    return progressDict
+
+
 @st.dialog("Run Simulation Experiment", width="large", icon=":material/motion_play:")
-def runSimulationButton():
+def runSimulationButton() -> None:
     """
     Callback function for the Run Simulation button, opening a dialog window
     before running the simulation itself.
@@ -283,9 +366,10 @@ already busy with a different task.
             simParams: dict[str, Any] = {"Scenario Names": scenarioNames}
             community = session.get("community", "newcastle")
             simParams["Community"] = community
-            useAdvanced = session.get("showAdvanced", False)
             schema = json.loads(parameterJSON)
-            if "+vaccine" in schema.get("middle_joint"):
+            useAdvanced = session.get("showAdvanced", False)
+            useVaccines = "+vaccine" in schema.get("middle_joint")
+            if useVaccines:
                 simParams["Analysis Formats"] = [
                     AnalysisFile(
                         tool="epidemic", names=scenarioNames, useCumulative=True
@@ -345,6 +429,16 @@ already busy with a different task.
 
             session.pendingSimParams = simParams
 
+            # Prepare model call parameters
+            statusParams = {
+                "resultType": "zip",
+                "statusDecoder": runModelProgress(scenarioNames, useVaccines),
+                "progress": simCurrentProgress,
+                "status": simStatusQueue,
+                "results": simResultQueue,
+                "error": simErrorQueue,
+            }
+
             # Clear the status queue
             simCurrentProgress.append(0.0)
             simStatusQueue.clear()
@@ -352,7 +446,15 @@ already busy with a different task.
             session["simulationError"] = None
 
             # Make the model call
-            runModelWrapper(parameterJSON)
+            # runModelWrapper(parameterJSON)
+            session.simulationInProgress = True
+            taskWrapper(
+                "Simulation Experiment",
+                "runModel",
+                parameterJSON,
+                cancelSimThread,
+                statusParams,
+            )
 
             # TODO: Remember streamlit_push_notifications
 
@@ -414,52 +516,324 @@ def stopSimulationButton():
         st.rerun()
 
 
-async def runModelStart(parameterJSON: str) -> str:
+# Server contact functions
+
+
+async def taskStart(route: str, parameterJSON: str) -> str:
     """
-    Async function to prompt the server to begin running a simulation.
+    Async function to prompt the server to begin a task via a POST request.
 
     Parameters:
-        parameterJSON (str): A string containing the JSON representation of
-            the simulation experiment to run.
+        route (str): The URL route to contact.
+
+        parameterJSON (str): A string containing the JSON to include in the server call.
 
     Returns:
-        str: The ID used to obtain information on the simulation.
+        str: The ID used in future requests to obtain the task's status and results.
+
+    Raises:
+        ClientResponseError: If the server responds with an unsuccessful error
+            code (4XX or 5XX).
+
+        AssertionError: If the server responds with error code 422, i.e. if
+            `parameterJSON` is rejected by the server's validation model.
+
+
     """
 
     # Send POST request to server with parameters
     schema = json.loads(parameterJSON)
-    functionLog.info(
-        f"[runModelStart] Initialising session with base url {serverUrl}..."
-    )
-    async with ClientSession(raise_for_status=False, base_url=serverUrl) as session:
-        async with session.post("runModel", json=schema) as response:
+    functionLog.info(f"[taskStart] Initialising session with base url {serverUrl}...")
+    functionLog.info(f"[taskStart] Contacting {serverUrl}/{route}...")
+    async with ClientSession(raise_for_status=False, base_url=serverUrl) as client:
+        async with client.post(route, json=schema) as response:
             responseData = await response.json()
             if response.status == 422:
                 # TODO: Unwrap Pydantic errors instead of
                 # making them AssertionErrors
                 raise AssertionError(
-                    """
-The provided parameters did not comply with the simulation's model schema
-                    """,
+                    "The provided parameters did not comply with the required schema",
                     response.text(),
                 )
             response.raise_for_status()
-            simulationID = responseData["simulationID"]
-        functionLog.info(f"[runModelStart] Sim ID: {simulationID}")
-        return simulationID
+            taskID = responseData["taskID"]
+        functionLog.info(f"[taskStart] Task ID: {taskID}")
+        return taskID
 
 
-async def runModelMonitor(simulationID: str):
+async def taskMonitor(flag: Event) -> None:
     """
-    Async function to wait until the cancellation flag is set before progressing
+    Async function to wait until the cancellation flag is set before progressing.
 
     Parameters:
-        simulationID (str): The ID distinguishing this simulation experiment.
+        flag (Event): The flag to wait for.
     """
     while True:
-        if cancelSimThread.is_set():
-            return simulationID
+        if flag.is_set():
+            return
         await asyncio.sleep(0.25)
+
+
+async def taskCancel(taskID: str):
+    """
+    Async function to cancel a running task.
+
+    Parameters:
+        taskID (str): The ID distinguishing this server task.
+    """
+    # Send DELETE request to server with parameters
+    functionLog.info(f"[taskCancel] Cancelling task {taskID}...")
+    async with ClientSession(base_url=serverUrl) as client:
+        async with client.delete(f"cancel/{taskID}"):
+            functionLog.info(f"[taskCancel] Task {taskID} successfully cancelled.")
+
+
+@overload
+async def taskResults(
+    route: str, taskID: str, resultType: Literal["zip"]
+) -> list[bytes]: ...
+
+
+@overload
+async def taskResults(route: str, taskID: str, resultType: Literal["json"]) -> dict: ...
+
+
+async def taskResults(route: str, taskID: str, resultType: str) -> list[bytes] | dict:
+    """
+    Async function to retrieve the results from a completed task.
+
+    Parameters:
+        route (str): The URL route to contact.
+
+        taskID (str): The ID distinguishing this server task.
+
+        resultType (str): A string indicating the format the results
+            should be interpreted as.
+
+    Returns:
+        list or dict: If `resultType` is `zip`, returns a list of analysis files,
+            unzipped and stored as byte data. If `resultType` is `json`, returns
+            a dictionary representation of the JSON data.
+
+    Raises:
+        FileNotFoundError: If the server returns an empty zip file.
+
+        JSONDecodeError: If the results cannot be decoded from JSON.
+
+        ValueError: If `resultType` is not one of the accepted options or the
+            results cannot be unzipped. Notes are used to distinguish these
+            two error circumstances.
+
+    """
+
+    # Send POST request to server with parameters
+    functionLog.info(f"[taskDownload] Downloading results for task {taskID}...")
+    async with ClientSession(base_url=serverUrl) as client:
+        # Download the analysis files
+        async with client.get(f"{route}/results/{taskID}") as response:
+            fileData = await response.read()
+            match resultType:
+                case "zip":
+                    # Unzip data and format each analysis file
+                    with ZipFile(BytesIO(fileData)) as analyses:
+                        fileNames = analyses.namelist()
+                        if len(fileNames) == 0:
+                            raise FileNotFoundError("Server returned no readable files")
+                        try:
+                            return [analyses.read(file) for file in fileNames]
+                        except ValueError as e:
+                            e.add_note("zip")
+                            raise e
+                case "json":
+                    return json.loads(fileData)
+                case _:
+                    raise ValueError("Unrecognised result type")
+
+
+async def taskStatus(
+    session: ClientSession,
+    taskID: str,
+    route: str,
+    resultType: Literal["zip", "json"],
+    statuses: dict[str, tuple[float, str]],
+    progressValue: deque[float],
+    statusQueue: list[str],
+    resultQueue: Queue,
+):
+    """
+    Async function to get status updates from the server via a websocket
+
+    Parameters:
+        session (ClientSession): The `aiohttp` session to open the websocket on.
+
+        taskID (str): The ID distinguishing this server task.
+
+        route (str): The URL route to contact for this task.
+
+        resultType (str): A string indicating the format of the results.
+
+        statuses (dict): A dictionary used to decode status messages
+            returned by the server.
+
+        progressValue (deque of float): A deque used to store the percentage
+            of the task that has been completed.
+
+        statusQueue (list of str): A list used to store the status messages
+            noting the steps of the task that have been completed.
+
+        resultQueue (Queue): A queue used to store the results of the task.
+
+    Raises:
+        RuntimeError: If the server returns the `error` status.
+
+        PythonFinalisationError: If the server returns the `shutdown` status.
+
+        WSMessageTypeError: If the websocket cannot be found.
+    """
+
+    # TODO: Finish genericising
+    async with session.ws_connect(f"/status/{taskID}") as ws:
+        async for msg in ws:
+            match msg.type:
+                case WSMsgType.TEXT:
+                    data = json.loads(msg.data)
+                    status = data.get("status")
+                    functionLog.info(f"[taskStatus] Task {taskID} status: {status}")
+                    progress, message = statuses[status]
+                    # Prevent duplicate status messages
+                    if message not in simStatusQueue:
+                        progressValue.append(progress)
+                        statusQueue.append(status)
+                    # End the websocket if certain statuses are returned
+                    match status:
+                        case "completed":
+                            # Download the analysis files
+                            results = await taskResults(route, taskID, resultType)
+                            resultQueue.put(results)
+                            return
+                        case "error":
+                            functionLog.error(f"""
+[taskStatus] Server encountered an error while running the task {taskID}
+                            """)
+                            raise RuntimeError("""
+An error occurred while the server was completing the request.
+                            """)
+                        case "shutdown":
+                            functionLog.error(f"""
+[taskStatus] Server shut down while running the task {taskID}
+                            """)
+                            raise PythonFinalizationError("""
+The simulation server shut down while attempting to complete the task.
+                            """)
+                case WSMsgType.CLOSE:
+                    if msg.data == 1008:
+                        statusQueue.append("Error: Server websocket not found")
+                        raise WSMessageTypeError(
+                            "Websocket with requested ID not found"
+                        )
+                    # TODO: Account for other closures
+                case WSMsgType.ERROR:
+                    statusQueue.append("Error: Server websocket had issues")
+                    socketError = ws.exception()
+                    if socketError is not None:
+                        raise socketError
+                    else:
+                        raise WSMessageTypeError(f"WebSocket error: {ws.exception()}")
+
+
+async def taskWebsocket(route: str, taskID: str, cancelFlag: Event, statusParams: dict):
+    """
+    Async function to monitor the server websocket and cancel if requested
+
+    Parameters:
+        route (str): The URL route to contact for this task.
+
+        taskID (str): The ID distinguishing this server task.
+
+        cancelFlag (Event): The flag to indicate that the task should be cancelled.
+
+        statusParams (dict): A dictionary compiling the parameters used for monitoring
+            the task, namely the status dictionary and the queues specific
+            to this task.
+    """
+
+    async with ClientSession(base_url=serverUrl) as client:
+        statusTask = asyncio.create_task(
+            taskStatus(
+                client,
+                taskID,
+                route,
+                statusParams["resultType"],
+                statusParams["statusDecoder"],
+                statusParams["progress"],
+                statusParams["status"],
+                statusParams["results"],
+            )
+        )
+        monitorTask = asyncio.create_task(taskMonitor(cancelFlag))
+
+        # Continue when either results are downloaded or monitor stops
+        finishedTask, incompleteTask = await asyncio.wait(
+            [statusTask, monitorTask], return_when=asyncio.FIRST_COMPLETED
+        )
+        for task in incompleteTask:
+            task.cancel()
+
+        # Cancel the sim if monitor was first
+        if monitorTask in finishedTask:
+            # Cancel the simulation
+            await taskCancel(taskID)
+            return
+        else:
+            statusTask.result()
+
+
+def taskWrapper(
+    taskName: str,
+    route: str,
+    parameterJSON: str,
+    cancelFlag: Event,
+    statusParams: dict,
+):
+    """
+    Async wrapper function for server tasks, allowing HTTP requests to be made
+    asynchronously without blocking Streamlit operations.
+
+    Parameters:
+        taskName (str): The name of the task being completed.
+
+        route (str): The URL route to contact for this task.
+
+        parameterJSON (str): A string containing the JSON representation of
+            the simulation experiment to run.
+
+        cancelFlag (Event): The flag to indicate that the task should be cancelled.
+
+        statusParams (dict): A dictionary compiling the parameters used for monitoring
+            the task, namely the status dictionary and the queues specific
+            to this task.
+    """
+
+    def threadRunner():
+        """
+        Inner function to asynchronously call the server and await results,
+        needed to avoid interrupting Streamlit UI functionality.
+        """
+        try:
+            # Get task ID
+            taskID = asyncio.run(taskStart(route, parameterJSON))
+
+            # Open the websocket
+            asyncio.run(taskWebsocket(route, taskID, cancelFlag, statusParams))
+
+        except Exception as e:
+            # TODO: Add taskName as parameter for formatError
+            formatError(e, statusParams["error"])
+        finally:
+            cancelFlag.clear()
+
+    taskThread = Thread(target=threadRunner)
+    taskThread.start()
 
 
 async def runModelStatus(session: ClientSession, simulationID: str, parameterJSON: str):
@@ -542,7 +916,9 @@ async def runModelStatus(session: ClientSession, simulationID: str, parameterJSO
                     match simStatus:
                         case "completed":
                             # Download the analysis files
-                            simData = await runModelDownload(simulationID)
+                            simData: list = await taskResults(
+                                "runModel/download", simulationID, "zip"
+                            )
                             simResultQueue.put(simData)
                             simCurrentProgress.append(1.0)
                             simStatusQueue.append("Simulation complete!")
@@ -574,14 +950,16 @@ The simulation server shut down while attempting to run the simulation.
                                 simStatusQueue.append(status)
                 case WSMsgType.CLOSE:
                     if msg.data == 1008:
-                        raise RuntimeError("Websocket with requested ID not found")
+                        raise WSMessageTypeError(
+                            "Websocket with requested ID not found"
+                        )
                 case WSMsgType.ERROR:
                     simStatusQueue.append("Error: Server websocket had issues")
                     socketError = ws.exception()
                     if socketError is not None:
                         raise socketError
                     else:
-                        raise RuntimeError(f"WebSocket error: {ws.exception()}")
+                        raise WSMessageTypeError(f"WebSocket error: {ws.exception()}")
 
 
 async def runModelWebsocket(simulationID: str, parameterJSON: str):
@@ -598,7 +976,7 @@ async def runModelWebsocket(simulationID: str, parameterJSON: str):
         statusTask = asyncio.create_task(
             runModelStatus(session, simulationID, parameterJSON)
         )
-        monitorTask = asyncio.create_task(runModelMonitor(simulationID))
+        monitorTask = asyncio.create_task(taskMonitor(cancelSimThread))
 
         # Continue when either results are downloaded or monitor stops
         finishedTask, incompleteTask = await asyncio.wait(
@@ -610,56 +988,10 @@ async def runModelWebsocket(simulationID: str, parameterJSON: str):
         # Cancel the sim if monitor was first
         if monitorTask in finishedTask:
             # Cancel the simulation
-            await runModelCancel(simulationID)
+            await taskCancel(simulationID)
             return
         else:
             statusTask.result()
-
-
-async def runModelDownload(simulationID: str) -> list[bytes]:
-    """
-    Async function to download the results from a complete simulation.
-
-    Parameters:
-        simulationID (str): The ID distinguishing this simulation experiment.
-
-    Returns:
-        list: The analysis files, unzipped and stored as byte data.
-    """
-    # Send POST request to server with parameters
-    functionLog.info(
-        f"[runModelDownload] Downloading analysis data for sim {simulationID}..."
-    )
-    async with ClientSession(base_url=serverUrl) as session:
-        # Download the analysis files
-        async with session.get(f"runModel/download/{simulationID}") as response:
-            fileData = await response.read()
-            # Unzip data and format each analysis file
-            with ZipFile(BytesIO(fileData)) as analyses:
-                fileNames = analyses.namelist()
-                if len(fileNames) == 0:
-                    raise FileNotFoundError("Server returned no readable files")
-                try:
-                    return [analyses.read(file) for file in fileNames]
-                except ValueError as e:
-                    raise e
-
-
-async def runModelCancel(simulationID: str):
-    """
-    Async function to cancel a running simulation.
-
-    Parameters:
-        simulationID (str): The ID distinguishing this simulation experiment.
-    """
-
-    # Send DELETE request to server with parameters
-    functionLog.info(f"[runModelCancel] Cancelling sim {simulationID}...")
-    async with ClientSession(base_url=serverUrl) as session:
-        async with session.delete(f"cancel/{simulationID}"):
-            functionLog.info(
-                f"[runModelCancel] Sim {simulationID} successfully cancelled."
-            )
 
 
 def runModelWrapper(parameterJSON):
@@ -681,29 +1013,32 @@ def runModelWrapper(parameterJSON):
         """
         try:
             # Get simulation ID
-            simulationID = asyncio.run(runModelStart(parameterJSON))
+            simulationID = asyncio.run(taskStart("runModel", parameterJSON))
 
             # Open the websocket
             asyncio.run(runModelWebsocket(simulationID, parameterJSON))
 
         except Exception as e:
-            formatError(e)
+            formatError(e, simErrorQueue)
         finally:
             cancelSimThread.clear()
 
     session.simulationInProgress = True
-    runModelThread = threading.Thread(target=threadRunner)
+    runModelThread = Thread(target=threadRunner)
     runModelThread.start()
 
 
-def formatError(e: Exception):
+def formatError(e: Exception, errorQueue: Queue):
     """
-    Function to format error messages for display on the dashboard
+    Function to format error messages for display on the dashboard.
 
     Parameters:
         e (Exception): The exception to format.
+
+        errorQueue (Queue): The queue to add error details to.
     """
     # Get error message based on error type
+    # TODO: Use task type (sim, r0 calc etc) to modify error messages
     match e:
         case ClientConnectorError():
             errorShort = "Couldn't connect to server"
@@ -748,13 +1083,14 @@ parameters. Please make sure that all parameters are set to the right values
 before trying again.
             """
             errorIcon = "schema"
-        case RuntimeError():
+        case WSMessageTypeError():
             errorShort = "Websocket encountered an error"
             errorBody = """
 The websocket used to monitor the simulation server had an internal error.
 Please check your network connection and try again.
             """
             errorIcon = "plug_connect"
+        # TODO: Account for other ValueErrors (e.g. bad resultType)
         case ValueError():
             errorShort = "Error unzipping analysis files"
             errorBody = """
@@ -769,6 +1105,7 @@ The simulation server did not return any readable files. Ensure your
 parameters do not result in a simulation where nobody is infected and try again.
             """
             errorIcon = "unknown_document"
+        # TODO: Catch JSONDecodeError
         case PythonFinalizationError():
             errorShort = "Server shut down while running simulation"
             errorBody = """
@@ -785,5 +1122,5 @@ try again later.
             errorIcon = "error"
 
     # Add to the queue
-    functionLog.error(f"[runModel] {errorShort}: {e}")
-    simErrorQueue.put((errorShort, errorBody, errorIcon, e))
+    functionLog.error(f"[taskWrapper] {errorShort}: {e}")
+    errorQueue.put((errorShort, errorBody, errorIcon, e))
