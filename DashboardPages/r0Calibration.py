@@ -136,8 +136,8 @@ def calculateR0Button() -> None:
             # Make the model call
             session.calculationInProgress = True
             taskWrapper(
-                "Simulation Experiment",
-                "runModel",
+                "R0 Calculation",
+                "r0/calculate",
                 schema,
                 calcCancelFlag,
                 statusParams,
@@ -310,7 +310,7 @@ wish to calculate the basic reproduction number with interventions in place.
 # variables to indicate whether the calculation is running or
 # another task is preventing it
 st.button(
-    label=("Running calculation..." if calculationInProgress else "Calculate $R_0$"),
+    label=("Calculating $R_0$..." if calculationInProgress else "Calculate $R_0$"),
     on_click=calculateR0Button,
     key="_rCalculateButton",
     disabled=calculationInProgress,
@@ -359,23 +359,20 @@ def showCalcResults():
         simStatus.error(f"Error: {errorBody}", icon=f":material/{errorIcon}:")
         if errorObject is not None:
             simStatus.exception(errorObject)
-    else:
+    elif session.get("r0Calculation") is not None:
         scenarioName = session["calcScenarioName"]
         r0 = session["r0Calculation"]
         lowCI, highCI = session["r0CalculationInterval"]
         st.metric(
             f"Basic Reproduction Number ($R_0$) for {scenarioName}",
             r0,
+            border=True,
             delta_description=f"95% Confidence Interval: [{lowCI}, {highCI}]",
             help="""
 The basic reproduction number is the average number of new infections that will
 be caused by a single infected individual over the lifespan of their infection.
             """,
         )
-
-
-if session.showCalcProgress:
-    showCalcResults()
 
 # Stop Simulation Button
 if calculationInProgress:
@@ -387,3 +384,6 @@ if calculationInProgress:
         icon=":material/stop_circle:",
         help="Stop calculating $R_0$.",
     )
+
+if session.showCalcProgress:
+    showCalcResults()
