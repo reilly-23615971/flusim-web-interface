@@ -123,6 +123,7 @@ by ±0.02.
             schema = overrideTemplate(
                 name=community, description=str(targetR0), parameters=params
             ).model_dump_json(indent=4, exclude_unset=True)
+            # TODO: Just save ID instead of name?
             session.calibScenarioName = scenarioName
             session.calibSavedScenarioID = scenarioID
 
@@ -455,6 +456,7 @@ leftCalib.number_input(
     label="Target $R_0$",
     min_value=0.0,
     value=1.5,
+    format="%0.8g",
     key="_targetR",
     on_change=saveKey,
     args=["targetR"],
@@ -535,6 +537,37 @@ if calibrationInProgress:
     )
 
 calibResultsContainer = st.empty()
+
+# TODO: Since buttons can't be made in fragments, find a more robust way
+# to enusre this appearance is synchronised with the fragment
+calibrationResults = session.get("r0Calibration")
+idToUpdate = session.get("calibSavedScenarioID")
+if calibrationResults is not None and idToUpdate is not None:
+    scenarioName = session["calibScenarioName"]
+    beta = session["r0CalibrationBeta"]
+    def updateBeta():
+        """
+        Simple callback to update beta to match the calibrated value
+        """
+        session[f"beta{idToUpdate}"] = beta
+        stn.toast(
+            f"""
+{"The baseline scenario" if idToUpdate == 0 else scenarioName}
+now has a basic transmission parameter of {beta}.
+            """,
+            icon=":material/sync:",
+        )
+
+    st.button(
+        f"Update Parameters in {scenarioName}",
+        icon=":material/sync:",
+        on_click=updateBeta,
+        help=f"""
+Update the value of the basic transmission parameter in
+{"the baseline scenario" if idToUpdate == 0 else scenarioName}
+to match the calibrated value above.
+        """,
+    )
 
 # Calculation
 
@@ -641,6 +674,7 @@ def showR0Results():
             if errorObject is not None:
                 simStatus.exception(errorObject)
         elif session.get("r0Calibration") is not None:
+            # TODO: Save scenario ID and make descriptions sound natural
             calibContents = calibResultsContainer.container()
             scenarioName = session["calibScenarioName"]
             r0 = session["r0Calibration"]
@@ -657,28 +691,6 @@ named {scenarioName}, the disease will have a basic reproduction number equal
 to {r0}.
                 """,
             )
-            idToUpdate = session.get("calibSavedScenarioID")
-            if idToUpdate is not None:
-
-                def updateBeta():
-                    """
-                    Simple callback to update beta to match the calibrated value
-                    """
-                    session[f"beta{idToUpdate}"] = beta
-                    stn.toast(
-                        f"{scenarioName} now has a basic transmission parameter of {beta}.",
-                        icon=":material/sync:",
-                    )
-
-                calibContents.button(
-                    f"Update Parameters in {scenarioName}",
-                    icon=":material/sync:",
-                    on_click=updateBeta,
-                    help=f"""
-Update the value of the basic transmission parameter in {scenarioName} to match
-the calibrated value above.
-                    """,
-                )
 
     if session.showCalcProgress:
         try:
@@ -706,6 +718,7 @@ the calibrated value above.
             if errorObject is not None:
                 simStatus.exception(errorObject)
         elif session.get("r0Calculation") is not None:
+            # TODO: Save scenario ID and make descriptions sound natural
             calcContents = calcResultsContainer.container()
             scenarioName = session["calcScenarioName"]
             r0 = session["r0Calculation"]

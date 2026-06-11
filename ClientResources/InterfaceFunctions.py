@@ -354,6 +354,9 @@ def saveName(
             icon=":material/tab_close_inactive:",
         )
     else:
+        # Update saved names for r0
+        if session.get("calibSavedScenarioID") == scenarioID:
+            session["calibScenarioName"] = newName
         containerSave(key, scenarioID, containers, specialContainers)
 
 
