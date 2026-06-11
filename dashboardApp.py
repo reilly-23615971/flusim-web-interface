@@ -74,8 +74,10 @@ session = st.session_state
 # aren't mixed up by the server
 sessionParameters = {
     "simulationInProgress": False,
+    "calibrationInProgress": False,
     "calculationInProgress": False,
     "showSimProgress": False,
+    "showCalibProgress": False,
     "showCalcProgress": False,
     "scenarioCount": 0,
     "scenarioSetParamsExtra": {},

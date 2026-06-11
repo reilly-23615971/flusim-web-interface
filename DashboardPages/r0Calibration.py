@@ -107,7 +107,8 @@ by ±0.02.
             calibCancelFlag.clear()
 
             # Get relevant settings from session
-            useInterventions = session.get("rCalibrateInterventionsToggle", False)
+            showAdvanced = session.get("showAdvanced", False)
+            useInterventions = session.get("rCalculateInterventionsToggle", False) if showAdvanced else False
             community = session.get("community", "newcastle")
 
             # Load JSON
@@ -265,7 +266,8 @@ def calculateR0Button() -> None:
             calcCancelFlag.clear()
 
             # Get relevant settings from session
-            useInterventions = session.get("rCalculateInterventionsToggle", False)
+            showAdvanced = session.get("showAdvanced", False)
+            useInterventions = session.get("rCalculateInterventionsToggle", False) if showAdvanced else False
             community = session.get("community", "newcastle")
 
             # Load JSON
@@ -482,21 +484,22 @@ are listed by the names assigned to them.
     """,
 )
 
-loadKey("rCalibrateInterventionsToggle", default=False)
-rightCalib.toggle(
-    "Include Vaccinations and NPIs",
-    False,
-    key="_rCalibrateInterventionsToggle",
-    on_change=saveKey,
-    args=["rCalibrateInterventionsToggle"],
-    help="""
-Traditionally, the basic reproduction number is calculated without the influence
-of medical interventions such as vaccination, so they will be excluded from the
-simulation when calculating the parameters necessary to achieve a specific $R_0$.
-Set this toggle to `True` if you wish to match the basic reproduction number
-with interventions in place. 
-    """,
-)
+if showAdvanced:
+    loadKey("rCalibrateInterventionsToggle", default=False)
+    rightCalib.toggle(
+        "Include Vaccinations and NPIs",
+        False,
+        key="_rCalibrateInterventionsToggle",
+        on_change=saveKey,
+        args=["rCalibrateInterventionsToggle"],
+        help="""
+    Traditionally, the basic reproduction number is calculated without the influence
+    of medical interventions such as vaccination, so they will be excluded from the
+    simulation when calculating the parameters necessary to achieve a specific $R_0$.
+    Set this toggle to `True` if you wish to match the basic reproduction number
+    with interventions in place. 
+        """,
+    )
 
 # Button to begin calculation
 st.button(
@@ -514,7 +517,7 @@ to determine what transmission parameters achieve the desired $R_0$.
         """
         if not calibrationInProgress
         else """
-$R_0$ is already being calibrated; please wait for the process to complete.
+$R_0$ is currently being calibrated; please wait for the process to complete.
         """
     ),
 )
@@ -531,7 +534,7 @@ if calibrationInProgress:
         help="Stop calibrating $R_0$.",
     )
 
-calibResultsContainer = st.container()
+calibResultsContainer = st.empty()
 
 # Calculation
 
@@ -561,20 +564,22 @@ defined at the :grey-badge[:material/variable_add: Scenario Parameters] page
 are listed by the names assigned to them.
     """,
 )
-loadKey("rCalculateInterventionsToggle", default=False)
-rightCalc.toggle(
-    "Include Vaccinations and NPIs",
-    False,
-    key="_rCalculateInterventionsToggle",
-    on_change=saveKey,
-    args=["rCalculateInterventionsToggle"],
-    help="""
-Traditionally, the basic reproduction number is calculated without the influence
-of medical interventions such as vaccination, so they will be excluded from the
-simulation when calculating the value of $R_0$. Set this toggle to `True` if you
-wish to calculate the basic reproduction number with interventions in place. 
-    """,
-)
+
+if showAdvanced:
+    loadKey("rCalculateInterventionsToggle", default=False)
+    rightCalc.toggle(
+        "Include Vaccinations and NPIs",
+        False,
+        key="_rCalculateInterventionsToggle",
+        on_change=saveKey,
+        args=["rCalculateInterventionsToggle"],
+        help="""
+    Traditionally, the basic reproduction number is calculated without the influence
+    of medical interventions such as vaccination, so they will be excluded from the
+    simulation when calculating the value of $R_0$. Set this toggle to `True` if you
+    wish to calculate the basic reproduction number with interventions in place. 
+        """,
+    )
 
 
 # Button to begin calculation
@@ -593,14 +598,14 @@ to estimate a value for $R_0$.
         """
         if not calculationInProgress
         else """
-$R_0$ is already being calculated; please wait for the process to complete.
+$R_0$ is currently being calculated; please wait for the process to complete.
         """
     ),
 )
 
 # TODO: Show Calib Results and dashboardApp additions
 
-calcResultsContainer = st.container()
+calcResultsContainer = st.empty()
 
 
 @st.fragment(run_every=1)
@@ -609,12 +614,14 @@ def showR0Results():
     Fragment to display any errors that occur when calculating R0
     """
     if session.showCalibProgress:
-        # TODO: Update to calib
         try:
             progress = calibCurrentProgress[0]
         except IndexError:
             progress = 0.0
+            # TODO: Use status to list the estimates that have occurred
+            # already in lieu of a progress bar/estimated time
         if progress < 0.0:
+            calibContents = calibResultsContainer.container()
             # Display errors that have occurred alongside progress
             errorTitle, errorBody, errorIcon, errorObject = session.get(
                 "calibrationError",
@@ -625,8 +632,8 @@ def showR0Results():
                     None,
                 ),
             )
-            calibResultsContainer.progress(1.0, f":red[:material/error:] {errorTitle}")
-            simStatus = calibResultsContainer.status(
+            calibContents.progress(1.0, f":red[:material/error:] {errorTitle}")
+            simStatus = calibContents.status(
                 label="Calibration stopped due to error (click for more info)",
                 state="error",
             )
@@ -634,10 +641,11 @@ def showR0Results():
             if errorObject is not None:
                 simStatus.exception(errorObject)
         elif session.get("r0Calibration") is not None:
+            calibContents = calibResultsContainer.container()
             scenarioName = session["calibScenarioName"]
             r0 = session["r0Calibration"]
             beta = session["r0CalibrationBeta"]
-            calibResultsContainer.metric(
+            calibContents.metric(
                 f"Transmission Parameter Required for $R_0$ of {r0} in {scenarioName}",
                 beta,
                 border=True,
@@ -649,7 +657,6 @@ named {scenarioName}, the disease will have a basic reproduction number equal
 to {r0}.
                 """,
             )
-            # TODO: Button to update beta with recorded value
             idToUpdate = session.get("calibSavedScenarioID")
             if idToUpdate is not None:
 
@@ -663,7 +670,7 @@ to {r0}.
                         icon=":material/sync:",
                     )
 
-                calibResultsContainer.button(
+                calibContents.button(
                     f"Update Parameters in {scenarioName}",
                     icon=":material/sync:",
                     on_click=updateBeta,
@@ -679,6 +686,7 @@ the calibrated value above.
         except IndexError:
             progress = 0.0
         if progress < 0.0:
+            calcContents = calcResultsContainer.container()
             # Display errors that have occurred alongside progress
             errorTitle, errorBody, errorIcon, errorObject = session.get(
                 "calculationError",
@@ -689,8 +697,8 @@ the calibrated value above.
                     None,
                 ),
             )
-            calcResultsContainer.progress(1.0, f":red[:material/error:] {errorTitle}")
-            simStatus = calcResultsContainer.status(
+            calcContents.progress(1.0, f":red[:material/error:] {errorTitle}")
+            simStatus = calcContents.status(
                 label="Calculation stopped due to error (click for more info)",
                 state="error",
             )
@@ -698,10 +706,11 @@ the calibrated value above.
             if errorObject is not None:
                 simStatus.exception(errorObject)
         elif session.get("r0Calculation") is not None:
+            calcContents = calcResultsContainer.container()
             scenarioName = session["calcScenarioName"]
             r0 = session["r0Calculation"]
             lowCI, highCI = session["r0CalculationInterval"]
-            calcResultsContainer.metric(
+            calcContents.metric(
                 f"Basic Reproduction Number ($R_0$) for {scenarioName}",
                 r0,
                 border=True,
