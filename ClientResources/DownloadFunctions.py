@@ -628,11 +628,11 @@ def deleteScenario(scenarioID: int, openTab: Optional[str] = None):
     del session["activeErrors"][scenarioCount]
 
     # Update selected scenarios for R0 calculation
-    for widget in {"rCalculateScenario"}:
-        currentIndex = session[widget]
+    for widget in {"rCalibrateScenario", "calibSavedScenarioID", "rCalculateScenario"}:
+        currentIndex = session.get(widget)
         if currentIndex == scenarioID:
-            session[widget] = 0
-        elif currentIndex > scenarioID:
+            del session[widget]
+        elif currentIndex is not None and currentIndex > scenarioID:
             session[widget] -= 1
 
     # Update scenario count

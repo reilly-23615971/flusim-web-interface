@@ -25,6 +25,9 @@ except ImportError:
 
 from ClientResources.InterfaceFunctions import timeString
 from ClientResources.SharedResources import (
+    calibCurrentProgress,
+    calibErrorQueue,
+    calibResultQueue,
     calcCurrentProgress,
     calcErrorQueue,
     calcResultQueue,
@@ -259,6 +262,53 @@ Simulation encountered an error; see
 
         resultsObtained = True
 
+    # R0 Calibration Results
+    calibHasResults, calibHasError = (
+        not calibResultQueue.empty(),
+        not calibErrorQueue.empty(),
+    )
+    if session.calibrationInProgress and (calibHasResults or calibHasError):
+        if calibHasResults and not calibHasError:
+            # Get calculation results
+            calibrationData: dict[str, Any] = calibResultQueue.get()
+            appLog.info(
+                f"[updateData] Obtained the following calibration data:\n{calibrationData}"
+            )
+            r0 = calibrationData["r0"]
+            lowCI, highCI = calibrationData["interval"]
+            beta = calibrationData["beta"]
+            scenarioName = session.get("calibScenarioName")
+            session["r0Calibration"] = r0
+            session["r0CalibrationBeta"] = beta
+
+            # session.calculationEndTime = datetime.now()
+            # totalTime = session.calculationEndTime - session.calculationStartTime
+            # formattedTime = timeString(totalTime.total_seconds())
+            notifyToast(
+                f"""
+$R_0$ of {r0} for {scenarioName} achieved with transmission value of {beta}
+                """,
+                icon=":material/partner_exchange:",
+            )
+            appLog.info("[updateData] R0 calibration is complete.")
+        if calibHasError:
+            # Notify user of errors, but leave displaying them to runSimulations
+            session["calibrationError"] = calibErrorQueue.get()
+            calibCurrentProgress.append(-1.0)
+            notifyToast(
+                """
+Error calibrating $R_0$; see
+:primary-badge[:material/partner_exchange: $R_0$ Calibration] for more.
+                """,
+                icon=":material/error:",
+            )
+
+        # Re-enable running new simulations and using their data
+        session.calibrationInProgress = False
+        session.showCalibProgress = True
+
+        resultsObtained = True
+
     # R0 Calculation Results
     calcHasResults, calcHasError = (
         not calcResultQueue.empty(),
@@ -293,7 +343,7 @@ $R_0$ for {scenarioName} is {r0} with a 95% confidence interval of [{lowCI}, {hi
             calcCurrentProgress.append(-1.0)
             notifyToast(
                 """
-$R_0$ calculation encountered an error; see
+Error calculating $R_0$; see
 :primary-badge[:material/partner_exchange: $R_0$ Calibration] for more.
                 """,
                 icon=":material/error:",

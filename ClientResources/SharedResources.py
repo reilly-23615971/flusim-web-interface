@@ -205,6 +205,12 @@ simErrorQueue = Queue[tuple[str, str, str, Optional[Exception]]]()
 simCurrentProgress = deque[float](maxlen=1)
 simStatusQueue = list[str]()
 
+# R0 Calibration
+calibResultQueue = Queue[dict]()
+calibErrorQueue = Queue[tuple[str, str, str, Optional[Exception]]]()
+calibCurrentProgress = deque[float](maxlen=1)
+calibStatusQueue = list[str]()
+
 # R0 Calculation
 calcResultQueue = Queue[dict]()
 calcErrorQueue = Queue[tuple[str, str, str, Optional[Exception]]]()
