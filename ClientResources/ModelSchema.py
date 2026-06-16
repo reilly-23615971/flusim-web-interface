@@ -1470,6 +1470,16 @@ class vaccineEfficacy(BaseModel):
         title="Dose Type",
         description="The type of vaccine dose these parameters apply to.",
     )
+    '''
+    StrainId: Optional[int] = Field(
+        title="Strain ID",
+        default=None,
+        description="""
+The ID of the infection strain these parameters apply to. If None, the
+parameters apply to all infection strains.
+        """,
+    )
+    '''
     Age: Optional[AgeGroup] = Field(
         title="Age",
         default=None,

@@ -16,6 +16,7 @@ sharedLog = logging.getLogger(__name__)
 # Toggle to use preset JSON config with runSimulation instead of using
 # the parameters set by the user, for testing
 usePresetParams = False
+presetJSONPath = "ClientResources/defaultParams.guide.json"
 
 # Toggle to use built-in data instead of model output
 # TODO: Include different types of preset data

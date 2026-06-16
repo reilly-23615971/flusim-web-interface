@@ -1969,9 +1969,8 @@ def diseaseSaveSchema(
                 1.0 if waningRate == 0 else (1.0 - wanedEfficacy) / waningRate
             )
         else:
-            # Set immunity delay to 9999, effectively disabling it
-            # TODO: Make sure simulation accepts delays this high
-            scenarioParams.infection_waning_cycle_delay = 9999
+            # Set rate to 0
+            scenarioParams.infection_waning_rate_per_cycle = 0
         # Infection Seeding
         scenarioParams.seed_rate = idGet("seedRate", id, 0.25)
         scenarioParams.seeding_start_cycle = (seedPeriod[0] - 1) * 2
@@ -2173,8 +2172,8 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             )
 
         # Natural immunity waning
-        if "infection_waning_cycle_delay" in paramDict:
-            useWaning = paramDict["infection_waning_cycle_delay"] != 9999
+        if "infection_waning_rate_per_cycle" in paramDict:
+            useWaning = paramDict["infection_waning_rate_per_cycle"] > 0
             updateParamFromSchema("naturalWaningToggle", useWaning, scenarioID)
         else:
             useWaning = idGet("naturalWaningToggle", 0, False)

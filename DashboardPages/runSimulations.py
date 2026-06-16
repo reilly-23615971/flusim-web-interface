@@ -38,6 +38,7 @@ from ClientResources.ServerFunctions import taskWrapper
 from ClientResources.SharedResources import (
     AnalysisFile,
     communityPopulation,
+    presetJSONPath,
     saveJSON,
     simCurrentProgress,
     simErrorQueue,
@@ -251,7 +252,7 @@ already busy with a different task.
             # Create the final model JSON
             # Load debug parameters from file
             if usePresetParams:
-                with open("ClientResources/defaultParams.guide.json", "r") as f:
+                with open(presetJSONPath, "r") as f:
                     parameterJSON = f.read()
                 scenarioNames = [
                     "Baseline",

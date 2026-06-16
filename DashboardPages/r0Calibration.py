@@ -108,7 +108,11 @@ by ±0.02.
 
             # Get relevant settings from session
             showAdvanced = session.get("showAdvanced", False)
-            useInterventions = session.get("rCalculateInterventionsToggle", False) if showAdvanced else False
+            useInterventions = (
+                session.get("rCalculateInterventionsToggle", False)
+                if showAdvanced
+                else False
+            )
             community = session.get("community", "newcastle")
 
             # Load JSON
@@ -268,7 +272,11 @@ def calculateR0Button() -> None:
 
             # Get relevant settings from session
             showAdvanced = session.get("showAdvanced", False)
-            useInterventions = session.get("rCalculateInterventionsToggle", False) if showAdvanced else False
+            useInterventions = (
+                session.get("rCalculateInterventionsToggle", False)
+                if showAdvanced
+                else False
+            )
             community = session.get("community", "newcastle")
 
             # Load JSON
@@ -539,12 +547,13 @@ if calibrationInProgress:
 calibResultsContainer = st.empty()
 
 # TODO: Since buttons can't be made in fragments, find a more robust way
-# to enusre this appearance is synchronised with the fragment
+# to ensure this appearance is synchronised with the fragment
 calibrationResults = session.get("r0Calibration")
 idToUpdate = session.get("calibSavedScenarioID")
 if calibrationResults is not None and idToUpdate is not None:
     scenarioName = session["calibScenarioName"]
     beta = session["r0CalibrationBeta"]
+
     def updateBeta():
         """
         Simple callback to update beta to match the calibrated value
