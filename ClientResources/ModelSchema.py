@@ -63,6 +63,7 @@ parameterCategories = {
     "Scenario_VaccineCoverage": ["Age"],
     "Scenario_VaccineDose": ["DoseType"],
     "Scenario_VaccineDoseEfficacy": ["DoseType", "Age"],
+    # "Scenario_VaccineDoseEfficacy": ["DoseType", "StrainId", "Age"],
 }
 parameterGetters = {
     "Scenario_CrossImmunity": attrgetter("FromStrainId", "ToStrainId"),
@@ -71,6 +72,7 @@ parameterGetters = {
     "Scenario_VaccineCoverage": attrgetter("Age"),
     "Scenario_VaccineDose": attrgetter("DoseType"),
     "Scenario_VaccineDoseEfficacy": attrgetter("DoseType", "Age"),
+    # "Scenario_VaccineDoseEfficacy": attrgetter("DoseType", "StrainId", "Age"),
 }
 
 

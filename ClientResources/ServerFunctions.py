@@ -59,14 +59,15 @@ async def taskStart(route: str, parameterJSON: str) -> str:
     functionLog.info(f"[taskStart] Contacting {serverUrl}/{route}...")
     async with ClientSession(raise_for_status=False, base_url=serverUrl) as client:
         async with client.post(route, json=schema) as response:
-            responseData = await response.json()
             if response.status == 422:
+                errorText = await response.text()
                 # TODO: Unwrap Pydantic errors instead of
                 # making them AssertionErrors
                 raise AssertionError(
                     "The provided parameters did not comply with the required schema",
-                    response.text(),
+                    errorText,
                 )
+            responseData = await response.json()
             response.raise_for_status()
             taskID = responseData["taskID"]
         functionLog.info(f"[taskStart] Task ID: {taskID}")
