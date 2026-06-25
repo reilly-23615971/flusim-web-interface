@@ -283,16 +283,20 @@ def createConfig(scenarioCount: int, includeDashboard: bool = False) -> modelGui
     )
 
 
-def loadConfig(file: BytesIO):
+def loadConfig(file: BytesIO | str):
     """
     Function to read a JSON config file and set the dashboard's parameters
     to correspond to it.
 
     Parameters:
-        file (BytesIO): The JSON file containing the parameter settings.
+        file (BytesIO or str): The JSON file containing the parameter settings.
+            A string representation of the JSON will also be accepted.
     """
     try:
-        schema = modelGuideFile.model_validate_json(file.read())
+        if isinstance(file, str):
+            schema = modelGuideFile.model_validate_json(file)
+        else:
+            schema = modelGuideFile.model_validate_json(file.read())
     except ValidationError as e:
         validationErrorFormatting(e)
         return

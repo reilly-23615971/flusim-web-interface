@@ -22,7 +22,11 @@ except ImportError:
     importlib.reload(importlib.import_module("streamlit_notify"))
     import streamlit_notify as stn  # type: ignore
 
-from ClientResources.DownloadFunctions import createConfig, uploadDownloadBar
+from ClientResources.DownloadFunctions import (
+    createConfig,
+    loadConfig,
+    uploadDownloadBar,
+)
 from ClientResources.InterfaceFunctions import (
     errorChecker,
     healthOutcomeStore,
@@ -254,12 +258,8 @@ already busy with a different task.
             if usePresetParams:
                 with open(presetJSONPath, "r") as f:
                     parameterJSON = f.read()
-                scenarioNames = [
-                    "Baseline",
-                    "School Closure",
-                    "Case Isolation",
-                    "Community Contact Reduction",
-                ]
+                loadConfig(parameterJSON)
+                scenarioCount = session.get("scenarioCount", 0) + 1
 
             # Create JSON for selected parameters
             else:
@@ -269,12 +269,12 @@ already busy with a different task.
                 if saveJSON:
                     with open("./savedJSON.json", "w") as file:
                         file.write(parameterJSON)
-                scenarioNames = ["Baseline"] + [
-                    session[f"scenarioName{i}"] for i in range(1, scenarioCount)
-                ]
 
             # Save current parameter values that'll be used for
             # visualisation when the user has potentially changed them
+            scenarioNames = ["Baseline"] + [
+                session[f"scenarioName{i}"] for i in range(1, scenarioCount)
+            ]
             simParams: dict[str, Any] = {"Scenario Names": scenarioNames}
             community = session.get("community", "newcastle")
             simParams["Community"] = community
