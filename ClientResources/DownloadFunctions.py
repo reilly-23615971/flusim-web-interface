@@ -283,7 +283,7 @@ def createConfig(scenarioCount: int, includeDashboard: bool = False) -> modelGui
     )
 
 
-def loadConfig(file: BytesIO | str):
+def loadConfig(file: BytesIO | str, loud: bool = True):
     """
     Function to read a JSON config file and set the dashboard's parameters
     to correspond to it.
@@ -291,6 +291,8 @@ def loadConfig(file: BytesIO | str):
     Parameters:
         file (BytesIO or str): The JSON file containing the parameter settings.
             A string representation of the JSON will also be accepted.
+
+        loud (bool): Set to `True` to notify the user of the updated parameters.
     """
     try:
         if isinstance(file, str):
@@ -431,13 +433,13 @@ def loadConfig(file: BytesIO | str):
         session.clear()
         session.update(backupSession)
         return
-
-    stn.toast(
-        "Parameters successfully uploaded!",
-        icon=":material/download_done:",
-        duration="short",
-    )
-    st.rerun()
+    if loud:
+        stn.toast(
+            "Parameters successfully uploaded!",
+            icon=":material/download_done:",
+            duration="short",
+        )
+        st.rerun()
 
 
 def createTemplate(

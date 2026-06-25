@@ -258,7 +258,7 @@ already busy with a different task.
             if usePresetParams:
                 with open(presetJSONPath, "r") as f:
                     parameterJSON = f.read()
-                loadConfig(parameterJSON)
+                loadConfig(parameterJSON, loud=False)
                 scenarioCount = session.get("scenarioCount", 0) + 1
 
             # Create JSON for selected parameters
@@ -640,6 +640,7 @@ def simulationProgressBar():
             ),
         )
         st.progress(1.0, f":red[:material/error:] {errorTitle}")
+        # TODO: Different label for cancellation
         simStatus = st.status(
             label="Experiment stopped due to error (click for more info)", state="error"
         )
