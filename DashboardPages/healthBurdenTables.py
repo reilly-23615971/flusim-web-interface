@@ -213,12 +213,13 @@ def generateTable():
     )
 
     # Format data according to column type
-    formatValues = (
+    # TODO: Is + with baseline difference necessary enough to revive this?
+    '''formatValues = (
         {column: "{:+.5n}" for column in diffSet - percSet}
         | {column: "{:+.3%}" for column in diffSet & percSet}
         | {column: "{:.3%}" for column in percSet - diffSet}
         | {column: "{:.5n}" for column in set(ageData.columns) - (diffSet | percSet)}
-    )
+    )'''
 
     # Create fake index columns
     if agesUsed:
@@ -311,7 +312,7 @@ def generateTable():
             )
 
     # Save the generated table
-    session.HealthOutcomeTableData = ageStyle.format(formatValues)  # type: ignore
+    session.HealthOutcomeTableData = ageStyle # .format(formatValues)  # type: ignore
     session.HealthOutcomeTableConfig = columnConfig
     session.ChartGenerated = True
 

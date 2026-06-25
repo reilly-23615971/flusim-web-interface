@@ -691,8 +691,11 @@ def generateAsir(
             percentCols.add(columnName)
             differenceCols.add(columnName)
 
-        # Formally create the column
+        # Formally create the column and add config details
         fullData[columnName] = currentColumn
+        columnConfig[columnName] = st.column_config.NumberColumn(
+            format="percent" if proportion else "localized"
+        )
 
     # Remove the base values column once it's redundant
     fullData.drop("Base Values", axis=1, inplace=True)
