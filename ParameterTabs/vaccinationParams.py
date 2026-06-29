@@ -181,6 +181,7 @@ will be vaccinated against the pathogen.
                 staticVaccination = True
 
             # Vaccinated Proportions
+            # TODO: Make between 0 and 100, percentage signs are a necessary sacrifice
             if staticVaccination:
                 # Single vaccination proportion
                 loadKey("initialVaccinated", id, 0.0)
@@ -2691,6 +2692,8 @@ def vaccineSaveSchema(
                     },
                 ),
             )
+            # TODO: Scenario coverage with Age=None doesn't overwrite baseline coverage;
+            # either add explicit entries for each age or modify the toolbox
             schema.Scenario_VaccineCoverage = [
                 vaccineCoverage(
                     Age=None,

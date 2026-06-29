@@ -82,7 +82,6 @@ def uploadDownloadBar():
             label="Upload Parameters from File",
             width="stretch",
             on_click=parameterUpload,
-            key="_uploadParamsButton",
             icon=":material/upload_file:",
             help="""
 Upload a JSON file containing parameter settings for the simulation. These
@@ -497,6 +496,7 @@ def loadTemplate(
 
         templateName (str, optional): The name of the template being applied.
     """
+    # TODO: This isn't working; debug
     if not isinstance(template, Parameters):
         try:
             with open(template, "r") as file:

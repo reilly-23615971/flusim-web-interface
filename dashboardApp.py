@@ -142,6 +142,7 @@ healthTables = st.Page(
     icon=":material/table_chart_view:",
 )
 
+# TODO: Shorten section names, reduce font sizes or increase sidebar width
 pages = {
     "Flusim Web Dashboard": [landingPage],
     "Parameter Configuration": [

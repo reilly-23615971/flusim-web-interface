@@ -1112,6 +1112,8 @@ An age group that will have a specific mortality rate defined for it,
 overriding the base rate.
                             """,
                         ),
+                        # TODO: See if localized is OK for format and
+                        # won't hide too many decimal places
                         "Mortality Rate": st.column_config.NumberColumn(
                             "Mortality Rate (Deaths per 100,000 Cases)",
                             required=True,

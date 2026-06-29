@@ -214,12 +214,12 @@ def generateTable():
 
     # Format data according to column type
     # TODO: Is + with baseline difference necessary enough to revive this?
-    '''formatValues = (
+    """formatValues = (
         {column: "{:+.5n}" for column in diffSet - percSet}
         | {column: "{:+.3%}" for column in diffSet & percSet}
         | {column: "{:.3%}" for column in percSet - diffSet}
         | {column: "{:.5n}" for column in set(ageData.columns) - (diffSet | percSet)}
-    )'''
+    )"""
 
     # Create fake index columns
     if agesUsed:
@@ -312,7 +312,7 @@ def generateTable():
             )
 
     # Save the generated table
-    session.HealthOutcomeTableData = ageStyle # .format(formatValues)  # type: ignore
+    session.HealthOutcomeTableData = ageStyle  # .format(formatValues)  # type: ignore
     session.HealthOutcomeTableConfig = columnConfig
     session.ChartGenerated = True
 
@@ -512,7 +512,7 @@ to a different Age Group Separation mode before attempting to generate a table.
     # TODO: Sometimes this visually appears off despite being on; why?
     colourToggle = st.toggle(
         "Use Colour in Table",
-        value=False,
+        value=True,
         on_change=saveKey,
         args=["colourToggle"],
         kwargs={"notScenario": True},
@@ -560,6 +560,7 @@ included in the table.
         },
     )
     # TODO: Allow manually setting column names
+    # TODO: Have default column settings instead of being empty?
     healthColumnForm = st.data_editor(
         baseColumnData,
         height="content",
@@ -605,6 +606,7 @@ all age groups will be considered.
                 """,
                 )
             ),
+            # TODO: Make advanced settings hide this when disabled
             "Vaccination Status": (
                 None
                 if not (currentDataUsesVaccines or usePresetData)
