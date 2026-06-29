@@ -557,7 +557,7 @@ will begin to lose their immunity to the pathogen.
     )
     infection_waning_rate_per_cycle: Optional[float] = Field(
         title="Infection Waning Rate Per Cycle",
-        default=0.005,
+        default=0.0,
         ge=0.0,
         description="""
 The proportion of immune individuals who will lose their immunity to the
