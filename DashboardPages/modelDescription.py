@@ -64,10 +64,12 @@ st.subheader("Experiment Details")
 st.markdown("""
     This dashboard operates by communicating with a separate server running the *Flusim* model. Parameter values selected by the user are sent from the dashboard to the server, which uses them to configure the *Flusim* simulation model. Once the simulation has ran, the server extracts results such as infections per day and sends them back to the dashboard. Finally, the dashboard uses these results alongside additional parameters set by the user to generate health burden outcomes and visualisations of the results. The image below visualises this process of conducting simulation experiments.
 """)
-st.image(
+st.container(horizontal_alignment="center").image(
     "/app/static/modelDiagram.png",
-    width="stretch",
-    caption="""
+    width=1000,
+)
+st.caption(
+    body="""
 A simplified diagram of how a simulation experiment is conducted. Disease
 and vaccination parameters from the dashboard are sent to the server program, which
 hosts the *Flusim* individual-based simulation model. This model is comprised of
@@ -79,6 +81,7 @@ the model. Once the server has returned these simulation outcomes, the dashboard
 combines them with user-specified health burden parameters to generate health burden
 outcomes such as GP visits and deaths.
     """,
+    text_alignment="center"
 )
 
 # TODO: Full parameter templates
