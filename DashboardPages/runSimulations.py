@@ -443,6 +443,9 @@ st.markdown("""
     These parameters control various universal elements of the simulation engine.
 """)
 
+# Buttons to upload simulation parameters
+uploadDownloadBar()
+
 # Advanced parameters toggle
 # TODO: Move advanced parameters to either the sidebar or a separate settings page
 loadKey("showAdvanced", default=False, noZeroDefault=True)
@@ -569,7 +572,6 @@ if showAdvanced:
     st.markdown("""
         - The scaling population will be used to adjust simulation results for populations larger than the simulated population. For instance, if you simulate Newcastle (whose population is 272,407) and set the scaling population to 544,814, all health burdens will be doubled to make them proportional to the new value.
     """)
-    # TODO: Can this (and other big number inputs) use commas?
     loadKey("scalingPopulation", default=communityPopulation[community])
     st.number_input(
         "Scaling Population",
@@ -586,10 +588,6 @@ if showAdvanced:
     population matches the scaling population.
             """,
     )
-
-# Buttons to upload simulation parameters
-# TODO: Move download popover so it doesn't interfere with the run sim dialog
-uploadDownloadBar()
 
 # Button to run the simulation
 # TODO: Check if server is available and grey out button if not

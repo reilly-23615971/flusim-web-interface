@@ -338,7 +338,6 @@ def taskWrapper(
             asyncio.run(taskWebsocket(route, taskID, cancelFlag, statusParams))
 
         except Exception as e:
-            # TODO: Add taskName as parameter for formatError
             formatError(e, taskName, statusParams["error"])
         finally:
             cancelFlag.clear()

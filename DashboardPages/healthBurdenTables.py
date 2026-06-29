@@ -519,7 +519,6 @@ to a different Age Group Separation mode before attempting to generate a table.
         agesToUse = []
 
     # Toggle coloured table cells
-    # TODO: Sometimes this visually appears off despite being on; why?
     colourToggle = st.toggle(
         "Use Colour in Table",
         value=True,
@@ -591,7 +590,6 @@ included in the table.
         },
     )
     # TODO: Allow manually setting column names
-    # TODO: Have default column settings instead of being empty?
     healthColumnForm = st.data_editor(
         baseColumnData,
         height="content",
@@ -941,7 +939,6 @@ tableConfig = session.get("HealthOutcomeTableConfig")
 if tableData is not None:
     st.header("Health Burden Outcome Table")
     # TODO: Fix columns being deselected when changing column settings
-    # TODO: No more scientific notation, yes more thousands separators
     st.dataframe(
         tableData,
         height="auto",

@@ -110,10 +110,9 @@ def buildNPITab(id: int, advanced: bool = False):
             """)
 
             # Case Isolation
-            # TODO: That's DIAGNOSED case isolation
             loadKey("caseIsolation", id, False)
             st.toggle(
-                "Enable Case Isolation",
+                "Enable Diagnosed Case Isolation",
                 value=False,
                 on_change=saveKey,
                 args=["caseIsolation", id],

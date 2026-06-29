@@ -984,6 +984,7 @@ set to affect the value on Day 45 will be changed to affect it on Day 30 instead
             )
 
             # Health Burden Outcomes
+            # TODO: Columnize these
             loadKey("caseRatio", id, 50.0)
             st.number_input(
                 "Diagnosis Rate (% Percentage of Cases)",
@@ -1071,7 +1072,6 @@ symptomatic cases of the pathogen.
             )
 
             # Dataframe for age-based mortality (if advanced params are enabled)
-            # TODO: Add thousands separators/ban scientific notation from all tables
             if advanced:
                 st.markdown(
                     "### Age-Specific Mortality Rate",
@@ -1112,8 +1112,6 @@ An age group that will have a specific mortality rate defined for it,
 overriding the base rate.
                             """,
                         ),
-                        # TODO: See if localized is OK for format and
-                        # won't hide too many decimal places
                         "Mortality Rate": st.column_config.NumberColumn(
                             "Mortality Rate (Deaths per 100,000 Cases)",
                             required=True,

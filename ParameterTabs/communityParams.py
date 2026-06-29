@@ -131,7 +131,6 @@ as public transport.
         # Other Community Parameters
         st.subheader("Advanced Community Settings", divider="grey")
 
-        # TODO: Default to 0
         loadKey("diagnosisDelay", id, 0)
         st.slider(
             "Case Diagnosis Delay (Days)",

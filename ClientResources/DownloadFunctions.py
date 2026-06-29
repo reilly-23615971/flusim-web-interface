@@ -99,7 +99,7 @@ def parameterDownload():
     parameter set when clicked. Uses a `st.popover` container due to
     `st.dialog` not working well with `st.download_button`.
     """
-    # TODO: Check if there's errors
+    # TODO: Check if there's errors before downloading
     # TODO: See if occasional page-blanking bugs can be fixed
     # TODO: Popover is a bit finicky; consider trying dialog or expander again
     with st.popover(
@@ -196,8 +196,6 @@ def createConfig(scenarioCount: int, includeDashboard: bool = False) -> modelGui
     scenarioParams = [Parameters() for _ in range(scenarioCount)]
 
     # Populate parameters with session_state values
-    # TODO: Make sure scenario parameters don't include baseline defaults
-    # (particularly with variable-length forms)
     # TODO: Add setting that forces tables to have baseline duplicates removed
     # (for sending to the server, not for downloading)
     useVaccines = False
@@ -207,7 +205,10 @@ def createConfig(scenarioCount: int, includeDashboard: bool = False) -> modelGui
         baseline = scenarioParams[0] if id != 0 else None
         diseaseSaveSchema(scenario, id, useAdvanced, baseline, includeDashboard)
         communitySaveSchema(scenario, id, useAdvanced, baseline)
-        useVaccines = vaccineSaveSchema(scenario, id, useAdvanced) or useVaccines
+        useVaccines = (
+            vaccineSaveSchema(scenario, id, useAdvanced, baseline, includeDashboard)
+            or useVaccines
+        )
         npiSaveSchema(scenario, id, useAdvanced, baseline, includeDashboard)
         if useAdvanced:
             dynamicSaveSchema(scenario, id)
@@ -399,7 +400,6 @@ def loadConfig(file: BytesIO | str, loud: bool = True):
         for scenarioID, scenario in enumerate(simulationList):
             if scenarioID != 0:
                 addScenario()
-                # TODO: Make sure names are unique (either here or in the schema)
                 updateParamFromSchema("scenarioName", scenario.name, scenarioID)
                 if scenario.override_setting:
                     scenarioParams = scenario.override_setting.parameters
@@ -474,7 +474,7 @@ def createTemplate(
     diseaseSaveSchema(template, scenarioID, useAdvanced, baseline, includeDashboard)
     communitySaveSchema(template, scenarioID, useAdvanced, baseline)
     if includeInterventions:
-        vaccineSaveSchema(template, scenarioID, useAdvanced)
+        vaccineSaveSchema(template, scenarioID, useAdvanced, baseline, includeDashboard)
         npiSaveSchema(template, scenarioID, useAdvanced, baseline, includeDashboard)
     if useAdvanced:
         dynamicSaveSchema(template, scenarioID)
