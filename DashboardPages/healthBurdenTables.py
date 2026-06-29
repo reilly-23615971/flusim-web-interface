@@ -195,7 +195,7 @@ def generateTable():
         if ageSeparation == "By Row"
         else []
     )
-    useColour = session.get("colourToggle")
+    useColour = session.get("colourToggle", True)
     tableLog.info(f"""
         [generateTable] Formatting Asir data using the scenarios
         {scenariosUsed} (of {scenarioNames}), the age groups {agesUsed}

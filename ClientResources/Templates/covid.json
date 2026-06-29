@@ -41,7 +41,7 @@
         "diagnosed_case_isolation": true,
         "class_dismissal": false,
         "infection_waning_cycle_delay": 720,
-        "infection_waning_rate_per_cycle": 0.005,
+        "infection_waning_rate_per_cycle": 0.0,
         "infection_waned_protection": 0.5,
         "school_closure_compliance": 0.5,
         "school_closure_trigger": "none",

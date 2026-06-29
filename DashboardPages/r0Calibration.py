@@ -464,6 +464,7 @@ leftCalib.number_input(
     label="Target $R_0$",
     min_value=0.0,
     value=1.5,
+    step=0.1,
     format="%0.8g",
     key="_targetR",
     on_change=saveKey,
