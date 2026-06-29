@@ -2747,7 +2747,6 @@ def vaccineSaveSchema(
             if id > 0 and baseline is not None:
                 schemaRemoveBaseline(scenarioParams, baseline.Scenario_Parameter)
             schemaUpdate(schema, "Scenario_Parameter", scenarioParams)
-            schema.Scenario_Parameter = scenarioParams
 
             # Vaccine Doses and Efficacy
             if multiDoseToggle:
@@ -3367,6 +3366,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
         )
         for boost in boosterEfficacySchema:
             age, base, waned = boost.Age, boost.Efficacy, boost.WanedEfficacy
+            assert not isinstance(base, list)
             if age is not None:
                 boosterEfficacyTable.loc[boosterEfficacyTable.shape[0]] = [
                     age,
