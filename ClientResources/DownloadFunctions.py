@@ -496,7 +496,6 @@ def loadTemplate(
 
         templateName (str, optional): The name of the template being applied.
     """
-    # TODO: This isn't working; debug
     if not isinstance(template, Parameters):
         try:
             with open(template, "r") as file:
@@ -553,14 +552,13 @@ def loadTemplate(
         # that may occur between starting the upload process and an error occurring
         session.clear()
         session.update(backupSession)
-        return
-
-    stn.toast(
-        body="Template successfully loaded!",
-        icon=":material/list_alt_check:",
-        duration="short",
-    )
-    st.rerun()
+    else:
+        stn.toast(
+            body="Template successfully loaded!",
+            icon=":material/list_alt_check:",
+            duration="short",
+        )
+        st.rerun()
 
 
 # Scenario management functions

@@ -1,4 +1,8 @@
 {
+    "Dashboard_Parameter": {
+        "prob_icu": 0.00128,
+        "prob_gp": 0.17
+    },
     "Scenario_ParameterWithAgePrefix": {
         "mort": 0.00025
     },
@@ -21,9 +25,7 @@
         "prob_withdrawal": 0.5,
         "prob_school_withdrawal": 0.9,
         "prob_hospitalisation": 0.0064,
-        "prob_icu": 0.00128,
         "prob_diagnosis": 0.5,
-        "prob_gp": 0.17,
         "prob_child_supervision": 1.0,
         "background_contact_count": 4.0,
         "max_class_size": 10,
