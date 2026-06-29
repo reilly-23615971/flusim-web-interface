@@ -151,10 +151,20 @@ def generateTable():
             "healthColumnForm",
             pd.DataFrame(
                 {
-                    "Health Burden Outcome": [None],
-                    "Age Groups": [[]],
-                    "Vaccination Status": ["All"],
-                    "Options": [[]],
+                    "Health Burden Outcome": [
+                        "Symptomatic Infections",
+                        "Symptomatic Infections",
+                        "Hospitalisations",
+                        "Hospitalisations",
+                    ],
+                    "Age Groups": [[], [], [], []],
+                    "Vaccination Status": ["All", "All", "All", "All"],
+                    "Options": [
+                        [],
+                        ["Percentage", "Difference from Baseline"],
+                        [],
+                        ["Percentage", "Difference from Baseline"],
+                    ],
                 },
             ),
         ),
@@ -540,14 +550,35 @@ included in the table.
     )
     st.markdown("Double-click a cell in this table to edit its value.")
 
+    """
+    default=pd.DataFrame(
+        {
+            "Health Burden Outcome": [None],
+            "Age Groups": [[]],
+            "Vaccination Status": ["All"],
+            "Options": [[]],
+        },
+    ),
+    """
+
     loadKey(
         "healthColumnForm",
         default=pd.DataFrame(
             {
-                "Health Burden Outcome": [None],
-                "Age Groups": [[]],
-                "Vaccination Status": ["All"],
-                "Options": [[]],
+                "Health Burden Outcome": [
+                    "Symptomatic Infections",
+                    "Symptomatic Infections",
+                    "Hospitalisations",
+                    "Hospitalisations",
+                ],
+                "Age Groups": [[], [], [], []],
+                "Vaccination Status": ["All", "All", "All", "All"],
+                "Options": [
+                    [],
+                    ["Percentage", "Difference from Baseline"],
+                    [],
+                    ["Percentage", "Difference from Baseline"],
+                ],
             },
         ),
         dataframe=True,
