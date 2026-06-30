@@ -808,9 +808,9 @@ set to affect the value on Day 45 will be changed to affect it on Day 30 instead
             )
 
             # Health Burden Outcomes
-            # TODO: Columnize these
+            leftCol, rightCol = st.columns(2)
             loadKey("caseRatio", id, 50.0)
-            st.number_input(
+            leftCol.number_input(
                 "Diagnosis Rate (% Percentage of Cases)",
                 min_value=0.0,
                 max_value=100.0,
@@ -827,7 +827,7 @@ diagnosed as a confirmed case of the pathogen.
                 """,
             )
             loadKey("gpRatio", id, 17.0)
-            st.number_input(
+            rightCol.number_input(
                 "GP Visit Rate (% Percentage of Cases)",
                 min_value=0.0,
                 max_value=100.0,
@@ -844,8 +844,8 @@ general practitioner (GP) as a result of the pathogen.
                 """,
             )
             loadKey("hospitalRatio", id, 320.0)
-            st.number_input(
-                "Hospitalisation Rate (Hospitalisations per 100,000 Cases)",
+            leftCol.number_input(
+                "Hospitalisation Rate (per 100,000 Cases)",
                 min_value=0.0,
                 max_value=100000.0,
                 value=320.0,
@@ -861,7 +861,7 @@ for every 100,000 symptomatic cases of the pathogen.
                 """,
             )
             loadKey("icuRatio", id, 20.0)
-            st.number_input(
+            rightCol.number_input(
                 "ICU Visit Rate (% Percentage of Hospitalisations)",
                 min_value=0.0,
                 max_value=100.0,
@@ -879,7 +879,7 @@ a hospital's intensive care unit (ICU) as a result of the pathogen.
             )
             loadKey("deathRatio", id, 12.0)
             deathRate = st.number_input(
-                "Mortality Rate (Deaths per 100,000 Cases)",
+                "Mortality Rate (per 100,000 Cases)",
                 min_value=0.0,
                 max_value=100000.0,
                 value=12.0,
@@ -937,7 +937,7 @@ overriding the base rate.
                             """,
                         ),
                         "Mortality Rate": st.column_config.NumberColumn(
-                            "Mortality Rate (Deaths per 100,000 Cases)",
+                            "Mortality Rate (per 100,000 Cases)",
                             required=True,
                             default=deathRate,
                             min_value=0.0,

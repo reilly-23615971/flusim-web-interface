@@ -216,6 +216,7 @@ No simulations have completed yet, so there is no data to plot.
 )
 
 # Display the graph itself
+# TODO: Graph is laggy; see if performance can be improved
 chartData = session.get("InfectionChartData")
 if chartData is not None:
     st.header("Flusim Infection Curves")

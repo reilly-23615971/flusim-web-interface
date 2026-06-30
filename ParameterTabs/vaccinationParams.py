@@ -1199,8 +1199,9 @@ Toggle whether or not booster vaccines are
 administered in the simulation, overriding other booster-related parameters.
                     """,
                 )
+                leftCol, rightCol = st.columns(2)
                 loadKey("boosterDoseCount", id, 3)
-                boosterDoseCount = st.slider(
+                boosterDoseCount = leftCol.slider(
                     "Number of Booster Doses",
                     1,
                     10,
@@ -1215,7 +1216,7 @@ simulation will be administered a booster vaccine.
                     """,
                 )
                 loadKey("boosterDelay", id, 3)
-                boosterDelay = st.slider(
+                boosterDelay = rightCol.slider(
                     "Time Between Booster Doses (Months)",
                     1,
                     12,
@@ -1233,7 +1234,7 @@ to receive another, where a month is 30 days.
                     """,
                 )
                 loadKey("boosterDuration", id, 4)
-                boosterDuration = st.slider(
+                boosterDuration = leftCol.slider(
                     "Booster Immunity Waning Delay (Months)",
                     1,
                     12,
@@ -1248,7 +1249,7 @@ before they begin losing their immunity, where a month is 30 days.
                     """,
                 )
                 loadKey("boosterWaningRate", id, 6)
-                st.slider(
+                rightCol.slider(
                     "Booster Waning Duration (Months)",
                     0,
                     12,
@@ -1292,7 +1293,7 @@ pathogen all at once.
                     True,
                 )
                 loadKey("boosterBaseEfficacy", id, 0.9)
-                boosterBaseEfficacy = st.slider(
+                boosterBaseEfficacy = leftCol.slider(
                     "Initial Booster Efficacy (Probability)",
                     min_value=0.0,
                     max_value=1.0,
@@ -1310,7 +1311,7 @@ booster will remain healthy when exposed to the pathogen.
                     """,
                 )
                 loadKey("boosterWanedEfficacy", id, 0.6)
-                boosterWanedEfficacy = st.slider(
+                boosterWanedEfficacy = rightCol.slider(
                     "Minimum Booster Efficacy (Probability)",
                     min_value=0.0,
                     max_value=0.99,
