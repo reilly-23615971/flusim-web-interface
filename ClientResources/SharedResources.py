@@ -15,13 +15,27 @@ sharedLog = logging.getLogger(__name__)
 
 # Toggle to use preset JSON config with runSimulation instead of using
 # the parameters set by the user, for testing
+# Note that R0 calibration has its own file paths!
 usePresetParams = False
-presetJSONPath = "ClientResources/defaultParams.guide.json"
+presetJSONPath = "ClientResources/MultiStrainParams.json"
 
 # Toggle to use built-in data instead of model output
 # TODO: Include different types of preset data
 # (e.g. vaccinated vs unvaccinated) for better testing
 usePresetData = False
+presetCommunity = "newcastle"
+presetScenarioNames = [
+    "Baseline",
+    "School Closure",
+    "Case Isolation",
+    "Community Contact Reduction",
+]
+presetDataPathes = {
+    "Cumulative": "./TestData/epidemicMedianCumulative.csv",
+    "Daily Rate": "./TestData/epidemicMedianDaily.csv",
+    "ASIR": "./TestData/asirMedianAbsolute.csv",
+    "Vaccinated": "./TestData/asirMedianVaccinated.csv",
+}
 
 # Toggle to save the JSON form of parameters as a file
 saveJSON = False

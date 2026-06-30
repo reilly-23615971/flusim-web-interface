@@ -34,8 +34,6 @@ from ClientResources.SharedResources import (
     simCurrentProgress,
     simErrorQueue,
     simResultQueue,
-    usePresetData,
-    usePresetParams,
 )
 from ClientResources.VisualisationFunctions import formatData
 
@@ -189,7 +187,7 @@ def updateData() -> None:
 
             # Remove any old session data that is no longer valid
             # TODO: Make more robust when number of returned values can vary more
-            scenarioCount = 4 if usePresetData else len(simParams["Scenario Names"])
+            scenarioCount = len(simParams["Scenario Names"])
             dataForms = simParams["Analysis Formats"]
             if len(dataForms) < 4:
                 session.pop("modelDataAsirVaccinated", None)

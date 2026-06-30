@@ -49,6 +49,7 @@ from ClientResources.SharedResources import (
     simResultQueue,
     simStatusQueue,
     splitPoint,
+    usePresetData,
     usePresetParams,
 )
 
@@ -211,6 +212,26 @@ community data to simulate each of the following {scenarioCount} scenarios:
             icon=":material/error:",
         )
     else:
+        if usePresetData:
+            st.error(
+                """
+The debug settings of the dashboard are set such that visualisations use
+preset data instead of server outputs. You will not be able to use the data
+of any simulations you run unless this setting is disabled.
+                """,
+                icon=":material/bug_report:",
+            )
+        if usePresetParams:
+            st.warning(
+                """
+The debug settings of the dashboard are set such that simulations use
+preset parameters instead of those set on the dashboard. Simulations
+you run will not match the settings defined on the
+:primary-badge[:material/variable_insert: Baseline Parameters] and
+:primary-badge[:material/variable_add: Scenario Parameters] pages.
+                """,
+                icon=":material/bug_report:",
+            )
         if session.get("ChartGenerated"):
             st.warning(
                 """
@@ -218,7 +239,7 @@ Running a new simulation will result in future tables and graphs using
 the new simulation's data. Please make sure to save any tables or graphs
 you wish to keep with the current simulation data before running a new
 simulation.
-        """,
+                """,
                 icon=":material/bar_chart_off:",
             )
 

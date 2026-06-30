@@ -17,6 +17,9 @@ from ClientResources.ParameterFunctions import idGet, loadKey, replaceTableNA, s
 from ClientResources.SharedResources import (
     ageWithTime,
     mutedCodes,
+    presetCommunity,
+    presetDataPathes,
+    presetScenarioNames,
     tableOutcomes,
     usePresetData,
 )
@@ -96,18 +99,13 @@ def generateTable():
     if usePresetData:
         # Set default session_state params
         useAdvanced = session.get("showAdvanced", False)
-        scenarioNames = [
-            "Baseline",
-            "School Closure",
-            "Case Isolation",
-            "Community Contact Reduction",
-        ]
+        scenarioNames = presetScenarioNames
         healthOutcomeRates, mortalityRates = healthOutcomeStore(
             scenarioNames,
             useAges=useAdvanced,
         )
         simParams = {
-            "Community": "newcastle",
+            "Community": presetCommunity,
             "Scenario Names": scenarioNames,
             "Health Outcome Rates": healthOutcomeRates,
             "Age-Separated Health Outcome Rates": mortalityRates,
@@ -130,10 +128,13 @@ def generateTable():
         session.SimParams = simParams
 
         # Load test data from files
-        with open("./TestData/asirMedianAbsolute.csv", "rb") as csv:
+        with open(presetDataPathes["ASIR"], "rb") as csv:
             fullData = formatAsir(csv.read(), scenarioNames)
-        with open("./TestData/asirMedianVaccinated.csv", "rb") as csv:
-            vaccinatedData = formatAsir(csv.read(), scenarioNames)
+        if presetDataPathes.get("ASIR") is not None:
+            with open(presetDataPathes["Vaccinated"], "rb") as csv:
+                vaccinatedData = formatAsir(csv.read(), scenarioNames)
+        else:
+            vaccinatedData = None
 
     # Load data from session_state
     else:
@@ -141,9 +142,6 @@ def generateTable():
         fullData = session.get("modelDataAsirFull")
         vaccinatedData = session.get("modelDataAsirVaccinated")
 
-    useVaccinationSplit = (
-        usePresetData or session.get("modelDataAsirVaccinated") is not None
-    )
     ageSeparation = session.get("healthOutcomeAgeSeparation", "Combined")
 
     healthColumnForm = replaceTableNA(
@@ -177,7 +175,7 @@ def generateTable():
         (
             outcome,
             ageGroups if ageGroups else ageWithTime,
-            vaccineStatus if useVaccinationSplit else "All",
+            vaccineStatus if vaccinatedData is not None else "All",
             "Percentage" in options,
             "Difference from Baseline" in options,
         )
@@ -353,9 +351,11 @@ displayed depending on the parameters selected above.
 healthOutcomeErrorContainer = st.container()
 
 # Check if there is data to tabulate
-currentDataExists = not (session.get("modelDataAsirFull") is None)
-currentDataUsesVaccines = not (session.get("modelDataAsirVaccinated") is None)
-if not currentDataExists and not usePresetData:
+currentDataExists = usePresetData or session.get("modelDataAsirFull") is not None
+currentDataUsesVaccines = (
+    usePresetData and presetDataPathes["Vaccinated"] is not None
+) or session.get("modelDataAsirVaccinated") is not None
+if not currentDataExists:
     healthOutcomeErrorContainer.warning(
         """
         No simulation data has been generated. Click
@@ -397,11 +397,8 @@ with tableSettings:
 
     # Scenario and age group selection
     st.subheader("Scenario and Age Group Selection")
-    scenarioNames = simParams.get(
-        "Scenario Names",
-        ["Baseline", "School Closure", "Case Isolation", "Community Contact Reduction"],
-    )
-    if currentDataExists or usePresetData:
+    scenarioNames = simParams.get("Scenario Names", presetScenarioNames)
+    if currentDataExists:
         loadKey("healthOutcomeScenariosToUse", default=scenarioNames)
         scenariosToUse: Optional[list[str]] = st.multiselect(
             "Scenarios to Include in Table",
@@ -638,7 +635,7 @@ all age groups will be considered.
             # TODO: Make advanced settings hide this when disabled
             "Vaccination Status": (
                 None
-                if not (currentDataUsesVaccines or usePresetData)
+                if not currentDataUsesVaccines
                 else st.column_config.SelectboxColumn(
                     "Vaccination Status",
                     required=True,
@@ -714,7 +711,7 @@ add at least one column before attempting to generate a table.
             )
         else:
             dupeColumnForm = dupeColumnForm.drop("Age Groups", errors="ignore")
-        if not (currentDataUsesVaccines or usePresetData):
+        if not currentDataUsesVaccines:
             dupeColumnForm = dupeColumnForm.drop("Vaccination Status", errors="ignore")
         if dupeColumnForm.astype(str).duplicated().any():
             st.warning(

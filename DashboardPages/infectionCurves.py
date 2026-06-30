@@ -10,7 +10,12 @@ from typing import Optional
 import streamlit as st
 
 from ClientResources.ParameterFunctions import loadKey, saveKey
-from ClientResources.SharedResources import usePresetData
+from ClientResources.SharedResources import (
+    presetCommunity, 
+    presetDataPathes, 
+    presetScenarioNames, 
+    usePresetData,
+)
 from ClientResources.VisualisationFunctions import formatEpidemic, plotEpidemic
 
 # Logging
@@ -29,7 +34,7 @@ def generateGraph():
         FileNotFoundError: If there is no data to generate a graph with.
     """
     # Throw error if no data is present
-    if not usePresetData and not (session.get("modelDataEpidemicDaily") is not None):
+    if not usePresetData and session.get("modelDataEpidemicDaily") is None:
         raise FileNotFoundError("""
             No simulation epidemic data was available to plot; please run a
             simulation before attempting to generate a table.
@@ -40,25 +45,15 @@ def generateGraph():
     # Debug code for loading data in testing
     if usePresetData:
         # Set default session_state params
-        scenarioNames = [
-            "Baseline",
-            "School Closure",
-            "Case Isolation",
-            "Community Contact Reduction",
-        ]
+        scenarioNames = presetScenarioNames
         simParams = {
-            "Community": "newcastle",
+            "Community": presetCommunity,
             "Scenario Names": scenarioNames,
             "Scaling Factor": session.get("scalingPopulation", 272407) / 272407,
         }
         session.SimParams = simParams
         # Load test data from file
-        presetFilename = (
-            "./TestData/epidemicMedianCumulative.csv"
-            if chartType == "Cumulative"
-            else "./TestData/epidemicMedianDaily.csv"
-        )
-        with open(presetFilename, "rb") as csv:
+        with open(presetDataPathes[chartType], "rb") as csv:
             epidemicData = formatEpidemic(
                 csv.read(),
                 scenarioNames,
@@ -95,8 +90,8 @@ st.markdown("""
 
 # Check if there is data to tabulate
 chartErrorContainer = st.container()
-currentDataExists = not (session.get("modelDataEpidemicDaily") is None)
-if not currentDataExists and not usePresetData:
+currentDataExists = usePresetData or session.get("modelDataAsirFull") is not None
+if not currentDataExists:
     chartErrorContainer.warning(
         """
         No simulation data has been generated. Click
@@ -155,16 +150,8 @@ that occur in each day of the simulation.
 
     # Scenario selection
     simParams = session.get("SimParams", {})
-    scenarioNames = simParams.get(
-        "Scenario Names",
-        [
-            "Baseline",
-            "School Closure",
-            "Case Isolation",
-            "Community Contact Reduction",
-        ],
-    )
-    if currentDataExists or usePresetData:
+    scenarioNames = simParams.get("Scenario Names", presetScenarioNames)
+    if currentDataExists:
         loadKey("chartScenariosToUse", default=scenarioNames)
         scenariosToUse: Optional[list[str]] = st.multiselect(
             "Scenarios to Include in Graph",
@@ -213,7 +200,7 @@ st.button(
     key="generateGraph",
     type="primary",
     on_click=generateGraph,
-    disabled=((not usePresetData and not currentDataExists) or not scenariosToUse),
+    disabled=not (currentDataExists or scenariosToUse),
     help=(
         """
 Use the data from the last simulation to generate a graph
@@ -259,12 +246,7 @@ graph.
                 """,
             )
         elif usePresetData:
-            presetFilename = (
-                "./TestData/epidemicMedianCumulative.csv"
-                if chartType == "Cumulative"
-                else "./TestData/epidemicMedianDaily.csv"
-            )
-            with open(presetFilename, "rb") as csv:
+            with open(presetDataPathes[chartType], "rb") as csv:
                 epidemicData = formatEpidemic(
                     csv.read(), scenarioNames, cumulative=chartType == "Cumulative"
                 )
