@@ -499,13 +499,13 @@ def ageRangeCombiner(ages: list[str]) -> str:
     }
 
     # Sort the ages
-    ageList = ages.copy()
-    ageList.sort(key=lambda x: ageStarts[x])
+    ages = ages.copy()
+    ages.sort(key=lambda x: ageStarts[x])
 
     # Iteratively identify continuous age blocks and display as string
-    currentStart, currentEnd = ageStarts[ageList[0]], ageEnds[ageList[0]]
+    currentStart, currentEnd = ageStarts[ages[0]], ageEnds[ages[0]]
     currentString = ""
-    for age in ageList[1:]:
+    for age in ages[1:]:
         if ageStarts[age] == currentEnd:
             currentEnd = ageEnds[age]
         else:

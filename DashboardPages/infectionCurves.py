@@ -73,6 +73,7 @@ def generateGraph():
     assert epidemicData is not None, "Epidemic data was not defined"
     chartData = plotEpidemic(
         epidemicData,
+        scenarioNames=scenarioNames,
         includedScenarios=scenariosUsed,
         cumulative=chartType == "Cumulative",
     )
@@ -216,7 +217,7 @@ No simulations have completed yet, so there is no data to plot.
 )
 
 # Display the graph itself
-# TODO: Graph is laggy; see if performance can be improved
+# TODO: Clicking on the legend is no longer a thing; update the manual
 chartData = session.get("InfectionChartData")
 if chartData is not None:
     st.header("Flusim Infection Curves")

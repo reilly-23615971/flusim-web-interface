@@ -180,6 +180,7 @@ def formatEpidemic(
 
 def plotEpidemic(
     data: pd.DataFrame,
+    scenarioNames: list[str],
     includedScenarios: list[str],
     outcomeName: str = "Symptomatic Infections",
     cumulative=False,
@@ -192,15 +193,18 @@ def plotEpidemic(
         data (DataFrame): A dataframe containing the epidemic data, processed with
             the formatEpidemic function.
 
-        outcome (str): A string indicating the health outcome the epidemic
+        scenarioNames (list of str): An ordered list of all scenarios in
+            the data, included or otherwise.
+
+        includedScenarios (list of str): A list of strings containing
+            the names of scenarios that will be included in the table.
+
+        outcomeName (str): A string indicating the health outcome the epidemic
             data represents. Can be either 'Symptomatic Infections', 'Diagnosed Cases',
             'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
 
         cumulative (bool): Set to `True` when the DataFrame contains
             cumulative data instead of individual data.
-
-        includedScenarios (list of str): A list of strings containing
-            the names of scenarios that will be included in the table.
 
     Returns:
         finalPlot (LayerChart): An Altair plot layering a line graph of the infection
@@ -211,6 +215,7 @@ def plotEpidemic(
         ValueError: If `data` is not a `DataFrame` or `outcome` is not one of
             the recognised health burden outcomes.
     """
+
     # Validate parameters
     try:
         if not isinstance(data, pd.DataFrame):
@@ -229,85 +234,75 @@ def plotEpidemic(
             )
         )
         raise e
+    assert set(includedScenarios).issubset(
+        scenarioNames
+    ), "Included scenarios not in data"
     outcome = "Infections"  # TODO: placeholder until other burdens can be graphed
-
-    # Define reusable chart components
-    plotTitle = (
-        f"Cumulative Median {outcome} Over Time"
-        if cumulative
-        else f"Median {outcome} per Day Over Time"
-    )
-    yLabel = f"Total {outcome}:Q" if cumulative else f"{outcome} per Day:Q"
-    xLabel, colourLabel = "Days Since First Infection:Q", "Scenario:N"
-    tooltipPicker = alt.selection_point(
-        fields=[xLabel[:-2]], nearest=True, on="pointerover", empty=False
-    )
-    legendPicker = alt.selection_point(fields=[colourLabel[:-2]], bind="legend")
-    tooltipCondition = alt.when(tooltipPicker)
-    scenarioNames = data["Scenario"].unique()
-    orderedScenarios, includedColours = zip(
-        *[
-            (name, mutedCodes[index])
-            for index, name in enumerate(scenarioNames)
-            if name in includedScenarios
-        ]
-    )
 
     # Remove any scenarios/age groups not specified in the data
     filteredData = data[data["Scenario"].isin(includedScenarios)]
+    filteredData["Scenario Index"] = filteredData["Scenario"].map(
+        includedScenarios.index
+    )
 
-    # Plot the line graph itself
-    epidemicPlot = (
-        alt.Chart(filteredData, title=plotTitle)
-        .mark_line(interpolate="natural")
-        .encode(
-            x=alt.X(xLabel).scale(
-                nice=False,
-                domain=(0, ceil(data["Days Since First Infection"].max() / 10) * 10),
-            ),
-            y=yLabel,
-            color=alt.Color(colourLabel).scale(
-                domain=orderedScenarios, range=includedColours
-            ),
-            opacity=(
-                alt.when(legendPicker).then(alt.value(1)).otherwise(alt.value(0.2))
-            ),
+    # Reusable chart components
+    yLabel = f"Total {outcome}" if cumulative else f"{outcome} per Day"
+    scenarioColours = [
+        mutedCodes[scenarioNames.index(scenario)] for scenario in includedScenarios
+    ]
+    tooltipSelection = alt.selection_point(
+        fields=["Days Since First Infection"],
+        nearest=True,
+        on="pointerover",
+        empty=False,
+        clear="pointerout",
+    )
+
+    # Define the chart itself
+    chartBase = alt.Chart(
+        filteredData,
+        title=(
+            f"Cumulative Median {outcome} Over Time"
+            if cumulative
+            else f"Median {outcome} per Day Over Time"
+        ),
+    ).encode(
+        x=alt.X("Days Since First Infection:Q").scale(
+            nice=False,
+            domain=(0, ceil(data["Days Since First Infection"].max() / 10) * 10),
         )
-        .add_params(legendPicker)
     )
 
-    # Define points for tooltip generation
-    epidemicPoints = epidemicPlot.mark_point().encode(
-        opacity=tooltipCondition.then(alt.value(1)).otherwise(alt.value(0))
+    # Plot the lines
+    chartLines = chartBase.mark_line(interpolate="natural").encode(
+        y=f"{yLabel}:Q",
+        color=alt.Color("Scenario:N").scale(
+            domain=includedScenarios, range=scenarioColours
+        ),
     )
 
-    # Internally use indices for tooltips to avoid . or [] causing issues
-    tooltipData = filteredData.copy()
-    tooltipData["Scenario"] = tooltipData["Scenario"].map(includedScenarios.index)
-
-    # Plot vertical lines to display tooltips with data from all scenarios
-    epidemicRule = (
-        alt.Chart(tooltipData)
-        .transform_pivot("Scenario", value=yLabel[:-2], groupby=[xLabel[:-2]])
+    # Highlight x-value at mouse with vertical rule
+    chartPoints = chartLines.mark_point().transform_filter(tooltipSelection)
+    chartRule = (
+        chartBase.transform_pivot(
+            "Scenario Index", value=yLabel, groupby=["Days Since First Infection"]
+        )
         .mark_rule(color="grey")
         .encode(
-            x=xLabel,
-            opacity=(tooltipCondition.then(alt.value(0.3)).otherwise(alt.value(0))),
-            tooltip=[xLabel]
+            opacity=alt.when(tooltipSelection)
+            .then(alt.value(0.3))
+            .otherwise(alt.value(0)),
+            tooltip=["Days Since First Infection:Q"]
             + [
-                alt.Tooltip(
-                    str(index),
-                    type="quantitative",
-                    title=f"{scenario} {outcome}",
-                )
+                alt.Tooltip(str(index), type="quantitative", title=scenario)
                 for index, scenario in enumerate(includedScenarios)
             ],
         )
-        .add_params(tooltipPicker)
+        .add_params(tooltipSelection)
     )
 
-    # Return both plots combined
-    return alt.layer(epidemicPlot, epidemicPoints, epidemicRule)
+    # Return all plots combined
+    return chartLines + chartPoints + chartRule
 
 
 def formatAsir(rawCSV: bytes, scenarioNames: list[str]) -> pd.DataFrame:
