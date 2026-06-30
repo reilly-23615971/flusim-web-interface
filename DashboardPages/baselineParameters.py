@@ -4,8 +4,10 @@
 
 # Imports
 import logging
+from typing import Optional
 
 import streamlit as st
+from streamlit.elements.lib.mutable_tab_container import TabContainer
 
 from ClientResources.DownloadFunctions import uploadDownloadBar
 from ClientResources.InterfaceFunctions import errorChecker
@@ -74,6 +76,7 @@ dynamic parameter updates.
 )
 
 # Create tabs for each category of parameters
+dynamicTab: Optional[TabContainer] = None
 if showAdvanced:
     diseaseTab, communityTab, vaccineTab, npiTab, dynamicTab, templateTab = st.tabs(
         [
@@ -118,8 +121,8 @@ if npiTab.open:
     }
     with npiTab:
         buildNPITab(0, showAdvanced)
-if showAdvanced and dynamicTab.open:  # type: ignore
-    with dynamicTab:  # type: ignore
+if dynamicTab is not None and dynamicTab.open:
+    with dynamicTab:
         buildDynamicTab(0)
 if templateTab.open:
     with templateTab:

@@ -5,9 +5,10 @@
 # Imports
 import logging
 import time
-from typing import Optional
+from typing import Literal, Optional
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import streamlit as st
 from matplotlib.colors import TwoSlopeNorm, to_hex
@@ -18,7 +19,7 @@ from ClientResources.SharedResources import (
     ageWithTime,
     mutedCodes,
     presetCommunity,
-    presetDataPathes,
+    presetDataPaths,
     presetScenarioNames,
     tableOutcomes,
     usePresetData,
@@ -81,12 +82,13 @@ def selectTextColour(colour: str) -> str:
     return "#000000" if luminosity > 135 else "#ffffff"
 
 
-def generateTable():
+def generateTable() -> None:
     """
     Callback function used to generate and format health burden tables.
     """
     # Throw error if no data is present
-    if not usePresetData and session.get("modelDataAsirFull") is None:
+    fullData = session.get("modelDataAsirFull")
+    if not usePresetData and fullData is None:
         raise FileNotFoundError("""
             No simulation ASIR data was available to plot; please run a
             simulation before attempting to generate a table.
@@ -128,19 +130,18 @@ def generateTable():
         session.SimParams = simParams
 
         # Load test data from files
-        with open(presetDataPathes["ASIR"], "rb") as csv:
+        with open(presetDataPaths["ASIR"], "rb") as csv:
             fullData = formatAsir(csv.read(), scenarioNames)
-        if presetDataPathes.get("ASIR") is not None:
-            with open(presetDataPathes["Vaccinated"], "rb") as csv:
-                vaccinatedData = formatAsir(csv.read(), scenarioNames)
+        if presetDataPaths.get("ASIR") is not None:
+            with open(presetDataPaths["Vaccinated"], "rb") as csv:
+                vaccineData = formatAsir(csv.read(), scenarioNames)
         else:
-            vaccinatedData = None
+            vaccineData = None
 
     # Load data from session_state
     else:
         scenarioNames = session.SimParams["Scenario Names"]
-        fullData = session.get("modelDataAsirFull")
-        vaccinatedData = session.get("modelDataAsirVaccinated")
+        vaccineData = session.get("modelDataAsirVaccinated")
 
     ageSeparation = session.get("healthOutcomeAgeSeparation", "Combined")
 
@@ -171,11 +172,13 @@ def generateTable():
             "Vaccination Status": "All",
         },
     )
-    columnDetails = [
+    columnDetails: list[
+        tuple[str, list[str], Literal["All", "Vaccinated", "Unvaccinated"], bool, bool]
+    ] = [
         (
             outcome,
             ageGroups if ageGroups else ageWithTime,
-            vaccineStatus if vaccinatedData is not None else "All",
+            vaccineStatus if vaccineData is not None else "All",
             "Percentage" in options,
             "Difference from Baseline" in options,
         )
@@ -210,19 +213,20 @@ def generateTable():
         and the following columns: {columnDetails}'
     """)
 
+    assert fullData is not None, "ASIR data was not defined"
     ageData, columnConfig, percSet, diffSet = generateAsir(
-        fullData,  # type: ignore
+        fullData,
         scenarioNames,
         ageSeparation,
-        columnDetails,  # type: ignore
+        columnDetails,
         includedScenarios=scenariosUsed,
         includedAges=agesUsed,
-        baseVaccinatedData=vaccinatedData,
+        vaccinatedData=vaccineData,
     )
 
     # Format data according to column type
     # TODO: Is + with baseline difference necessary enough to revive this?
-    """formatValues = (
+    """formatValues: dict[str, Any] = (
         {column: "{:+.5n}" for column in diffSet - percSet}
         | {column: "{:+.3%}" for column in diffSet & percSet}
         | {column: "{:.3%}" for column in percSet - diffSet}
@@ -248,9 +252,9 @@ def generateTable():
 
     # Colour the index cells
     if useColour:
-        # Set default cell background colour
+        # Set default cell colours
         ageStyle.set_properties(
-            **{"background-color": "#F7F7F7"}, color="black"  # type: ignore
+            **{"background-color": "#F7F7F7", "color": "black"}, subset=None
         )
         # Generate and map scenario colour palette
         scenarioColourMap = mutedCodes[: len(scenarioNames)]
@@ -279,9 +283,10 @@ def generateTable():
 
         # Colour ages if present
         if agesUsed:
-            ageColourMap = plt.get_cmap("viridis_r", 10).colors  # type: ignore
+            ageColourMap = plt.get_cmap("viridis_r", 10)
+            ageColourList = [ageColourMap(value) for value in np.linspace(0, 1, 10)]
             ageColourDictionary = {
-                age: to_hex(ageColourMap[index])
+                age: to_hex(ageColourList[index])
                 for index, age in enumerate(ageWithTime)
             }
             ageColourDictionary["Total"] = "#000000"
@@ -306,12 +311,13 @@ def generateTable():
         # Use background gradients on difference from baseline columns
         for column in diffSet:
             colVals = ageData[column]
+            gradientMap = np.array(getSlopeNorm(colVals)(colVals))
             ageStyle = ageStyle.background_gradient(
                 "RdBu_r",
                 vmin=0,
                 vmax=1,
                 subset=[column],
-                gmap=getSlopeNorm(colVals)(colVals),  # type: ignore
+                gmap=gradientMap,
             )
             # Set white background for NA values to make them readable
             ageStyle = ageStyle.map(
@@ -320,7 +326,7 @@ def generateTable():
             )
 
     # Save the generated table
-    session.HealthOutcomeTableData = ageStyle  # .format(formatValues)  # type: ignore
+    session.HealthOutcomeTableData = ageStyle  # .format(formatValues)
     session.HealthOutcomeTableConfig = columnConfig
     session.ChartGenerated = True
 
@@ -353,7 +359,7 @@ healthOutcomeErrorContainer = st.container()
 # Check if there is data to tabulate
 currentDataExists = usePresetData or session.get("modelDataAsirFull") is not None
 currentDataUsesVaccines = (
-    usePresetData and presetDataPathes["Vaccinated"] is not None
+    usePresetData and presetDataPaths["Vaccinated"] is not None
 ) or session.get("modelDataAsirVaccinated") is not None
 if not currentDataExists:
     healthOutcomeErrorContainer.warning(
@@ -952,9 +958,10 @@ if tableData is not None:
         """
         # TODO: Reflect changes made to the table by the user (reordered cols etc.)
         # Or just remove this since there's a built-in download button now
+        assert tableData is not None, "Table data was not defined"
         st.download_button(
             "Download Table Data",
-            tableData.data.to_csv(index=False),  # type: ignore
+            tableData.data.to_csv(index=False),
             f"FlusimHealthBurdenData_{time.strftime('%Y.%m.%d_%I.%M.%S%p')}.csv",
             mime="text/csv",
             key="infectionDataDownload",

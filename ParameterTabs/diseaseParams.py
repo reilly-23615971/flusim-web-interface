@@ -4,7 +4,7 @@
 
 # Imports
 import logging
-from typing import Literal, Optional
+from typing import Optional
 
 import altair as alt
 import pandas as pd
@@ -12,6 +12,7 @@ import streamlit as st
 from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import (
+    ageDisplay,
     ageSort,
     backgroundColour,
     dayCount,
@@ -338,7 +339,7 @@ are not specified for a specific age group.
                         "Age Group",
                         required=True,
                         options=ageTimeDict.keys(),
-                        format_func=lambda x: ageTimeDict[x],  # type: ignore
+                        format_func=ageDisplay,
                         help="""
 The age group whose infectiousness and susceptibility will be modified.
                         """,
@@ -1106,7 +1107,7 @@ each age group, overriding the global rate defined above.
                             "Age Group",
                             required=True,
                             options=ageTimeDict.keys(),
-                            format_func=lambda x: ageTimeDict[x],  # type: ignore
+                            format_func=ageDisplay,
                             help="""
 An age group that will have a specific mortality rate defined for it,
 overriding the base rate.
@@ -1182,7 +1183,7 @@ for every 100,000 cases of the pathogen.
                                 else deathRemainingGroups
                             ),
                             on_change=saveKey,
-                            args=["deathAgeGroup", id, f"-{i}"],  # type: ignore
+                            args=["deathAgeGroup", id, f"-{i}"],
                             disabled=not deathRowCount < 10,
                             help="""
                             An age group that will have specific mortality
@@ -1211,7 +1212,7 @@ for every 100,000 cases of the pathogen.
                             0.000115077,
                             key=f"_deathRatio{id}-{i}",
                             on_change=saveKey,
-                            args=["deathRatio", id, f"-{i}"],  # type: ignore
+                            args=["deathRatio", id, f"-{i}"],
                             format_func=lambda x: f"{100 * x:0.3g}%",
                             help="""
                             The probability that an infected, symptomatic
@@ -1911,7 +1912,7 @@ def diseaseSaveSchema(
             if baseline is not None and baseline.Scenario_Strain is not None
             else None
         )
-        if baseBeta is None or baseBeta != beta:  # type: ignore
+        if baseBeta is None or baseBeta != beta:
             schema.Scenario_Strain = [
                 strainParameters(StrainId=0, Beta=idGet("beta", id, 0.0616))
             ]

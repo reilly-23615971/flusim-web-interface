@@ -5,7 +5,7 @@
 # Imports
 import logging
 import time
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Callable, Optional
 
 import pandas as pd
 import streamlit as st
@@ -18,7 +18,7 @@ except ImportError:
 
     time.sleep(0.01)
     importlib.reload(importlib.import_module("streamlit_notify"))
-    import streamlit_notify as stn  # type: ignore
+    import streamlit_notify as stn
 
 # Logging
 paramFunctionLog = logging.getLogger(__name__)

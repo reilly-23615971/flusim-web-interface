@@ -183,7 +183,7 @@ each day of the simulation is 2 cycles.
                 15,
                 key=f"_seedCycle{id}-{i}",
                 on_change=saveKey,
-                args=["seedCycle", id, f"-{i}"],  # type: ignore
+                args=["seedCycle", id, f"-{i}"],
                 placeholder="Enter the day number",
                 help="""
                     The day of the simulation upon which the new
@@ -337,7 +337,7 @@ each day of the simulation is 2 cycles.
                 0.25,
                 key=f"_seedNewRate{id}-{i}",
                 on_change=saveKey,
-                args=["seedNewRate", id, f"-{i}"],  # type: ignore
+                args=["seedNewRate", id, f"-{i}"],
                 format_func=lambda x: f"{x:0.4g}",
                 help="""
                 The average number of individuals that will be
@@ -534,7 +534,7 @@ they are closed after the specified point in the simulation.
                 key=f"_closeCycle{id}-{i}",
                 disabled=not closeActive,
                 on_change=saveKey,
-                args=["closeCycle", id, f"-{i}"],  # type: ignore
+                args=["closeCycle", id, f"-{i}"],
                 format_func=lambda x: f"Day {x + 1}",
                 help="""
                     The day of the simulation upon which the new
@@ -703,7 +703,7 @@ they are closed after the specified point in the simulation.
                 key=f"_closeNewRate{id}-{i}",
                 disabled=not closeActive,
                 on_change=saveKey,
-                args=["closeNewRate", id, f"-{i}"],  # type: ignore
+                args=["closeNewRate", id, f"-{i}"],
                 format_func=lambda x: f"{100 * x:0.3g}%",
                 help="""
                 The probability that an individual will withdraw
@@ -909,7 +909,7 @@ effect, overwriting the normal BCC rate.
                 key=f"_bccCycle{id}-{i}",
                 disabled=not bccActive,
                 on_change=saveKey,
-                args=["bccCycle", id, f"-{i}"],  # type: ignore
+                args=["bccCycle", id, f"-{i}"],
                 format_func=lambda x: f"Day {x + 1}",
                 help="""
                     The day of the simulation upon which the new value
@@ -1078,7 +1078,7 @@ effect, overwriting the normal BCC rate.
                 0.2,
                 disabled=not bccActive,
                 on_change=saveKey,
-                args=["bccNewRate", id, f"-{i}"],  # type: ignore
+                args=["bccNewRate", id, f"-{i}"],
                 key=f"_bccNewRate{id}-{i}",
                 help="""
                 The average number of other people each individual

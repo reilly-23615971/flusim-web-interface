@@ -30,7 +30,7 @@ presetScenarioNames = [
     "Case Isolation",
     "Community Contact Reduction",
 ]
-presetDataPathes = {
+presetDataPaths = {
     "Cumulative": "./TestData/epidemicMedianCumulative.csv",
     "Daily Rate": "./TestData/epidemicMedianDaily.csv",
     "ASIR": "./TestData/asirMedianAbsolute.csv",

@@ -414,6 +414,20 @@ def ageSort(age: tuple[str, Any]) -> int:
     ].index(age[0])
 
 
+def ageDisplay(option: Any) -> str:
+    """
+    Function to be passed to format_func for displaying selectbox values
+
+    Parameters:
+        option (any): The string to be converted from key to display value.
+
+    Returns:
+        str: The display value corresponding to the selectbox option.
+    """
+
+    return ageTimeDict[cast(str, option)]
+
+
 def ageRangeString(lower: int | float, upper: int | float) -> str:
     """
     Simple function to format 2 numbers as an age range, accounting for

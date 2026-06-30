@@ -13,13 +13,13 @@ from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import (
     ageCast,
+    ageDisplay,
     paramError,
     schemaRemoveBaseline,
     schemaUpdate,
     trigCast,
 )
 from ClientResources.ModelSchema import (
-    EfficacyValue,
     Parameters,
     dashboardParameters,
     scenarioParameters,
@@ -38,7 +38,6 @@ from ClientResources.ParameterFunctions import (
 )
 from ClientResources.SharedResources import (
     ageTimeDict,
-    communityPopulation,
     ordinals,
 )
 
@@ -139,7 +138,7 @@ will be vaccinated against the pathogen.
     # TODO: Vaccine Presets
     # st.html(f'<span id = "vaccinationTriggerCondition{id}"></span>')
     with st.expander(
-        "Vaccination Programs", key=f"vaccineProgramContainer{id}", on_change="rerun"
+        "Vaccine Coverage", key=f"vaccineProgramContainer{id}", on_change="rerun"
     ) as programContainer:
         if programContainer.open:
             # Describe what sort of parameters are here
@@ -414,7 +413,7 @@ defined above.
                         "Age Group",
                         required=True,
                         options=ageTimeDict.keys(),
-                        format_func=lambda x: ageTimeDict[x],  # type: ignore
+                        format_func=ageDisplay,
                         help="""
 An age group that will have specific vaccine proportions defined for it,
 overriding the base proportions.
@@ -967,7 +966,7 @@ overriding the global efficacy value for this dose defined above.
                                     "Age Group",
                                     required=True,
                                     options=ageTimeDict.keys(),
-                                    format_func=lambda x: ageTimeDict[x],  # type: ignore
+                                    format_func=ageDisplay,
                                     help=f"""
 An age group that will have a specific
 {"initial " if waningToggle else ""}efficacy value defined
@@ -1421,7 +1420,7 @@ the global waned efficacy defined above.
                                 "Age Group",
                                 required=True,
                                 options=ageTimeDict.keys(),
-                                format_func=lambda x: ageTimeDict[x],  # type: ignore
+                                format_func=ageDisplay,
                                 help="""
 An age group that will have a specific final efficacy value after
 immunity waning defined for it, overriding the base value.
@@ -1820,7 +1819,7 @@ for individual age groups in the simulation, overriding the efficacy defined abo
                             "Age Group",
                             required=True,
                             options=ageTimeDict.keys(),
-                            format_func=lambda x: ageTimeDict[x],  # type: ignore
+                            format_func=ageDisplay,
                             help="""
 An age group that will have a specific vaccine efficacy value defined
 for it, overriding the base value.
@@ -1929,7 +1928,7 @@ healthy when exposed to the pathogen.
                             "Age Group",
                             required=True,
                             options=ageTimeDict.keys(),
-                            format_func=lambda x: ageTimeDict[x],  # type: ignore
+                            format_func=ageDisplay,
                             help="""
 An age group that will have specific booster vaccine efficacy values defined
 for it, overriding the base efficacy value for booster vaccines.
@@ -2257,7 +2256,7 @@ global booster efficacy values defined above.
                             "Age Group",
                             required=True,
                             options=ageTimeDict.keys(),
-                            format_func=lambda x: ageTimeDict[x],  # type: ignore
+                            format_func=ageDisplay,
                             help="""
 An age group that will have specific booster vaccine efficacy values defined
 for it, overriding the base efficacy value for booster vaccines.
@@ -3354,7 +3353,8 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
         boosterEfficacySchema.sort(key=lambda x: ageOrder.get(x.Age, 99))
         if len(boosterEfficacySchema) > 0 and boosterEfficacySchema[0].Age is None:
             baseBoostEfficacy = boosterEfficacySchema.pop(0)
-            baseBoostFull: EfficacyValue = baseBoostEfficacy.Efficacy  # type: ignore
+            baseBoostFull = baseBoostEfficacy.Efficacy
+            assert not isinstance(baseBoostFull, list), "Booster efficacy was list"
             updateParamFromSchema("boosterBaseEfficacy", baseBoostFull, scenarioID)
             baseBoostWaned = baseBoostEfficacy.WanedEfficacy
             updateParamFromSchema("boosterWanedEfficacy", baseBoostWaned, scenarioID)
@@ -3377,7 +3377,7 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
         )
         for boost in boosterEfficacySchema:
             age, base, waned = boost.Age, boost.Efficacy, boost.WanedEfficacy
-            assert not isinstance(base, list)
+            assert not isinstance(base, list), "Booster efficacy was list"
             if age is not None:
                 boosterEfficacyTable.loc[boosterEfficacyTable.shape[0]] = [
                     age,

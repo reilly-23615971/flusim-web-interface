@@ -6,7 +6,6 @@
 import logging
 from collections import defaultdict
 from io import BytesIO
-from itertools import chain
 from math import ceil
 from typing import Any, Literal, Optional, Sequence
 
@@ -145,15 +144,15 @@ def formatEpidemic(
     outcome = "Infections"  # TODO: placeholder until other burdens can be graphed
     # Generate and format the dataframe
     if splitByAge:
-        # TODO: Complete if desired; not sure how useful/desirable
-        # age-split time series graphs will be (redundant with asir)
+        # TODO: Complete if desired
         return pd.DataFrame()
     else:
+        typeMapping: defaultdict[int, Any] = defaultdict(lambda: np.float64, {0: int})
         framedData = pd.read_csv(
             BytesIO(rawCSV),
             header=0,
             names=["Days Since First Infection"] + scenarioNames,
-            dtype=defaultdict(lambda: np.float64, {0: int}),  # type: ignore
+            dtype=typeMapping,
         )
 
         # Fill null values
@@ -345,11 +344,12 @@ def formatAsir(rawCSV: bytes, scenarioNames: list[str]) -> pd.DataFrame:
         raise e
 
     # Generate and format the dataframe
+    typeMapping: defaultdict[int, Any] = defaultdict(lambda: np.float64, {0: str})
     framedData = pd.read_csv(
         BytesIO(rawCSV),
         header=0,
         index_col=0,
-        dtype=defaultdict(lambda: np.float64, {0: str}),  # type: ignore
+        dtype=typeMapping,
     )
     functionLog.info(
         f"Scenario names are {scenarioNames}; current index is {framedData.index}"
@@ -412,7 +412,7 @@ def scaleAsirColumn(
             deathRates = pd.DataFrame(mortDict).T.stack()
             dataIndexValues = pd.MultiIndex.from_frame(data[["Scenario", "Age Group"]])
             scaledColumn = data["Base Values"] * pd.Series(
-                dataIndexValues.map(deathRates), index=data.index  # type: ignore
+                dataIndexValues.map(deathRates), index=data.index
             ).fillna(data["Scenario"].map(healthRates["Deaths"]))
 
             baselineDeath = mortDict[baselineScenario]
@@ -471,7 +471,7 @@ def generateAsir(
     ] = [("Symptomatic Infections", [], "All", False, False)],
     includedScenarios: Optional[list[str]] = None,
     includedAges: Optional[list[str]] = None,
-    baseVaccinatedData: Optional[pd.DataFrame] = None,
+    vaccinatedData: Optional[pd.DataFrame] = None,
 ) -> tuple[pd.DataFrame, dict[str, ColumnConfig], set[str], set[str]]:
     """
     Function to create a table of health burden data obtained
@@ -511,7 +511,7 @@ def generateAsir(
             if this is an empty list, the age group column will be omitted entirely.
             Ignored if `ageSeparation` is `Combined` or `By Column`.
 
-        baseVaccinatedData (Dataframe, optional): A DataFrame containing asir data
+        vaccinatedData (Dataframe, optional): A DataFrame containing asir data
             specifically for vaccinated individuals in the simulation.
 
     Returns:
@@ -589,8 +589,9 @@ def generateAsir(
     fullBaselines = fullData["Age Group"].map(baselineRows["Base Values"])
 
     # Generate vaccinated baseline data if needed
-    if baseVaccinatedData is not None:
-        vaccinatedData = baseVaccinatedData.copy()
+    vaccinatedBaselines = pd.Series()
+    if vaccinatedData is not None:
+        vaccinatedData = vaccinatedData.copy()
         vaccinatedBaselineRows = (
             vaccinatedData.loc[vaccinatedData["Scenario"] == baselineScenario]
             .drop("Scenario", axis=1)
@@ -599,9 +600,6 @@ def generateAsir(
         vaccinatedBaselines = vaccinatedData["Age Group"].map(
             vaccinatedBaselineRows["Base Values"]
         )
-    else:
-        vaccinatedData = None
-
     # Generate config data for Streamlit display
     percentCols, differenceCols = set(), set()
     columnConfig = {}
@@ -626,7 +624,7 @@ def generateAsir(
             vaccinatedColumn, vaccinatedBaseColumn = scaleAsirColumn(
                 vaccinatedData,
                 outcome,
-                vaccinatedBaselines,  # type: ignore
+                vaccinatedBaselines,
                 baselineScenario,
             )
             vaccinatedColumn, vaccinatedBaseColumn = recalculateTotals(
@@ -654,8 +652,11 @@ def generateAsir(
             if set(ageGroups) == set(ageWithTime):
                 ageGroups = ["Total"]
             filteredColumn = currentColumn.iloc[
+                np.array([index for age in ageGroups for index in ageIndices[age]])
+            ]
+            """filteredColumn = currentColumn.iloc[
                 chain.from_iterable(ageIndices[age] for age in ageGroups)
-            ]  # type: ignore
+            ]"""
             columnSums = filteredColumn.groupby(
                 filteredColumn.index % scenarioCount
             ).sum()

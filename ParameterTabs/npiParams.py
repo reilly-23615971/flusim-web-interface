@@ -11,6 +11,7 @@ import streamlit as st
 from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import (
+    ageDisplay,
     paramError,
     schemaRemoveBaseline,
     schemaUpdate,
@@ -233,7 +234,7 @@ defined above.
                             "Age Group",
                             required=True,
                             options=ageTimeDict.keys(),
-                            format_func=lambda x: ageTimeDict[x],  # type: ignore
+                            format_func=ageDisplay,
                             help="""
 An age group that will have a specific social distancing compliance
 probability defined for it, overriding the base probability.

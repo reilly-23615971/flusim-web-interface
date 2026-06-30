@@ -21,7 +21,7 @@ except ImportError:
 
     time.sleep(0.01)
     importlib.reload(importlib.import_module("streamlit_notify"))
-    import streamlit_notify as stn  # type: ignore
+    import streamlit_notify as stn
 
 from ClientResources.InterfaceFunctions import uniqueName, validationErrorFormatting
 from ClientResources.ModelSchema import (

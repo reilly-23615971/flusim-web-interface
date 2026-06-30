@@ -19,7 +19,7 @@ except ImportError:
 
     time.sleep(0.01)
     importlib.reload(importlib.import_module("streamlit_notify"))
-    import streamlit_notify as stn  # type: ignore
+    import streamlit_notify as stn
 
 # from streamlit_push_notifications import send_push, send_alert
 from ClientResources.DownloadFunctions import createTemplate

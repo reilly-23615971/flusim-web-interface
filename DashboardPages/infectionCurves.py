@@ -11,9 +11,9 @@ import streamlit as st
 
 from ClientResources.ParameterFunctions import loadKey, saveKey
 from ClientResources.SharedResources import (
-    presetCommunity, 
-    presetDataPathes, 
-    presetScenarioNames, 
+    presetCommunity,
+    presetDataPaths,
+    presetScenarioNames,
     usePresetData,
 )
 from ClientResources.VisualisationFunctions import formatEpidemic, plotEpidemic
@@ -53,7 +53,7 @@ def generateGraph():
         }
         session.SimParams = simParams
         # Load test data from file
-        with open(presetDataPathes[chartType], "rb") as csv:
+        with open(presetDataPaths[chartType], "rb") as csv:
             epidemicData = formatEpidemic(
                 csv.read(),
                 scenarioNames,
@@ -70,8 +70,9 @@ def generateGraph():
         [generateGraph] Formatting epidemic data using the scenarios
         {scenariosUsed} and the data type {chartType}
     """)
+    assert epidemicData is not None, "Epidemic data was not defined"
     chartData = plotEpidemic(
-        epidemicData,  # type: ignore
+        epidemicData,
         includedScenarios=scenariosUsed,
         cumulative=chartType == "Cumulative",
     )
@@ -159,7 +160,7 @@ that occur in each day of the simulation.
             default=scenarioNames,
             key="_chartScenariosToUse",
             on_change=saveKey,
-            args=["chartScenariosToUse"],  # type: ignore
+            args=["chartScenariosToUse"],
             placeholder="Please select at least 1 scenario",
             kwargs={"notScenario": True},
             help="""
@@ -246,7 +247,7 @@ graph.
                 """,
             )
         elif usePresetData:
-            with open(presetDataPathes[chartType], "rb") as csv:
+            with open(presetDataPaths[chartType], "rb") as csv:
                 epidemicData = formatEpidemic(
                     csv.read(), scenarioNames, cumulative=chartType == "Cumulative"
                 )
