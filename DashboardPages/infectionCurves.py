@@ -279,25 +279,3 @@ graph.
             )
 
     infectionDataDownload()
-
-    st.subheader("Using the Graph")
-    st.markdown("""
-        - Hover your mouse over a point on the graph to display a
-        tooltip, which lists the infection values for each scenario on
-        the corresponding day.
-        - Click on a scenario name on the right to show only the line
-        for that scenario, blurring the others. Hold Shift and click on
-        another scenario name to toggle its visibility without
-        affecting the other lines.
-
-        Hovering your mouse over the graph's top right corner will
-        display two additional icons:
-
-        - Click the :material/fullscreen: fullscreen symbol to put the
-        table in fullscreen; click it again to return to viewing the
-        whole dashboard.
-        - Click the :material/more_horiz: menu symbol to display a list
-        of additional options. With these options you can download the
-        graph as an image file or access the Vega source data for the
-        graph.
-    """)

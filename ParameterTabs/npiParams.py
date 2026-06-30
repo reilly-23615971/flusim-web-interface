@@ -61,29 +61,6 @@ def buildNPITab(id: int, advanced: bool = False):
         advanced (bool): Set to `True` to show more complex parameters like
             NPI trigger thresholds.
     """
-
-    """
-    # Initialise session variables needed by the vaccination/NPI forms
-    sessionParameters = {
-        f"socialRowCount{id}": 0,
-        f"classDismissal{id}": False,
-    }
-    for parameter, default in sessionParameters.items():
-        session[parameter] = session.get(parameter, default)
-
-    # Ensure age selections only give possible parameters
-    # Dictionary format: 'remaining groups variable': (
-    #   'number of rows variable', 'group row variable prefix'
-    # )
-    ageGroupSets = {
-        f"socialRemainingAgeGroups{id}": (
-            f"socialRowCount{id}",
-            f"socialAgeGroup{id}-",
-        ),
-    }
-
-    # Use function to recalculate remaining group parameters
-    getRemainingGroups(ageGroupSets, ageCategories.keys())"""
     simLength = session.get("cycleCount", 360)
     triggerNames = list(triggerConditions.keys())[1:]
 
@@ -277,141 +254,6 @@ social distancing interventions in the simulation.
                     """,
                     True,
                 )
-
-                '''
-                # Save relevant params as variables to avoid lookups
-                socialRowCount = session[f"socialRowCount{id}"]
-                socialRemainingGroups = session[f"socialRemainingAgeGroups{id}"]
-                socialAgeContainer = st.container()
-                for i in range(socialRowCount):
-                    (socialGroupColumn, socialComplianceColumn, socialRemoveColumn) = (
-                        socialAgeContainer.columns(
-                            (0.25, 0.55, 0.2), vertical_alignment="center"
-                        )
-                    )
-                    socialCurrentGroup = session.get(f"socialAgeGroup{id}-{i}")
-
-                    # Age group column
-                    loadKey(
-                        "socialAgeGroup",
-                        id,
-                        (
-                            socialCurrentGroup
-                            if socialCurrentGroup
-                            else socialRemainingGroups[0]
-                        ),
-                        f"-{i}",
-                    )
-                    with socialGroupColumn:
-                        st.selectbox(
-                            "Age Group",
-                            key=f"_socialAgeGroup{id}-{i}",
-                            # Set age group options such that only ages
-                            # that haven't been selected yet can be selected
-                            options=(
-                                [socialCurrentGroup]
-                                + [
-                                    group
-                                    for group in socialRemainingGroups
-                                    if group != socialCurrentGroup
-                                ]
-                                if socialCurrentGroup
-                                else socialRemainingGroups
-                            ),
-                            disabled=(
-                                not useSocialDistancingToggle or not socialRowCount < 10
-                            ),
-                            on_change=saveKey,
-                            args=["socialAgeGroup", id, f"-{i}"],
-                            help="""
-                            An age group that will have specific
-                            social distancing compliance probability
-                            defined for it, overriding the base
-                            probability.
-
-                            ##### Options:
-                            - Young Infant: 0-6 months old.
-                            - Infant: 7-24 months old.
-                            - Young Child: 3-5 years old.
-                            - Child: 6-12 years old.
-                            - Adolescent: 13-17 years old.
-                            - Young Adult: 18-24 years old.
-                            - Adult: 25-44 years old.
-                            - Older Adult: 45-64 years old.
-                            - Senior: 65-79 years old.
-                            - Older Senior: 80+ years old.
-                        """,
-                        )
-                    # Compliance column
-                    loadKey("socialCompliance", id, 0.9, f"-{i}")
-                    with socialComplianceColumn:
-                        st.select_slider(
-                            "Social Distancing Compliance (Probability)",
-                            np.linspace(0.0, 1.0, 201),
-                            0.9,
-                            format_func=lambda x: f"{100 * x:0.3g}%",
-                            disabled=not useSocialDistancingToggle,
-                            on_change=saveKey,
-                            args=["socialCompliance", id, f"-{i}"],
-                            key=f"_socialCompliance{id}-{i}",
-                            help="""
-                            The probability that an individual in
-                            this age group will comply with social
-                            distancing interventions in the
-                            simulation.
-                        """,
-                        )
-                    # Delete button column
-                    with socialRemoveColumn:
-                        st.button(
-                            label="Remove Age Group",
-                            icon=":material/delete:",
-                            key=f"socialRemove{id}-{i}",
-                            on_click=deleteFormRow,
-                            args=(
-                                i,
-                                f"socialRowCount{id}",
-                                {f"socialAgeGroup{id}-", f"socialCompliance{id}-"},
-                            ),
-                            disabled=not useVaccinesToggle,
-                            help="""
-                            Remove this row of the form and remove
-                            these age-specific vaccine proportion
-                            values from the simulation.
-                        """,
-                        )
-                # Button to add another row for age specific params
-                socialAgeContainer.button(
-                    label="Add Age Group",
-                    icon=":material/add:",
-                    on_click=addFormRow,
-                    key=f"socialAdd{id}",
-                    args=(
-                        f"socialRowCount{id}",
-                        {
-                            f"socialAgeGroup{id}-{socialRowCount}": (
-                                socialRemainingGroups[0]
-                                if socialRemainingGroups else None
-                            ),
-                            f"socialCompliance{id}-{socialRowCount}":
-                            socialDistancingCompliance,
-                        },
-                    ),
-                    disabled=(not useSocialDistancingToggle or not socialRowCount < 10),
-                    help=(
-                        """
-                        Add another row to this form, where you can
-                        select an additional age group to have unique
-                        social distancing compliance values.
-                    """
-                        if socialRowCount <= 9
-                        else """
-                        All age groups have been given unique social
-                        distancing compliance values, so a new age
-                        group cannot be added.
-                    """
-                    ),
-                )'''
         else:
             # Make sure triggers account for class dismissal
             classDismissal = idGet("classDismissal", id, False)
@@ -1473,15 +1315,6 @@ def npiSaveSchema(
                         setattr(
                             scenarioParams, f"{age}_social_distance", globalCompliance
                         )
-                """
-                for i in range(session.get(f"socialRowCount{id}", 0)):
-                    setattr(
-                        scenarioParams,
-                        f"{ageCategories[session[
-                        f'socialAgeGroup{id}-{i}']
-                        ]}_social_distance",
-                        idGet("socialCompliance", id, globalCompliance, f"-{i}"),
-                    )"""
             else:
                 ageScenarioParams.social_distance = 0.0
             # Save age-specific parameters

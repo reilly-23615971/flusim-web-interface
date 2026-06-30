@@ -86,43 +86,6 @@ st.markdown(f"""
     the left and right arrow keys to fine-tune the parameter's value.
 """)
 
-
-'''
-# List current scenarios
-st.header("Current Scenarios")
-
-if scenarioCount == 0:
-    st.markdown(
-        """
-    No additional scenarios have been defined. If you run the
-    simulation now without adding any additional scenarios, only the
-    baseline scenario will be included in the model, using the
-    parameters defined at the
-    :grey-badge[:material/variable_insert: Baseline Parameters] page.
-"""
-    )
-elif scenarioCount == 1:
-    st.markdown(
-        f"""
-    There is currently 1 additional scenario defined for the simulation
-    (excluding the baseline scenario),
-    named {session[f'scenarioName{1}']}.
-"""
-    )
-else:
-    st.markdown(
-        f"""
-There are currently {scenarioCount} additional scenarios defined for
-the simulation (excluding the baseline scenario), with the following
-names:
-
-{'\n'.join(f'- {session[f'scenarioName{id}']}' for id in range(1, scenarioCount + 1))}
-"""
-    )
-
-st.header("Scenario Parameter Configuration")
-'''
-
 # Buttons to upload simulation parameters
 uploadDownloadBar()
 
