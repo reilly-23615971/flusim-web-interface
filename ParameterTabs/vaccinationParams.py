@@ -432,14 +432,14 @@ overriding the base proportions.
                         format="%0.5g%%",
                         help=(
                             """
-The percentage of individuals in this age group that will be vaccinated against
-the pathogen.
-                        """
+The percentage of individuals in this age group that will be
+vaccinated against the pathogen.
+                            """
                             if staticVaccination
                             else """
 The percentage of individuals in this age group that will already be
 vaccinated against the pathogen at the beginning of the simulation.
-                        """
+                            """
                         ),
                     ),
                     "Target Vaccinated Proportion": (
@@ -899,25 +899,30 @@ pathogen all at once.
                     with st.container(border=True):
                         st.markdown(f"#### {ordinals[i+1]} Vaccine Dose")
                         loadKey("primaryBaseEfficacy", id, 0.5, f"-{i}")
-                        baseDoseEfficacy = st.slider(
-                            (
-                                "Initial Dose Efficacy (Probability)"
-                                if waningToggle
-                                else "Dose Efficacy (Probability)"
-                            ),
-                            min_value=0.0,
-                            max_value=1.0,
-                            value=0.5,
-                            format="percent",
-                            disabled=not useVaccinesToggle,
-                            on_change=saveKey,
-                            args=["primaryBaseEfficacy", id, f"-{i}"],
-                            key=f"_primaryBaseEfficacy{id}-{i}",
-                            help=f"""
+                        # Store efficacy between 0-100 for form compatibility
+                        baseDoseEfficacy = round(
+                            st.slider(
+                                (
+                                    "Initial Dose Efficacy (Probability)"
+                                    if waningToggle
+                                    else "Dose Efficacy (Probability)"
+                                ),
+                                min_value=0.0,
+                                max_value=1.0,
+                                value=0.5,
+                                format="percent",
+                                disabled=not useVaccinesToggle,
+                                on_change=saveKey,
+                                args=["primaryBaseEfficacy", id, f"-{i}"],
+                                key=f"_primaryBaseEfficacy{id}-{i}",
+                                help=f"""
 The {"initial " if waningToggle else ""}efficacy of this vaccine dose,
 represented as the probability that an individual that has received the
 dose will remain healthy when exposed to the pathogen.
                             """,
+                            )
+                            * 100,
+                            6,
                         )
 
                         # Age-Specific Primary Efficacy Field
@@ -982,8 +987,8 @@ for this vaccine dose, overriding the base value.
                                     required=True,
                                     default=baseDoseEfficacy,
                                     min_value=0.0,
-                                    max_value=1.0,
-                                    format="percent",
+                                    max_value=100.0,
+                                    format="%0.5g%%",
                                     help=f"""
 The {"initial " if waningToggle else ""}efficacy of this vaccine dose for
 this age group, represented as the probability that a vaccinated individual in
@@ -1341,6 +1346,7 @@ represented as the probability that they will remain healthy when exposed to
 the pathogen.
                         """,
                     )
+                    percentWanedEfficacy = round(primaryWanedEfficacy * 100, 6)
                     # Last efficacy value is all that's cared about
                     # for error checking purposes
                     finalDose = primaryDoseCount - 1
@@ -1398,7 +1404,7 @@ the global waned efficacy defined above.
                         pd.DataFrame(
                             {
                                 "Age Group": [None],
-                                "Dose Efficacy After Waning": [primaryWanedEfficacy],
+                                "Dose Efficacy After Waning": [percentWanedEfficacy],
                             },
                         ),
                         dataframe=True,
@@ -1429,10 +1435,10 @@ immunity waning defined for it, overriding the base value.
                             "Dose Efficacy After Waning": st.column_config.NumberColumn(
                                 "Minimum Dose Efficacy (Probability)",
                                 required=True,
-                                default=primaryWanedEfficacy,
+                                default=percentWanedEfficacy,
                                 min_value=0.0,
-                                max_value=0.999999,
-                                format="percent",
+                                max_value=99.999999,
+                                format="%0.5g%%",
                                 help="""
 The efficacy of the immunity possessed by a vaccinated individual in this age group
 after the full waning duration, represented as the probability that they will remain
@@ -1467,8 +1473,15 @@ healthy when exposed to the pathogen.
                             {
                                 "Age Group": [None],
                                 "Initial Dose Efficacy": [
-                                    idGet(
-                                        "primaryBaseEfficacy", id, 0.5, f"-{finalDose}"
+                                    round(
+                                        idGet(
+                                            "primaryBaseEfficacy",
+                                            id,
+                                            0.5,
+                                            f"-{finalDose}",
+                                        )
+                                        * 100,
+                                        6,
                                     )
                                 ],
                             },
@@ -1776,6 +1789,10 @@ pathogen all at once.
                 else:
                     primaryWanedEfficacy = 0.0
 
+                # Scale to 0-100 for form compatibility
+                percentDoseEfficacy = round(doseEfficacy * 100, 6)
+                percentWanedEfficacy = round(primaryWanedEfficacy * 100, 6)
+
                 # Age-Specific Primary Efficacy Field
                 st.markdown(
                     f"##### Age-Specific Vaccine Efficacy",
@@ -1786,14 +1803,15 @@ for individual age groups in the simulation, overriding the efficacy defined abo
                 )
                 if useVaccinesToggle:
                     st.markdown("Double-click a cell in this table to edit its value.")
+
                 loadKey(
                     "vacSingleEfficacyAgeForm",
                     id,
                     pd.DataFrame(
                         {
                             "Age Group": [None],
-                            "Vaccine Efficacy": [doseEfficacy],
-                            "Vaccine Efficacy After Waning": [primaryWanedEfficacy],
+                            "Vaccine Efficacy": [percentDoseEfficacy],
+                            "Vaccine Efficacy After Waning": [percentWanedEfficacy],
                         },
                     ),
                     dataframe=True,
@@ -1802,7 +1820,7 @@ for individual age groups in the simulation, overriding the efficacy defined abo
                 if waningToggle:
                     session[f"vacSingleEfficacyAgeForm{id}"] = replaceTableNA(
                         session[f"vacSingleEfficacyAgeForm{id}"],
-                        {"Vaccine Efficacy After Waning": primaryWanedEfficacy},
+                        {"Vaccine Efficacy After Waning": percentWanedEfficacy},
                     )
                 vacEfficacyAgeForm = st.data_editor(
                     session[f"vacSingleEfficacyAgeForm{id}"],
@@ -1828,10 +1846,10 @@ for it, overriding the base value.
                         "Vaccine Efficacy": st.column_config.NumberColumn(
                             f"{"Initial " if waningToggle else ""}Vaccine Efficacy (Probability)",
                             required=True,
-                            default=doseEfficacy,
+                            default=percentDoseEfficacy,
                             min_value=0.0,
-                            max_value=1.0,
-                            format="percent",
+                            max_value=100.0,
+                            format="%0.5g%%",
                             help=f"""
 The {"initial " if waningToggle else ""}efficacy of each vaccine dose for this age group, represented as the probability that a recently vaccinated individual in
 this age group will remain healthy when exposed to the pathogen.
@@ -1843,10 +1861,10 @@ this age group will remain healthy when exposed to the pathogen.
                             else st.column_config.NumberColumn(
                                 "Minimum Vaccine Efficacy (Probability)",
                                 required=True,
-                                default=primaryWanedEfficacy,
+                                default=percentWanedEfficacy,
                                 min_value=0.0,
-                                max_value=0.999999,
-                                format="percent",
+                                max_value=99.999999,
+                                format="%0.5g%%",
                                 help="""
 The efficacy of the immunity possessed by a vaccinated individual in this age group
 after the full waning duration, represented as the probability that they will remain
@@ -2214,6 +2232,10 @@ healthy when exposed to the pathogen.
                 # Store age-based booster efficacy values for error checking
                 # boostAgeInitials, boostAgeWaneds = {}, {}
 
+                # Scale to 0-100 for form compatibility
+                boostPercentBaseEfficacy = round(boosterBaseEfficacy * 100, 6)
+                boostPercentWanedEfficacy = round(boosterWanedEfficacy * 100, 6)
+
                 # Modifiable-length field for age-specific efficacy
                 st.markdown(
                     "### Age-Specific Booster Efficacy",
@@ -2231,8 +2253,10 @@ global booster efficacy values defined above.
                     pd.DataFrame(
                         {
                             "Age Group": [None],
-                            "Initial Booster Efficacy": [boosterBaseEfficacy],
-                            "Booster Efficacy After Waning": [boosterWanedEfficacy],
+                            "Initial Booster Efficacy": [boostPercentBaseEfficacy],
+                            "Booster Efficacy After Waning": [
+                                boostPercentWanedEfficacy
+                            ],
                         },
                     ),
                     dataframe=True,
@@ -2265,10 +2289,10 @@ for it, overriding the base efficacy value for booster vaccines.
                         "Initial Booster Efficacy": st.column_config.NumberColumn(
                             "Initial Booster Efficacy (Probability)",
                             required=True,
-                            default=boosterBaseEfficacy,
+                            default=boostPercentBaseEfficacy,
                             min_value=0.0,
-                            max_value=1.0,
-                            format="percent",
+                            max_value=100.0,
+                            format="%0.5g%%",
                             help="""
 The initial efficacy of each booster vaccine for this age group, represented
 as the probability that a recently vaccinated individual in this age group
@@ -2278,10 +2302,10 @@ will remain healthy when exposed to the pathogen.
                         "Booster Efficacy After Waning": st.column_config.NumberColumn(
                             "Minimum Booster Efficacy (Probability)",
                             required=True,
-                            default=boosterWanedEfficacy,
+                            default=boostPercentWanedEfficacy,
                             min_value=0.0,
-                            max_value=0.999999,
-                            format="percent",
+                            max_value=99.999999,
+                            format="%0.5g%%",
                             help="""
 The efficacy of the immunity possessed by a booster-vaccinated individual in
 this age group after the full waning duration, represented as the probability
@@ -2785,13 +2809,19 @@ def vaccineSaveSchema(
                         pd.DataFrame(
                             {
                                 "Age Group": [None],
-                                "Initial Dose Efficacy": [primBaseEfficacy[i]],
+                                "Initial Dose Efficacy": [
+                                    round(primBaseEfficacy[i] * 100, 6)
+                                ],
                             },
                         ),
                         f"-{i}",
-                    )
+                    ).copy()
                     for i in range(primDoseCount)
                 ]
+                for form in vacInitialEfficacyAgeForms:
+                    form["Initial Dose Efficacy"] = (
+                        form["Initial Dose Efficacy"].div(100.0).round(6)
+                    )
                 ageInitialDict = {
                     age: [
                         next(
@@ -2807,16 +2837,25 @@ def vaccineSaveSchema(
                     for age in ageNames
                 }
                 ageWaneDict = {age: primWanedEfficacy for age in ageNames}
-                vacWaneAgeForm = idGet(
-                    "vacWaneAgeForm",
-                    id,
-                    pd.DataFrame(
-                        {
-                            "Age Group": [None],
-                            "Dose Efficacy After Waning": [primWanedEfficacy],
-                        },
-                    ),
-                ).dropna()
+                vacWaneAgeForm = (
+                    idGet(
+                        "vacWaneAgeForm",
+                        id,
+                        pd.DataFrame(
+                            {
+                                "Age Group": [None],
+                                "Dose Efficacy After Waning": [
+                                    round(primWanedEfficacy * 100, 6)
+                                ],
+                            },
+                        ),
+                    )
+                    .copy()
+                    .dropna()
+                )
+                vacWaneAgeForm["Dose Efficacy After Waning"] = (
+                    vacWaneAgeForm["Dose Efficacy After Waning"].div(100.0).round(6)
+                )
                 ageWaneDict.update(
                     vacWaneAgeForm.set_index("Age Group")[
                         "Dose Efficacy After Waning"
@@ -2899,11 +2938,18 @@ def vaccineSaveSchema(
                     pd.DataFrame(
                         {
                             "Age Group": [None],
-                            "Vaccine Efficacy": [singleEfficacy],
-                            "Vaccine Efficacy After Waning": [singleWanedEfficacy],
+                            "Vaccine Efficacy": [round(singleEfficacy * 100, 6)],
+                            "Vaccine Efficacy After Waning": [
+                                round(singleWanedEfficacy * 100, 6)
+                            ],
                         },
                     ),
+                ).copy()
+                efficacyCols = ["Vaccine Efficacy", "Vaccine Efficacy After Waning"]
+                singleEfficacyAgeForm[efficacyCols] = (
+                    singleEfficacyAgeForm[efficacyCols].div(100.0).round(6)
                 )
+
                 efficacyParams = [
                     vaccineEfficacy(
                         DoseType="primary",
@@ -2961,10 +3007,21 @@ def vaccineSaveSchema(
                     pd.DataFrame(
                         {
                             "Age Group": [None],
-                            "Initial Booster Efficacy": [boostBaseEfficacy],
-                            "Booster Efficacy After Waning": [boostWanedEfficacy],
+                            "Initial Booster Efficacy": [
+                                round(boostBaseEfficacy * 100, 6)
+                            ],
+                            "Booster Efficacy After Waning": [
+                                round(boostWanedEfficacy * 100, 6)
+                            ],
                         },
                     ),
+                ).copy()
+                boosterCols = [
+                    "Initial Booster Efficacy",
+                    "Booster Efficacy After Waning",
+                ]
+                boostEfficacyAgeForm[boosterCols] = (
+                    boostEfficacyAgeForm[boosterCols].div(100.0).round(6)
                 )
                 efficacyParams += [
                     vaccineEfficacy(
@@ -3301,6 +3358,10 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
 
         # Save the tables
         for index, table in enumerate(primaryEfficacyTables):
+            if not table.empty:
+                table["Initial Dose Efficacy"] = (
+                    table["Initial Dose Efficacy"].mul(100.0).round(6)
+                )
             updateTableFromSchema(
                 "vacInitialEfficacyAgeForm",
                 table,
@@ -3308,10 +3369,14 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
                 pd.DataFrame(
                     {
                         "Age Group": [None],
-                        "Vaccine Efficacy": [baseFull[index]],
+                        "Initial Dose Efficacy": [round(baseFull[index] * 100, 6)],
                     },
                 ),
                 extra=f"-{index}",
+            )
+        if not primaryWanedTable.empty:
+            primaryWanedTable["Dose Efficacy After Waning"] = (
+                primaryWanedTable["Dose Efficacy After Waning"].mul(100.0).round(6)
             )
         updateTableFromSchema(
             "vacWaneAgeForm",
@@ -3320,10 +3385,18 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             pd.DataFrame(
                 {
                     "Age Group": [None],
-                    "Dose Efficacy After Waning": [baseWaned],
+                    "Dose Efficacy After Waning": [round(baseWaned * 100, 6)],
                 },
             ),
         )
+        if not primarySingleTable.empty:
+            efficacyCols = [
+                "Vaccine Efficacy",
+                "Vaccine Efficacy After Waning",
+            ]
+            primarySingleTable[efficacyCols] = (
+                primarySingleTable[efficacyCols].mul(100.0).round(6)
+            )
         updateTableFromSchema(
             "vacSingleEfficacyAgeForm",
             primarySingleTable,
@@ -3331,8 +3404,8 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             pd.DataFrame(
                 {
                     "Age Group": [None],
-                    "Vaccine Efficacy": [baseFull[0]],
-                    "Vaccine Efficacy After Waning": [baseWaned],
+                    "Vaccine Efficacy": [round(baseFull[0] * 100, 6)],
+                    "Vaccine Efficacy After Waning": [round(baseWaned * 100, 6)],
                 },
             ),
         )
@@ -3384,7 +3457,14 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
                     base,
                     waned,
                 ]
-
+        if not boosterEfficacyTable.empty:
+            boosterCols = [
+                "Initial Booster Efficacy",
+                "Booster Efficacy After Waning",
+            ]
+            boosterEfficacyTable[boosterCols] = (
+                boosterEfficacyTable[boosterCols].mul(100.0).round(6)
+            )
         updateTableFromSchema(
             "boostEfficacyAgeForm",
             boosterEfficacyTable,
@@ -3392,8 +3472,8 @@ def vaccineLoadSchema(schema: Parameters, scenarioID: int = 0):
             pd.DataFrame(
                 {
                     "Age Group": [None],
-                    "Initial Booster Efficacy": [baseBoostFull],
-                    "Booster Efficacy After Waning": [baseBoostWaned],
+                    "Initial Booster Efficacy": [round(baseBoostFull * 100, 6)],
+                    "Booster Efficacy After Waning": [round(baseBoostWaned * 100, 6)],
                 },
             ),
         )

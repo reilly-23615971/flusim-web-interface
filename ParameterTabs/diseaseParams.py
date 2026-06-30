@@ -2351,11 +2351,10 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
         mortParams = {
             p.removesuffix("_mort"): round(v * 100000, 6) if v is not None else None
             for p, v in paramDict.items()
-            if p.endswith("_mort")
+            if p.endswith("_mort") and v != deathRate
         }
         for param, value in mortParams.items():
-            if value != deathRate:
-                mortTable.loc[mortTable.shape[0]] = [param, value]
+            mortTable.loc[mortTable.shape[0]] = [param, value]
         updateTableFromSchema(
             "mortAgeForm",
             mortTable,

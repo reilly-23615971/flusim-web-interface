@@ -174,20 +174,24 @@ simulation, overriding other social distancing parameters.
                 """,
             )
             loadKey("socialDistancingCompliance", id, 0.9)
-            socialDistancingCompliance = st.slider(
-                "Social Distancing Compliance (Probability)",
-                min_value=0.0,
-                max_value=1.0,
-                value=0.9,
-                format="percent",
-                disabled=not useSocialDistancingToggle,
-                on_change=saveKey,
-                args=["socialDistancingCompliance", id],
-                key=f"_socialDistancingCompliance{id}",
-                help="""
+            socialDistancingCompliance = round(
+                st.slider(
+                    "Social Distancing Compliance (Probability)",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=0.9,
+                    format="percent",
+                    disabled=not useSocialDistancingToggle,
+                    on_change=saveKey,
+                    args=["socialDistancingCompliance", id],
+                    key=f"_socialDistancingCompliance{id}",
+                    help="""
 The probability that an individual will comply
 with social distancing interventions in the simulation.
                 """,
+                )
+                * 100,
+                6,
             )
             # Age-specific social distancing compliance (if advanced params enabled)
             # TODO: Check sim for social distance nuance
@@ -245,8 +249,8 @@ probability defined for it, overriding the base probability.
                             required=True,
                             default=socialDistancingCompliance,
                             min_value=0.0,
-                            max_value=1.0,
-                            format="percent",
+                            max_value=100.0,
+                            format="%0.5g%%",
                             help="""
 The probability that an individual in this age group will comply with
 social distancing interventions in the simulation.
@@ -1454,6 +1458,9 @@ def npiSaveSchema(
                             "Social Distancing Compliance": [globalCompliance],
                         },
                     ),
+                ).copy()
+                distanceAgeForm["Social Distancing Compliance"] = (
+                    distanceAgeForm["Social Distancing Compliance"].div(100.0).round(6)
                 )
                 for age in ageTimeDict:
                     if age in distanceAgeForm["Age Group"].values:
@@ -1636,9 +1643,10 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
     # Global Age Parameters
     schemaAge = schema.Scenario_ParameterWithAgePrefix
     if schemaAge is not None and schemaAge.social_distance is not None:
-        updateParamFromSchema(
-            "socialDistancingCompliance", schemaAge.social_distance, scenarioID
-        )
+        compliance = schemaAge.social_distance
+        updateParamFromSchema("socialDistancingCompliance", compliance, scenarioID)
+    else:
+        compliance = idGet("socialDistanceCompliance", 0, 0.9)
 
     # General Scenario Parameters
     schemaParameters = schema.Scenario_Parameter
@@ -1742,29 +1750,33 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
                 )
 
         # Social Distancing Table
+        # TODO: Identical-to-global values are getting kept here
         distanceParams = {
             p.removesuffix("_social_distance"): v
             for p, v in paramDict.items()
-            if p.endswith("_social_distance")
+            if p.endswith("_social_distance") and v != compliance
         }
-        if distanceParams:
-            distanceTable = pd.DataFrame(
-                columns=("Age Group", "Social Distancing Compliance")
+        distanceTable = pd.DataFrame(
+            columns=("Age Group", "Social Distancing Compliance")
+        )
+        for param, value in distanceParams.items():
+            distanceTable.loc[distanceTable.shape[0]] = [param, value]
+        if not distanceTable.empty:
+            distanceTable["Social Distancing Compliance"] = (
+                distanceTable["Social Distancing Compliance"].mul(100.0).round(6)
             )
-            for param, value in distanceParams.items():
-                distanceTable.loc[distanceTable.shape[0]] = [param, value]
-            updateTableFromSchema(
-                "distanceAgeForm",
-                distanceTable,
-                scenarioID,
-                pd.DataFrame(
-                    {
-                        "Age Group": [None],
-                        "Social Distancing Compliance": [
-                            paramDict.get(
-                                idGet("socialDistancingCompliance", scenarioID, 0.0),
-                            )
-                        ],
-                    },
-                ),
-            )
+        updateTableFromSchema(
+            "distanceAgeForm",
+            distanceTable,
+            scenarioID,
+            pd.DataFrame(
+                {
+                    "Age Group": [None],
+                    "Social Distancing Compliance": [
+                        paramDict.get(
+                            idGet("socialDistancingCompliance", scenarioID, 0.0),
+                        )
+                    ],
+                },
+            ),
+        )
