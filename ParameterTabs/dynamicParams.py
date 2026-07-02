@@ -27,7 +27,7 @@ dynamicLog = logging.getLogger(__name__)
 session = st.session_state
 
 
-@st.fragment
+# @st.fragment
 def buildDynamicTab(id: int):
     """
     Function to generate the dynamic parameters in a specified container

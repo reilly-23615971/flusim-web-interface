@@ -47,7 +47,7 @@ diseaseLog = logging.getLogger(__name__)
 session = st.session_state
 
 
-@st.fragment
+# @st.fragment
 def buildDiseaseTab(id: int, advanced: bool = False):
     """
     Function to generate the parameters for the pathogen in a specified

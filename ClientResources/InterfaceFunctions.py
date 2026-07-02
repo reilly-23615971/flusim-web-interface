@@ -108,7 +108,7 @@ def dualError(
         session["activeErrors"][scenarioID].pop(label, None)
 
 
-@st.fragment(run_every=1)
+# @st.fragment(run_every=1)
 def errorChecker(scenarioID: int, name: str = "Errors in Current Scenario"):
     """
     Fragment to list errors from a specific scenario in a dropdown container.

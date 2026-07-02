@@ -47,7 +47,7 @@ npiLog = logging.getLogger(__name__)
 session = st.session_state
 
 
-@st.fragment
+# @st.fragment
 def buildNPITab(id: int, advanced: bool = False):
     """
     Function to generate the parameters for NPIs in a

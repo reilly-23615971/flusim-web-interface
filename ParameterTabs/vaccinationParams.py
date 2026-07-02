@@ -50,7 +50,7 @@ session = st.session_state
 
 # TODO: See if the vaccination trigger parameters are fully working
 # and reimplement them if they are
-@st.fragment
+# @st.fragment
 def buildVaccinationTab(id: int, advanced: bool = False):
     """
     Function to generate the parameters for vaccination in a

@@ -30,7 +30,7 @@ communityLog = logging.getLogger(__name__)
 session = st.session_state
 
 
-@st.fragment
+# @st.fragment
 def buildCommunityTab(id: int, advanced: bool = False):
     """
     Function to generate the parameters for the simulation environment in a
