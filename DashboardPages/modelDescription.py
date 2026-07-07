@@ -81,7 +81,7 @@ the model. Once the server has returned these simulation outcomes, the dashboard
 combines them with user-specified health burden parameters to generate health burden
 outcomes such as GP visits and deaths.
     """,
-    text_alignment="center"
+    text_alignment="center",
 )
 
 # TODO: Full parameter templates

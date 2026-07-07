@@ -5,7 +5,7 @@
 # Imports
 import logging
 import time
-from typing import Literal, Optional
+from typing import Literal, Optional, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -227,15 +227,19 @@ def generateTable() -> None:
     if agesUsed:
         ageData.rename_axis(index=["Scenario Index", "Age Group Index"], inplace=True)
         ageData.insert(
-            0, "Scenario Name", ageData.index.get_level_values("Scenario Index").values
+            0,
+            ("", "Scenario Name"),
+            ageData.index.get_level_values("Scenario Index").values,
         )
         ageData.insert(
-            1, "Age Group", ageData.index.get_level_values("Age Group Index").values
+            1,
+            ("", "Age Group"),
+            ageData.index.get_level_values("Age Group Index").values,
         )
 
     else:
         ageData.rename_axis("Scenario Index", inplace=True)
-        ageData.insert(0, "Scenario Name", ageData.index.to_series())
+        ageData.insert(0, ("", "Scenario Name"), ageData.index.to_series())
 
     # Initialise styler
     ageStyle = ageData.style
@@ -269,7 +273,7 @@ def generateTable() -> None:
             colour = scenarioColourDictionary[name]
             return f"background-color: {colour}; color: {selectTextColour(colour)}"
 
-        ageStyle = ageStyle.map(scenarioColourString, subset=["Scenario Name"])
+        ageStyle = ageStyle.map(scenarioColourString, subset=[("", "Scenario Name")])
 
         # Colour ages if present
         if agesUsed:
@@ -296,7 +300,7 @@ def generateTable() -> None:
                 colour = ageColourDictionary[value]
                 return f"background-color: {colour}; color: {selectTextColour(colour)}"
 
-            ageStyle = ageStyle.map(ageColourString, subset=["Age Group"])
+            ageStyle = ageStyle.map(ageColourString, subset=[("", "Age Group")])
 
         # Use background gradients on difference from baseline columns
         for column in diffSet:
@@ -315,9 +319,16 @@ def generateTable() -> None:
                 subset=[column],
             )
 
+    # Format column config to match Streamlit requirements with MultiIndex
+    formattedConfig = {
+        cast(int, ageData.columns.get_loc(column)) + ageData.index.nlevels: value
+        for column, value in columnConfig.items()
+        if column in ageData.columns
+    }
+
     # Save the generated table
     session.HealthOutcomeTableData = ageStyle  # .format(formatValues)
-    session.HealthOutcomeTableConfig = columnConfig
+    session.HealthOutcomeTableConfig = formattedConfig
     session.ChartGenerated = True
 
 
@@ -747,10 +758,11 @@ tableConfig = session.get("HealthOutcomeTableConfig")
 if tableData is not None:
     st.header("Health Burden Outcome Table")
     # TODO: Fix columns being deselected when changing column settings
+    # TODO: Consider increasing the default height (you'll need to measure in pixels)
     st.dataframe(
         tableData,
         height="auto",
-        width="content",
+        width="stretch",
         column_config=tableConfig,
         hide_index=True,
         placeholder="N/A",

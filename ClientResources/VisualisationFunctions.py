@@ -200,8 +200,13 @@ def plotEpidemic(
             the names of scenarios that will be included in the table.
 
         outcomeName (str): A string indicating the health outcome the epidemic
-            data represents. Can be either 'Symptomatic Infections', 'Diagnosed Cases',
-            'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
+            data represents. Accepts any of the following values:
+             - Symptomatic Infections
+             - Diagnosed Cases
+             - Hospitalisations
+             - ICU Visits
+             - GP Visits
+             - Deaths
 
         cumulative (bool): Set to `True` when the DataFrame contains
             cumulative data instead of individual data.
@@ -467,7 +472,12 @@ def generateAsir(
     includedScenarios: Optional[list[str]] = None,
     includedAges: Optional[list[str]] = None,
     vaccinatedData: Optional[pd.DataFrame] = None,
-) -> tuple[pd.DataFrame, dict[str, ColumnConfig], set[str], set[str]]:
+) -> tuple[
+    pd.DataFrame,
+    dict[tuple[str, str], ColumnConfig],
+    set[tuple[str, str]],
+    set[tuple[str, str]],
+]:
     """
     Function to create a table of health burden data obtained
     from the 'asir' Flusim analysis tool.
@@ -490,11 +500,14 @@ def generateAsir(
 
         columns (sequence of tuples (str, list of str, str, bool, bool)): A list
             of tuples representing the settings each column should have. The
-            values in each tuple are as follows: the health burden outcome to
-            display, which age groups the column should represent (ignored if
-            `ageSeparation` is `Combined` or `By Row`), what vaccination status
-            the column should represent, whether the column should be a percentage and
-            whether the column should display the difference from baseline values.
+            values in each tuple are as follows:
+             - the health burden outcome to display
+             - which age groups the column should represent (ignored if
+            `ageSeparation` is `Combined` or `By Row`)
+             - what vaccination status the column should represent
+             - whether or not the column should display percentages
+             - whether or not the column should display the difference from
+            the baseline scenario's values
 
         includedScenarios (list of str, optional): A list of strings
             containing the names of scenarios that will be included in
@@ -513,13 +526,13 @@ def generateAsir(
         formattedData (DataFrame): A dataframe containing the data,
             reshaped into a format more easily used for table construction.
 
-        columnConfig (dict of str and ColumnConfig): A dictionary storing the
-            configuration settings for each column in the table.
+        columnConfig (dict of str tuples and ColumnConfig): A dictionary storing
+            the configuration settings for each column in the table.
 
-        percentCols (set of str): A set of strings holding the names of
+        percentCols (set of str tuples): A set of strings holding the names of
             each column that uses percentage formatting.
 
-        differenceCols (set of str): A set of strings holding the names of
+        differenceCols (set of str tuples): A set of strings holding the names of
             each column that uses difference from baseline formatting.
 
     Raises:
@@ -595,11 +608,6 @@ def generateAsir(
         vaccinatedBaselines = vaccinatedData["Age Group"].map(
             vaccinatedBaselineRows["Base Values"]
         )
-    # Generate config data for Streamlit display
-    percentCols, differenceCols = set(), set()
-    columnConfig = {}
-    columnConfig["Scenario Name"] = st.column_config.TextColumn(pinned=True)
-    columnConfig["Age Group"] = st.column_config.TextColumn(pinned=True)
 
     # Prepare burden-scaled columns beforehand for efficiency
     requiredOutcomes = {outcome for outcome, _, _, _, _ in columns}
@@ -636,11 +644,24 @@ def generateAsir(
             outcomeColumns[(outcome, "Unvaccinated")] = unvaccinatedColumn
             outcomeBaselines[(outcome, "Unvaccinated")] = unvaccinatedBaseColumn
 
+    # Remove the base values column once it's redundant
+    fullData.drop("Base Values", axis=1, inplace=True)
+
+    # Format as MultiIndex
+    fullData.columns = pd.MultiIndex.from_product(([""], fullData.columns))
+
+    # Generate config data for Streamlit display
+    percentCols, differenceCols = set(), set()
+    columnConfig = {}
+    columnConfig[("", "Scenario Name")] = st.column_config.TextColumn(pinned=True)
+    columnConfig[("", "Age Group")] = st.column_config.TextColumn(pinned=True)
+
     # Generate columns
     for outcome, ageGroups, vaccineStatus, proportion, baselineDifference in columns:
         currentColumn = outcomeColumns[(outcome, vaccineStatus)].copy()
         columnBaselines = outcomeBaselines[(outcome, vaccineStatus)].copy()
         columnName = f"{"" if vaccineStatus == "All" else vaccineStatus} {outcome}"
+        columnSuffix = ""
 
         # Replace values with those of summed age groups
         if ageSeparation == "By Column":
@@ -649,15 +670,12 @@ def generateAsir(
             filteredColumn = currentColumn.iloc[
                 np.array([index for age in ageGroups for index in ageIndices[age]])
             ]
-            """filteredColumn = currentColumn.iloc[
-                chain.from_iterable(ageIndices[age] for age in ageGroups)
-            ]"""
             columnSums = filteredColumn.groupby(
                 filteredColumn.index % scenarioCount
             ).sum()
             currentColumn = pd.concat([columnSums] * 11, ignore_index=True)
             columnBaselines = pd.Series(columnSums[0], index=range(11 * scenarioCount))
-            columnName += f" ({ageRangeCombiner(ageGroups)})"
+            columnSuffix += f"{ageRangeCombiner(ageGroups)} "
 
         # Apply proportion/difference modifications
         # TODO: Either fix or disable just proportion
@@ -669,62 +687,64 @@ def generateAsir(
                     agePops[age] for age in ageGroups
                 )
             else:
-                populationColumn = fullData["Age Group"].map(agePops) * scalingFactor
+                populationColumn = (
+                    fullData[("", "Age Group")].map(agePops) * scalingFactor
+                )
             currentColumn /= populationColumn
-            columnName += " (%)"
-            percentCols.add(columnName)
+            columnSuffix += "%"
+            percentCols.add((columnName, columnSuffix))
         elif not proportion and baselineDifference:
             currentColumn = currentColumn - columnBaselines
-            columnName += " (Difference from Baseline)"
-            differenceCols.add(columnName)
+            columnSuffix = "Difference from Baseline"
+            differenceCols.add((columnName, columnSuffix))
         elif proportion and baselineDifference:
             currentColumn = currentColumn - columnBaselines
             # Account for potential division by 0
             currentColumn = (currentColumn / columnBaselines).where(
                 columnBaselines != 0, other=np.nan
             )
-            columnName += " (% Difference from Baseline)"
-            percentCols.add(columnName)
-            differenceCols.add(columnName)
+            columnSuffix = "% Difference from Baseline"
+            percentCols.add((columnName, columnSuffix))
+            differenceCols.add((columnName, columnSuffix))
+        else:
+            columnSuffix += "Total"
 
         # Formally create the column and add config details
-        fullData[columnName] = currentColumn
-        columnConfig[columnName] = st.column_config.NumberColumn(
+        fullData[(columnName, columnSuffix)] = currentColumn
+        columnConfig[(columnName, columnSuffix)] = st.column_config.NumberColumn(
             format="percent" if proportion else "localized"
         )
 
-    # Remove the base values column once it's redundant
-    fullData.drop("Base Values", axis=1, inplace=True)
-
     # Remove any scenarios/age groups not specified in the data
     if set(scenarioNames) != set(includedScenarios):
-        fullData = fullData[fullData["Scenario"].isin(includedScenarios)]
+        fullData = fullData[fullData[("", "Scenario")].isin(includedScenarios)]
     if not includedAges:
-        fullData = fullData[fullData["Age Group"] == "Total"]
-        fullData = fullData.drop("Age Group", axis=1)
+        fullData = fullData[fullData[("", "Age Group")] == "Total"]
+        fullData = fullData.drop(("", "Age Group"), axis=1)
     elif set(includedAges) != set(ageWithTotal):
-        fullData = fullData[fullData["Age Group"].isin(includedAges)]
+        fullData = fullData[fullData[("", "Age Group")].isin(includedAges)]
 
-    # Set index for data
-    fullData.loc[:, "Scenario"] = pd.Categorical(
-        fullData["Scenario"],
+    # Make index columns categorical
+    fullData.loc[:, ("", "Scenario")] = pd.Categorical(
+        fullData[("", "Scenario")],
         categories=scenarioNames,
         ordered=True,
     )
     if includedAges:
-        fullData.loc[:, "Age Group"] = pd.Categorical(
-            fullData["Age Group"],
+        fullData.loc[:, ("", "Age Group")] = pd.Categorical(
+            fullData[("", "Age Group")],
             categories=ageWithTotal,
             ordered=True,
         )
 
     # Order index using order of includedScenarios/includedAges
-    fullData = (
-        fullData.set_index(["Scenario", "Age Group"])
-        if includedAges
-        else fullData.set_index("Scenario")
-    ).reindex(includedScenarios, level="Scenario")
     if includedAges:
-        fullData = fullData.reindex(includedAges, level="Age Group")
+        fullData = (
+            fullData.set_index([("", "Scenario"), ("", "Age Group")])
+            .reindex(includedScenarios, level=0)
+            .reindex(includedAges, level=1)
+        )
+    else:
+        fullData = fullData.set_index(("", "Scenario")).reindex(includedScenarios)
 
     return fullData, columnConfig, percentCols, differenceCols
