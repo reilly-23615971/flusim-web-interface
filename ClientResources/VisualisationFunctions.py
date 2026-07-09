@@ -696,6 +696,8 @@ def generateAsir(
         elif not proportion and baselineDifference:
             currentColumn = currentColumn - columnBaselines
             columnSuffix = "Difference"
+            # currentColumn = columnBaselines - currentColumn
+            # columnSuffix = "Averted"
             differenceCols.add((columnName, columnSuffix))
         elif proportion and baselineDifference:
             currentColumn = currentColumn - columnBaselines
@@ -704,6 +706,10 @@ def generateAsir(
                 columnBaselines != 0, other=np.nan
             )
             columnSuffix = "% Difference"
+            # currentColumn = (columnBaselines / currentColumn).where(
+            # currentColumn != 0, other=np.nan
+            # )
+            # columnSuffix = "% Averted"
             percentCols.add((columnName, columnSuffix))
             differenceCols.add((columnName, columnSuffix))
         else:

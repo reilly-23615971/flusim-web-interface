@@ -642,7 +642,8 @@ all age groups will be considered.
             # TODO: Make advanced settings hide this when disabled
             "Vaccination Status": (
                 None
-                if not currentDataUsesVaccines
+                if True  # TODO: Debug for demo
+                # if not currentDataUsesVaccines
                 else st.column_config.SelectboxColumn(
                     "Vaccination Status",
                     required=True,
@@ -660,6 +661,7 @@ individuals who had not received vaccines in the simulation.
                 """,
                 )
             ),
+            # TODO: Rename baseline difference to averted burdens?
             "Options": st.column_config.MultiselectColumn(
                 "Options",
                 default=[],
@@ -700,6 +702,7 @@ add at least one column before attempting to generate a table.
     else:
         if simParams.get("Waning In Simulation"):
             # TODO: Also check for percentage without baseline diff
+            # TODO: Account for baseline diff change to averted burdens
             st.warning(
                 """
                     Warning: Columns that display values as percentages without also
