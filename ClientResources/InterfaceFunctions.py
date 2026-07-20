@@ -267,15 +267,7 @@ def healthOutcomeStore(
     }
 
     # Deaths (age-specific)
-    """ageRates = {
-        scenarioNames[scenarioID]: {
-            idGet("deathAgeGroup", scenarioID, None, f"-{rowID}"): deathFormat(
-                idGet(deathKey, scenarioID, deathDefault, f"-{rowID}")
-            )
-            for rowID in range(idGet("deathRowCount", scenarioID, 0))
-        }
-        for scenarioID in range(scenarioCount + 1)
-    }"""
+    # TODO: Move hospitalisations here too
     ageRates = {}
     for scenarioID, name in enumerate(scenarioNames):
         baseDeathRate = deathFormat(idGet(deathKey, scenarioID, deathDefault))

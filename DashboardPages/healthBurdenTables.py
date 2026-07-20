@@ -110,7 +110,7 @@ def generateTable() -> None:
             "Community": presetCommunity,
             "Scenario Names": scenarioNames,
             "Health Outcome Rates": healthOutcomeRates,
-            "Age-Separated Health Outcome Rates": mortalityRates,
+            "Age-Specific Mortality": mortalityRates,
             "Scaling Factor": session.get("scalingPopulation", 272407) / 272407,
             "Asymptomatic Rates": (
                 [

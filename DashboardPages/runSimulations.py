@@ -348,7 +348,7 @@ already busy with a different task.
                 useAges=useAdvanced,
             )
             simParams["Health Outcome Rates"] = healthOutcomeRates
-            simParams["Age-Separated Health Outcome Rates"] = mortalityRates
+            simParams["Age-Specific Mortality"] = mortalityRates
             simParams["Waning In Simulation"] = useAdvanced and any(
                 idGet("naturalWaningToggle", scenarioID, False)
                 or (

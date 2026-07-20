@@ -408,7 +408,8 @@ showAdvanced = st.toggle(
     args=["showAdvanced"],
     help="""
 Toggle whether to include parameters that control more fine-grain aspects
-of the simulation environment (such as waning vaccine immunity) when calibrating or calculating R0.
+of the simulation environment (such as waning vaccine-derived immunity)
+when calibrating or calculating R0.
     """,
 )
 

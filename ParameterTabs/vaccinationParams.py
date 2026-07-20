@@ -464,7 +464,9 @@ are vaccinated may be lower if there are an insufficient number of doses availab
 
     # Primary Vaccine Parameters
     with st.expander(
-        "Vaccine Immunity", key=f"vaccinePropertyContainer{id}", on_change="rerun"
+        "Vaccine-Derived Immunity",
+        key=f"vaccinePropertyContainer{id}",
+        on_change="rerun",
     ) as vaccineContainer:
         if vaccineContainer.open:
             # Describe primary vaccines
@@ -529,7 +531,7 @@ receive another, where a month is 30 days.
                 # Waning parameters
                 loadKey("vaccineWaningToggle", id, False)
                 waningToggle = st.toggle(
-                    "Enable Vaccine Immunity Waning",
+                    "Enable Vaccine-Derived Immunity Waning",
                     value=False,
                     on_change=saveKey,
                     args=["vaccineWaningToggle", id],
@@ -544,7 +546,7 @@ final vaccine dose.
                 if waningToggle:
                     loadKey("primaryDuration", id, 6)
                     st.slider(
-                        "Vaccine Immunity Waning Delay (Months)",
+                        "Vaccine-Derived Immunity Waning Delay (Months)",
                         1,
                         12,
                         6,
@@ -838,7 +840,7 @@ healthy when exposed to the pathogen.
                             should only be used in a single row of the form.
 
                             Please remove or change any rows of the Age-Specific
-                            Minimum Efficacy form in the Vaccine Immunity section
+                            Minimum Efficacy form in the Vaccine-Derived Immunity section
                             of :primary-badge[:material/vaccines: Vaccination]
                             that use the same age group as another row.
                         """,
@@ -910,7 +912,7 @@ healthy when exposed to the pathogen.
                 if advanced:
                     loadKey("vaccineWaningToggle", id, False)
                     waningToggle = st.toggle(
-                        "Enable Vaccine Immunity Waning",
+                        "Enable Vaccine-Derived Immunity Waning",
                         value=False,
                         on_change=saveKey,
                         args=["vaccineWaningToggle", id],
@@ -992,7 +994,7 @@ the pathogen.
                     )
                     loadKey("primaryDuration", id, 6)
                     st.slider(
-                        "Vaccine Immunity Waning Delay (Months)",
+                        "Vaccine-Derived Immunity Waning Delay (Months)",
                         1,
                         12,
                         6,

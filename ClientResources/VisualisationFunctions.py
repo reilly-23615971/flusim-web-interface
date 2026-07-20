@@ -401,7 +401,7 @@ def scaleAsirColumn(
     """
     # TODO: see if making rates parameters is more efficient
     healthRates = session.SimParams["Health Outcome Rates"]
-    mortDict = session.SimParams["Age-Separated Health Outcome Rates"]
+    mortDict = session.SimParams["Age-Specific Mortality"]
     match outcome:
         case "Symptomatic Infections":
             # No scaling necessary
