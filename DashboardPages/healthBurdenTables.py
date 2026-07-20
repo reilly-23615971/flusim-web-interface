@@ -642,8 +642,7 @@ all age groups will be considered.
             # TODO: Make advanced settings hide this when disabled
             "Vaccination Status": (
                 None
-                if True  # TODO: Debug for demo
-                # if not currentDataUsesVaccines
+                if not currentDataUsesVaccines
                 else st.column_config.SelectboxColumn(
                     "Vaccination Status",
                     required=True,
