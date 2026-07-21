@@ -343,12 +343,12 @@ already busy with a different task.
                     for scenarioID in range(scenarioCount)
                 ]
             )
-            healthOutcomeRates, mortalityRates = healthOutcomeStore(
+            basicRates, ageRates = healthOutcomeStore(
                 scenarioNames,
                 useAges=useAdvanced,
             )
-            simParams["Health Outcome Rates"] = healthOutcomeRates
-            simParams["Age-Specific Mortality"] = mortalityRates
+            simParams["Health Outcome Rates"] = basicRates
+            simParams["Age-Specific Outcomes"] = ageRates
             simParams["Waning In Simulation"] = useAdvanced and any(
                 idGet("naturalWaningToggle", scenarioID, False)
                 or (

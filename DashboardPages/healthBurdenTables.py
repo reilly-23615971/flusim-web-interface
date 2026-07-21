@@ -102,15 +102,15 @@ def generateTable() -> None:
         # Set default session_state params
         useAdvanced = session.get("showAdvanced", False)
         scenarioNames = presetScenarioNames
-        healthOutcomeRates, mortalityRates = healthOutcomeStore(
+        basicRates, ageRates = healthOutcomeStore(
             scenarioNames,
             useAges=useAdvanced,
         )
         simParams = {
             "Community": presetCommunity,
             "Scenario Names": scenarioNames,
-            "Health Outcome Rates": healthOutcomeRates,
-            "Age-Specific Mortality": mortalityRates,
+            "Health Outcome Rates": basicRates,
+            "Age-Specific Outcomes": ageRates,
             "Scaling Factor": session.get("scalingPopulation", 272407) / 272407,
             "Asymptomatic Rates": (
                 [

@@ -242,58 +242,120 @@ def healthOutcomeStore(
             health burden rates.
     """
     # Required values for outcome rates
-    icuKey, icuDefault, icuFormat = "icuRatio", 20.0, lambda x: x / 100
-    deathKey, deathDefault, deathFormat = "deathRatio", 12.0, lambda x: x / 100000
     outcomeRates = {
         "Diagnosed Cases": ("caseRatio", 50.0, lambda x: x / 100),
         "GP Visits": ("gpRatio", 17.0, lambda x: x / 100),
         "Hospitalisations": ("hospitalRatio", 320.0, lambda x: x / 100000),
-        "Deaths": (deathKey, deathDefault, deathFormat),
+        "Deaths": ("deathRatio", 12.0, lambda x: x / 100000),
     }
 
-    # Basic rates (not age-specific)
+    # Basic rates
     singleRates = {}
     for outcome, (key, default, formatFunc) in outcomeRates.items():
         singleRates[outcome] = {
-            scenario: formatFunc(idGet(key, i, default))
-            for i, scenario in enumerate(scenarioNames)
+            name: formatFunc(idGet(key, scenarioID, default))
+            for scenarioID, name in enumerate(scenarioNames)
         }
 
     # ICU (dependent on hospitalisation)
+    icuMultipliers = {
+        name: idGet("icuRatio", scenarioID, 20.0) / 100
+        for scenarioID, name in enumerate(scenarioNames)
+    }
     singleRates["ICU Visits"] = {
-        scenario: singleRates["Hospitalisations"][scenario]
-        * icuFormat(idGet(icuKey, i, icuDefault))
-        for i, scenario in enumerate(scenarioNames)
+        name: rate * icuMultipliers[name]
+        for name, rate in singleRates["Hospitalisations"].items()
     }
 
-    # Deaths (age-specific)
-    # TODO: Move hospitalisations here too
+    # Age-specific rates
+    hospitalKey, hospitalDefault, hospitalFormat = outcomeRates["Hospitalisations"]
+    deathKey, deathDefault, deathFormat = outcomeRates["Deaths"]
     ageRates = {}
-    for scenarioID, name in enumerate(scenarioNames):
-        baseDeathRate = deathFormat(idGet(deathKey, scenarioID, deathDefault))
-        if useAges:
-            mortAgeForm = idGet(
-                "mortAgeForm",
-                scenarioID,
-                pd.DataFrame(
-                    {
-                        "Age Group": [None],
-                        "Mortality Rate": [baseDeathRate],
-                    },
-                ),
-            ).copy()
-            mortAgeForm["Mortality Rate"] = mortAgeForm["Mortality Rate"].apply(
+    if useAges:
+        hospitalRates, icuRates, deathRates = {}, {}, {}
+        for scenarioID, name in enumerate(scenarioNames):
+            # Get previously-extracted base rates
+            baseHospitalRate = singleRates["Hospitalisations"][name]
+            baseDeathRate = singleRates["Deaths"][name]
+            baseICURate = icuMultipliers[name]
+            # Format table with age-specific rates
+            burdenAgeForm = (
+                idGet(
+                    "burdenAgeForm",
+                    scenarioID,
+                    pd.DataFrame(
+                        {
+                            "Age Group": [None],
+                            "Hospitalisation Rate": [baseHospitalRate],
+                            "Mortality Rate": [baseDeathRate],
+                        },
+                    ),
+                )
+                .copy()
+                .dropna()
+                .replace({"Age Group": ageTimeDict})
+            )
+            burdenAgeForm["Hospitalisation Rate"] = burdenAgeForm[
+                "Hospitalisation Rate"
+            ].apply(hospitalFormat)
+            burdenAgeForm["Mortality Rate"] = burdenAgeForm["Mortality Rate"].apply(
                 deathFormat
             )
+            # Convert to dictionaries with base rate as default
+            hospitalAgeDict = (
+                burdenAgeForm[["Age Group", "Hospitalisation Rate"]]
+                .set_index("Age Group")["Hospitalisation Rate"]
+                .to_dict()
+            )
+            hospitalRates[name] = {
+                age: baseHospitalRate for age in ageWithTime
+            } | hospitalAgeDict
+
+            icuAgeDict = {
+                age: rate * baseICURate for age, rate in hospitalAgeDict.items()
+            }
+            icuRates[name] = {
+                age: baseHospitalRate * baseICURate for age in ageWithTime
+            } | icuAgeDict
+
             mortAgeDict = (
-                mortAgeForm.dropna()
-                .replace({"Age Group": ageTimeDict})
+                burdenAgeForm[["Age Group", "Mortality Rate"]]
                 .set_index("Age Group")["Mortality Rate"]
                 .to_dict()
             )
-        else:
-            mortAgeDict = {}
-        ageRates[name] = {age: baseDeathRate for age in ageWithTime} | mortAgeDict
+            deathRates[name] = {age: baseDeathRate for age in ageWithTime} | mortAgeDict
+        ageRates = {
+            "Hospitalisations": hospitalRates,
+            "ICU Visits": icuRates,
+            "Deaths": deathRates,
+        }
+    else:
+        # Just set every age to the base rate
+        # TODO: Avoid this unnecessary iteration and just check elsewhere
+        # that there's no age-specific rates in use
+        ageRates = {
+            "Hospitalisations": {
+                scenario: {
+                    age: hospitalFormat(idGet(hospitalKey, i, hospitalDefault))
+                    for age in ageWithTime
+                }
+                for i, scenario in enumerate(scenarioNames)
+            },
+            "Deaths": {
+                scenario: {
+                    age: deathFormat(idGet(deathKey, i, deathDefault))
+                    for age in ageWithTime
+                }
+                for i, scenario in enumerate(scenarioNames)
+            },
+        }
+        ageRates["ICU Visits"] = {
+            name: {
+                age: rate * icuMultipliers[name]
+                for age, rate in ageRates["Hospitalisations"][name].items()
+            }
+            for name in scenarioNames
+        }
 
     return singleRates, ageRates
 
@@ -354,7 +416,7 @@ def saveName(
 
 def uniqueName(currentName: str, names: set[str]):
     """
-    Function to add a suffix to a string to make it unique compared to a set
+    Function to add a suffix to a string to make it unique compared to a set.
 
     Parameters:
         currentName (str): The string to make unique.
@@ -383,7 +445,7 @@ def uniqueName(currentName: str, names: set[str]):
 # Age functions
 def ageSort(age: tuple[str, Any]) -> int:
     """
-    Function to be used in `sorted()` for ordering age groups
+    Function to be used in `sorted()` for ordering age groups.
 
     Parameters:
         age (tuple with str): A tuple where the first item is the string
@@ -404,6 +466,37 @@ def ageSort(age: tuple[str, Any]) -> int:
         "senior",
         "older_senior",
     ].index(age[0])
+
+
+def ageSortSeries(ages: pd.Series) -> pd.Series:
+    """
+    Function to be used in `pd.sort_values` for ordering age groups
+
+    Parameters:
+        age (Series): A Series containing string representations of age groups.
+
+    Returns:
+        Series: A Series containing the numeric ordering index of each age group.
+    """
+    return ages.map(
+        {
+            age: index
+            for index, age in enumerate(
+                [
+                    "young_infant",
+                    "infant",
+                    "young_child",
+                    "child",
+                    "adolescent",
+                    "young_adult",
+                    "adult",
+                    "older_adult",
+                    "senior",
+                    "older_senior",
+                ]
+            )
+        }
+    )
 
 
 def ageDisplay(option: Any) -> str:

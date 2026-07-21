@@ -83,8 +83,13 @@ def formatEpidemic(
             non-descriptive placeholders).
 
         outcome (str): A string indicating the health outcome the epidemic
-            data represents. Can be either 'Symptomatic Infections', 'Diagnosed Cases',
-            'Hospitalisations', 'ICU Visits', 'GP Visits' or 'Deaths'.
+            data represents. Accepts any of the following values:
+             - Symptomatic Infections
+             - Diagnosed Cases
+             - Hospitalisations
+             - ICU Visits
+             - GP Visits
+             - Deaths
 
         cumulative (bool): Set to `True` when the CSV contains cumulative
             data instead of individual data.
@@ -384,25 +389,25 @@ def scaleAsirColumn(
     """
     # TODO: see if making rates parameters is more efficient
     healthRates = session.SimParams["Health Outcome Rates"]
-    mortDict = session.SimParams["Age-Specific Mortality"]
+    ageRates = session.SimParams["Age-Specific Outcomes"]
     match outcome:
         case "Symptomatic Infections":
             # No scaling necessary
             scaledColumn = data["Base Values"].copy()
             scaledBaseline = baselineData.copy()
-        case "Deaths":
-            # TODO: Update for any other outcomes that become age-specific
-            deathRates = pd.DataFrame(mortDict).T.stack()
+        case "Hospitalisations" | "ICU Visits" | "Deaths":
+            # Get age-specific rates
+            burdenRates = pd.DataFrame(ageRates[outcome]).T.stack()
             dataIndexValues = pd.MultiIndex.from_frame(data[["Scenario", "Age Group"]])
             scaledColumn = data["Base Values"] * pd.Series(
-                dataIndexValues.map(deathRates), index=data.index
-            ).fillna(data["Scenario"].map(healthRates["Deaths"]))
+                dataIndexValues.map(burdenRates), index=data.index
+            ).fillna(data["Scenario"].map(healthRates[outcome]))
 
-            baselineDeath = mortDict[baselineScenario]
+            baselineRates = ageRates[outcome][baselineScenario]
             scaledBaseline = baselineData * (
                 data["Age Group"]
-                .map(baselineDeath)
-                .fillna(healthRates["Deaths"][baselineScenario])
+                .map(baselineRates)
+                .fillna(healthRates[outcome][baselineScenario])
             )
 
         case _:

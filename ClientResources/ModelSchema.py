@@ -134,6 +134,88 @@ Toggles whether more complex parameters should be displayed on the dashboard.
         """,
     )
 
+    # Age-Specific Hospitalisation
+    young_infant_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Young Infant)",
+        default=None,
+        description="""
+The probability that an individual who is less than 6 months old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    infant_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Infant)",
+        default=None,
+        description="""
+The probability that an individual who is 7-24 months old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    young_child_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Young Child)",
+        default=None,
+        description="""
+The probability that an individual who is 3-5 years old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    child_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Child)",
+        default=None,
+        description="""
+The probability that an individual who is 6-12 years old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    adolescent_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Adolescent)",
+        default=None,
+        description="""
+The probability that an individual who is 13-17 years old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    young_adult_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Young Adult)",
+        default=None,
+        description="""
+The probability that an individual who is 18-24 years old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    adult_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Adult)",
+        default=None,
+        description="""
+The probability that an individual who is 25-44 years old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    older_adult_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Older Adult)",
+        default=None,
+        description="""
+The probability that an individual who is 45-64 years old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    senior_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Senior)",
+        default=None,
+        description="""
+The probability that an individual who is 65-79 years old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    older_senior_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Older Senior)",
+        default=None,
+        description="""
+The probability that an individual who is over 80 years old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+
 
 # Set of scenario parameters set collectively for all age groups
 class ageScenarioParameters(BaseModel):
