@@ -808,6 +808,7 @@ set to affect the value on Day 45 will be changed to affect it on Day 30 instead
             )
 
             # Health Burden Outcomes
+            # TODO: Can the percents be turned into sliders?
             leftCol, rightCol = st.columns(2)
             loadKey("caseRatio", id, 50.0)
             leftCol.number_input(
@@ -1735,9 +1736,7 @@ def diseaseSaveSchema(
         if includeDashboard:
             dashboardParams = dashboardParameters()
             dashboardParams.prob_gp = round(idGet("gpRatio", id, 17.0) / 100, 6)
-            dashboardParams.prob_icu = round(
-                hospitalRate * idGet("icuRatio", id, 20.0) / 100, 10
-            )
+            dashboardParams.prob_icu = round(idGet("icuRatio", id, 20.0) / 100, 6)
             if id > 0 and baseline is not None:
                 schemaRemoveBaseline(dashboardParams, baseline.Dashboard_Parameter)
             schemaUpdate(schema, "Dashboard_Parameter", dashboardParams)
@@ -1790,9 +1789,6 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             updateParamFromSchema(
                 "gpRatio", round(schemaDash.prob_gp * 100, 6), scenarioID
             )
-        icuRate = schemaDash.prob_icu
-    else:
-        icuRate = None
 
     # General Scenario Parameters
     schemaParameters = schema.Scenario_Parameter
@@ -1812,6 +1808,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             "prob_asymptomatic": ("asymptomaticAdult", lambda x: x),
             "prob_asymptomatic_young": ("asymptomaticChild", lambda x: x),
             "prob_diagnosis": ("caseRatio", lambda x: round(x * 100, 6)),
+            "prob_hospitalisation": ("hospitalRatio", lambda x: round(x * 100000, 6)),
             "infection_waning_cycle_delay": (
                 "naturalImmunityDuration",
                 lambda x: x // 60 if x != 9999 else None,
@@ -1820,34 +1817,6 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
         simpleParams = {p: v for p, v in paramConvert.items() if p in paramDict}
         for parameter, (key, formatFunc) in simpleParams.items():
             updateParamFromSchema(key, formatFunc(paramDict[parameter]), scenarioID)
-
-        # Hospitalisation and ICU ratio
-        # TODO: If ICU is changed to a multiplier these can be migrated to paramConvert
-        if "prob_hospitalisation" in paramDict or icuRate is not None:
-            hospitalRate = paramDict.get("prob_hospitalisation")
-            if None in {hospitalRate, icuRate} and scenarioID == 0:
-                raise AssertionError("""
-                    Hospitalisation and ICU rate parameters were only partially
-                    defined for the baseline scenario
-                """)
-
-            # Use baseline values to plug None gaps
-            baseHospitalRate = idGet("hospitalRatio", 0, 320.0)
-            baseICUProb = idGet("icuRatio", 0, 20.0)
-            if hospitalRate is None:
-                hospitalRate = baseHospitalRate / 100000
-            if icuRate is None:
-                icuRate = hospitalRate * baseICUProb / 100
-
-            # Calculate ICU proportion
-            updateParamFromSchema(
-                "hospitalRatio", round(hospitalRate * 100000, 6), scenarioID
-            )
-            updateParamFromSchema(
-                "icuRatio",
-                round(icuRate * 100 / hospitalRate, 6) if hospitalRate > 0.0 else 0.0,
-                scenarioID,
-            )
 
         # Natural immunity waning
         if "infection_waning_rate_per_cycle" in paramDict:

@@ -1,6 +1,6 @@
 {
     "Dashboard_Parameter": {
-        "prob_icu": 0.001283,
+        "prob_icu": 0.2,
         "prob_gp": 0.17,
         "enable_social_distancing": false,
         "live_vaccine_distribution": true

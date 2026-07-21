@@ -31,24 +31,7 @@ functionLog = logging.getLogger(__name__)
 # Store st.session_state as variable for efficiency
 session = st.session_state
 
-
-# Dictionaries for generating column tooltips
-outcomeDescriptions = {
-    "Symptomatic Infections": "showing symptoms of the pathogen",
-    "Diagnosed Cases": "formally diagnosed as cases of the pathogen",
-    "Hospitalisations": "sent to a hospital due to the pathogen",
-    "Deaths": "killed as a direct result of the pathogen",
-    "ICU Visits": "committed to a hospital's Intensive Care Unit due to the pathogen",
-    "GP Visits": (
-        "prompted to visit their general practitioner "
-        "after noticing the symptoms of the pathogen"
-    ),
-}
-vaccineDescriptions = {
-    "All": "",
-    "Vaccinated": "vaccinated ",
-    "Unvaccinated": "unvaccinated ",
-}
+# Server data has total at the front
 ageWithTotal = ["Total"] + ageWithTime
 
 

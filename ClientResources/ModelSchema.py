@@ -82,13 +82,11 @@ parameterGetters = {
 
 # Set of parameters used exclusively by the dashboard
 class dashboardParameters(BaseModel):
-    # TODO: Convert prob_icu to be a multiplier rather than the exact rate
-    # to mitigate imprecision caused by multiplication
     prob_icu: Optional[Probability] = Field(
         title="ICU Visit Probability",
-        default=0.0005,
+        default=0.2,
         description="""
-The probability of an infected individual visiting a hospital's Intensive Care
+The probability of a hospitalised individual visiting a hospital's Intensive Care
 Unit as a result of the pathogen.
         """,
     )
