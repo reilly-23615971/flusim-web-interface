@@ -2016,7 +2016,11 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
         burdenTable = pd.DataFrame(
             columns=("Age Group", "Hospitalisation Rate", "Mortality Rate")
         )
-        hospParams = {p: v for p, v in rawHospParams.items() if v != globalHospitalRate}
+        hospParams = {
+            p: round(v * 100000, 6)
+            for p, v in rawHospParams.items()
+            if v != globalHospitalRate
+        }
         mortParams = {
             p.removesuffix("_mort"): round(v * 100000, 6) if v is not None else None
             for p, v in paramDict.items()
