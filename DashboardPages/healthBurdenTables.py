@@ -307,7 +307,7 @@ def generateTable() -> None:
             colVals = ageData[column]
             gradientMap = np.array(getSlopeNorm(colVals)(colVals))
             ageStyle = ageStyle.background_gradient(
-                "RdBu_r",
+                "RdBu",
                 vmin=0,
                 vmax=1,
                 subset=[column],
