@@ -280,7 +280,8 @@ already busy with a different task.
             if usePresetParams:
                 with open(presetJSONPath, "r") as f:
                     parameterJSON = f.read()
-                loadConfig(parameterJSON, loud=False)
+                if loadConfig(parameterJSON, loud=False):
+                    return
                 scenarioCount = session.get("scenarioCount", 0) + 1
 
             # Create JSON for selected parameters
@@ -620,7 +621,6 @@ st.button(
         else "Run Simulation Experiment"
     ),
     on_click=runSimulationButton,
-    key="_runSim",
     disabled=simulationInProgress,
     type="primary",
     icon="spinner" if simulationInProgress else ":material/motion_play:",

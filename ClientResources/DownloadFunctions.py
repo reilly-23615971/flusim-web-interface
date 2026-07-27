@@ -283,7 +283,7 @@ def createConfig(scenarioCount: int, includeDashboard: bool = False) -> modelGui
     )
 
 
-def loadConfig(file: BytesIO | str, loud: bool = True):
+def loadConfig(file: BytesIO | str, loud: bool = True) -> bool:
     """
     Function to read a JSON config file and set the dashboard's parameters
     to correspond to it.
@@ -293,6 +293,10 @@ def loadConfig(file: BytesIO | str, loud: bool = True):
             A string representation of the JSON will also be accepted.
 
         loud (bool): Set to `True` to notify the user of the updated parameters.
+
+    Returns:
+        bool: `False` if the parameters were loaded successfully,
+            `True` if an error occurred.
     """
     try:
         if isinstance(file, str):
@@ -301,7 +305,7 @@ def loadConfig(file: BytesIO | str, loud: bool = True):
             schema = modelGuideFile.model_validate_json(file.read())
     except ValidationError as e:
         validationErrorFormatting(e)
-        return
+        return True
 
     # Save a backup of st.session_state to ensure changes aren't left unfinished
     backupSession = deepcopy(dict(session))
@@ -431,7 +435,7 @@ def loadConfig(file: BytesIO | str, loud: bool = True):
         # that may occur between starting the upload process and an error occurring
         session.clear()
         session.update(backupSession)
-        return
+        return True
     if loud:
         stn.toast(
             "Parameters successfully uploaded!",
@@ -439,6 +443,7 @@ def loadConfig(file: BytesIO | str, loud: bool = True):
             duration="short",
         )
         st.rerun()
+    return False
 
 
 def createTemplate(
