@@ -5,7 +5,7 @@
 # Imports
 import logging
 import time
-from typing import Literal, Optional, cast
+from typing import Literal, Optional, Sequence, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -21,6 +21,7 @@ from ClientResources.SharedResources import (
     presetCommunity,
     presetDataPaths,
     presetScenarioNames,
+    showDebugTableDownloads,
     tableOutcomes,
     usePresetData,
 )
@@ -330,6 +331,149 @@ def generateTable() -> None:
     session.HealthOutcomeTableData = ageStyle  # .format(formatValues)
     session.HealthOutcomeTableConfig = formattedConfig
     session.ChartGenerated = True
+
+def downloadPresetTable(
+    name: str,
+    columns: Sequence[
+        tuple[str, list[str], Literal["All", "Vaccinated", "Unvaccinated"], bool, bool]
+    ] = [("Symptomatic Infections", [], "All", False, False)],
+    ageSeparation: Literal["Combined", "By Row", "By Column"] = "Combined",
+    includedScenarios: Optional[list[str]] = None,
+    includedAges: Optional[list[str]] = None,
+) -> None:
+    """
+    Function to create a button downloading specific table presets.
+
+    Parameters:
+        name (str): The name of the file to download.
+
+        columns (sequence of tuples (str, list of str, str, bool, bool)): A list
+            of tuples representing the settings each column should have. The
+            values in each tuple are as follows:
+             - the health burden outcome to display
+             - which age groups the column should represent (ignored if
+            `ageSeparation` is `Combined` or `By Row`)
+             - what vaccination status the column should represent
+             - whether or not the column should display percentages
+             - whether or not the column should display the difference from
+            the baseline scenario's values
+
+        ageSeparation (str): A string indicating whether different age groups
+            should be represented with additional rows or columns. Can be either
+            `Combined` (do not separate values by age group at all), `By Row`
+            (include extra rows for each age group), or `By Column` (use different
+            age groups for each column).
+
+        includedScenarios (list of str, optional): A list of strings
+            containing the names of scenarios that will be included in
+            the table. If this is `None`, all scenarios will be included.
+
+        includedAges (list of str, optional): A list of strings
+            containing the names of age groups that will be included in the
+            table. If this is `None`, all age groups will be included. However,
+            if this is an empty list, the age group column will be omitted entirely.
+            Ignored if `ageSeparation` is `Combined` or `By Column`.
+    """
+    # TODO: Reduce redundancy with generateTable
+
+    # Throw error if no data is present
+    fullData = session.get("modelDataAsirFull")
+    if not usePresetData and fullData is None:
+        raise FileNotFoundError("""
+            No simulation ASIR data was available to plot; please run a
+            simulation before attempting to download a table.
+        """)
+
+    # Debug code for loading data in testing
+    if usePresetData:
+        # Set default session_state params
+        useAdvanced = session.get("showAdvanced", False)
+        scenarioNames = presetScenarioNames
+        basicRates, ageRates = healthOutcomeStore(
+            scenarioNames,
+            useAges=useAdvanced,
+        )
+        simParams = {
+            "Community": presetCommunity,
+            "Scenario Names": scenarioNames,
+            "Health Outcome Rates": basicRates,
+            "Age-Specific Outcomes": ageRates,
+            "Scaling Factor": session.get("scalingPopulation", 272407) / 272407,
+            "Asymptomatic Rates": (
+                [
+                    [
+                        1 - idGet("asymptomaticChild", scenarioID, 0.35),
+                        1 - idGet("asymptomaticAdult", scenarioID, 0.35),
+                    ]
+                    for scenarioID in range(4)
+                ]
+                if useAdvanced
+                else [
+                    [1 - idGet("asymptomaticAdult", scenarioID, 0.35)] * 2
+                    for scenarioID in range(4)
+                ]
+            ),
+        }
+        session.SimParams = simParams
+
+        # Load test data from files
+        with open(presetDataPaths["ASIR"], "rb") as csv:
+            fullData = formatAsir(csv.read(), scenarioNames)
+        if presetDataPaths.get("ASIR") is not None:
+            with open(presetDataPaths["Vaccinated"], "rb") as csv:
+                vaccineData = formatAsir(csv.read(), scenarioNames)
+        else:
+            vaccineData = None
+
+    # Load data from session_state
+    else:
+        scenarioNames = session.SimParams["Scenario Names"]
+        vaccineData = session.get("modelDataAsirVaccinated")
+
+    tableLog.info(f"""
+        [downloadPresetTable] Formatting Asir data for the preset {name},
+        using the scenarios {includedScenarios} (of {scenarioNames}),
+        the age groups {includedAges} and the following columns: {columns}'
+    """)
+
+    assert fullData is not None, "ASIR data was not defined"
+    ageData, _, _, _ = generateAsir(
+        fullData,
+        scenarioNames,
+        ageSeparation,
+        columns,
+        includedScenarios=includedScenarios,
+        includedAges=includedAges,
+        vaccinatedData=vaccineData,
+    )
+
+    # Create fake index columns
+    if ageSeparation == "By Row":
+        ageData.rename_axis(index=["Scenario Index", "Age Group Index"], inplace=True)
+        ageData.insert(
+            0,
+            ("", "Scenario Name"),
+            ageData.index.get_level_values("Scenario Index").values,
+        )
+        ageData.insert(
+            1,
+            ("", "Age Group"),
+            ageData.index.get_level_values("Age Group Index").values,
+        )
+
+    else:
+        ageData.rename_axis("Scenario Index", inplace=True)
+        ageData.insert(0, ("", "Scenario Name"), ageData.index.to_series())
+
+
+    st.download_button(
+        f"Download {name}",
+        ageData.to_csv(index=False),
+        f"{name}.csv",
+        mime="text/csv",
+        icon=":material/download:",
+        help="Download a preset table as a CSV file.",
+    )
 
 
 st.title("Health Burden Tables")
@@ -791,3 +935,49 @@ Download the above table as a CSV file.
         )
 
     burdenDataDownload()
+
+# Debug buttons for common table downloads
+if showDebugTableDownloads and currentDataExists:
+    st.divider()
+    downloadPresetTable("AllBurdens", columns=[
+        ("Symptomatic Infections", ageWithTime, "All", False, False),
+        ("Symptomatic Infections", ageWithTime, "All", False, True),
+        ("Symptomatic Infections", ageWithTime, "All", True, True),
+        ("GP Visits", ageWithTime, "All", False, False),
+        ("GP Visits", ageWithTime, "All", False, True),
+        ("GP Visits", ageWithTime, "All", True, True),
+        ("Hospitalisations", ageWithTime, "All", False, False),
+        ("Hospitalisations", ageWithTime, "All", False, True),
+        ("Hospitalisations", ageWithTime, "All", True, True),
+        ("Deaths", ageWithTime, "All", False, False),
+        ("Deaths", ageWithTime, "All", False, True),
+        ("Deaths", ageWithTime, "All", True, True),
+    ])
+    downloadPresetTable("AgesByRow", columns=[
+        ("Symptomatic Infections", ageWithTime, "All", False, False),
+        ("Symptomatic Infections", ageWithTime, "All", False, True),
+        ("Symptomatic Infections", ageWithTime, "All", True, True),
+        ("GP Visits", ageWithTime, "All", False, False),
+        ("GP Visits", ageWithTime, "All", False, True),
+        ("GP Visits", ageWithTime, "All", True, True),
+        ("Hospitalisations", ageWithTime, "All", False, False),
+        ("Hospitalisations", ageWithTime, "All", False, True),
+        ("Hospitalisations", ageWithTime, "All", True, True),
+        ("Deaths", ageWithTime, "All", False, False),
+        ("Deaths", ageWithTime, "All", False, True),
+        ("Deaths", ageWithTime, "All", True, True),
+    ], ageSeparation="By Row")
+    downloadPresetTable("AgesByColumn", columns=[
+        ("Symptomatic Infections", ["Infant (7-24 Months)", "Young Child (3-5 Years)"], "All", False, True),
+        ("Symptomatic Infections", ["Child (6-12 Years)", "Adolescent (13-17 Years)"], "All", False, True),
+        ("Symptomatic Infections", ageWithTime, "All", False, True),
+        ("GP Visits", ["Infant (7-24 Months)", "Young Child (3-5 Years)"], "All", False, True),
+        ("GP Visits", ["Child (6-12 Years)", "Adolescent (13-17 Years)"], "All", False, True),
+        ("GP Visits", ageWithTime, "All", False, True),
+        ("Hospitalisations", ["Infant (7-24 Months)", "Young Child (3-5 Years)"], "All", False, True),
+        ("Hospitalisations", ["Child (6-12 Years)", "Adolescent (13-17 Years)"], "All", False, True),
+        ("Hospitalisations", ageWithTime, "All", False, True),
+        ("Deaths", ["Infant (7-24 Months)", "Young Child (3-5 Years)"], "All", False, True),
+        ("Deaths", ["Child (6-12 Years)", "Adolescent (13-17 Years)"], "All", False, True),
+        ("Deaths", ageWithTime, "All", False, True),
+    ], ageSeparation="By Column")

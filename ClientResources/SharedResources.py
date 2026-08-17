@@ -43,6 +43,9 @@ saveJSON = False
 # Toggle to round the values displayed in infection curves/burden tables
 roundResults = True
 
+# Toggle to add buttons downloading frequently-used tables to Health Burden Outcomes
+showDebugTableDownloads = False
+
 # Other Constants
 
 # Maximum number of additional scenarios
