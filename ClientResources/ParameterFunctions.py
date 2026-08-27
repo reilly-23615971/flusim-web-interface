@@ -10,16 +10,6 @@ from typing import Any, Callable, Optional
 import pandas as pd
 import streamlit as st
 
-# Reload streamlit_notify if it fails the first time
-try:
-    import streamlit_notify as stn
-except ImportError:
-    import importlib
-
-    time.sleep(0.01)
-    importlib.reload(importlib.import_module("streamlit_notify"))
-    import streamlit_notify as stn
-
 # Logging
 paramFunctionLog = logging.getLogger(__name__)
 
@@ -217,7 +207,7 @@ def timeScaleChange():
         dynamicScaleChange(param, form, name, 0, noSave=True)
     if changedList:
         # TODO: Note which scenario these were present in
-        stn.toast(
+        st.toast(
             f"""
 These parameters were above the new simulation length,
 so they have been reduced:\n""" + "\n".join(f"- {name}" for name in changedList),
@@ -292,7 +282,7 @@ def dynamicScaleChange(
 
         # Notify any changes
         if hasChanged:
-            stn.toast(
+            st.toast(
                 f"""
 Some of the dynamic update points for {paramName} were outside
 of the new period where {paramName.rsplit(' ', 1)[0]} is active.

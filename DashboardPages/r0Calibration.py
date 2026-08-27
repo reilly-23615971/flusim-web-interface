@@ -6,20 +6,8 @@
 import logging
 from datetime import datetime
 from threading import Event
-from typing import Any
 
 import streamlit as st
-
-# Reload streamlit_notify if it fails the first time
-try:
-    import streamlit_notify as stn
-except ImportError:
-    import importlib
-    import time
-
-    time.sleep(0.01)
-    importlib.reload(importlib.import_module("streamlit_notify"))
-    import streamlit_notify as stn
 
 # from streamlit_push_notifications import send_push, send_alert
 from ClientResources.DownloadFunctions import createTemplate
@@ -168,7 +156,7 @@ by ±0.02.
             )
 
             # Generate popup to let the user know it's pending
-            stn.toast(
+            st.toast(
                 "Calibrating $R_0$. Please wait...",
                 icon=":material/partner_exchange:",
             )
@@ -198,7 +186,7 @@ def stopCalibrationButton():
     ):
         # Exit immediately if there's nothing to stop
         if not session.calibrationInProgress:
-            stn.toast(
+            st.toast(
                 "$R_0$ is not currently being calibrated; there's nothing to cancel.",
                 icon=":material/stop:",
             )
@@ -219,7 +207,7 @@ def stopCalibrationButton():
         session.showCalibProgress = True
 
         # Generate popup to let the user know it's cancelled
-        stn.toast(
+        st.toast(
             "The calibration has been cancelled.",
             icon=":material/stop_circle:",
         )
@@ -330,7 +318,7 @@ def calculateR0Button() -> None:
             )
 
             # Generate popup to let the user know it's pending
-            stn.toast(
+            st.toast(
                 "Sending a request to calculate $R_0$. Please wait...",
                 icon=":material/calculate:",
             )
@@ -359,7 +347,7 @@ def stopCalculationButton():
     ):
         # Exit immediately if there's nothing to stop
         if not session.calculationInProgress:
-            stn.toast(
+            st.toast(
                 "$R_0$ is not currently being calculated; there's nothing to cancel.",
                 icon=":material/stop:",
             )
@@ -380,7 +368,7 @@ def stopCalculationButton():
         session.showCalcProgress = True
 
         # Generate popup to let the user know it's cancelled
-        stn.toast(
+        st.toast(
             "The calculation has been cancelled.",
             icon=":material/stop_circle:",
         )
@@ -561,7 +549,7 @@ if calibrationResults is not None and idToUpdate is not None:
         Simple callback to update beta to match the calibrated value
         """
         session[f"beta{idToUpdate}"] = beta
-        stn.toast(
+        st.toast(
             f"""
 {"The baseline scenario" if idToUpdate == 0 else scenarioName}
 now has a basic transmission parameter of {beta}.

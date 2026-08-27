@@ -274,11 +274,11 @@ async def taskWebsocket(route: str, taskID: str, cancelFlag: Event, statusParams
                 client,
                 taskID,
                 route,
-                statusParams["resultType"],
-                statusParams["statusDecoder"],
-                statusParams["progress"],
-                statusParams["status"],
-                statusParams["results"],
+                resultType=statusParams["resultType"],
+                statuses=statusParams["statusDecoder"],
+                progressValue=statusParams["progress"],
+                statusQueue=statusParams["status"],
+                resultQueue=statusParams["results"],
             )
         )
         monitorTask = asyncio.create_task(taskMonitor(cancelFlag))

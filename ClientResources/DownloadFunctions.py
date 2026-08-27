@@ -13,16 +13,6 @@ from typing import Optional
 import streamlit as st
 from pydantic import ValidationError
 
-# Reload streamlit_notify if it fails the first time
-try:
-    import streamlit_notify as stn
-except ImportError:
-    import importlib
-
-    time.sleep(0.01)
-    importlib.reload(importlib.import_module("streamlit_notify"))
-    import streamlit_notify as stn
-
 from ClientResources.InterfaceFunctions import uniqueName, validationErrorFormatting
 from ClientResources.ModelSchema import (
     Parameters,
@@ -437,7 +427,7 @@ def loadConfig(file: BytesIO | str, loud: bool = True) -> bool:
         session.update(backupSession)
         return True
     if loud:
-        stn.toast(
+        st.toast(
             "Parameters successfully uploaded!",
             icon=":material/download_done:",
             duration="short",
@@ -558,7 +548,7 @@ def loadTemplate(
         session.clear()
         session.update(backupSession)
     else:
-        stn.toast(
+        st.toast(
             body="Template successfully loaded!",
             icon=":material/list_alt_check:",
             duration="short",
@@ -589,7 +579,7 @@ def addScenario(openTab: Optional[str] = None):
     if openTab is not None:
         session[openTab] = f"**#{newCount}** {newName}"
         session.tabReloader = not session.get("tabReloader", False)
-        stn.toast("Scenario added!", icon=":material/add:")
+        st.toast("Scenario added!", icon=":material/add:")
 
 
 def deleteScenario(scenarioID: int, openTab: Optional[str] = None):
@@ -655,7 +645,7 @@ def deleteScenario(scenarioID: int, openTab: Optional[str] = None):
             openCount = scenarioID if scenarioID < scenarioCount else scenarioCount - 1
             session[openTab] = f"**#{openCount}** {session[f"scenarioName{openCount}"]}"
             session.tabReloader = not session.get("tabReloader", False)
-        stn.toast("Scenario removed!", icon=":material/delete:")
+        st.toast("Scenario removed!", icon=":material/delete:")
 
 
 def resetScenario(scenarioID: int, loud: bool = True):
@@ -676,4 +666,4 @@ def resetScenario(scenarioID: int, loud: bool = True):
     session["scenarioSetParamsExtra"][scenarioID] = set()
     session["activeErrors"][scenarioID] = session["activeErrors"][0]
     if loud:
-        stn.toast("Scenario reset!", icon=":material/settings_backup_restore:")
+        st.toast("Scenario reset!", icon=":material/settings_backup_restore:")

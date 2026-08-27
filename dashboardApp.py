@@ -7,21 +7,9 @@
 import logging
 import os
 from datetime import datetime
-from functools import partial
 from typing import Any
 
 import streamlit as st
-
-# Reload streamlit_notify if it fails the first time
-try:
-    import streamlit_notify as stn
-except ImportError:
-    import importlib
-    import time
-
-    time.sleep(0.01)
-    importlib.reload(importlib.import_module("streamlit_notify"))
-    import streamlit_notify as stn
 
 from ClientResources.InterfaceFunctions import timeString
 from ClientResources.SharedResources import (
@@ -90,10 +78,6 @@ for parameter, default in sessionParameters.items():
 # TODO: See if an extra cookie package like streamlit-cookie-controller
 # can preserve parameters between refreshed pages
 
-# Define partial function for toasts
-notifyToast = partial(stn.toast, duration="infinite")
-
-
 st.logo(":material/microbiology:")
 
 
@@ -151,9 +135,6 @@ pages = {
     "Conducting Experiments": [r0Calculation, runSimulation],
     "Results Visualisation": [infectionGraphs, healthTables],
 }
-
-# Display toasts
-stn.notify(remove=True)
 
 # Initialise and run the application pages
 flusimPages = st.navigation(pages)
@@ -235,9 +216,10 @@ ensure all scenarios do not possess any errors and try again.
                 session.simulationEndTime = datetime.now()
                 totalTime = session.simulationEndTime - session.simulationStartTime
                 formattedTime = timeString(totalTime.total_seconds())
-                notifyToast(
+                st.toast(
                     f"Simulation complete! Total duration: {formattedTime}",
                     icon=":material/check_circle:",
+                    duration="infinite",
                 )
                 appLog.info("[updateData] Data processing is complete.")
                 session.ChartGenerated = False
@@ -245,12 +227,13 @@ ensure all scenarios do not possess any errors and try again.
             # Notify user of errors, but leave displaying them to runSimulations
             session["simulationError"] = simErrorQueue.get()
             simCurrentProgress.append(-1.0)
-            notifyToast(
+            st.toast(
                 """
 Simulation encountered an error; see
 :primary-badge[:material/motion_play: Run Simulations] for more.
                 """,
                 icon=":material/error:",
+                duration="infinite",
             )
 
         # Re-enable running new simulations and using their data
@@ -281,23 +264,25 @@ Simulation encountered an error; see
             # session.calculationEndTime = datetime.now()
             # totalTime = session.calculationEndTime - session.calculationStartTime
             # formattedTime = timeString(totalTime.total_seconds())
-            notifyToast(
+            st.toast(
                 f"""
 $R_0$ of {r0} for {scenarioName} achieved with transmission value of {beta}
                 """,
                 icon=":material/partner_exchange:",
+                duration="infinite",
             )
             appLog.info("[updateData] R0 calibration is complete.")
         if calibHasError:
             # Notify user of errors, but leave displaying them to runSimulations
             session["calibrationError"] = calibErrorQueue.get()
             calibCurrentProgress.append(-1.0)
-            notifyToast(
+            st.toast(
                 """
 Error calibrating $R_0$; see
 :primary-badge[:material/partner_exchange: $R_0$ Calibration] for more.
                 """,
                 icon=":material/error:",
+                duration="infinite",
             )
 
         # Re-enable running new simulations and using their data
@@ -327,7 +312,7 @@ Error calibrating $R_0$; see
             # session.calculationEndTime = datetime.now()
             # totalTime = session.calculationEndTime - session.calculationStartTime
             # formattedTime = timeString(totalTime.total_seconds())
-            notifyToast(
+            st.toast(
                 f"""
 $R_0$ for {scenarioName} is {r0} with a 95% confidence interval of [{lowCI}, {highCI}]
                 """,
@@ -338,7 +323,7 @@ $R_0$ for {scenarioName} is {r0} with a 95% confidence interval of [{lowCI}, {hi
             # Notify user of errors, but leave displaying them to runSimulations
             session["calculationError"] = calcErrorQueue.get()
             calcCurrentProgress.append(-1.0)
-            notifyToast(
+            st.toast(
                 """
 Error calculating $R_0$; see
 :primary-badge[:material/partner_exchange: $R_0$ Calibration] for more.

@@ -11,17 +11,6 @@ from typing import Any
 
 import streamlit as st
 
-# Reload streamlit_notify if it fails the first time
-try:
-    import streamlit_notify as stn
-except ImportError:
-    import importlib
-    import time
-
-    time.sleep(0.01)
-    importlib.reload(importlib.import_module("streamlit_notify"))
-    import streamlit_notify as stn
-
 from ClientResources.DownloadFunctions import (
     createConfig,
     loadConfig,
@@ -264,11 +253,15 @@ already busy with a different task.
             Are you sure you want to begin running simulations with the
             selected parameters?
         """)
-        if st.button(
-            "Confirm",
-            key="confirmRunButton",
-            icon="spinner" if runPending else None,
-            disabled=runPending,
+
+        if (
+            st.button(
+                "Confirm",
+                key="confirmRunButton",
+                icon="spinner" if runPending else None,
+                disabled=runPending,
+            )
+            or runPending
         ):
             # Set params indicating model is simulating
             session.simulationInProgress = True
@@ -393,7 +386,7 @@ already busy with a different task.
             # TODO: Remember streamlit_push_notifications
 
             # Generate popup to let the user know it's pending
-            stn.toast(
+            st.toast(
                 "Sending a request to run the simulation. Please wait...",
                 icon=":material/experiment:",
             )
@@ -422,7 +415,7 @@ def stopSimulationButton():
     ):
         # Exit immediately if there's nothing to stop
         if not session.simulationInProgress:
-            stn.toast(
+            st.toast(
                 "No simulations are currently running; there's nothing to cancel.",
                 icon=":material/stop:",
             )
@@ -443,7 +436,7 @@ def stopSimulationButton():
         session.showSimProgress = True
 
         # Generate popup to let the user know it's cancelled
-        stn.toast(
+        st.toast(
             "The simulation has been cancelled.",
             icon=":material/stop_circle:",
         )
