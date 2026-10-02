@@ -5,7 +5,7 @@
 # Imports
 import logging
 from operator import attrgetter
-from typing import Annotated, Any, Literal, Optional, cast
+from typing import Annotated, Any, Literal, Optional, Self, cast
 
 from annotated_types import Ge, Le, Len
 from pydantic import (
@@ -16,7 +16,6 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from typing_extensions import Self
 
 # Logging
 validationLog = logging.getLogger(__name__)

@@ -1,3 +1,0 @@
-[[tool.mypy.overrides]]
-module = ["streamlit_notify.*"]
-ignore_missing_imports = true

@@ -13,7 +13,6 @@ dependencies:
   - pydantic>=2.10.3
   - streamlit>=1.62.0
   - watchdog>=4.0.2
-  - typing_extensions>=4.12.2
   - pip
 # Notifications may be integrated in the future if desired
 #  - pip:
