@@ -4,7 +4,7 @@
 
 # Imports
 import logging
-from typing import Literal, Optional
+from typing import Optional
 
 import altair as alt
 import pandas as pd
@@ -12,7 +12,9 @@ import streamlit as st
 from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import (
+    ageDisplay,
     ageSort,
+    ageSortSeries,
     backgroundColour,
     dayCount,
     dualError,
@@ -46,7 +48,7 @@ diseaseLog = logging.getLogger(__name__)
 session = st.session_state
 
 
-@st.fragment
+# @st.fragment
 def buildDiseaseTab(id: int, advanced: bool = False):
     """
     Function to generate the parameters for the pathogen in a specified
@@ -60,27 +62,6 @@ def buildDiseaseTab(id: int, advanced: bool = False):
         advanced (bool): Set to True to show more complex parameters like
             location-specific transmission modifiers.
     """
-    # Initialise session variables needed by the pathogen forms
-    # sessionParameters = {
-    #   f"transRowCount{id}": 0,
-    #   f"seedPeriodError{id}": 0,
-    #   f"deathRowCount{id}": 0}
-    # }
-    # for parameter, default in sessionParameters.items():
-    # session[parameter] = session.get(parameter, default)
-
-    # Ensure age selections only give possible parameters
-    # Dictionary format: 'remaining groups variable': (
-    #   'number of rows variable', 'group row variable prefix'
-    # )
-    # ageGroupSets = {
-    #    f"transRemainingAgeGroups{id}": (f"transRowCount{id}", f"transAgeGroup{id}-"),
-    #    f"deathRemainingAgeGroups{id}": (f"deathRowCount{id}", f"deathAgeGroup{id}-")
-    # }
-
-    # Use function to recalculate remaining group parameters
-    # getRemainingGroups(ageGroupSets, ageCategories.keys())
-
     # Tab Content
     st.header("Pathogen-Related Parameters")
     st.markdown("""
@@ -151,7 +132,7 @@ def buildDiseaseTab(id: int, advanced: bool = False):
                 min_value=0.00001,
                 max_value=1.0,
                 value=0.0616,
-                step=0.00001,
+                step=0.001,
                 format="%0.5g",
                 key=f"_beta{id}",
                 on_change=saveKey,
@@ -172,7 +153,7 @@ the pathogen in any interaction with infected individuals.
                 min_value=0.00001,
                 max_value=1.0,
                 value=0.55,
-                step=0.00001,
+                step=0.01,
                 format="%0.5g",
                 on_change=saveKey,
                 args=["betaAsymptomatic", id],
@@ -197,7 +178,7 @@ interacting with asymptomatic individuals.
                 min_value=0.00001,
                 max_value=1.0,
                 value=0.55,
-                step=0.00001,
+                step=0.01,
                 format="%0.5g",
                 on_change=saveKey,
                 args=["betaPostSymptomatic", id],
@@ -221,7 +202,7 @@ individuals.
                     min_value=0.00001,
                     max_value=10.0,
                     value=1.0,
-                    step=0.00001,
+                    step=0.01,
                     format="%0.5g",
                     key=f"_schoolKappa{id}",
                     on_change=saveKey,
@@ -241,7 +222,7 @@ individuals in schools.
                     min_value=0.00001,
                     max_value=10.0,
                     value=1.0,
-                    step=0.00001,
+                    step=0.01,
                     format="%0.5g",
                     key=f"_workKappa{id}",
                     on_change=saveKey,
@@ -261,7 +242,7 @@ individuals in workplaces.
                     min_value=0.00001,
                     max_value=10.0,
                     value=2.2,
-                    step=0.00001,
+                    step=0.01,
                     format="%0.5g",
                     key=f"_householdKappa{id}",
                     on_change=saveKey,
@@ -281,7 +262,7 @@ individuals in households.
                     min_value=0.00001,
                     max_value=10.0,
                     value=1.0,
-                    step=0.00001,
+                    step=0.01,
                     format="%0.5g",
                     key=f"_backgroundKappa{id}",
                     on_change=saveKey,
@@ -338,7 +319,7 @@ are not specified for a specific age group.
                         "Age Group",
                         required=True,
                         options=ageTimeDict.keys(),
-                        format_func=lambda x: ageTimeDict[x],  # type: ignore
+                        format_func=ageDisplay,
                         help="""
 The age group whose infectiousness and susceptibility will be modified.
                         """,
@@ -388,162 +369,6 @@ group to contract the pathogen when interacting with infected individuals.
                 """,
                 True,
             )
-
-            # Old variable-length form
-            '''# Save relevant params as variables to avoid lookups
-            transRowCount = session[f"transRowCount{id}"]
-            transRemainingGroups = session[f"transRemainingAgeGroups{id}"]
-            transAgeContainer = st.container()
-            for i in range(transRowCount):
-                (
-                    transGroupColumn,
-                    transInfectColumn,  # transSusceptColumn,
-                    transRemoveColumn,
-                ) = transAgeContainer.columns(
-                    (0.25, 0.55, 0.2), vertical_alignment="center"
-                )
-                transCurrentGroup = session.get(f"transAgeGroup{id}-{i}")
-
-                # Age group column
-                loadKey(
-                    "transAgeGroup",
-                    id,
-                    transCurrentGroup if transCurrentGroup else transRemainingGroups[0],
-                    f"-{i}",
-                )
-                with transGroupColumn:
-                    st.selectbox(
-                        "Age Group",
-                        key=f"_transAgeGroup{id}-{i}",
-                        options=(
-                            # Set age group options such that only ages
-                            # that haven't been selected yet can be selected
-                            [transCurrentGroup]
-                            + [
-                                group
-                                for group in transRemainingGroups
-                                if group != transCurrentGroup
-                            ]
-                            if transCurrentGroup
-                            else transRemainingGroups
-                        ),
-                        on_change=saveKey,
-                        args=["transAgeGroup", id, f"-{i}"],
-                        disabled=not transRowCount < 10,
-                        help="""
-                        An age group that will have specific
-                        infectiousness and susceptibility parameters
-                        defined for it, modifying the base transmission
-                        probability for interactions involving
-                        individuals in that age group.
-
-                        ##### Options:
-                        - Young Infant: 0-6 months old.
-                        - Infant: 7-24 months old.
-                        - Young Child: 3-5 years old.
-                        - Child: 6-12 years old.
-                        - Adolescent: 13-17 years old.
-                        - Young Adult: 18-24 years old.
-                        - Adult: 25-44 years old.
-                        - Older Adult: 45-64 years old.
-                        - Senior: 65-79 years old.
-                        - Older Senior: 80+ years old.
-                    """,
-                    )
-                # Infectiousness column
-                loadKey("transInfect", id, 1.0, f"-{i}")
-                with transInfectColumn:
-                    st.select_slider(
-                        "Infectiousness",
-                        np.linspace(0.0, 3.0, 301),
-                        1.0,
-                        key=f"_transInfect{id}-{i}",
-                        on_change=saveKey,
-                        args=["transInfect", id, f"-{i}"],
-                        format_func=lambda x: f"{x:0.3g}",
-                        help="""
-                        The value of the infectiousness parameter
-                        $inf(I_i)$ when the infected individual in an
-                        interaction ($I_i$) is a member of this age
-                        group. The lower this value is, the less likely
-                        it is for uninfected individuals to contract
-                        the pathogen when interacting with infected
-                        individuals in this age group.
-                    """,
-                    )
-                # Susceptibility column
-                loadKey("transSuscept", id, 1.0, f"-{i}")
-                with transInfectColumn:
-                    st.select_slider(
-                        "Susceptibility",
-                        np.linspace(0.0, 3.0, 301),
-                        1.0,
-                        key=f"_transSuscept{id}-{i}",
-                        on_change=saveKey,
-                        args=["transSuscept", id, f"-{i}"],
-                        format_func=lambda x: f"{x:0.3g}",
-                        help="""
-                        The value of the susceptibility parameter
-                        $susc(I_s)$ when the uninfected individual in
-                        an interaction ($I_s$) is a member of this age
-                        group. The lower this value is, the less likely
-                        it is for uninfected individuals in this age
-                        group to contract the pathogen when interacting
-                        with infected individuals.
-                    """,
-                    )
-                # Delete button column
-                with transRemoveColumn:
-                    st.button(
-                        label="Remove Age Group",
-                        icon=":material/delete:",
-                        key=f"transRemove{id}-{i}",
-                        on_click=deleteFormRow,
-                        args=(
-                            i,
-                            f"transRowCount{id}",
-                            {
-                                f"transAgeGroup{id}-",
-                                f"transInfect{id}-",
-                                f"transSuscept{id}-",
-                            },
-                        ),
-                        help="""
-                        Remove this row of the form and remove these
-                        age-specific transmission parameters from the
-                        simulation.
-                    """,
-                    )
-            # Button to add another row for age specific params
-            transAgeContainer.button(
-                label="Add Age Group",
-                icon=":material/add:",
-                on_click=addFormRow,
-                key=f"transAdd{id}",
-                args=(
-                    f"transRowCount{id}",
-                    {
-                        f"transAgeGroup{id}-{transRowCount}": (
-                            transRemainingGroups[0] if transRemainingGroups else None
-                        ),
-                        f"transInfect{id}-{transRowCount}": 1.0,
-                        f"transSuscept{id}-{transRowCount}": 1.0,
-                    },
-                ),
-                disabled=not transRowCount < 10,
-                help=(
-                    """
-                    Add another row to this form, where you can select
-                    an additional age group to have unique transmission
-                    parameters.
-                """
-                    if transRowCount <= 9
-                    else """
-                    All age groups have been given unique transmission
-                    parameters, so a new age group cannot be added.
-                """
-                ),
-            )'''
 
     # Life Cycle Parameters
     with st.expander(
@@ -984,13 +809,15 @@ set to affect the value on Day 45 will be changed to affect it on Day 30 instead
             )
 
             # Health Burden Outcomes
+            # TODO: Can the percents be turned into sliders?
+            leftCol, rightCol = st.columns(2)
             loadKey("caseRatio", id, 50.0)
-            st.number_input(
+            leftCol.number_input(
                 "Diagnosis Rate (% Percentage of Cases)",
                 min_value=0.0,
                 max_value=100.0,
                 value=50.0,
-                step=0.1,
+                step=1.0,
                 format="%0.3g",
                 placeholder="Enter a percentage between 0 and 100",
                 key=f"_caseRatio{id}",
@@ -1002,12 +829,12 @@ diagnosed as a confirmed case of the pathogen.
                 """,
             )
             loadKey("gpRatio", id, 17.0)
-            st.number_input(
+            rightCol.number_input(
                 "GP Visit Rate (% Percentage of Cases)",
                 min_value=0.0,
                 max_value=100.0,
                 value=17.0,
-                step=0.1,
+                step=1.0,
                 format="%0.3g",
                 placeholder="Enter a percentage between 0 and 100",
                 key=f"_gpRatio{id}",
@@ -1019,12 +846,12 @@ general practitioner (GP) as a result of the pathogen.
                 """,
             )
             loadKey("hospitalRatio", id, 320.0)
-            st.number_input(
-                "Hospitalisation Rate (Hospitalisations per 100,000 Cases)",
+            hospitalRate = leftCol.number_input(
+                "Hospitalisation Rate (per 100,000 Cases)",
                 min_value=0.0,
                 max_value=100000.0,
                 value=320.0,
-                step=0.01,
+                step=1.0,
                 format="%0.5g",
                 placeholder="Enter a number between 0 and 100000",
                 key=f"_hospitalRatio{id}",
@@ -1036,12 +863,12 @@ for every 100,000 symptomatic cases of the pathogen.
                 """,
             )
             loadKey("icuRatio", id, 20.0)
-            st.number_input(
+            rightCol.number_input(
                 "ICU Visit Rate (% Percentage of Hospitalisations)",
                 min_value=0.0,
                 max_value=100.0,
                 value=20.0,
-                step=0.1,
+                step=1.0,
                 format="%0.3g",
                 placeholder="Enter a percentage between 0 and 100",
                 key=f"_icuRatio{id}",
@@ -1054,11 +881,11 @@ a hospital's intensive care unit (ICU) as a result of the pathogen.
             )
             loadKey("deathRatio", id, 12.0)
             deathRate = st.number_input(
-                "Mortality Rate (Deaths per 100,000 Cases)",
+                "Mortality Rate (per 100,000 Cases)",
                 min_value=0.0,
                 max_value=100000.0,
                 value=12.0,
-                step=0.01,
+                step=0.1,
                 format="%0.5g",
                 placeholder="Enter a number between 0 and 100000",
                 key=f"_deathRatio{id}",
@@ -1070,35 +897,35 @@ symptomatic cases of the pathogen.
                 """,
             )
 
-            # Dataframe for age-based mortality (if advanced params are enabled)
-            # TODO: Add thousands separators/ban scientific notation from all tables
+            # Dataframe for age-based burdens (if advanced params are enabled)
             if advanced:
                 st.markdown(
-                    "### Age-Specific Mortality Rate",
+                    "### Age-Specific Health Burdens",
                     help="""
-This table allows for unique likelihoods of death to be defined for
-each age group, overriding the global rate defined above.
+This table allows for unique likelihoods of death or hospitalisation to be
+defined for each age group, overriding the global rates defined above.
                     """,
                 )
                 st.markdown("Double-click a cell in this table to edit its value.")
                 loadKey(
-                    "mortAgeForm",
+                    "burdenAgeForm",
                     id,
                     pd.DataFrame(
                         {
                             "Age Group": [None],
+                            "Hospitalisation Rate": [hospitalRate],
                             "Mortality Rate": [deathRate],
                         },
                     ),
                     dataframe=True,
                 )
-                mortAgeForm = st.data_editor(
-                    session[f"mortAgeForm{id}"],
+                burdenAgeForm = st.data_editor(
+                    session[f"burdenAgeForm{id}"],
                     height="content",
                     num_rows="dynamic",
-                    key=f"_mortAgeForm{id}",
+                    key=f"_burdenAgeForm{id}",
                     on_change=saveKey,
-                    args=["mortAgeForm", id],
+                    args=["burdenAgeForm", id],
                     kwargs={"dataframe": True},
                     placeholder="Enter a value",
                     column_config={
@@ -1106,166 +933,56 @@ each age group, overriding the global rate defined above.
                             "Age Group",
                             required=True,
                             options=ageTimeDict.keys(),
-                            format_func=lambda x: ageTimeDict[x],  # type: ignore
+                            format_func=ageDisplay,
                             help="""
-An age group that will have a specific mortality rate defined for it,
-overriding the base rate.
+An age group that will have specific health burden outcome rates defined for it,
+overriding the base rates.
+                            """,
+                        ),
+                        "Hospitalisation Rate": st.column_config.NumberColumn(
+                            "Hospitalisation Rate (per 100,000 Cases)",
+                            required=True,
+                            default=hospitalRate,
+                            min_value=0.0,
+                            max_value=100000.0,
+                            format="localized",
+                            help="""
+The average number of infected individuals who will be admitted to a hospital
+for every 100,000 cases of the pathogen in this age group.
                             """,
                         ),
                         "Mortality Rate": st.column_config.NumberColumn(
-                            "Mortality Rate (Deaths per 100,000 Cases)",
+                            "Mortality Rate (per 100,000 Cases)",
                             required=True,
                             default=deathRate,
                             min_value=0.0,
                             max_value=100000.0,
-                            format="%0.8g",
+                            format="localized",
                             help="""
-The average number of infected individuals in this age group who will die
-for every 100,000 cases of the pathogen.
+The average number of infected individuals who will die
+for every 100,000 cases of the pathogen in this age group.
                             """,
                         ),
                     },
                 )
                 paramError(
-                    "mortalityAgeFormDuplicates",
+                    "burdenAgeFormDuplicates",
                     id,
-                    lambda: hasDuplicates(mortAgeForm),
+                    lambda: hasDuplicates(burdenAgeForm),
                     f"""
-                        Error: The age-specific mortality rate form used by the {
+                        Error: The age-specific health burden rate form used by the {
                             'baseline scenario' if id == 0
                             else f'scenario named "{session[f'scenarioName{id}']}"'
                         } contains duplicate age group rows. Each age group
                         should only be used in a single row of the form.
 
-                        Please remove or change any rows of the Age-Specific
-                        Mortality Rate form in
+                        Please remove or change any rows of the
+                        Age-Specific Health Burdens form in
                         :primary-badge[:material/coronavirus: Pathogen]
                         that use the same age group as another row.
                     """,
                     True,
                 )
-
-                '''
-                # Save relevant params as variables to avoid lookups
-                deathRowCount = session[f"deathRowCount{id}"]
-                deathRemainingGroups = session[f"deathRemainingAgeGroups{id}"]
-                deathAgeContainer = st.container()
-                for i in range(deathRowCount):
-                    (deathGroupColumn, deathRateColumn, deathRemoveColumn) = (
-                        deathAgeContainer.columns(
-                            (0.25, 0.55, 0.2), vertical_alignment="center"
-                        )
-                    )
-                    deathCurrentGroup = session.get(f"deathAgeGroup{id}-{i}")
-
-                    # Age group column
-                    loadKey(
-                        "deathAgeGroup",
-                        id,
-                        deathCurrentGroup if deathCurrentGroup else deathRemainingGroups[0],
-                        f"-{i}",
-                    )
-                    with deathGroupColumn:
-                        st.selectbox(
-                            "Age Group",
-                            key=f"_deathAgeGroup{id}-{i}",
-                            # Set age group options such that only ages
-                            # that haven't been selected yet can be selected
-                            options=(
-                                [deathCurrentGroup]
-                                + [
-                                    group
-                                    for group in deathRemainingGroups
-                                    if group != deathCurrentGroup
-                                ]
-                                if deathCurrentGroup
-                                else deathRemainingGroups
-                            ),
-                            on_change=saveKey,
-                            args=["deathAgeGroup", id, f"-{i}"],  # type: ignore
-                            disabled=not deathRowCount < 10,
-                            help="""
-                            An age group that will have specific mortality
-                            rates defined for it, overriding the base
-                            probability.
-
-                            ##### Options:
-                            - Young Infant: 0-6 months old.
-                            - Infant: 7-24 months old.
-                            - Young Child: 3-5 years old.
-                            - Child: 6-12 years old.
-                            - Adolescent: 13-17 years old.
-                            - Young Adult: 18-24 years old.
-                            - Adult: 25-44 years old.
-                            - Older Adult: 45-64 years old.
-                            - Senior: 65-79 years old.
-                            - Older Senior: 80+ years old.
-                        """,
-                        )
-                    # Mortality column
-                    loadKey("deathRatio", id, 0.000115077, f"-{i}")
-                    with deathRateColumn:
-                        st.select_slider(
-                            "Mortality Rate (Probability)",
-                            np.linspace(0.0, 1.0, 201),
-                            0.000115077,
-                            key=f"_deathRatio{id}-{i}",
-                            on_change=saveKey,
-                            args=["deathRatio", id, f"-{i}"],  # type: ignore
-                            format_func=lambda x: f"{100 * x:0.3g}%",
-                            help="""
-                            The probability that an infected, symptomatic
-                            individual in this age group will die as a
-                            direct result of the pathogen.
-                        """,
-                        )
-                    # Delete button column
-                    with deathRemoveColumn:
-                        st.button(
-                            label="Remove Age Group",
-                            icon=":material/delete:",
-                            key=f"deathRemove{id}-{i}",
-                            on_click=deleteFormRow,
-                            args=(
-                                i,
-                                f"deathRowCount{id}",
-                                {f"deathAgeGroup{id}-", f"deathRate{id}-"},
-                            ),
-                            help="""
-                            Remove this row of the form and remove these
-                            age-specific mortality rates from the
-                            simulation.
-                        """,
-                        )
-                # Button to add another row for age specific params
-                deathAgeContainer.button(
-                    label="Add Age Group",
-                    icon=":material/add:",
-                    on_click=addFormRow,
-                    key=f"deathAdd{id}",
-                    args=(
-                        f"deathRowCount{id}",
-                        {
-                            f"deathAgeGroup{id}-{deathRowCount}": (
-                                deathRemainingGroups[0] if deathRemainingGroups else None
-                            ),
-                            f"deathRatio{id}-{deathRowCount}": deathRate,
-                        },
-                    ),
-                    disabled=not deathRowCount < 10,
-                    help=(
-                        """
-                        Add another row to this form, where you can select
-                        an additional age group to have a unique mortality
-                        rate.
-                    """
-                        if deathRowCount <= 9
-                        else """
-                        All age groups have been given unique mortality
-                        rates, so a new age group cannot be added.
-                    """
-                    ),
-                )'''
 
     # Waning Immunity Parameters (if advanced parameters are enabled)
     if advanced:
@@ -1667,67 +1384,8 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
 
     # Health Burdens
     st.subheader("Health Burden Outcomes")
-    # Get age-specific mortality values
-    transValues, suscValues = {}, {}
+    hospitalRate = idGet("hospitalRatio", scenarioID, 320.0)
     deathRate = idGet("deathRatio", scenarioID, 12.0)
-    mortString = f"""
-           For every 100,000 symptomatic individuals in the simulation, an average
-        of {deathRate:.10g} individual{plural(deathRate)} will die.
-    """
-    if advanced:
-        mortAgeForm = idGet(
-            "mortAgeForm",
-            scenarioID,
-            pd.DataFrame(
-                {
-                    "Age Group": [None],
-                    "Mortality Rate": [deathRate],
-                },
-            ),
-        )
-        mortValues = {
-            age: mort
-            for age, mort in zip(
-                mortAgeForm["Age Group"],
-                mortAgeForm["Mortality Rate"],
-            )
-            if age and mort != deathRate
-        }
-    else:
-        mortValues = {}
-    match len(mortValues):
-        case 0:
-            mortString += """
-           The dashboard also possesses the ability to define separate mortality
-        rates for different age groups; however, currently there are no age groups
-        whose mortality rate differs from the above value.
-            """
-        case 1:
-            ((age, value),) = mortValues.items()
-            mortString += f"""
-           The age group "{ageTimeDict[age]}" uses a different mortality rate;
-        for every 100,000 symptomatic individuals who are in the age group
-        "{ageTimeDict[age]}", an average of {value:.10g} individual{plural(value)}
-        will die.
-            """
-        case 10:
-            mortString = """
-           Each age group in the simulation has its own mortality rate,
-        defining the average number of deaths for every 100,000 symptomatic
-        individuals in that age group. These mortality rates are listed below:
-            """
-            for age, value in sorted(mortValues.items(), key=ageSort):
-                mortString += f"""\n
-           - {ageTimeDict[age]}: {value:.10g} death{plural(value)} per 100,000 cases
-                """
-        case _:
-            mortString += """
-           Additionally, the following age groups use different mortality rates:
-            """
-            for age, value in sorted(mortValues.items(), key=ageSort):
-                mortString += f"""\n
-           - {ageTimeDict[age]}: {value:.10g} death{plural(value)} per 100,000 cases
-                """
     st.markdown(
         """
         Health burden outcomes are adverse consequences that may result from an
@@ -1758,7 +1416,7 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
         result of the infection.
         
            For every 100,000 symptomatic individuals in the simulation, an average
-        of {hospitalisation:.10g} individuals will be hospitalised.
+        of {hospitalisation:.10g} individual(s) will be hospitalised.
 
         4. ICU Visits: The individual has been admitted to the Intensive Care Unit
         (ICU) of a hospital.
@@ -1769,15 +1427,53 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
 
         5. Mortality: The individual has died as a direct result of the infection.
         
-           {death}
+           For every 100,000 symptomatic individuals in the simulation, an average
+        of {death:.10g} individual(s) will die.
     """.format(
             diagnosis=idGet("caseRatio", scenarioID, 50.0),
             gp=idGet("gpRatio", scenarioID, 17.0),
-            hospitalisation=idGet("hospitalRatio", scenarioID, 320.0),
+            hospitalisation=hospitalRate,
             icu=idGet("icuRatio", scenarioID, 20.0),
-            death=mortString,
+            death=deathRate,
         )
     )
+    burdenAgeForm = (
+        idGet(
+            "burdenAgeForm",
+            scenarioID,
+            pd.DataFrame(
+                {
+                    "Age Group": [None],
+                    "Hospitalisation Rate": [hospitalRate],
+                    "Mortality Rate": [deathRate],
+                },
+            ),
+        )
+        .dropna()
+        .sort_values("Age Group", key=ageSortSeries)
+    )
+    burdenAgeForm["Age Group"] = burdenAgeForm["Age Group"].map(ageDisplay)
+    if advanced and not burdenAgeForm.empty:
+        st.markdown("""
+        Additionally, the following age groups use different
+        hospitalisation/mortality rates:
+            """)
+        # TODO: Sort the table beforehand
+        st.dataframe(
+            burdenAgeForm,
+            hide_index=True,
+            column_config={
+                "Age Group": "Age Group",
+                "Hospitalisation Rate": st.column_config.NumberColumn(
+                    "Hospitalisation Rate (per 100,000 Cases)",
+                    format="localized",
+                ),
+                "Mortality Rate": st.column_config.NumberColumn(
+                    "Mortality Rate (per 100,000 Cases)",
+                    format="localized",
+                ),
+            },
+        )
 
     # Waning
     # TODO: Come up with a more readable way of generating this description
@@ -1903,6 +1599,19 @@ def diseaseSaveSchema(
         preSymptomPeriod = idGet("preSymptomPeriod", id, 1.0)
         symptomPeriod = idGet("symptomPeriod", id, 2.0)
         postSymptomPeriod = idGet("postSymptomPeriod", id, 2.5)
+        globalHospitalRate = round(idGet("hospitalRatio", id, 320.0) / 100000, 10)
+        globalDeathRate = round(idGet("deathRatio", id, 12.0) / 100000, 10)
+        burdenAgeForm = idGet(
+            "burdenAgeForm",
+            id,
+            pd.DataFrame(
+                {
+                    "Age Group": [None],
+                    "Hospitalisation Rate": [globalHospitalRate],
+                    "Mortality Rate": [globalDeathRate],
+                },
+            ),
+        )
 
         # Strain Parameters
         beta = idGet("beta", id, 0.0616)
@@ -1911,14 +1620,13 @@ def diseaseSaveSchema(
             if baseline is not None and baseline.Scenario_Strain is not None
             else None
         )
-        if baseBeta is None or baseBeta != beta:  # type: ignore
+        if baseBeta is None or baseBeta != beta:
             schema.Scenario_Strain = [
                 strainParameters(StrainId=0, Beta=idGet("beta", id, 0.0616))
             ]
 
         # Scenario Parameters With Age Prefix
         ageScenarioParams = ageScenarioParameters()
-        globalDeathRate = round(idGet("deathRatio", id, 12.0) / 100000, 10)
         ageScenarioParams.mort = globalDeathRate
 
         # Scenario Parameters
@@ -1934,20 +1642,11 @@ def diseaseSaveSchema(
             scenarioParams.kappa_child_education = idGet("schoolKappa", id, 1.0)
             scenarioParams.kappa_workplace = idGet("workKappa", id, 1.0)
             scenarioParams.kappa_background = idGet("backgroundKappa", id, 1.0)
-            mortAgeForm = idGet(
-                "mortAgeForm",
-                id,
-                pd.DataFrame(
-                    {
-                        "Age Group": [None],
-                        "Mortality Rate": [globalDeathRate],
-                    },
-                ),
-            )
+
             for age in ageTimeDict:
-                if age in mortAgeForm["Age Group"].values:
-                    mort = mortAgeForm.loc[
-                        mortAgeForm["Age Group"] == age, "Mortality Rate"
+                if age in burdenAgeForm["Age Group"].values:
+                    mort = burdenAgeForm.loc[
+                        burdenAgeForm["Age Group"] == age, "Mortality Rate"
                     ].item()
                     setattr(scenarioParams, f"{age}_mort", round(mort / 100000, 10))
                 else:
@@ -1969,9 +1668,8 @@ def diseaseSaveSchema(
                 1.0 if waningRate == 0 else (1.0 - wanedEfficacy) / waningRate
             )
         else:
-            # Set immunity delay to 99999, effectively disabling it
-            # TODO: Make sure simulation accepts delays this high
-            scenarioParams.infection_waning_cycle_delay = 99999
+            # Set rate to 0
+            scenarioParams.infection_waning_rate_per_cycle = 0
         # Infection Seeding
         scenarioParams.seed_rate = idGet("seedRate", id, 0.25)
         scenarioParams.seeding_start_cycle = (seedPeriod[0] - 1) * 2
@@ -2013,25 +1711,6 @@ def diseaseSaveSchema(
             else:
                 setattr(scenarioParams, f"{age}_trans", 1.0)
                 setattr(scenarioParams, f"{age}_susc", 1.0)
-        """
-        for i in range(session.get(f"transRowCount{id}", 0)):
-            varAgeGroup = ageCategories[session[f"transAgeGroup{id}-{i}"]]
-            setattr(
-                scenarioParams,
-                f"{varAgeGroup}_trans",
-                idGet("transInfect", id, 1, f"-{i}"),
-            )
-            setattr(
-                scenarioParams,
-                f"{varAgeGroup}_susc",
-                idGet("transSuscept", id, 1, f"-{i}"),
-            )
-        for i in range(session.get(f"deathRowCount{id}", 0)):
-            setattr(
-                scenarioParams,
-                f"{ageCategories[session[f'deathAgeGroup{id}-{i}']]}_mort",
-                idGet("deathRatio", id, globalDeathRate, f"-{i}"),
-            )"""
 
         # Save the updated parameters, removing redundant baseline values
         # TODO: Find a better way to prevent needing to include every table age
@@ -2039,11 +1718,6 @@ def diseaseSaveSchema(
         ageTableParams = set().union(
             *[{f"{age}_trans", f"{age}_susc", f"{age}_mort"} for age in ageTimeDict]
         )
-        """ageTableParams = {}
-        for age in ageTimeDict:
-            ageTableParams[f"{age}_trans"] = 1.0
-            ageTableParams[f"{age}_susc"] = 1.0
-            ageTableParams[f"{age}_mort"] = globalDeathRate"""
         if baseline is not None and id > 0:
             schemaRemoveBaseline(
                 ageScenarioParams, baseline.Scenario_ParameterWithAgePrefix
@@ -2058,11 +1732,22 @@ def diseaseSaveSchema(
         if includeDashboard:
             dashboardParams = dashboardParameters()
             dashboardParams.prob_gp = round(idGet("gpRatio", id, 17.0) / 100, 6)
-            dashboardParams.prob_icu = round(
-                hospitalRate * idGet("icuRatio", id, 20.0) / 100, 10
-            )
+            dashboardParams.prob_icu = round(idGet("icuRatio", id, 20.0) / 100, 6)
+            for age in ageTimeDict:
+                if age in burdenAgeForm["Age Group"].values:
+                    hosp = burdenAgeForm.loc[
+                        burdenAgeForm["Age Group"] == age, "Hospitalisation Rate"
+                    ].item()
+                    setattr(dashboardParams, f"{age}_hosp", round(hosp / 100000, 10))
+                else:
+                    setattr(dashboardParams, f"{age}_hosp", globalHospitalRate)
+
             if id > 0 and baseline is not None:
-                schemaRemoveBaseline(dashboardParams, baseline.Dashboard_Parameter)
+                schemaRemoveBaseline(
+                    dashboardParams,
+                    baseline.Dashboard_Parameter,
+                    ignore={f"{age}_hosp" for age in ageTimeDict},
+                )
             schemaUpdate(schema, "Dashboard_Parameter", dashboardParams)
     except (ValueError, ValidationError) as e:
         diseaseLog.error(
@@ -2101,10 +1786,10 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
     # Global Age Parameters
     schemaAge = schema.Scenario_ParameterWithAgePrefix
     if schemaAge is not None and schemaAge.mort is not None:
-        deathRate = round(schemaAge.mort * 100000, 6)
-        updateParamFromSchema("deathRatio", deathRate, scenarioID)
+        globalDeathRate = round(schemaAge.mort * 100000, 6)
+        updateParamFromSchema("deathRatio", globalDeathRate, scenarioID)
     else:
-        deathRate = idGet("deathRatio", 0, 12.0)
+        globalDeathRate = idGet("deathRatio", 0, 12.0)
 
     # Dashboard Parameters
     schemaDash = schema.Dashboard_Parameter
@@ -2113,9 +1798,15 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             updateParamFromSchema(
                 "gpRatio", round(schemaDash.prob_gp * 100, 6), scenarioID
             )
-        icuRate = schemaDash.prob_icu
+        rawHospParams = {
+            p.removesuffix("_hosp"): v
+            for p, v in schemaDash.model_dump(
+                exclude_unset=True, exclude_none=True
+            ).items()
+            if p.endswith("_hosp")
+        }
     else:
-        icuRate = None
+        rawHospParams = {}
 
     # General Scenario Parameters
     schemaParameters = schema.Scenario_Parameter
@@ -2135,46 +1826,19 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             "prob_asymptomatic": ("asymptomaticAdult", lambda x: x),
             "prob_asymptomatic_young": ("asymptomaticChild", lambda x: x),
             "prob_diagnosis": ("caseRatio", lambda x: round(x * 100, 6)),
+            "prob_hospitalisation": ("hospitalRatio", lambda x: round(x * 100000, 6)),
             "infection_waning_cycle_delay": (
                 "naturalImmunityDuration",
-                lambda x: x // 60,
+                lambda x: x // 60 if x != 9999 else None,
             ),
         }
         simpleParams = {p: v for p, v in paramConvert.items() if p in paramDict}
         for parameter, (key, formatFunc) in simpleParams.items():
             updateParamFromSchema(key, formatFunc(paramDict[parameter]), scenarioID)
 
-        # Hospitalisation and ICU ratio
-        # TODO: If ICU is changed to a multiplier these can be migrated to paramConvert
-        if "prob_hospitalisation" in paramDict or icuRate is not None:
-            hospitalRate = paramDict.get("prob_hospitalisation")
-            if None in {hospitalRate, icuRate} and scenarioID == 0:
-                raise AssertionError("""
-                    Hospitalisation and ICU rate parameters were only partially
-                    defined for the baseline scenario
-                """)
-
-            # Use baseline values to plug None gaps
-            baseHospitalRate = idGet("hospitalRatio", 0, 320.0)
-            baseICUProb = idGet("icuRatio", 0, 20.0)
-            if hospitalRate is None:
-                hospitalRate = baseHospitalRate / 100000
-            if icuRate is None:
-                icuRate = hospitalRate * baseICUProb / 100
-
-            # Calculate ICU proportion
-            updateParamFromSchema(
-                "hospitalRatio", round(hospitalRate * 100000, 6), scenarioID
-            )
-            updateParamFromSchema(
-                "icuRatio",
-                round(icuRate * 100 / hospitalRate, 6) if hospitalRate > 0.0 else 0.0,
-                scenarioID,
-            )
-
         # Natural immunity waning
-        if "infection_waning_cycle_delay" in paramDict:
-            useWaning = paramDict["infection_waning_cycle_delay"] != 99999
+        if "infection_waning_rate_per_cycle" in paramDict:
+            useWaning = paramDict["infection_waning_rate_per_cycle"] > 0
             updateParamFromSchema("naturalWaningToggle", useWaning, scenarioID)
         else:
             useWaning = idGet("naturalWaningToggle", 0, False)
@@ -2316,12 +1980,12 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
         transParams = {
             p.removesuffix("_trans"): v
             for p, v in paramDict.items()
-            if p.endswith("_trans")
+            if p.endswith("_trans") and v != 1.0
         }
         suscParams = {
             p.removesuffix("_susc"): v
             for p, v in paramDict.items()
-            if p.endswith("_susc")
+            if p.endswith("_susc") and v != 1.0
         }
         # TODO: Leave table to inherit baseline if ages are unchanged
         transAges = sorted(
@@ -2331,8 +1995,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
         for age in transAges:
             transValue = transParams.get(age, 1.0)
             suscValue = suscParams.get(age, 1.0)
-            if transValue != 1.0 or suscValue != 1.0:
-                transTable.loc[transTable.shape[0]] = [age, transValue, suscValue]
+            transTable.loc[transTable.shape[0]] = [age, transValue, suscValue]
         updateTableFromSchema(
             "transAgeForm",
             transTable,
@@ -2346,23 +2009,39 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             ),
         )
 
-        # Age-specific mortality
-        mortTable = pd.DataFrame(columns=("Age Group", "Mortality Rate"))
+        # Age-specific health burdens
+        globalHospitalRate = paramDict.get(
+            "prob_hospitalisation", idGet("hospitalRatio", 0, 320.0)
+        )
+        burdenTable = pd.DataFrame(
+            columns=("Age Group", "Hospitalisation Rate", "Mortality Rate")
+        )
+        hospParams = {
+            p: round(v * 100000, 6)
+            for p, v in rawHospParams.items()
+            if v != globalHospitalRate
+        }
         mortParams = {
             p.removesuffix("_mort"): round(v * 100000, 6) if v is not None else None
             for p, v in paramDict.items()
-            if p.endswith("_mort")
+            if p.endswith("_mort") and v != globalDeathRate
         }
-        for param, value in mortParams.items():
-            if value != deathRate:
-                mortTable.loc[mortTable.shape[0]] = [param, value]
+        burdenAges = sorted(
+            set(hospParams.keys()) | set(mortParams.keys()),
+            key=lambda x: list(ageTimeDict).index(x),
+        )
+        for age in burdenAges:
+            hospValue = hospParams.get(age, globalHospitalRate)
+            mortValue = mortParams.get(age, globalDeathRate)
+            burdenTable.loc[burdenTable.shape[0]] = [age, hospValue, mortValue]
         updateTableFromSchema(
-            "mortAgeForm",
-            mortTable,
+            "burdenAgeForm",
+            burdenTable,
             scenarioID,
             pd.DataFrame(
                 {
                     "Age Group": [None],
+                    "Hospitalisation Rate": [idGet("hospitalRatio", scenarioID, 320.0)],
                     "Mortality Rate": [idGet("deathRatio", scenarioID, 12.0)],
                 },
             ),

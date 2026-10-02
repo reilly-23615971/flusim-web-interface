@@ -9,11 +9,12 @@ from functools import partial
 from typing import Any, Callable, Literal, cast
 
 import numpy as np
+import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.ParameterFunctions import containerSave
-from ClientResources.SharedResources import ageWithTime, triggerConditions
+from ClientResources.ParameterFunctions import containerSave, idGet
+from ClientResources.SharedResources import ageTimeDict, ageWithTime, triggerConditions
 
 # Logging
 functionLog = logging.getLogger(__name__)
@@ -107,7 +108,7 @@ def dualError(
         session["activeErrors"][scenarioID].pop(label, None)
 
 
-@st.fragment(run_every=1)
+# @st.fragment(run_every=1)
 def errorChecker(scenarioID: int, name: str = "Errors in Current Scenario"):
     """
     Fragment to list errors from a specific scenario in a dropdown container.
@@ -222,6 +223,143 @@ def trigCast(x: str) -> Literal[
     )
 
 
+def healthOutcomeStore(
+    scenarioNames: list[str], useAges: bool = True
+) -> tuple[dict, dict]:
+    """
+    Function to format and store health burden outcome rates for a given set
+    of scenarios.
+
+    Parameters:
+        scenarioNames (list of str): The names of each scenario defined in
+            the simulation.
+
+        useAges (Boolean): Set to False to ignore age-specific health burdens
+            and define each of their values to be the same baseline value.
+
+    Returns:
+        tuple of dicts: A pair of dictionaries storing the global and age-specific
+            health burden rates.
+    """
+    # Required values for outcome rates
+    outcomeRates = {
+        "Diagnosed Cases": ("caseRatio", 50.0, lambda x: x / 100),
+        "GP Visits": ("gpRatio", 17.0, lambda x: x / 100),
+        "Hospitalisations": ("hospitalRatio", 320.0, lambda x: x / 100000),
+        "Deaths": ("deathRatio", 12.0, lambda x: x / 100000),
+    }
+
+    # Basic rates
+    singleRates = {}
+    for outcome, (key, default, formatFunc) in outcomeRates.items():
+        singleRates[outcome] = {
+            name: formatFunc(idGet(key, scenarioID, default))
+            for scenarioID, name in enumerate(scenarioNames)
+        }
+
+    # ICU (dependent on hospitalisation)
+    icuMultipliers = {
+        name: idGet("icuRatio", scenarioID, 20.0) / 100
+        for scenarioID, name in enumerate(scenarioNames)
+    }
+    singleRates["ICU Visits"] = {
+        name: rate * icuMultipliers[name]
+        for name, rate in singleRates["Hospitalisations"].items()
+    }
+
+    # Age-specific rates
+    hospitalKey, hospitalDefault, hospitalFormat = outcomeRates["Hospitalisations"]
+    deathKey, deathDefault, deathFormat = outcomeRates["Deaths"]
+    ageRates = {}
+    if useAges:
+        hospitalRates, icuRates, deathRates = {}, {}, {}
+        for scenarioID, name in enumerate(scenarioNames):
+            # Get previously-extracted base rates
+            baseHospitalRate = singleRates["Hospitalisations"][name]
+            baseDeathRate = singleRates["Deaths"][name]
+            baseICURate = icuMultipliers[name]
+            # Format table with age-specific rates
+            burdenAgeForm = (
+                idGet(
+                    "burdenAgeForm",
+                    scenarioID,
+                    pd.DataFrame(
+                        {
+                            "Age Group": [None],
+                            "Hospitalisation Rate": [baseHospitalRate],
+                            "Mortality Rate": [baseDeathRate],
+                        },
+                    ),
+                )
+                .copy()
+                .dropna()
+                .replace({"Age Group": ageTimeDict})
+            )
+            burdenAgeForm["Hospitalisation Rate"] = burdenAgeForm[
+                "Hospitalisation Rate"
+            ].apply(hospitalFormat)
+            burdenAgeForm["Mortality Rate"] = burdenAgeForm["Mortality Rate"].apply(
+                deathFormat
+            )
+            # Convert to dictionaries with base rate as default
+            hospitalAgeDict = (
+                burdenAgeForm[["Age Group", "Hospitalisation Rate"]]
+                .set_index("Age Group")["Hospitalisation Rate"]
+                .to_dict()
+            )
+            hospitalRates[name] = {
+                age: baseHospitalRate for age in ageWithTime
+            } | hospitalAgeDict
+
+            icuAgeDict = {
+                age: rate * baseICURate for age, rate in hospitalAgeDict.items()
+            }
+            icuRates[name] = {
+                age: baseHospitalRate * baseICURate for age in ageWithTime
+            } | icuAgeDict
+
+            mortAgeDict = (
+                burdenAgeForm[["Age Group", "Mortality Rate"]]
+                .set_index("Age Group")["Mortality Rate"]
+                .to_dict()
+            )
+            deathRates[name] = {age: baseDeathRate for age in ageWithTime} | mortAgeDict
+        ageRates = {
+            "Hospitalisations": hospitalRates,
+            "ICU Visits": icuRates,
+            "Deaths": deathRates,
+        }
+    else:
+        # Just set every age to the base rate
+        # TODO: Avoid this unnecessary iteration and just check elsewhere
+        # that there's no age-specific rates in use
+        ageRates = {
+            "Hospitalisations": {
+                scenario: {
+                    age: hospitalFormat(idGet(hospitalKey, i, hospitalDefault))
+                    for age in ageWithTime
+                }
+                for i, scenario in enumerate(scenarioNames)
+            },
+            "Deaths": {
+                scenario: {
+                    age: deathFormat(idGet(deathKey, i, deathDefault))
+                    for age in ageWithTime
+                }
+                for i, scenario in enumerate(scenarioNames)
+            },
+        }
+        ageRates["ICU Visits"] = {
+            name: {
+                age: rate * icuMultipliers[name]
+                for age, rate in ageRates["Hospitalisations"][name].items()
+            }
+            for name in scenarioNames
+        }
+
+    return singleRates, ageRates
+
+
 # Scenario name functions
 def saveName(
     key: str,
@@ -270,12 +408,15 @@ def saveName(
             icon=":material/tab_close_inactive:",
         )
     else:
+        # Update saved names for r0
+        if session.get("calibSavedScenarioID") == scenarioID:
+            session["calibScenarioName"] = newName
         containerSave(key, scenarioID, containers, specialContainers)
 
 
 def uniqueName(currentName: str, names: set[str]):
     """
-    Function to add a suffix to a string to make it unique compared to a set
+    Function to add a suffix to a string to make it unique compared to a set.
 
     Parameters:
         currentName (str): The string to make unique.
@@ -304,7 +445,7 @@ def uniqueName(currentName: str, names: set[str]):
 # Age functions
 def ageSort(age: tuple[str, Any]) -> int:
     """
-    Function to be used in `sorted()` for ordering age groups
+    Function to be used in `sorted()` for ordering age groups.
 
     Parameters:
         age (tuple with str): A tuple where the first item is the string
@@ -325,6 +466,51 @@ def ageSort(age: tuple[str, Any]) -> int:
         "senior",
         "older_senior",
     ].index(age[0])
+
+
+def ageSortSeries(ages: pd.Series) -> pd.Series:
+    """
+    Function to be used in `pd.sort_values` for ordering age groups
+
+    Parameters:
+        age (Series): A Series containing string representations of age groups.
+
+    Returns:
+        Series: A Series containing the numeric ordering index of each age group.
+    """
+    return ages.map(
+        {
+            age: index
+            for index, age in enumerate(
+                [
+                    "young_infant",
+                    "infant",
+                    "young_child",
+                    "child",
+                    "adolescent",
+                    "young_adult",
+                    "adult",
+                    "older_adult",
+                    "senior",
+                    "older_senior",
+                ]
+            )
+        }
+    )
+
+
+def ageDisplay(option: Any) -> str:
+    """
+    Function to be passed to format_func for displaying selectbox values
+
+    Parameters:
+        option (any): The string to be converted from key to display value.
+
+    Returns:
+        str: The display value corresponding to the selectbox option.
+    """
+
+    return ageTimeDict[cast(str, option)]
 
 
 def ageRangeString(lower: int | float, upper: int | float) -> str:
@@ -398,13 +584,13 @@ def ageRangeCombiner(ages: list[str]) -> str:
     }
 
     # Sort the ages
-    ageList = ages.copy()
-    ageList.sort(key=lambda x: ageStarts[x])
+    ages = ages.copy()
+    ages.sort(key=lambda x: ageStarts[x])
 
     # Iteratively identify continuous age blocks and display as string
-    currentStart, currentEnd = ageStarts[ageList[0]], ageEnds[ageList[0]]
+    currentStart, currentEnd = ageStarts[ages[0]], ageEnds[ages[0]]
     currentString = ""
-    for age in ageList[1:]:
+    for age in ages[1:]:
         if ageStarts[age] == currentEnd:
             currentEnd = ageEnds[age]
         else:

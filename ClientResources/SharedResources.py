@@ -15,18 +15,36 @@ sharedLog = logging.getLogger(__name__)
 
 # Toggle to use preset JSON config with runSimulation instead of using
 # the parameters set by the user, for testing
+# Note that R0 calibration has its own file paths!
 usePresetParams = False
+presetJSONPath = "ClientResources/MultiStrainParams.json"
 
 # Toggle to use built-in data instead of model output
 # TODO: Include different types of preset data
 # (e.g. vaccinated vs unvaccinated) for better testing
 usePresetData = False
+presetCommunity = "newcastle"
+presetScenarioNames = [
+    "Baseline",
+    "School Closure",
+    "Case Isolation",
+    "Community Contact Reduction",
+]
+presetDataPaths = {
+    "Cumulative": "./TestData/epidemicMedianCumulative.csv",
+    "Daily Rate": "./TestData/epidemicMedianDaily.csv",
+    "ASIR": "./TestData/asirMedianAbsolute.csv",
+    "Vaccinated": "./TestData/asirMedianVaccinated.csv",
+}
 
 # Toggle to save the JSON form of parameters as a file
 saveJSON = False
 
 # Toggle to round the values displayed in infection curves/burden tables
 roundResults = True
+
+# Toggle to add buttons downloading frequently-used tables to Health Burden Outcomes
+showDebugTableDownloads = False
 
 # Other Constants
 
@@ -198,10 +216,24 @@ while len(mutedCodes) < maxScenarios:
     mutedCodes = mutedCodes + mutedCodes[1:]
 
 # Queues used to store data from server requests
-resultQueue = Queue[list]()
-errorQueue = Queue[tuple[str, str, str, Optional[Exception]]]()
-currentProgress = deque[float](maxlen=1)
-statusQueue = list[str]()
+
+# Simulations
+simResultQueue = Queue[list]()
+simErrorQueue = Queue[tuple[str, str, str, Optional[Exception]]]()
+simCurrentProgress = deque[float](maxlen=1)
+simStatusQueue = list[str]()
+
+# R0 Calibration
+calibResultQueue = Queue[dict]()
+calibErrorQueue = Queue[tuple[str, str, str, Optional[Exception]]]()
+calibCurrentProgress = deque[float](maxlen=1)
+calibStatusQueue = list[str]()
+
+# R0 Calculation
+calcResultQueue = Queue[dict]()
+calcErrorQueue = Queue[tuple[str, str, str, Optional[Exception]]]()
+calcCurrentProgress = deque[float](maxlen=1)
+calcStatusQueue = list[str]()
 
 
 class AnalysisFile:

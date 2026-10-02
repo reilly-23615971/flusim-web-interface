@@ -63,6 +63,7 @@ parameterCategories = {
     "Scenario_VaccineCoverage": ["Age"],
     "Scenario_VaccineDose": ["DoseType"],
     "Scenario_VaccineDoseEfficacy": ["DoseType", "Age"],
+    # "Scenario_VaccineDoseEfficacy": ["DoseType", "StrainId", "Age"],
 }
 parameterGetters = {
     "Scenario_CrossImmunity": attrgetter("FromStrainId", "ToStrainId"),
@@ -71,6 +72,7 @@ parameterGetters = {
     "Scenario_VaccineCoverage": attrgetter("Age"),
     "Scenario_VaccineDose": attrgetter("DoseType"),
     "Scenario_VaccineDoseEfficacy": attrgetter("DoseType", "Age"),
+    # "Scenario_VaccineDoseEfficacy": attrgetter("DoseType", "StrainId", "Age"),
 }
 
 
@@ -80,13 +82,11 @@ parameterGetters = {
 
 # Set of parameters used exclusively by the dashboard
 class dashboardParameters(BaseModel):
-    # TODO: Convert prob_icu to be a multiplier rather than the exact rate
-    # to mitigate imprecision caused by multiplication
     prob_icu: Optional[Probability] = Field(
         title="ICU Visit Probability",
-        default=0.0005,
+        default=0.2,
         description="""
-The probability of an infected individual visiting a hospital's Intensive Care
+The probability of a hospitalised individual visiting a hospital's Intensive Care
 Unit as a result of the pathogen.
         """,
     )
@@ -131,6 +131,88 @@ this value and the size of the simulated population.
         default=False,
         description="""
 Toggles whether more complex parameters should be displayed on the dashboard.
+        """,
+    )
+
+    # Age-Specific Hospitalisation
+    young_infant_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Young Infant)",
+        default=None,
+        description="""
+The probability that an individual who is less than 6 months old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    infant_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Infant)",
+        default=None,
+        description="""
+The probability that an individual who is 7-24 months old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    young_child_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Young Child)",
+        default=None,
+        description="""
+The probability that an individual who is 3-5 years old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    child_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Child)",
+        default=None,
+        description="""
+The probability that an individual who is 6-12 years old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    adolescent_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Adolescent)",
+        default=None,
+        description="""
+The probability that an individual who is 13-17 years old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    young_adult_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Young Adult)",
+        default=None,
+        description="""
+The probability that an individual who is 18-24 years old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    adult_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Adult)",
+        default=None,
+        description="""
+The probability that an individual who is 25-44 years old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    older_adult_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Older Adult)",
+        default=None,
+        description="""
+The probability that an individual who is 45-64 years old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    senior_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Senior)",
+        default=None,
+        description="""
+The probability that an individual who is 65-79 years old will
+be hospitalised as a result of the pathogen.
+        """,
+    )
+    older_senior_hosp: Optional[Probability] = Field(
+        title="Hospitalisation Rate (Older Senior)",
+        default=None,
+        description="""
+The probability that an individual who is over 80 years old will
+be hospitalised as a result of the pathogen.
         """,
     )
 
@@ -555,7 +637,7 @@ will begin to lose their immunity to the pathogen.
     )
     infection_waning_rate_per_cycle: Optional[float] = Field(
         title="Infection Waning Rate Per Cycle",
-        default=0.005,
+        default=0.0,
         ge=0.0,
         description="""
 The proportion of immune individuals who will lose their immunity to the
@@ -1470,6 +1552,16 @@ class vaccineEfficacy(BaseModel):
         title="Dose Type",
         description="The type of vaccine dose these parameters apply to.",
     )
+    '''
+    StrainId: Optional[int] = Field(
+        title="Strain ID",
+        default=None,
+        description="""
+The ID of the infection strain these parameters apply to. If None, the
+parameters apply to all infection strains.
+        """,
+    )
+    '''
     Age: Optional[AgeGroup] = Field(
         title="Age",
         default=None,

@@ -66,7 +66,6 @@ change the name of the scenario.
         disabled=templatePending,
     ):
         loadTemplate(scenarioID, templatePath)
-        st.rerun()
 
 
 @st.dialog("Load Scenario as Template", width="large", icon=":material/list_alt_add:")
@@ -120,7 +119,6 @@ Note that this will not change the names of either scenario.
     ):
         template = createTemplate(newID, includeDashboard=True)
         loadTemplate(currentID, template)
-        st.rerun()
 
 
 @st.dialog(
@@ -193,7 +191,6 @@ disease or situation.
         st.button(
             templateName,
             icon=f":material/{icon}:",
-            key=f"_defaultTemplateButton{templateName}",
             on_click=defaultTemplateButton,
             args=[scenarioID, templatePath, templateName],
             help=description,

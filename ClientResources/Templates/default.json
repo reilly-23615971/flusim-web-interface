@@ -1,4 +1,10 @@
 {
+    "Dashboard_Parameter": {
+        "prob_icu": 0.2,
+        "prob_gp": 0.17,
+        "enable_social_distancing": false,
+        "live_vaccine_distribution": true
+    },
     "Scenario_ParameterWithAgePrefix": {
         "mort": 0.00025
     },
@@ -21,9 +27,7 @@
         "prob_withdrawal": 0.5,
         "prob_school_withdrawal": 0.9,
         "prob_hospitalisation": 0.0064,
-        "prob_icu": 0.00128,
         "prob_diagnosis": 0.5,
-        "prob_gp": 0.17,
         "prob_child_supervision": 1.0,
         "background_contact_count": 4.0,
         "max_class_size": 10,
@@ -37,7 +41,7 @@
         "diagnosed_case_isolation": false,
         "class_dismissal": false,
         "infection_waning_cycle_delay": 720,
-        "infection_waning_rate_per_cycle": 0.005,
+        "infection_waning_rate_per_cycle": 0.0,
         "infection_waned_protection": 0.5,
         "school_closure_compliance": 0.5,
         "school_closure_trigger": "none",
@@ -77,8 +81,8 @@
     "Scenario_VaccineCoverage": [
         {
             "Age": null,
-            "Initial": 0.233,
-            "Target": 0.233
+            "Initial": 0.228,
+            "Target": 0.228
         },
         {
             "Age": "young_infant",

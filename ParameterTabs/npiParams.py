@@ -11,6 +11,7 @@ import streamlit as st
 from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import (
+    ageDisplay,
     paramError,
     schemaRemoveBaseline,
     schemaUpdate,
@@ -46,7 +47,7 @@ npiLog = logging.getLogger(__name__)
 session = st.session_state
 
 
-@st.fragment
+# @st.fragment
 def buildNPITab(id: int, advanced: bool = False):
     """
     Function to generate the parameters for NPIs in a
@@ -60,29 +61,6 @@ def buildNPITab(id: int, advanced: bool = False):
         advanced (bool): Set to `True` to show more complex parameters like
             NPI trigger thresholds.
     """
-
-    """
-    # Initialise session variables needed by the vaccination/NPI forms
-    sessionParameters = {
-        f"socialRowCount{id}": 0,
-        f"classDismissal{id}": False,
-    }
-    for parameter, default in sessionParameters.items():
-        session[parameter] = session.get(parameter, default)
-
-    # Ensure age selections only give possible parameters
-    # Dictionary format: 'remaining groups variable': (
-    #   'number of rows variable', 'group row variable prefix'
-    # )
-    ageGroupSets = {
-        f"socialRemainingAgeGroups{id}": (
-            f"socialRowCount{id}",
-            f"socialAgeGroup{id}-",
-        ),
-    }
-
-    # Use function to recalculate remaining group parameters
-    getRemainingGroups(ageGroupSets, ageCategories.keys())"""
     simLength = session.get("cycleCount", 360)
     triggerNames = list(triggerConditions.keys())[1:]
 
@@ -110,10 +88,9 @@ def buildNPITab(id: int, advanced: bool = False):
             """)
 
             # Case Isolation
-            # TODO: That's DIAGNOSED case isolation
             loadKey("caseIsolation", id, False)
             st.toggle(
-                "Enable Case Isolation",
+                "Enable Diagnosed Case Isolation",
                 value=False,
                 on_change=saveKey,
                 args=["caseIsolation", id],
@@ -174,20 +151,24 @@ simulation, overriding other social distancing parameters.
                 """,
             )
             loadKey("socialDistancingCompliance", id, 0.9)
-            socialDistancingCompliance = st.slider(
-                "Social Distancing Compliance (Probability)",
-                min_value=0.0,
-                max_value=1.0,
-                value=0.9,
-                format="percent",
-                disabled=not useSocialDistancingToggle,
-                on_change=saveKey,
-                args=["socialDistancingCompliance", id],
-                key=f"_socialDistancingCompliance{id}",
-                help="""
+            socialDistancingCompliance = round(
+                st.slider(
+                    "Social Distancing Compliance (Probability)",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=0.9,
+                    format="percent",
+                    disabled=not useSocialDistancingToggle,
+                    on_change=saveKey,
+                    args=["socialDistancingCompliance", id],
+                    key=f"_socialDistancingCompliance{id}",
+                    help="""
 The probability that an individual will comply
 with social distancing interventions in the simulation.
                 """,
+                )
+                * 100,
+                6,
             )
             # Age-specific social distancing compliance (if advanced params enabled)
             # TODO: Check sim for social distance nuance
@@ -234,7 +215,7 @@ defined above.
                             "Age Group",
                             required=True,
                             options=ageTimeDict.keys(),
-                            format_func=lambda x: ageTimeDict[x],  # type: ignore
+                            format_func=ageDisplay,
                             help="""
 An age group that will have a specific social distancing compliance
 probability defined for it, overriding the base probability.
@@ -245,8 +226,8 @@ probability defined for it, overriding the base probability.
                             required=True,
                             default=socialDistancingCompliance,
                             min_value=0.0,
-                            max_value=1.0,
-                            format="percent",
+                            max_value=100.0,
+                            format="%0.5g%%",
                             help="""
 The probability that an individual in this age group will comply with
 social distancing interventions in the simulation.
@@ -273,141 +254,6 @@ social distancing interventions in the simulation.
                     """,
                     True,
                 )
-
-                '''
-                # Save relevant params as variables to avoid lookups
-                socialRowCount = session[f"socialRowCount{id}"]
-                socialRemainingGroups = session[f"socialRemainingAgeGroups{id}"]
-                socialAgeContainer = st.container()
-                for i in range(socialRowCount):
-                    (socialGroupColumn, socialComplianceColumn, socialRemoveColumn) = (
-                        socialAgeContainer.columns(
-                            (0.25, 0.55, 0.2), vertical_alignment="center"
-                        )
-                    )
-                    socialCurrentGroup = session.get(f"socialAgeGroup{id}-{i}")
-
-                    # Age group column
-                    loadKey(
-                        "socialAgeGroup",
-                        id,
-                        (
-                            socialCurrentGroup
-                            if socialCurrentGroup
-                            else socialRemainingGroups[0]
-                        ),
-                        f"-{i}",
-                    )
-                    with socialGroupColumn:
-                        st.selectbox(
-                            "Age Group",
-                            key=f"_socialAgeGroup{id}-{i}",
-                            # Set age group options such that only ages
-                            # that haven't been selected yet can be selected
-                            options=(
-                                [socialCurrentGroup]
-                                + [
-                                    group
-                                    for group in socialRemainingGroups
-                                    if group != socialCurrentGroup
-                                ]
-                                if socialCurrentGroup
-                                else socialRemainingGroups
-                            ),
-                            disabled=(
-                                not useSocialDistancingToggle or not socialRowCount < 10
-                            ),
-                            on_change=saveKey,
-                            args=["socialAgeGroup", id, f"-{i}"],
-                            help="""
-                            An age group that will have specific
-                            social distancing compliance probability
-                            defined for it, overriding the base
-                            probability.
-
-                            ##### Options:
-                            - Young Infant: 0-6 months old.
-                            - Infant: 7-24 months old.
-                            - Young Child: 3-5 years old.
-                            - Child: 6-12 years old.
-                            - Adolescent: 13-17 years old.
-                            - Young Adult: 18-24 years old.
-                            - Adult: 25-44 years old.
-                            - Older Adult: 45-64 years old.
-                            - Senior: 65-79 years old.
-                            - Older Senior: 80+ years old.
-                        """,
-                        )
-                    # Compliance column
-                    loadKey("socialCompliance", id, 0.9, f"-{i}")
-                    with socialComplianceColumn:
-                        st.select_slider(
-                            "Social Distancing Compliance (Probability)",
-                            np.linspace(0.0, 1.0, 201),
-                            0.9,
-                            format_func=lambda x: f"{100 * x:0.3g}%",
-                            disabled=not useSocialDistancingToggle,
-                            on_change=saveKey,
-                            args=["socialCompliance", id, f"-{i}"],
-                            key=f"_socialCompliance{id}-{i}",
-                            help="""
-                            The probability that an individual in
-                            this age group will comply with social
-                            distancing interventions in the
-                            simulation.
-                        """,
-                        )
-                    # Delete button column
-                    with socialRemoveColumn:
-                        st.button(
-                            label="Remove Age Group",
-                            icon=":material/delete:",
-                            key=f"socialRemove{id}-{i}",
-                            on_click=deleteFormRow,
-                            args=(
-                                i,
-                                f"socialRowCount{id}",
-                                {f"socialAgeGroup{id}-", f"socialCompliance{id}-"},
-                            ),
-                            disabled=not useVaccinesToggle,
-                            help="""
-                            Remove this row of the form and remove
-                            these age-specific vaccine proportion
-                            values from the simulation.
-                        """,
-                        )
-                # Button to add another row for age specific params
-                socialAgeContainer.button(
-                    label="Add Age Group",
-                    icon=":material/add:",
-                    on_click=addFormRow,
-                    key=f"socialAdd{id}",
-                    args=(
-                        f"socialRowCount{id}",
-                        {
-                            f"socialAgeGroup{id}-{socialRowCount}": (
-                                socialRemainingGroups[0]
-                                if socialRemainingGroups else None
-                            ),
-                            f"socialCompliance{id}-{socialRowCount}":
-                            socialDistancingCompliance,
-                        },
-                    ),
-                    disabled=(not useSocialDistancingToggle or not socialRowCount < 10),
-                    help=(
-                        """
-                        Add another row to this form, where you can
-                        select an additional age group to have unique
-                        social distancing compliance values.
-                    """
-                        if socialRowCount <= 9
-                        else """
-                        All age groups have been given unique social
-                        distancing compliance values, so a new age
-                        group cannot be added.
-                    """
-                    ),
-                )'''
         else:
             # Make sure triggers account for class dismissal
             classDismissal = idGet("classDismissal", id, False)
@@ -1454,6 +1300,9 @@ def npiSaveSchema(
                             "Social Distancing Compliance": [globalCompliance],
                         },
                     ),
+                ).copy()
+                distanceAgeForm["Social Distancing Compliance"] = (
+                    distanceAgeForm["Social Distancing Compliance"].div(100.0).round(6)
                 )
                 for age in ageTimeDict:
                     if age in distanceAgeForm["Age Group"].values:
@@ -1466,15 +1315,6 @@ def npiSaveSchema(
                         setattr(
                             scenarioParams, f"{age}_social_distance", globalCompliance
                         )
-                """
-                for i in range(session.get(f"socialRowCount{id}", 0)):
-                    setattr(
-                        scenarioParams,
-                        f"{ageCategories[session[
-                        f'socialAgeGroup{id}-{i}']
-                        ]}_social_distance",
-                        idGet("socialCompliance", id, globalCompliance, f"-{i}"),
-                    )"""
             else:
                 ageScenarioParams.social_distance = 0.0
             # Save age-specific parameters
@@ -1508,7 +1348,7 @@ def npiSaveSchema(
             scenarioParams.school_closure_relaxation = trigCast(schoolTrigger)
             if schoolTrigger == "Always":
                 scenarioParams.school_closure_delay = 0
-                scenarioParams.school_closure_duration = 99999
+                scenarioParams.school_closure_duration = 9999
             elif schoolTrigger == "Timed":
                 schoolPeriod = [
                     i - 1 for i in idGet("schoolClosurePeriod", id, (1, 60))
@@ -1536,7 +1376,7 @@ def npiSaveSchema(
             scenarioParams.withdrawal_increase_relaxation = trigCast(withdrawalTrigger)
             if withdrawalTrigger == "Always":
                 scenarioParams.withdrawal_increase_delay = 0
-                scenarioParams.withdrawal_increase_duration = 99999
+                scenarioParams.withdrawal_increase_duration = 9999
             elif withdrawalTrigger == "Timed":
                 withdrawalPeriod = [
                     i - 1 for i in idGet("withdrawalIncreasePeriod", id, (1, 60))
@@ -1557,7 +1397,7 @@ def npiSaveSchema(
             scenarioParams.reduced_workgroup_relaxation = trigCast(reducedGroupTrigger)
             if reducedGroupTrigger == "Always":
                 scenarioParams.reduced_workgroup_delay = 0
-                scenarioParams.reduced_workgroup_duration = 99999
+                scenarioParams.reduced_workgroup_duration = 9999
             elif reducedGroupTrigger == "Timed":
                 reducedGroupPeriod = [
                     i - 1 for i in idGet("reducedGroupPeriod", id, (1, 60))
@@ -1578,7 +1418,7 @@ def npiSaveSchema(
             scenarioParams.bcc_reduction_relaxation = trigCast(bccTrigger)
             if bccTrigger == "Always":
                 scenarioParams.bcc_reduction_delay = 0
-                scenarioParams.bcc_reduction_duration = 99999
+                scenarioParams.bcc_reduction_duration = 9999
             elif bccTrigger == "Timed":
                 bccPeriod = [i - 1 for i in idGet("bccPeriod", id, (1, 60))]
                 scenarioParams.bcc_reduction_delay = bccPeriod[0] * 2
@@ -1636,9 +1476,10 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
     # Global Age Parameters
     schemaAge = schema.Scenario_ParameterWithAgePrefix
     if schemaAge is not None and schemaAge.social_distance is not None:
-        updateParamFromSchema(
-            "socialDistancingCompliance", schemaAge.social_distance, scenarioID
-        )
+        compliance = schemaAge.social_distance
+        updateParamFromSchema("socialDistancingCompliance", compliance, scenarioID)
+    else:
+        compliance = idGet("socialDistanceCompliance", 0, 0.9)
 
     # General Scenario Parameters
     schemaParameters = schema.Scenario_Parameter
@@ -1703,7 +1544,7 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
                 updateParamFromSchema(
                     f"{prefix}Toggle", startTrigger != "none", scenarioID
                 )
-                if startTrigger == "timed" and npiDelay == 0 and npiDuration == 99999:
+                if startTrigger == "timed" and npiDelay == 0 and npiDuration == 9999:
                     updateParamFromSchema(f"{prefix}Trigger", "Always", scenarioID)
                 elif startTrigger != "none":
                     updateParamFromSchema(
@@ -1712,10 +1553,10 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
             # Disambiguate between Timed and Always via baseline trigger
             elif scenarioID != 0:
                 baselineTrigger = idGet(f"{prefix}Trigger", 0, None)
-                if baselineTrigger == "Timed" and npiDuration == 99999:
+                if baselineTrigger == "Timed" and npiDuration == 9999:
                     updateParamFromSchema(f"{prefix}Trigger", "Always", scenarioID)
                 elif baselineTrigger == "Always" and (
-                    npiDelay not in {None, 0} or npiDuration not in {None, 99999}
+                    npiDelay not in {None, 0} or npiDuration not in {None, 9999}
                 ):
                     updateParamFromSchema(f"{prefix}Trigger", "Timed", scenarioID)
 
@@ -1742,29 +1583,33 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
                 )
 
         # Social Distancing Table
+        # TODO: Identical-to-global values are getting kept here
         distanceParams = {
             p.removesuffix("_social_distance"): v
             for p, v in paramDict.items()
-            if p.endswith("_social_distance")
+            if p.endswith("_social_distance") and v != compliance
         }
-        if distanceParams:
-            distanceTable = pd.DataFrame(
-                columns=("Age Group", "Social Distancing Compliance")
+        distanceTable = pd.DataFrame(
+            columns=("Age Group", "Social Distancing Compliance")
+        )
+        for param, value in distanceParams.items():
+            distanceTable.loc[distanceTable.shape[0]] = [param, value]
+        if not distanceTable.empty:
+            distanceTable["Social Distancing Compliance"] = (
+                distanceTable["Social Distancing Compliance"].mul(100.0).round(6)
             )
-            for param, value in distanceParams.items():
-                distanceTable.loc[distanceTable.shape[0]] = [param, value]
-            updateTableFromSchema(
-                "distanceAgeForm",
-                distanceTable,
-                scenarioID,
-                pd.DataFrame(
-                    {
-                        "Age Group": [None],
-                        "Social Distancing Compliance": [
-                            paramDict.get(
-                                idGet("socialDistancingCompliance", scenarioID, 0.0),
-                            )
-                        ],
-                    },
-                ),
-            )
+        updateTableFromSchema(
+            "distanceAgeForm",
+            distanceTable,
+            scenarioID,
+            pd.DataFrame(
+                {
+                    "Age Group": [None],
+                    "Social Distancing Compliance": [
+                        paramDict.get(
+                            idGet("socialDistancingCompliance", scenarioID, 0.0),
+                        )
+                    ],
+                },
+            ),
+        )

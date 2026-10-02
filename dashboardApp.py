@@ -7,28 +7,21 @@
 import logging
 import os
 from datetime import datetime
-from functools import partial
+from typing import Any
 
 import streamlit as st
 
-# Reload streamlit_notify if it fails the first time
-try:
-    import streamlit_notify as stn
-except ImportError:
-    import importlib
-    import time
-
-    time.sleep(0.01)
-    importlib.reload(importlib.import_module("streamlit_notify"))
-    import streamlit_notify as stn  # type: ignore
-
 from ClientResources.InterfaceFunctions import timeString
 from ClientResources.SharedResources import (
-    currentProgress,
-    errorQueue,
-    resultQueue,
-    usePresetData,
-    usePresetParams,
+    calcCurrentProgress,
+    calcErrorQueue,
+    calcResultQueue,
+    calibCurrentProgress,
+    calibErrorQueue,
+    calibResultQueue,
+    simCurrentProgress,
+    simErrorQueue,
+    simResultQueue,
 )
 from ClientResources.VisualisationFunctions import formatData
 
@@ -67,7 +60,11 @@ session = st.session_state
 # aren't mixed up by the server
 sessionParameters = {
     "simulationInProgress": False,
-    "keepProgressBar": False,
+    "calibrationInProgress": False,
+    "calculationInProgress": False,
+    "showSimProgress": False,
+    "showCalibProgress": False,
+    "showCalcProgress": False,
     "scenarioCount": 0,
     "scenarioSetParamsExtra": {},
     "scenarioSetParams": {},
@@ -80,10 +77,6 @@ for parameter, default in sessionParameters.items():
 
 # TODO: See if an extra cookie package like streamlit-cookie-controller
 # can preserve parameters between refreshed pages
-
-# Define partial function for toasts
-notifyToast = partial(stn.toast, duration="infinite")
-
 
 st.logo(":material/microbiology:")
 
@@ -110,6 +103,11 @@ scenarioParameters = st.Page(
     title="Scenario Parameters",
     icon=":material/variable_add:",
 )
+r0Calculation = st.Page(
+    "DashboardPages/r0Calibration.py",
+    title="$R_0$ Calibration",
+    icon=":material/partner_exchange:",
+)
 runSimulation = st.Page(
     "DashboardPages/runSimulations.py",
     title="Run Simulations",
@@ -126,6 +124,7 @@ healthTables = st.Page(
     icon=":material/table_chart_view:",
 )
 
+# TODO: Shorten section names, reduce font sizes or increase sidebar width
 pages = {
     "Flusim Web Dashboard": [landingPage],
     "Parameter Configuration": [
@@ -133,12 +132,9 @@ pages = {
         baselineParameters,
         scenarioParameters,
     ],
-    "Conducting Experiments": [runSimulation],
+    "Conducting Experiments": [r0Calculation, runSimulation],
     "Results Visualisation": [infectionGraphs, healthTables],
 }
-
-# Display toasts
-stn.notify(remove=True)
 
 # Initialise and run the application pages
 flusimPages = st.navigation(pages)
@@ -151,13 +147,15 @@ st.sidebar.link_button(
 
 # TODO: Fix the "fragment no longer exists" issues
 @st.fragment(run_every=1)
-def updateData():
+def updateData() -> None:
     """
-    Fragment to regularly check if model results have been received yet.
+    Fragment to regularly check if server results have been received yet.
     """
-    hasResults, hasError = not resultQueue.empty(), not errorQueue.empty()
-    if session.simulationInProgress and (hasResults or hasError):
-        if hasResults and not hasError:
+    resultsObtained = False
+    # Simulation Results
+    simHasResults, simHasError = not simResultQueue.empty(), not simErrorQueue.empty()
+    if session.simulationInProgress and (simHasResults or simHasError):
+        if simHasResults and not simHasError:
             # Reset pending simulation variables
             # TODO: Add a check to ensure visualisations can't use the new values
             # while this function is still processing the data
@@ -165,16 +163,12 @@ def updateData():
             session.SimParams = simParams
 
             # Process data and ensure there is no formatting errors
-            returnedData = resultQueue.get()
+            returnedData = simResultQueue.get()
             appLog.info(f"[updateData] Processing the following data:\n{returnedData}")
 
             # Remove any old session data that is no longer valid
             # TODO: Make more robust when number of returned values can vary more
-            scenarioCount = (
-                4
-                if usePresetData or usePresetParams
-                else len(simParams["Scenario Names"])
-            )
+            scenarioCount = len(simParams["Scenario Names"])
             dataForms = simParams["Analysis Formats"]
             if len(dataForms) < 4:
                 session.pop("modelDataAsirVaccinated", None)
@@ -184,7 +178,7 @@ def updateData():
 
             # Check for any errors in the data
             if any(len(data) == 0 for data in formattedData):
-                errorQueue.put(
+                simErrorQueue.put(
                     (
                         "Simulation results were empty",
                         """
@@ -195,13 +189,13 @@ Please make sure your parameters do not possess any errors and try again.
                         None,
                     )
                 )
-                hasError = True
+                simHasError = True
             elif any(
                 form.tool == "epidemic"
                 and len(data["Scenario"].value_counts()) != scenarioCount
                 for data, form in zip(formattedData, dataForms)
             ):
-                errorQueue.put(
+                simErrorQueue.put(
                     (
                         "Some scenarios were not run properly",
                         """
@@ -212,7 +206,7 @@ ensure all scenarios do not possess any errors and try again.
                         None,
                     )
                 )
-                hasError = True
+                simHasError = True
             else:
                 # Save the data to st.session_state
                 for data, form in zip(formattedData, dataForms):
@@ -222,27 +216,129 @@ ensure all scenarios do not possess any errors and try again.
                 session.simulationEndTime = datetime.now()
                 totalTime = session.simulationEndTime - session.simulationStartTime
                 formattedTime = timeString(totalTime.total_seconds())
-                notifyToast(
+                st.toast(
                     f"Simulation complete! Total duration: {formattedTime}",
                     icon=":material/check_circle:",
+                    duration="infinite",
                 )
                 appLog.info("[updateData] Data processing is complete.")
                 session.ChartGenerated = False
-        if hasError:
+        if simHasError:
             # Notify user of errors, but leave displaying them to runSimulations
-            session["simulationError"] = errorQueue.get()
-            currentProgress.append(-1.0)
-            notifyToast(
+            session["simulationError"] = simErrorQueue.get()
+            simCurrentProgress.append(-1.0)
+            st.toast(
                 """
 Simulation encountered an error; see
 :primary-badge[:material/motion_play: Run Simulations] for more.
                 """,
                 icon=":material/error:",
+                duration="infinite",
             )
 
         # Re-enable running new simulations and using their data
         session.simulationInProgress = False
-        session.keepProgressBar = True
+        session.showSimProgress = True
+
+        resultsObtained = True
+
+    # R0 Calibration Results
+    calibHasResults, calibHasError = (
+        not calibResultQueue.empty(),
+        not calibErrorQueue.empty(),
+    )
+    if session.calibrationInProgress and (calibHasResults or calibHasError):
+        if calibHasResults and not calibHasError:
+            # Get calculation results
+            calibrationData: dict[str, Any] = calibResultQueue.get()
+            appLog.info(
+                f"[updateData] Obtained the following calibration data:\n{calibrationData}"
+            )
+            r0 = calibrationData["r0"]
+            lowCI, highCI = calibrationData["interval"]
+            beta = calibrationData["beta"]
+            scenarioName = session.get("calibScenarioName")
+            session["r0Calibration"] = r0
+            session["r0CalibrationBeta"] = beta
+
+            # session.calculationEndTime = datetime.now()
+            # totalTime = session.calculationEndTime - session.calculationStartTime
+            # formattedTime = timeString(totalTime.total_seconds())
+            st.toast(
+                f"""
+$R_0$ of {r0} for {scenarioName} achieved with transmission value of {beta}
+                """,
+                icon=":material/partner_exchange:",
+                duration="infinite",
+            )
+            appLog.info("[updateData] R0 calibration is complete.")
+        if calibHasError:
+            # Notify user of errors, but leave displaying them to runSimulations
+            session["calibrationError"] = calibErrorQueue.get()
+            calibCurrentProgress.append(-1.0)
+            st.toast(
+                """
+Error calibrating $R_0$; see
+:primary-badge[:material/partner_exchange: $R_0$ Calibration] for more.
+                """,
+                icon=":material/error:",
+                duration="infinite",
+            )
+
+        # Re-enable running new simulations and using their data
+        session.calibrationInProgress = False
+        session.showCalibProgress = True
+
+        resultsObtained = True
+
+    # R0 Calculation Results
+    calcHasResults, calcHasError = (
+        not calcResultQueue.empty(),
+        not calcErrorQueue.empty(),
+    )
+    if session.calculationInProgress and (calcHasResults or calcHasError):
+        if calcHasResults and not calcHasError:
+            # Get calculation results
+            calculationData: dict[str, Any] = calcResultQueue.get()
+            appLog.info(
+                f"[updateData] Obtained the following calculation data:\n{calculationData}"
+            )
+            r0 = calculationData["r0"]
+            lowCI, highCI = calculationData["interval"]
+            scenarioName = session.get("calcScenarioName")
+            session["r0Calculation"] = r0
+            session["r0CalculationInterval"] = (lowCI, highCI)
+
+            # session.calculationEndTime = datetime.now()
+            # totalTime = session.calculationEndTime - session.calculationStartTime
+            # formattedTime = timeString(totalTime.total_seconds())
+            st.toast(
+                f"""
+$R_0$ for {scenarioName} is {r0} with a 95% confidence interval of [{lowCI}, {highCI}]
+                """,
+                icon=":material/calculate:",
+            )
+            appLog.info("[updateData] R0 calculation is complete.")
+        if calcHasError:
+            # Notify user of errors, but leave displaying them to runSimulations
+            session["calculationError"] = calcErrorQueue.get()
+            calcCurrentProgress.append(-1.0)
+            st.toast(
+                """
+Error calculating $R_0$; see
+:primary-badge[:material/partner_exchange: $R_0$ Calibration] for more.
+                """,
+                icon=":material/error:",
+            )
+
+        # Re-enable running new simulations and using their data
+        session.calculationInProgress = False
+        session.showCalcProgress = True
+
+        resultsObtained = True
+
+    # Rerun if results have been updated
+    if resultsObtained:
         st.rerun()
 
 

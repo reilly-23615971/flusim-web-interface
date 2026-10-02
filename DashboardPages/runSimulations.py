@@ -3,26 +3,43 @@
 # Page where the simulation can be ran (and non-scenario parameters are changed)
 
 # Imports
+import json
 import logging
+from datetime import datetime
+from threading import Event
+from typing import Any
 
 import streamlit as st
 
-# from streamlit_push_notifications import send_push, send_alert
-from ClientResources.DownloadFunctions import uploadDownloadBar
+from ClientResources.DownloadFunctions import (
+    createConfig,
+    loadConfig,
+    uploadDownloadBar,
+)
+from ClientResources.InterfaceFunctions import (
+    errorChecker,
+    healthOutcomeStore,
+    timeString,
+)
 from ClientResources.ParameterFunctions import (
-    containerSave,
+    idGet,
     loadKey,
     saveKey,
     timeScaleChange,
 )
+from ClientResources.ServerFunctions import taskWrapper
 from ClientResources.SharedResources import (
+    AnalysisFile,
     communityPopulation,
-    currentProgress,
-    statusQueue,
-)
-from ClientResources.SimulationRunFunctions import (
-    runSimulationButton,
-    stopSimulationButton,
+    presetJSONPath,
+    saveJSON,
+    simCurrentProgress,
+    simErrorQueue,
+    simResultQueue,
+    simStatusQueue,
+    splitPoint,
+    usePresetData,
+    usePresetParams,
 )
 
 # Logging
@@ -31,6 +48,399 @@ runSimLog = logging.getLogger(__name__)
 # Store st.session_state as variable for efficiency
 session = st.session_state
 simulationInProgress = session.simulationInProgress
+simCancelFlag = Event()
+
+
+def simRuntimeEstimate(days: int, runs: int, scenarios: int) -> int:
+    """
+    Simple function estimating how long a simulation will take based on its
+    length. This uses a linear function derived from testing at various lengths
+    with default parameters (excluding immunity waning, which is as low as possible
+    to ensure constant infections). The actual length of a given simulation is
+    dependent on the number of infections, so this estimate is only a rough guess.
+
+    Parameters:
+        days (int): The number of days the simulation will run for.
+
+        runs (int): The number of simulation runs that will be done for each scenario.
+
+        scenarios (int): The number of scenarios defined in the simulation.
+
+    Returns:
+        int: The estimated number of seconds the simulation will run for.
+    """
+    # TODO: The commented-out equation overestimates due to using
+    # constant waning and no vaccination
+    # return round((0.0948297101449275 * days - 2.977807971014478) * runs * scenarios)
+    return round((0.02698311 * days - 2.977807971014478) * runs * scenarios)
+
+
+def runModelProgress(
+    scenarioNames: list[str], useVaccines: bool = False
+) -> dict[str, tuple[float, str]]:
+    """
+    Function to generate the status dictionary used for the simulation progress bar.
+
+    Parameters:
+        scenarioNames (list of str): The names of the scenarios in the simulation.
+
+        useVaccines (bool): Set to `True` to add an extra status point for
+            vaccine-based infections.
+
+    Returns:
+        dict: A dictionary matching short status strings to tuples containing
+            a float (the percentage of the progress bar to fill) and a string
+            (the description of the step represented by this status)
+    """
+    # TODO: Include client side processing like formatAsir in this progress
+    # TODO: Fake mid-simulation progress with estimated times
+    progressDict = {
+        "start": (0.01, "Initialising parameters..."),
+        "generatingConfig": (0.02, "Preparing simulation engine..."),
+        "zippingAnalysis": (0.98, "Compiling results..."),
+        "completed": (1.0, "Simulation complete!"),
+        "error": (-1.0, "Experiment halted due to error"),
+        "shutdown": (-1.0, "Server shut down before experiment could finish"),
+    }
+
+    # Scenario status
+    scenarioSegments = (splitPoint - 0.02) / len(scenarioNames)
+    progressDict |= {
+        f"runningSim{i}": (
+            scenarioSegments * i + 0.02,
+            f'Running scenario "{name}"...',
+        )
+        for i, name in enumerate(scenarioNames)
+    }
+    # Analysis status
+    # Note that ASIR gets twice the progress length as epidemic
+    if useVaccines:
+        analysisSegments = (1 - splitPoint - 0.02) / 6
+        progressDict |= {
+            "toolboxAnalysis0": (
+                splitPoint,
+                "Extracting cumulative infections...",
+            ),
+            "toolboxAnalysis1": (
+                analysisSegments + splitPoint,
+                "Extracting daily infections...",
+            ),
+            "toolboxAnalysis2": (
+                3 * analysisSegments + splitPoint,
+                "Extracting age-based infections...",
+            ),
+            "toolboxAnalysis3": (
+                5 * analysisSegments + splitPoint,
+                "Extracting vaccine-based infections...",
+            ),
+        }
+    else:
+        analysisSegments = (1 - splitPoint - 0.02) / 4
+        progressDict |= {
+            "toolboxAnalysis0": (splitPoint, "Extracting cumulative infections..."),
+            "toolboxAnalysis1": (
+                analysisSegments + splitPoint,
+                "Extracting daily infections...",
+            ),
+            "toolboxAnalysis2": (
+                3 * analysisSegments + splitPoint,
+                "Extracting age-based infections...",
+            ),
+        }
+    return progressDict
+
+
+@st.dialog("Run Simulation Experiment", width="large", icon=":material/motion_play:")
+def runSimulationButton() -> None:
+    """
+    Callback function for the Run Simulation button, opening a dialog window
+    before running the simulation itself.
+    """
+    # Disable button if it's taking a while to run
+    runPending = bool(session.get("confirmRunButton"))
+
+    # List scenarios
+    scenarioCount = session.get("scenarioCount", 0) + 1
+    if scenarioCount == 1:
+        st.markdown(f"""
+With the current parameters, this modelling experiment will use the
+"{session.get('community', 'newcastle').capitalize()}"
+community data to simulate the baseline scenario.
+        """)
+    else:
+        st.markdown(f"""
+With the current parameters, this modelling experiment will use the
+"{session.get('community', 'newcastle').capitalize()}"
+community data to simulate each of the following {scenarioCount} scenarios:
+        """)
+        with st.container() if scenarioCount < 11 else st.expander("Scenario Names"):
+            st.markdown(
+                "- Baseline\n"
+                + "\n".join(
+                    f"- {session[f'scenarioName{id}']}"
+                    for id in range(1, scenarioCount)
+                )
+            )
+
+    # Display any errors
+    # TODO: Hide scenario errors that are copies of baseline errors
+    severeErrorsFound = False
+    for id in range(scenarioCount):
+        severeErrorsFound = (
+            errorChecker(
+                id,
+                f"Errors in {session[f'scenarioName{id}'] if id > 0 else 'Baseline'}",
+            )
+            or severeErrorsFound
+        )
+    if severeErrorsFound:
+        st.error(
+            """
+                The simulation cannot be ran due to the errors displayed above.
+                Please correct these errors before running the simulation.
+            """,
+            icon=":material/error:",
+        )
+    else:
+        if usePresetData:
+            st.error(
+                """
+The debug settings of the dashboard are set such that visualisations use
+preset data instead of server outputs. You will not be able to use the data
+of any simulations you run unless this setting is disabled.
+                """,
+                icon=":material/bug_report:",
+            )
+        if usePresetParams:
+            st.warning(
+                """
+The debug settings of the dashboard are set such that simulations use
+preset parameters instead of those set on the dashboard. Simulations
+you run will not match the settings defined on the
+:primary-badge[:material/variable_insert: Baseline Parameters] and
+:primary-badge[:material/variable_add: Scenario Parameters] pages.
+                """,
+                icon=":material/bug_report:",
+            )
+        if session.get("ChartGenerated"):
+            st.warning(
+                """
+Running a new simulation will result in future tables and graphs using
+the new simulation's data. Please make sure to save any tables or graphs
+you wish to keep with the current simulation data before running a new
+simulation.
+                """,
+                icon=":material/bar_chart_off:",
+            )
+
+        # Get estimated simulation runtime
+        cycleCount = session.get("cycleCount", 360)
+        runCount = session.get("runCount", 24)
+        estimatedTime = simRuntimeEstimate(cycleCount, runCount, scenarioCount)
+        st.metric(
+            f"Estimated Time to Run Simulation Experiment",
+            value=timeString(estimatedTime),
+            border=True,
+            help="""
+This estimate is based on the length of each simulation run, the number of runs
+per scenario and the number of scenarios you have defined. The actual duration
+of the simulation experiment may differ from this estimate depending on other
+simulation parameters, as well as whether or not the simulation server is
+already busy with a different task.
+            """,
+        )
+        st.markdown("""
+            Are you sure you want to begin running simulations with the
+            selected parameters?
+        """)
+
+        if (
+            st.button(
+                "Confirm",
+                key="confirmRunButton",
+                icon="spinner" if runPending else None,
+                disabled=runPending,
+            )
+            or runPending
+        ):
+            # Set params indicating model is simulating
+            session.simulationInProgress = True
+            session.simulationStartTime = datetime.now()
+            simCancelFlag.clear()
+
+            # Create the final model JSON
+            # Load debug parameters from file
+            if usePresetParams:
+                with open(presetJSONPath, "r") as f:
+                    parameterJSON = f.read()
+                if loadConfig(parameterJSON, loud=False):
+                    return
+                scenarioCount = session.get("scenarioCount", 0) + 1
+
+            # Create JSON for selected parameters
+            else:
+                parameterJSON = createConfig(
+                    scenarioCount, includeDashboard=False
+                ).model_dump_json(indent=4, exclude_unset=True)
+                if saveJSON:
+                    with open("./savedJSON.json", "w") as file:
+                        file.write(parameterJSON)
+
+            # Save current parameter values that'll be used for
+            # visualisation when the user has potentially changed them
+            scenarioNames = ["Baseline"] + [
+                session[f"scenarioName{i}"] for i in range(1, scenarioCount)
+            ]
+            simParams: dict[str, Any] = {"Scenario Names": scenarioNames}
+            community = session.get("community", "newcastle")
+            simParams["Community"] = community
+            schema = json.loads(parameterJSON)
+            useAdvanced = session.get("showAdvanced", False)
+            useVaccines = "+vaccine" in schema.get("middle_joint")
+            if useVaccines:
+                simParams["Analysis Formats"] = [
+                    AnalysisFile(
+                        tool="epidemic", names=scenarioNames, useCumulative=True
+                    ),
+                    AnalysisFile(
+                        tool="epidemic", names=scenarioNames, useCumulative=False
+                    ),
+                    AnalysisFile(tool="asir", names=scenarioNames),
+                    AnalysisFile(tool="asir", names=scenarioNames, vaccinated=True),
+                ]
+            else:
+                simParams["Analysis Formats"] = [
+                    AnalysisFile(
+                        tool="epidemic", names=scenarioNames, useCumulative=True
+                    ),
+                    AnalysisFile(
+                        tool="epidemic", names=scenarioNames, useCumulative=False
+                    ),
+                    AnalysisFile(tool="asir", names=scenarioNames),
+                ]
+
+            simParams["Scaling Factor"] = (
+                session.get("scalingPopulation", communityPopulation[community])
+                / communityPopulation[community]
+            )
+            simParams["Asymptomatic Rates"] = (
+                [
+                    [
+                        1 - idGet("asymptomaticChild", scenarioID, 0.35),
+                        1 - idGet("asymptomaticAdult", scenarioID, 0.35),
+                    ]
+                    for scenarioID in range(scenarioCount)
+                ]
+                if useAdvanced
+                else [
+                    [1 - idGet("asymptomaticAdult", scenarioID, 0.35)] * 2
+                    for scenarioID in range(scenarioCount)
+                ]
+            )
+            basicRates, ageRates = healthOutcomeStore(
+                scenarioNames,
+                useAges=useAdvanced,
+            )
+            simParams["Health Outcome Rates"] = basicRates
+            simParams["Age-Specific Outcomes"] = ageRates
+            simParams["Waning In Simulation"] = useAdvanced and any(
+                idGet("naturalWaningToggle", scenarioID, False)
+                or (
+                    idGet("vaccineToggle", scenarioID, False)
+                    and (
+                        idGet("vaccineWaningToggle", scenarioID, False)
+                        or idGet("boosterToggle", scenarioID, False)
+                    )
+                )
+                for scenarioID in range(scenarioCount)
+            )
+
+            session.pendingSimParams = simParams
+
+            # Prepare model call parameters
+            statusParams = {
+                "resultType": "zip",
+                "statusDecoder": runModelProgress(scenarioNames, useVaccines),
+                "progress": simCurrentProgress,
+                "status": simStatusQueue,
+                "results": simResultQueue,
+                "error": simErrorQueue,
+            }
+
+            # Clear the status queue
+            simCurrentProgress.append(0.0)
+            simStatusQueue.clear()
+            simStatusQueue.append("Connecting to server...")
+            session["simulationError"] = None
+
+            # Make the model call
+            session.simulationInProgress = True
+            taskWrapper(
+                "Simulation Experiment",
+                "runModel",
+                parameterJSON,
+                simCancelFlag,
+                statusParams,
+            )
+
+            # TODO: Remember streamlit_push_notifications
+
+            # Generate popup to let the user know it's pending
+            st.toast(
+                "Sending a request to run the simulation. Please wait...",
+                icon=":material/experiment:",
+            )
+            st.rerun()
+
+
+@st.dialog("Cancel Simulation", width="large", icon=":material/stop_circle:")
+def stopSimulationButton():
+    """
+    Callback function for the Cancel Simulation button, opening a dialog window
+    before cancelling the currently pending simulation.
+    """
+    # Disable button if it's taking a while to run
+    cancelPending = bool(session.get("confirmCancelButton"))
+
+    st.warning(
+        "Are you sure you want to cancel the currently running simulation?",
+        icon=":material/warning:",
+    )
+
+    if st.button(
+        "Confirm",
+        key="confirmCancelButton",
+        icon="spinner" if cancelPending else None,
+        disabled=cancelPending,
+    ):
+        # Exit immediately if there's nothing to stop
+        if not session.simulationInProgress:
+            st.toast(
+                "No simulations are currently running; there's nothing to cancel.",
+                icon=":material/stop:",
+            )
+            st.rerun()
+
+        # Display as error on the progress bar
+        session["simulationError"] = (
+            "Simulation cancelled",
+            "The simulation was manually cancelled by the user.",
+            "stop_circle",
+            None,
+        )
+        simCurrentProgress.append(-1.0)
+
+        # Stop the runModel thread
+        simCancelFlag.set()
+        session.simulationInProgress = False
+        session.showSimProgress = True
+
+        # Generate popup to let the user know it's cancelled
+        st.toast(
+            "The simulation has been cancelled.",
+            icon=":material/stop_circle:",
+        )
+        st.rerun()
 
 
 # Page Content
@@ -49,17 +459,18 @@ st.markdown("""
     These parameters control various universal elements of the simulation engine.
 """)
 
+# Buttons to upload simulation parameters
+uploadDownloadBar()
+
 # Advanced parameters toggle
 # TODO: Move advanced parameters to either the sidebar or a separate settings page
 loadKey("showAdvanced", default=False, noZeroDefault=True)
-containersToOpen: set[str] = {"paramTabs0"}
 showAdvanced = st.toggle(
     "Show Advanced Parameters",
     False,
     key="_showAdvanced",
-    on_change=containerSave,
+    on_change=saveKey,
     args=["showAdvanced"],
-    kwargs={"containers": containersToOpen},
     help="""
 Toggle whether to display parameters that control more fine-grain aspects
 of the simulation environment, such as scaling population.
@@ -177,7 +588,6 @@ if showAdvanced:
     st.markdown("""
         - The scaling population will be used to adjust simulation results for populations larger than the simulated population. For instance, if you simulate Newcastle (whose population is 272,407) and set the scaling population to 544,814, all health burdens will be doubled to make them proportional to the new value.
     """)
-    # TODO: Can this (and other big number inputs) use commas?
     loadKey("scalingPopulation", default=communityPopulation[community])
     st.number_input(
         "Scaling Population",
@@ -195,10 +605,6 @@ if showAdvanced:
             """,
     )
 
-# Buttons to upload simulation parameters
-# TODO: Move download popover so it doesn't interfere with the run sim dialog
-uploadDownloadBar()
-
 # Button to run the simulation
 # TODO: Check if server is available and grey out button if not
 st.button(
@@ -208,17 +614,13 @@ st.button(
         else "Run Simulation Experiment"
     ),
     on_click=runSimulationButton,
-    key="_runSim",
     disabled=simulationInProgress,
     type="primary",
     icon="spinner" if simulationInProgress else ":material/motion_play:",
     help=(
         """
 Send a request to the *Flusim* model server to run the model
-with the specified parameters. Once the request has been made,
-you will be unable to run the model again until it completes,
-so make sure you have configured your parameters to appropriate
-values before clicking.
+with the specified parameters.
         """
         if not simulationInProgress
         else """
@@ -236,7 +638,7 @@ def simulationProgressBar():
     """
     # TODO: Display how long each step took
     try:
-        progress = currentProgress[0]
+        progress = simCurrentProgress[0]
     except IndexError:
         progress = 0.0
     if progress < 0.0:
@@ -251,10 +653,11 @@ def simulationProgressBar():
             ),
         )
         st.progress(1.0, f":red[:material/error:] {errorTitle}")
+        # TODO: Different label for cancellation
         simStatus = st.status(
             label="Experiment stopped due to error (click for more info)", state="error"
         )
-        for newStatus in statusQueue:
+        for newStatus in simStatusQueue:
             simStatus.write(newStatus)
         simStatus.error(f"Error: {errorBody}", icon=f":material/{errorIcon}:")
         if errorObject is not None:
@@ -262,17 +665,17 @@ def simulationProgressBar():
     else:
         st.progress(
             progress,
-            statusQueue[-1] if statusQueue else "Initialising parameters...",
+            simStatusQueue[-1] if simStatusQueue else "Initialising parameters...",
         )
         simStatus = st.status(
             "Experiment in progress..." if progress < 1.0 else "Experiment complete!",
             state="running" if progress < 1.0 else "complete",
         )
-        for newStatus in statusQueue:
+        for newStatus in simStatusQueue:
             simStatus.write(newStatus)
 
 
-if simulationInProgress or session.keepProgressBar:
+if simulationInProgress or session.showSimProgress:
     simulationProgressBar()
 
 # Stop Simulation Button
