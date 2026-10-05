@@ -7,7 +7,6 @@
 import logging
 import os
 from datetime import datetime
-from typing import Any
 
 import streamlit as st
 
@@ -51,8 +50,6 @@ appLog = logging.getLogger(__name__)
 session = st.session_state
 
 # Initialise session variables used globally by the dashboard
-# Use current time (Unix) as session ID so that different simulations
-# aren't mixed up by the server
 sessionParameters = {
     "simulationInProgress": False,
     "calibrationInProgress": False,

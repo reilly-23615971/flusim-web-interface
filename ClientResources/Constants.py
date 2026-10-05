@@ -3,7 +3,7 @@
 # Constants and debug settings used by the client application
 
 # Imports
-from ClientResources.Types import AgeWithTotal, Community
+from ClientResources.Types import CommunityName
 
 # Debug Settings
 
@@ -21,7 +21,7 @@ PRESET_SCENARIO_NAMES = [
     "Case Isolation",
     "Community Contact Reduction",
 ]
-PRESET_COMMUNITY: Community = "newcastle"
+PRESET_COMMUNITY: CommunityName = "newcastle"
 PRESET_DATA_PATHS = {
     "Cumulative": "./TestData/epidemicMedianCumulative.csv",
     "Daily Rate": "./TestData/epidemicMedianDaily.csv",
@@ -85,40 +85,6 @@ ORDINALS = {
     9: "Ninth",
     10: "Tenth",
 }
-
-# Dictionary getting the population of each community the simulator uses
-POPULATION: dict[Community, int] = {"newcastle": 272407, "cairns": 140402}
-
-# Nested dictionary holding number of individuals in each age bracket
-AGE_POPULATION: dict[Community, dict[AgeWithTotal, int]] = {
-    "newcastle": {
-        "Young Infant (0-6 Months)": 2742,
-        "Infant (7-24 Months)": 6641,
-        "Young Child (3-5 Years)": 10242,
-        "Child (6-12 Years)": 20603,
-        "Adolescent (13-17 Years)": 18513,
-        "Young Adult (18-24 Years)": 27015,
-        "Adult (25-44 Years)": 71299,
-        "Older Adult (45-64 Years)": 69949,
-        "Senior (65-79 Years)": 31384,
-        "Older Senior (80+ Years)": 14019,
-        "Total": 272407,
-    },
-    "cairns": {
-        "Young Infant (0-6 Months)": 1837,
-        "Infant (7-24 Months)": 4277,
-        "Young Child (3-5 Years)": 6381,
-        "Child (6-12 Years)": 12650,
-        "Adolescent (13-17 Years)": 10432,
-        "Young Adult (18-24 Years)": 12074,
-        "Adult (25-44 Years)": 42394,
-        "Older Adult (45-64 Years)": 36541,
-        "Senior (65-79 Years)": 10675,
-        "Older Senior (80+ Years)": 3141,
-        "Total": 140402,
-    },
-}
-
 
 # Colour codes for Paul Tol's "muted" colourblind-safe palette
 MUTED_CODES = [

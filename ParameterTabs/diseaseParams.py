@@ -17,7 +17,7 @@ from ClientResources.InterfaceFunctions import (
     ageSortSeries,
     backgroundColour,
     dayCount,
-    dualError,
+    dual_error,
     param_error,
     plural,
     schemaRemoveBaseline,
@@ -27,6 +27,7 @@ from ClientResources.ModelSchema import (
     Parameters,
     ageScenarioParameters,
     dashboardParameters,
+    patch_parameters,
     scenarioParameters,
     strainParameters,
 )
@@ -39,7 +40,12 @@ from ClientResources.ParameterFunctions import (
     update_param_from_schema,
     update_table_from_schema,
 )
-from ClientResources.Types import AGE_GROUP_KEYS, AGE_KEY_CONVERTER, AgeGroupKey
+from ClientResources.Types import (
+    AGE_GROUP_KEYS,
+    AGE_KEY_CONVERTER,
+    COMMUNITIES,
+    AgeGroupKey,
+)
 
 # Logging
 diseaseLog = logging.getLogger(__name__)
@@ -484,7 +490,7 @@ between a person ceasing to show symptoms of
 the pathogen and being fully recovered/no longer infectious.
                 """,
             )
-            dualError(
+            dual_error(
                 "noInfectiousPeriod",
                 id,
                 lambda: preSymptomPeriod + symptomPeriod + postSymptomPeriod == 0,
@@ -752,6 +758,86 @@ For instance, if you go from seeding ending on Day 60 to Day 30, an update point
 set to affect the value on Day 45 will be changed to affect it on Day 30 instead.
                 """,
             )
+            # Patch-Specific Seeding
+            if advanced:
+                community = COMMUNITIES[session.get("community", "newcastle")]
+                patches = community.patches
+                st.markdown("""
+                    ### Location-Specific Infection Seeding",
+
+                    This table allows for different locations in the simulated
+                    community to be seeded with infections more frequently. The
+                    higher a location's seeding weight is, the more likely it
+                    is that seeded infections will target an individual in that
+                    location.
+                """)
+                st.markdown("Double-click a cell in this table to edit its value.")
+                load_key(
+                    "seeding_patch_form",
+                    id,
+                    pd.DataFrame(
+                        {
+                            "Location": [None],
+                            "Seeding Weight": [1.0],
+                        },
+                    ),
+                    dataframe=True,
+                )
+                # TODO: Reset this when community changes (and warn the user)
+                seeding_patch_form = st.data_editor(
+                    session[f"seeding_patch_form{id}"],
+                    height="content",
+                    num_rows="dynamic",
+                    key=f"_seeding_patch_form{id}",
+                    on_change=save_key,
+                    args=["seeding_patch_form", id],
+                    kwargs={"dataframe": True},
+                    placeholder="Enter a value",
+                    column_config={
+                        "Location": st.column_config.SelectboxColumn(
+                            "Location",
+                            required=True,
+                            options=patches,
+                            help=f"""
+A location within the simulated community (currently {community.name}).
+                            """,
+                        ),
+                        "Seeding Weight": st.column_config.NumberColumn(
+                            "Seeding Weight",
+                            required=True,
+                            default=1.0,
+                            min_value=0.0,
+                            max_value=100.0,
+                            format="localized",
+                            help="""
+The relative likelihood of infections being seeded into individuals in this
+location. Higher values will result in infections being seeded here more often
+(e.g. setting this to 2.0 will make this location be seeded into twice as often
+as other locations) and vice versa. If this is set to 0, no infections will
+ever be seeded into individuals in this location (though they may still
+contract the infection via contact with individuals in other locations)
+                            """,
+                        ),
+                    },
+                )
+                param_error(
+                    "seeding_patch_form_duplicates",
+                    id,
+                    lambda: has_duplicates(seeding_patch_form),
+                    f"""
+                        Error: The location-specific infection seeding form used by the {
+                            'baseline scenario' if id == 0
+                            else f'scenario named "{session[f'scenarioName{id}']}"'
+                        } contains duplicate location rows. Each location
+                        should only be used in a single row of the form.
+                
+                        Please remove or change any rows of the
+                        Location-Specific Infection Seeding form in
+                        :primary-badge[:material/coronavirus: Pathogen]
+                        that use the same age group as another row.
+                    """,
+                    True,
+                )
 
     # Health Burden Outcome Parameters
     with st.expander(
@@ -1352,6 +1438,7 @@ def diseaseDescribe(scenario_id: int = 0, advanced: bool = False):
     )
 
     # Seeding
+    # TODO: Add the patch seeding stuff here
     st.subheader("Infection Seeding")
     seedRate = id_get("seedRate", scenario_id, 0.25)
     if seedRate.is_integer():
@@ -1588,8 +1675,6 @@ def diseaseSaveSchema(
             parameters like GP rate in the generated schema.
     """
     try:
-        # schema = baseSchema.model_copy()
-        # Validate parameters
         if not isinstance(schema, Parameters):
             raise ValueError("schema should be a Parameters object")
 
@@ -1625,6 +1710,30 @@ def diseaseSaveSchema(
                 strainParameters(StrainId=0, Beta=id_get("beta", id, 0.0616))
             ]
 
+        # Patch Parameters
+        if advanced:
+            seeding_patch_form: pd.DataFrame = id_get(
+                "seeding_patch_form",
+                id,
+                pd.DataFrame(
+                    {
+                        "Location": [None],
+                        "Seeding Weight": [1.0],
+                    },
+                ),
+            )
+            schema.Scenario_Patch = [
+                patch_parameters(
+                    Patch=patch,
+                    SeedingWeight=seed,
+                )
+                for patch, seed in zip(
+                    seeding_patch_form["Location"],
+                    seeding_patch_form["Seeding Weight"],
+                )
+                if patch
+            ]
+
         # Scenario Parameters With Age Prefix
         ageScenarioParams = ageScenarioParameters()
         ageScenarioParams.mort = globalDeathRate
@@ -1643,7 +1752,7 @@ def diseaseSaveSchema(
             scenarioParams.kappa_workplace = id_get("workKappa", id, 1.0)
             scenarioParams.kappa_background = id_get("backgroundKappa", id, 1.0)
 
-            for age in AGE_KEY_CONVERTER:
+            for age in AGE_GROUP_KEYS:
                 if age in burdenAgeForm["Age Group"].values:
                     mort = burdenAgeForm.loc[
                         burdenAgeForm["Age Group"] == age, "Mortality Rate"
@@ -1703,7 +1812,7 @@ def diseaseSaveSchema(
             ),
         )
         # TODO: Make sure there's no chance of this getting duplicate rows
-        for age in AGE_KEY_CONVERTER:
+        for age in AGE_GROUP_KEYS:
             if age in transAgeForm["Age Group"].values:
                 ageRow = transAgeForm.loc[transAgeForm["Age Group"] == age]
                 setattr(scenarioParams, f"{age}_trans", ageRow["Infectiousness"].item())
@@ -1716,10 +1825,7 @@ def diseaseSaveSchema(
         # TODO: Find a better way to prevent needing to include every table age
         # (maybe omit all ages if they're empty/unchanged from baseline?)
         ageTableParams = set().union(
-            *[
-                {f"{age}_trans", f"{age}_susc", f"{age}_mort"}
-                for age in AGE_KEY_CONVERTER
-            ]
+            *[{f"{age}_trans", f"{age}_susc", f"{age}_mort"} for age in AGE_GROUP_KEYS]
         )
         if baseline is not None and id > 0:
             schemaRemoveBaseline(
@@ -1736,7 +1842,7 @@ def diseaseSaveSchema(
             dashboardParams = dashboardParameters()
             dashboardParams.prob_gp = round(id_get("gpRatio", id, 17.0) / 100, 6)
             dashboardParams.prob_icu = round(id_get("icuRatio", id, 20.0) / 100, 6)
-            for age in AGE_KEY_CONVERTER:
+            for age in AGE_GROUP_KEYS:
                 if age in burdenAgeForm["Age Group"].values:
                     hosp = burdenAgeForm.loc[
                         burdenAgeForm["Age Group"] == age, "Hospitalisation Rate"
@@ -1749,7 +1855,7 @@ def diseaseSaveSchema(
                 schemaRemoveBaseline(
                     dashboardParams,
                     baseline.Dashboard_Parameter,
-                    ignore={f"{age}_hosp" for age in AGE_KEY_CONVERTER},
+                    ignore={f"{age}_hosp" for age in AGE_GROUP_KEYS},
                 )
             schemaUpdate(schema, "Dashboard_Parameter", dashboardParams)
     except (ValueError, ValidationError) as e:
@@ -1779,21 +1885,9 @@ def diseaseLoadSchema(schema: Parameters, scenario_id: int = 0):
     Raises:
         ValidationError: If some but not all of the parameters needed to
             define natural immunity waning/infection seeding/infection life
-            cycle periods are included in a baseline schema.
+            cycle periods are included in a baseline schema, or if patches are
+            defined for the wrong community.
     """
-    # Strain Parameters
-    schemaStrain = schema.Scenario_Strain
-    if schemaStrain is not None:
-        update_param_from_schema("beta", schemaStrain[0].Beta, scenario_id)
-
-    # Global Age Parameters
-    schemaAge = schema.Scenario_ParameterWithAgePrefix
-    if schemaAge is not None and schemaAge.mort is not None:
-        globalDeathRate = round(schemaAge.mort * 100000, 6)
-        update_param_from_schema("deathRatio", globalDeathRate, scenario_id)
-    else:
-        globalDeathRate = id_get("deathRatio", 0, 12.0)
-
     # Dashboard Parameters
     schemaDash = schema.Dashboard_Parameter
     if schemaDash is not None:
@@ -1810,6 +1904,47 @@ def diseaseLoadSchema(schema: Parameters, scenario_id: int = 0):
         }
     else:
         rawHospParams = {}
+
+    # Patch Parameters
+    valid_patches = set(COMMUNITIES[session.community].patches)
+    schema_patch = schema.Scenario_Patch
+    if schema_patch is not None:
+        patch_table = pd.DataFrame(columns=("Location", "Seeding Weight"))
+        for patch in schema_patch:
+            if patch not in valid_patches:
+                raise AssertionError("""
+                    Seeding weights were defined for locations that are not
+                    in the selected community
+                """)
+            name, weight = patch.Patch, patch.SeedingWeight
+            patch_table.loc[patch_table.shape[0]] = [
+                name,
+                round(weight if weight else 1.0, 6),
+            ]
+        update_table_from_schema(
+            "seeding_patch_form",
+            patch_table,
+            scenario_id,
+            pd.DataFrame(
+                {
+                    "Location": [None],
+                    "Seeding Weight": [1.0],
+                },
+            ),
+        )
+
+    # Strain Parameters
+    schemaStrain = schema.Scenario_Strain
+    if schemaStrain is not None:
+        update_param_from_schema("beta", schemaStrain[0].Beta, scenario_id)
+
+    # Global Age Parameters
+    schemaAge = schema.Scenario_ParameterWithAgePrefix
+    if schemaAge is not None and schemaAge.mort is not None:
+        globalDeathRate = round(schemaAge.mort * 100000, 6)
+        update_param_from_schema("deathRatio", globalDeathRate, scenario_id)
+    else:
+        globalDeathRate = id_get("deathRatio", 0, 12.0)
 
     # General Scenario Parameters
     schemaParameters = schema.Scenario_Parameter
@@ -1995,7 +2130,7 @@ def diseaseLoadSchema(schema: Parameters, scenario_id: int = 0):
         # TODO: Leave table to inherit baseline if ages are unchanged
         transAges = sorted(
             set(transParams.keys()) | set(suscParams.keys()),
-            key=lambda x: list(AGE_KEY_CONVERTER).index(x),
+            key=lambda x: AGE_GROUP_KEYS.index(x),
         )
         for age in transAges:
             transValue = transParams.get(age, 1.0)
@@ -2035,7 +2170,7 @@ def diseaseLoadSchema(schema: Parameters, scenario_id: int = 0):
         }
         burdenAges = sorted(
             set(hospParams.keys()) | set(mortParams.keys()),
-            key=lambda x: list(AGE_KEY_CONVERTER).index(x),
+            key=lambda x: AGE_GROUP_KEYS.index(x),
         )
         for age in burdenAges:
             hospValue = hospParams.get(age, globalHospitalRate)

@@ -73,13 +73,13 @@ def param_error(
         session["activeErrors"][scenario_id].pop(label, None)
 
 
-def dualError(
+def dual_error(
     label: str,
     scenario_id: int,
-    errorCon: Callable[[], bool],
-    warnCon: Callable[[], bool],
-    errorMessage: str,
-    warnMessage: str,
+    error_condition: Callable[[], bool],
+    warn_condition: Callable[[], bool],
+    error_message: str,
+    warn_message: str,
 ):
     """
     Function to display an error message with two different severity levels
@@ -90,23 +90,25 @@ def dualError(
 
         scenario_id (int): The integer representing the scenario this error applies to.
 
-        errorCon (callable, returns bool): The criteria for a red, run-blocking
-            error, formatted as a function that returns `True` when the criteria
-            is met. This condition will override the condition in `warnCon`.
+        error_condition (callable, returns bool): The criteria for a red,
+            run-blocking error, formatted as a function that returns `True`
+            when the criteria is met. This condition will override the
+            condition in `warn_condition`.
 
-        warnCon (callable, returns bool): The criteria for a yellow, minor warning,
-            formatted as a function that returns `True` when the criteria is met.
+        warn_condition (callable, returns bool): The criteria for a yellow,
+            minor warning, formatted as a function that returns `True` when
+            the criteria is met.
 
-        errorMessage (str): The text to display for the red error message.
+        error_message (str): The text to display for the red error message.
 
-        warnMessage (str): The text to display for the yellow error message.
+        warn_message (str): The text to display for the yellow error message.
     """
-    if errorCon():
-        error_format(errorMessage)
-        session["activeErrors"][scenario_id][label] = (errorMessage, True)
-    elif warnCon():
-        warn_format(warnMessage)
-        session["activeErrors"][scenario_id][label] = (warnMessage, False)
+    if error_condition():
+        error_format(error_message)
+        session["activeErrors"][scenario_id][label] = (error_message, True)
+    elif warn_condition():
+        warn_format(warn_message)
+        session["activeErrors"][scenario_id][label] = (warn_message, False)
     else:
         session["activeErrors"][scenario_id].pop(label, None)
 
@@ -337,7 +339,7 @@ def healthOutcomeStore(
 def saveName(
     key: str,
     scenario_id: int,
-    errorContainer,
+    error_container,
     containers: set[str] = set(),
     special_containers: dict[str, str] = {},
 ):
@@ -350,7 +352,7 @@ def saveName(
         scenario_id (int): The integer representing the scenario the widget
             is naming.
 
-        errorContainer: The container in which to display the error message.
+        error_container: The container in which to display the error message.
 
         containers (set of str): String used to identify each container to open.
 
@@ -368,14 +370,14 @@ def saveName(
         if i != scenario_id
     }
     if newName == "":
-        errorContainer.error(
+        error_container.error(
             """
             Please enter a name.
             """,
             icon=":material/remove_selection:",
         )
     elif newName in currentNames:
-        errorContainer.error(
+        error_container.error(
             """
             The selected name is already the name of a different scenario.
             Please enter a different name.

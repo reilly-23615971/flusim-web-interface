@@ -6,7 +6,9 @@
 from collections import deque
 from dataclasses import dataclass
 from queue import Queue
-from typing import Literal, Optional, Sequence, Union, get_args
+from typing import Literal, Optional, Sequence, get_args
+
+# Literal string classes
 
 # Age groups used by the simulator and displayed on the dashboard
 # Names used on the dashboard itself
@@ -24,7 +26,7 @@ type AgeGroup = Literal[
 ]
 AGE_GROUPS = get_args(AgeGroup)
 # Names plus total, for results tables
-type AgeWithTotal = Union[AgeGroup, Literal["Total"]]
+type AgeWithTotal = AgeGroup | Literal["Total"]
 AGE_WITH_TOTAL = AGE_GROUPS + tuple("Total")
 # Keys (snake case used in JSON schema)
 type AgeGroupKey = Literal[
@@ -50,7 +52,8 @@ AGE_KEY_CONVERTER: dict[AgeGroupKey, AgeGroup] = {
 type BoosterType = Literal["primary", "booster"]
 
 # Communities that can be modelled
-type Community = Literal["albany", "cairns", "newcastle"]
+type CommunityName = Literal["albany", "cairns", "newcastle"]
+COMMUNITY_NAMES = get_args(CommunityName)
 
 # Health burden outcomes that can be calculated by the dashboard
 type HealthOutcome = Literal[
@@ -62,6 +65,58 @@ type HealthOutcome = Literal[
     "Deaths",
 ]
 HEALTH_OUTCOMES = get_args(HealthOutcome)
+
+# Locations in the simulation
+type NewcastlePatch = Literal[
+    "Glendale - Cardiff - Hillsborough",
+    "Maryland - Fletcher - Minmi",
+    "Newcastle - Cooks Hill",
+    "Newcastle Port - Kooragang",
+    "Belmont - Bennetts Green",
+    "Belmont South - Blacksmiths",
+    "Shortland - Jesmond",
+    "Redhead",
+    "Wickham - Carrington - Tighes Hill",
+    "Valentine - Eleebana",
+    "Beresfield - Hexham",
+    "Swansea - Caves Beach",
+    "Hamilton - Broadmeadow",
+    "Charlestown - Dudley",
+    "Warners Bay - Boolaroo",
+    "Merewether - The Junction",
+    "Adamstown - Kotara",
+    "Wallsend - Elermore Vale",
+    "Stockton - Fullerton Cove",
+    "Lambton - New Lambton",
+    "Mayfield - Warabrook",
+    "Mount Hutton - Windale",
+    "Waratah - North Lambton",
+]
+type CairnsPatch = Literal[
+    "Westcourt - Bungalow",
+    "Cairns City",
+    "Redlynch",
+    "White Rock",
+    "Trinity Beach - Smithfield",
+    "Earlville - Bayview Heights",
+    "Clifton Beach - Kewarra Beach",
+    "Freshwater - Stratford",
+    "Woree",
+    "Mount Sheridan",
+    "Bentley Park",
+    "Gordonvale - Trinity",
+    "Whitfield - Edge Hill",
+    "Brinsmead",
+    "Lamb Range",
+    "Kanimbla - Mooroobool",
+    "Manunda",
+    "Edmonton",
+    "Manoora",
+    "Yorkeys Knob - Machans Beach",
+]
+NEWCASTLE_PATCHES = get_args(NewcastlePatch)
+CAIRNS_PATCHES = get_args(CairnsPatch)
+type CommunityPatch = NewcastlePatch | CairnsPatch
 
 # Conditions that control the enabling and disabling of interventions
 type TriggerCondition = Literal[
@@ -95,6 +150,7 @@ type ColumnDetails = tuple[
 ]
 
 
+# Dataclasses
 @dataclass
 class AnalysisFile:
     """
@@ -126,6 +182,61 @@ class AnalysisFile:
 
 
 @dataclass
+class CommunityData:
+    """
+    Class for storing a given community's relevant data
+    """
+
+    name: str
+    population: int
+    age_pops: dict[AgeWithTotal, int]
+    patches: Sequence[CommunityPatch]
+
+
+# Data for communities that can be modelled by the simulation
+NEWCASTLE = CommunityData(
+    name="Newcastle",
+    population=272407,
+    age_pops={
+        "Young Infant (0-6 Months)": 2742,
+        "Infant (7-24 Months)": 6641,
+        "Young Child (3-5 Years)": 10242,
+        "Child (6-12 Years)": 20603,
+        "Adolescent (13-17 Years)": 18513,
+        "Young Adult (18-24 Years)": 27015,
+        "Adult (25-44 Years)": 71299,
+        "Older Adult (45-64 Years)": 69949,
+        "Senior (65-79 Years)": 31384,
+        "Older Senior (80+ Years)": 14019,
+        "Total": 272407,
+    },
+    patches=NEWCASTLE_PATCHES,
+)
+CAIRNS = CommunityData(
+    name="Cairns",
+    population=140402,
+    age_pops={
+        "Young Infant (0-6 Months)": 1837,
+        "Infant (7-24 Months)": 4277,
+        "Young Child (3-5 Years)": 6381,
+        "Child (6-12 Years)": 12650,
+        "Adolescent (13-17 Years)": 10432,
+        "Young Adult (18-24 Years)": 12074,
+        "Adult (25-44 Years)": 42394,
+        "Older Adult (45-64 Years)": 36541,
+        "Senior (65-79 Years)": 10675,
+        "Older Senior (80+ Years)": 3141,
+        "Total": 140402,
+    },
+    patches=CAIRNS_PATCHES,
+)
+COMMUNITIES: dict[CommunityName, CommunityData] = {
+    "newcastle": NEWCASTLE,
+    "cairns": CAIRNS,
+}
+
+
+@dataclass
 class SimParams:
     """
     Class for storing parameter details relevant for simulation run handling
@@ -133,7 +244,7 @@ class SimParams:
 
     scenario_names: list[str]
     analysis_formats: list[AnalysisFile]
-    community: Community
+    community: CommunityName
     scaling_factor: float = 1.0
     symptomatic_rates: list[list[float]] = []
     health_outcome_rates: dict[str, dict] = {}
@@ -152,7 +263,6 @@ type RequestErrorData = tuple[
 ]
 
 
-# Queues used to store data from server requests
 @dataclass
 class RequestStatus:
     """

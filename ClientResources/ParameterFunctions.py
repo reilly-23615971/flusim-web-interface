@@ -183,6 +183,48 @@ def load_key(
             session["scenario_set_params"][scenario_id].add(key)
 
 
+def community_change():
+    """
+    Function to reset the valid values of location-based parameters.
+    """
+    current_community = session.get("community", "newcastle")
+    new_community = session.get("_community", "newcastle")
+    current_patches = session.get(
+        "seeding_patch_form", pd.DataFrame(columns=["Location"])
+    )
+    save_key("community")
+    # Reset location seeding weight when the location changes
+    if current_community != new_community:
+        reset_scenarios = []
+        for i in range(session.get("scenario_count", 0) + 1):
+            current_patches = session.get(
+                f"seeding_patch_form{i}", pd.DataFrame(columns=["Location"])
+            )
+            if current_patches["Location"].notna().any():
+                session[f"seeding_patch_form{i}"] = pd.DataFrame(
+                    {
+                        "Location": [None],
+                        "Seeding Weight": [1.0],
+                    },
+                )
+                reset_scenarios.append(i)
+        if reset_scenarios:
+            # TODO: Include a link to the seeding parameters if possible
+            reset_scenario_list = "\n".join(
+                f"- {session[f"scenarioName{i}"] if i else "Baseline"}"
+                for i in reset_scenarios
+            )
+            st.toast(
+                f"""
+                Location-specific seeding weights in the following scenarios
+                have been reset due to the new simulated community not
+                including the previously configured locations:\n"""
+                + reset_scenario_list,
+                icon=":material/wrong_location:",
+                duration="infinite",
+            )
+
+
 def time_scale_change():
     """
     Function to update the ranges of time-based parameters.

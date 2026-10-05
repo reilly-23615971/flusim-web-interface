@@ -17,41 +17,26 @@ from pydantic import (
     model_validator,
 )
 
-from ClientResources.Types import AgeGroupKey, BoosterType, Community, TriggerCondition
+from ClientResources.Types import (
+    COMMUNITIES,
+    AgeGroupKey,
+    BoosterType,
+    CommunityName,
+    CommunityPatch,
+    TriggerCondition,
+)
 
 # Logging
 validationLog = logging.getLogger(__name__)
 
 # Annotated Type Definitions
+type VaccinePriority = Literal["elderly", "healthcare", "essential_workers", "other"]
 type Kappa = Annotated[float, Ge(0)]
 # The following 3 types are structurally identical, but are
 # distinguished for readability and documentation purposes
 type Proportion = Annotated[float, Ge(0), Le(1)]
 type Probability = Annotated[float, Ge(0), Le(1)]
 type EfficacyValue = Annotated[float, Ge(0), Le(1)]
-
-# Vaccination priority is defined in advance for type checking purposes
-type VaccinePriority = Literal["elderly", "healthcare", "essential_workers", "other"]
-
-# Validation constants
-parameterCategories = {
-    "Scenario_CrossImmunity": ["FromStrainId", "ToStrainId"],
-    "Scenario_SeededNaturalImmunity": ["StrainId", "Age"],
-    "Scenario_Strain": ["StrainId"],
-    "Scenario_VaccineCoverage": ["Age"],
-    "Scenario_VaccineDose": ["DoseType"],
-    "Scenario_VaccineDoseEfficacy": ["DoseType", "Age"],
-    # "Scenario_VaccineDoseEfficacy": ["DoseType", "StrainId", "Age"],
-}
-parameterGetters = {
-    "Scenario_CrossImmunity": attrgetter("FromStrainId", "ToStrainId"),
-    "Scenario_SeededNaturalImmunity": attrgetter("StrainId", "Age"),
-    "Scenario_Strain": attrgetter("StrainId"),
-    "Scenario_VaccineCoverage": attrgetter("Age"),
-    "Scenario_VaccineDose": attrgetter("DoseType"),
-    "Scenario_VaccineDoseEfficacy": attrgetter("DoseType", "Age"),
-    # "Scenario_VaccineDoseEfficacy": attrgetter("DoseType", "StrainId", "Age"),
-}
 
 
 # Parameter Models
@@ -915,13 +900,12 @@ The number of vaccine doses available at the beginning of the simulation.
 The daily rate at which individuals receive their first dose of the vaccine.
         """,
     )
-    # TODO: Remove unused labelling
     vaccination_trigger: Optional[TriggerCondition] = Field(
         title="Vaccination Trigger",
         default="none",
         description="""
 The trigger condition that will enable vaccination in the simulation when
-fulfilled. Unused.
+fulfilled.
         """,
     )
     vaccination_relaxation: Optional[TriggerCondition] = Field(
@@ -929,7 +913,7 @@ fulfilled. Unused.
         default="none",
         description="""
 The trigger condition that will disable vaccination in the simulation when
-fulfilled. Unused.
+fulfilled.
         """,
     )
     vaccination_delay: Optional[int] = Field(
@@ -938,7 +922,7 @@ fulfilled. Unused.
         ge=0,
         description="""
 The number of cycles before a vaccination intervention comes into effect, when
-`vaccination_trigger` is set to "timed". Unused.
+`vaccination_trigger` is set to "timed".
         """,
     )
     vaccination_duration: Optional[int] = Field(
@@ -947,7 +931,7 @@ The number of cycles before a vaccination intervention comes into effect, when
         ge=0,
         description="""
 The number of cycles before a vaccination intervention is automatically
-relaxed, when `vaccination_relaxation` is set to "timed". Unused.
+relaxed, when `vaccination_relaxation` is set to "timed".
         """,
     )
 
@@ -1369,6 +1353,8 @@ recover from the additional strain.
         """,
     )
 
+    _primary_key: list[str] = ["FromStrainId", "ToStrainId"]
+
 
 # Simulation parameters whose value will change at specific times
 class dynamicIntervention(BaseModel):
@@ -1390,6 +1376,24 @@ class dynamicIntervention(BaseModel):
     NewValue: float = Field(
         title="New Value", description="The new value of the parameter."
     )
+
+
+# Parameters for different locations in the simulated community
+class patch_parameters(BaseModel):
+    Patch: CommunityPatch = Field(
+        title="Patch",
+        description="The name used to refer to this simulation location.",
+    )
+    SeedingWeight: Optional[float] = Field(
+        title="Seeding Weight",
+        default=1,
+        description="""
+The frequency at which infections will be seeded into individuals who reside
+in this patch, proportional to other strains in the simulation.
+        """,
+    )
+
+    _primary_key: list[str] = ["Patch"]
 
 
 # Seeding of naturally immune individuals into the population
@@ -1434,23 +1438,7 @@ simulation will stop seeding additional natural immunity into the population.
         """,
     )
 
-
-# Parameters for different locations in the simulated community
-class patchParameters(BaseModel):
-    # TODO: Add dedicated Patch literal type
-    Patch: str = Field(
-        title="Patch",
-        description="The name used to refer to this simulation location.",
-    )
-    SeedingWeight: Optional[float] = Field(
-        title="Seeding Weight",
-        default=1,
-        description="""
-The frequency at which infections will be seeded into individuals who reside
-in this patch, proportional to other strains in the simulation.
-        """,
-    )
-    # TODO: Validate to prevent location mismatches
+    _primary_key: list[str] = ["StrainId", "Age"]
 
 
 # Parameters for different strains to simulate in the same population
@@ -1471,6 +1459,8 @@ The frequency at which this strain will be seeded into the population,
 proportional to other strains in the simulation.
         """,
     )
+
+    _primary_key: list[str] = ["StrainId"]
 
 
 # Parameters for vaccine coverage across different age groups
@@ -1499,6 +1489,8 @@ enough doses are available, this is the proportion of the population that will
 end up being vaccinated.
         """,
     )
+
+    _primary_key: list[str] = ["Age"]
 
 
 # Parameters for different vaccine dose types
@@ -1538,6 +1530,8 @@ The proportion of vaccinated individuals who will lose their immunity to the
 pathogen each cycle, once immunity waning has begun.
         """,
     )
+
+    _primary_key: list[str] = ["DoseType"]
 
 
 # Parameters controlling efficacy of different vaccine doses
@@ -1580,6 +1574,8 @@ The total population effectiveness after all primary doses / each booster dose
 has waned.
         """,
     )
+
+    _primary_key: list[str] = ["DoseType", "Age"]
 
     @model_validator(mode="after")
     def efficacyValidation(self) -> Self:
@@ -1658,6 +1654,13 @@ can gain immunity to other infection strains.
 Parameters whose values will change at specific points in the simulation.
         """,
     )
+    Scenario_Patch: Optional[list[patch_parameters]] = Field(
+        title="Patch Parameters",
+        default=None,
+        description="""
+Parameters controlling different locations within the modelled community.
+        """,
+    )
     Scenario_SeededNaturalImmunity: Optional[list[seededImmunity]] = Field(
         title="Seeded Natural Immunity Parameters",
         default=None,
@@ -1710,6 +1713,7 @@ receives, and how often they are administered.
     @field_validator(
         "Scenario_CrossImmunity",
         "Scenario_DynamicIntervention",
+        "Scenario_Patch",
         "Scenario_SeededNaturalImmunity",
         "Scenario_Strain",
         "Scenario_VaccineCoverage",
@@ -1728,8 +1732,12 @@ receives, and how often they are administered.
         else:
             return value
 
+    # Parameter sets that require unique values
+    type UniqueListParams = crossImmunity | patch_parameters | seededImmunity | strainParameters | vaccineCoverage | vaccineDose | vaccineEfficacy
+
     @field_validator(
         "Scenario_CrossImmunity",
+        "Scenario_Patch",
         "Scenario_SeededNaturalImmunity",
         "Scenario_Strain",
         "Scenario_VaccineCoverage",
@@ -1739,8 +1747,8 @@ receives, and how often they are administered.
     )
     @classmethod
     def noDuplicateCategories(
-        cls, value: Optional[list[Any]], info: ValidationInfo
-    ) -> Optional[list[Any]]:
+        cls, params: Optional[list[UniqueListParams]], info: ValidationInfo
+    ) -> Optional[list[UniqueListParams]]:
         """
         Validation function to detect duplicate parameter classes that cover
         the same element in the simulation (e.g. two `Scenario_Strain` objects
@@ -1750,11 +1758,15 @@ receives, and how often they are administered.
             AssertionError: If there are duplicate parameter classes.
         """
         try:
-            if value is None or info.field_name is None:
-                return value
+            if not params or info.field_name is None:
+                return params
             # Identify duplicates in relevant category properties
-            relevantCategories = parameterGetters[info.field_name]
-            configuredValues = [relevantCategories(item) for item in value]
+            primary_key = params[0]._primary_key
+            configuredValues = [
+                value
+                for key in [list(attrgetter(*primary_key)(item)) for item in params]
+                for value in key
+            ]
             duplicateValues = [
                 item
                 for item in set(configuredValues)
@@ -1778,12 +1790,12 @@ receives, and how often they are administered.
                     ]
                 raise AssertionError(f"""
 The Flusim configuration file defined multiple {info.field_name} objects with
-the same values for the {' and '.join(parameterCategories[info.field_name])}
+the same values for the {' and '.join(primary_key)}
 attribute(s), making it ambiguous which values apply to the following
 categories: {', '.join(clearValues)}. Ensure each {info.field_name} object has
 unique values for these attributes.
                 """)
-            return value
+            return params
         except AssertionError as e:
             validationLog.error(
                 f"[vaccineEfficacy] Encountered {type(e).__name__}: {e}"
@@ -1838,13 +1850,28 @@ is "primary".
 
 # Model for parameters to modify in simulations on a specific community
 class communityOverride(BaseModel):
-    name: Community = Field(
+    name: CommunityName = Field(
         title="Name",
         description="The name of the community these parameters apply to.",
     )
     parameters: Parameters = Field(
         title="Parameters", description="Parameters to modify for this community."
     )
+
+    @model_validator(mode="after")
+    def community_override_patches(self) -> Self:
+        """
+        Validation function to ensure patches in `Scenario_Patch` are
+        part of the community this is an override for.
+
+        Raises:
+            ValueError: If `Scenario_Patch` includes locations not in this
+                community.
+        """
+
+        valid_patches = set(COMMUNITIES[self.name].patches)
+        check_patches(self, valid_patches)
+        return self
 
 
 # Model for templates used by simulation sets to modify parameters
@@ -1870,6 +1897,33 @@ class overrideParams(BaseModel):
     parameters: Parameters = Field(
         title="Parameters", description="The parameters to apply."
     )
+
+
+def check_patches(
+    params: communityOverride | overrideTemplate | overrideParams,
+    valid: set[CommunityPatch],
+):
+    """
+    Helper function to check if patches are part of the specified communities.
+
+    Parameters:
+        params (object): An object with the `parameters` attribute, whose
+            patch-specific parameters will be examined.
+
+        valid (set of str): The patches that are part of the desired communities.
+
+    Raises:
+        ValueError: If patches that aren't in `valid` are present in `params`.
+    """
+    if params.parameters.Scenario_Patch:
+        for patch in params.parameters.Scenario_Patch:
+            if patch.Patch not in valid:
+                raise ValueError("""
+The Flusim configuration file defines patches in `Scenario_Patch` not present
+in the communities specified in `community_used` and `community_overrides`.
+Ensure that `Scenario_Patch` only defines locations that are present in
+`community_used` and/or the `name` property of `community_overrides`.
+                """)
 
 
 # Model for individual simulations and their parameters
@@ -1969,7 +2023,7 @@ A descriptive string that will be inserted into the names of the files
 generated by the simulations, between the community name and the version number.
         """,
     )
-    community_used: Annotated[list[Community], Len(min_length=1)] = Field(
+    community_used: Annotated[list[CommunityName], Len(min_length=1)] = Field(
         title="Communities Used",
         default=["newcastle"],
         description="""
@@ -2026,6 +2080,14 @@ different scenarios.
                 `community_used`.
         """
         validCommunities = self.community_used
+        valid_patches: set[CommunityPatch] = {
+            patch
+            for patches in [
+                COMMUNITIES[community].patches for community in validCommunities
+            ]
+            for patch in patches
+        }
+        # Check community overrides
         if self.community_overrides:
             for override in self.community_overrides:
                 if override.name not in validCommunities:
@@ -2034,6 +2096,17 @@ different scenarios.
 Ensure the `name` property of each override in `community_overrides` matches a
 community in `community_used`.
                     """)
+        # Check other parameters
+        if self.shared_overrides:
+            check_patches(self.shared_overrides, valid_patches)
+        if self.override_templates:
+            for template in self.override_templates:
+                check_patches(template, valid_patches)
+        for sim_set in self.simulation_sets:
+            for sim in sim_set.simulations:
+                if sim.override_setting:
+                    check_patches(sim.override_setting, valid_patches)
+
         return self
 
     """
@@ -2055,9 +2128,9 @@ community in `community_used`.
         """
         if value is None:
             return None
-        # TODO: Test scenario params (besides start day of week) to see which are
-        # totally unused and which can be added to the dashboard
-        # also vaccination_trigger and friends,
+        # TODO: Test scenario params (besides start day of week) to see which
+        # are totally unused and which can be added to the dashboard.
+        # Also test vaccination_trigger and friends,
         # plus age_social_distance that isn't Adult
         excludedParams = {
             "parameters": {

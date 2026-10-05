@@ -16,13 +16,10 @@ import streamlit as st
 from streamlit.elements.lib.column_types import ColumnConfig
 
 from ClientResources.InterfaceFunctions import ageRangeCombiner
-from ClientResources.Constants import (
-    AGE_POPULATION,
-    ROUND_RESULTS,
-    MUTED_CODES,
-)
+from ClientResources.Constants import ROUND_RESULTS, MUTED_CODES
 from ClientResources.Types import (
     AGE_GROUPS,
+    COMMUNITIES,
     HEALTH_OUTCOMES,
     AgeWithTotal,
     AnalysisFile,
@@ -573,7 +570,7 @@ def generateAsir(
 
     # Useful constants
     fullData = baseData.copy()
-    agePops = AGE_POPULATION[session.sim_params.community]
+    agePops = COMMUNITIES[session.sim_params.community].age_pops
     scenario_count = len(scenarioNames)
     ageIndices = {
         age: range(index * scenario_count, (index * scenario_count) + scenario_count)

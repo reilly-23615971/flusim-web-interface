@@ -31,12 +31,9 @@ from ClientResources.ParameterFunctions import (
     update_param_from_schema,
     update_table_from_schema,
 )
-from ClientResources.Constants import (
-    POPULATION,
-)
 from ClientResources.Types import (
     AGE_GROUP_KEYS,
-    AGE_KEY_CONVERTER,
+    COMMUNITIES,
     TRIGGER_KEY_CONVERTER,
 )
 
@@ -1211,7 +1208,9 @@ Total") or in each individual school (for
 
                     # Show error if relax threshold is above trigger
                     # TODO: See if this can be replaced with a max value too
-                    population = POPULATION[session.get("community", "newcastle")]
+                    population = COMMUNITIES[
+                        session.get("community", "newcastle")
+                    ].population
                     param_error(
                         "triggerAbovePopulation",
                         id,
@@ -1313,7 +1312,7 @@ def npiSaveSchema(
                 distanceAgeForm["Social Distancing Compliance"] = (
                     distanceAgeForm["Social Distancing Compliance"].div(100.0).round(6)
                 )
-                for age in AGE_KEY_CONVERTER:
+                for age in AGE_GROUP_KEYS:
                     if age in distanceAgeForm["Age Group"].values:
                         compliance = distanceAgeForm.loc[
                             distanceAgeForm["Age Group"] == age,
@@ -1449,8 +1448,8 @@ def npiSaveSchema(
         # Other NPIs
         scenarioParams.diagnosed_case_isolation = id_get("caseIsolation", id, False)
 
-        # Save the updated parameters, removing redundant baseline values
-        distanceTableParams = {f"{age}_social_distance" for age in AGE_KEY_CONVERTER}
+        # Save the updated parameters, removing default baseline values
+        distanceTableParams = {f"{age}_social_distance" for age in AGE_GROUP_KEYS}
         if id > 0 and baseline is not None:
             schemaRemoveBaseline(
                 scenarioParams, baseline.Scenario_Parameter, ignore=distanceTableParams

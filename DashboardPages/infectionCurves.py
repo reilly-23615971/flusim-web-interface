@@ -9,13 +9,13 @@ from typing import Optional
 
 import streamlit as st
 
-from ClientResources.ParameterFunctions import load_key, save_key
 from ClientResources.Constants import (
-    PRESET_DATA_PATHS,
     PRESET_COMMUNITY,
+    PRESET_DATA_PATHS,
     PRESET_SCENARIO_NAMES,
     USE_PRESET_DATA,
 )
+from ClientResources.ParameterFunctions import load_key, save_key
 from ClientResources.Types import SimParams
 from ClientResources.VisualisationFunctions import formatEpidemic, plotEpidemic
 

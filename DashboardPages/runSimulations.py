@@ -7,10 +7,16 @@ import json
 import logging
 from datetime import datetime
 from threading import Event
-from typing import Any
 
 import streamlit as st
 
+from ClientResources.Constants import (
+    LOG_PARAM_JSON,
+    PRESET_JSON_PATH,
+    PROGRESS_SPLIT_POINT,
+    USE_PRESET_DATA,
+    USE_PRESET_PARAMS,
+)
 from ClientResources.DownloadFunctions import (
     create_config,
     load_config,
@@ -28,15 +34,13 @@ from ClientResources.ParameterFunctions import (
     time_scale_change,
 )
 from ClientResources.ServerFunctions import taskWrapper
-from ClientResources.Constants import (
-    POPULATION,
-    PRESET_JSON_PATH,
-    LOG_PARAM_JSON,
-    PROGRESS_SPLIT_POINT,
-    USE_PRESET_DATA,
-    USE_PRESET_PARAMS,
+from ClientResources.Types import (
+    COMMUNITIES,
+    COMMUNITY_NAMES,
+    SIM_STATUS,
+    AnalysisFile,
+    SimParams,
 )
-from ClientResources.Types import SIM_STATUS, AnalysisFile, SimParams
 
 # Logging
 runSimLog = logging.getLogger(__name__)
@@ -291,6 +295,7 @@ already busy with a different task.
                 session[f"scenarioName{i}"] for i in range(1, scenario_count)
             ]
             community = session.get("community", "newcastle")
+            population = COMMUNITIES[community].population
             schema = json.loads(parameterJSON)
             useAdvanced = session.get("showAdvanced", False)
             useVaccines = "+vaccine" in schema.get("middle_joint")
@@ -316,10 +321,7 @@ already busy with a different task.
                     AnalysisFile(tool="asir", names=scenarioNames),
                 ]
 
-            scalingFactor = (
-                session.get("scalingPopulation", POPULATION[community])
-                / POPULATION[community]
-            )
+            scalingFactor = session.get("scalingPopulation", population) / population
             asymptomaticRates = (
                 [
                     [
@@ -487,7 +489,7 @@ st.markdown("""
 load_key("community", default="newcastle")
 community = st.selectbox(
     "Simulated Community",
-    POPULATION.keys(),
+    COMMUNITY_NAMES,
     key="_community",
     format_func=lambda x: x.capitalize(),
     on_change=save_key,
@@ -589,11 +591,12 @@ if showAdvanced:
     st.markdown("""
         - The scaling population will be used to adjust simulation results for populations larger than the simulated population. For instance, if you simulate Newcastle (whose population is 272,407) and set the scaling population to 544,814, all health burdens will be doubled to make them proportional to the new value.
     """)
-    load_key("scalingPopulation", default=POPULATION[community])
+    default_population = COMMUNITIES[community if community else "newcastle"].population
+    load_key("scalingPopulation", default=default_population)
     st.number_input(
         "Scaling Population",
         min_value=1,
-        value=POPULATION[community],
+        value=default_population,
         key=f"_scalingPopulation",
         on_change=save_key,
         args=["scalingPopulation"],

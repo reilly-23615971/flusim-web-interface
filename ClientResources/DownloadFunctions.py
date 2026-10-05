@@ -13,7 +13,6 @@ from typing import Optional
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.Constants import POPULATION
 from ClientResources.InterfaceFunctions import unique_name, validationErrorFormatting
 from ClientResources.ModelSchema import (
     Parameters,
@@ -27,6 +26,7 @@ from ClientResources.ModelSchema import (
     simulationSet,
 )
 from ClientResources.ParameterFunctions import id_get, update_param_from_schema
+from ClientResources.Types import COMMUNITIES, COMMUNITY_NAMES
 from ParameterTabs.communityParams import (
     buildCommunityTab,
     communityLoadSchema,
@@ -222,7 +222,7 @@ def create_config(
         dashboardParams = dashboardParameters(show_advanced_parameters=useAdvanced)
         if useAdvanced:
             dashboardParams.scaling_population = session.get(
-                "scalingPopulation", POPULATION[community]
+                "scalingPopulation", COMMUNITIES[community].population
             )
         engineParams.Dashboard_Parameter = dashboardParams
     if useAdvanced:
@@ -313,7 +313,7 @@ def load_config(file: BytesIO | str, loud: bool = True) -> bool:
                 supports simulating a single community at a time; please
                 remove any excess communities from the JSON file.
             """)
-        if schema.community_used[0] not in POPULATION:
+        if schema.community_used[0] not in COMMUNITY_NAMES:
             raise AssertionError(f"""
                 The selected parameter schema uses the community
                 "{schema.community_used[0]}". The dashboard currently only
@@ -338,7 +338,7 @@ def load_config(file: BytesIO | str, loud: bool = True) -> bool:
                 session.scalingPopulation = (
                     dashboardSettings.scaling_population
                     if dashboardSettings.scaling_population is not None
-                    else POPULATION[engineSettings.name]
+                    else COMMUNITIES[engineSettings.name].population
                 )
 
             engineParams = engineSettings.parameters.Scenario_Parameter

@@ -15,8 +15,12 @@ from ClientResources.InterfaceFunctions import errorChecker
 from ClientResources.ModelSchema import Parameters, communityOverride, overrideTemplate
 from ClientResources.ParameterFunctions import load_key, save_key
 from ClientResources.ServerFunctions import taskWrapper
-from ClientResources.Constants import POPULATION, USE_PRESET_PARAMS
-from ClientResources.Types import R0_CALCULATION_STATUS, R0_CALIBRATION_STATUS
+from ClientResources.Constants import USE_PRESET_PARAMS
+from ClientResources.Types import (
+    COMMUNITY_NAMES,
+    R0_CALCULATION_STATUS,
+    R0_CALIBRATION_STATUS,
+)
 
 # Logging
 r0Log = logging.getLogger(__name__)
@@ -398,7 +402,7 @@ st.markdown("""
 load_key("community", default="newcastle")
 community = st.selectbox(
     "Simulated Community",
-    POPULATION.keys(),
+    COMMUNITY_NAMES,
     key="_community",
     format_func=lambda x: x.capitalize(),
     on_change=save_key,
