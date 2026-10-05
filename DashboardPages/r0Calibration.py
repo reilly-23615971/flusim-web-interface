@@ -13,20 +13,10 @@ import streamlit as st
 from ClientResources.DownloadFunctions import createTemplate
 from ClientResources.InterfaceFunctions import errorChecker
 from ClientResources.ModelSchema import Parameters, communityOverride, overrideTemplate
-from ClientResources.ParameterFunctions import loadKey, saveKey
+from ClientResources.ParameterFunctions import load_key, save_key
 from ClientResources.ServerFunctions import taskWrapper
-from ClientResources.SharedResources import (
-    calcCurrentProgress,
-    calcErrorQueue,
-    calcResultQueue,
-    calcStatusQueue,
-    calibCurrentProgress,
-    calibErrorQueue,
-    calibResultQueue,
-    calibStatusQueue,
-    communityPopulation,
-    usePresetParams,
-)
+from ClientResources.Constants import POPULATION, USE_PRESET_PARAMS
+from ClientResources.Types import R0_CALCULATION_STATUS, R0_CALIBRATION_STATUS
 
 # Logging
 r0Log = logging.getLogger(__name__)
@@ -49,15 +39,17 @@ def calibrateR0Button() -> None:
     calibPending = bool(session.get("confirmCalibrateButton"))
 
     # Get scenario to calculate
-    scenarioID = session.get("rCalibrateScenario", 0)
+    scenario_id = session.get("rCalibrateScenario", 0)
     scenarioName = (
-        "Baseline Scenario" if scenarioID == 0 else session[f"scenarioName{scenarioID}"]
+        "Baseline Scenario"
+        if scenario_id == 0
+        else session[f"scenarioName{scenario_id}"]
     )
     targetR0 = session.get("targetR", 1.5)
 
     # Display any errors
     # TODO: Hide scenario errors that are copies of baseline errors
-    severeErrorsFound = errorChecker(scenarioID, f"Errors in {scenarioName}")
+    severeErrorsFound = errorChecker(scenario_id, f"Errors in {scenarioName}")
     if severeErrorsFound:
         st.error(
             """
@@ -72,7 +64,7 @@ def calibrateR0Button() -> None:
         st.markdown(f"""
             Are you sure you want to calibrate the basic reproduction
             number to a value of {targetR0} for
-            {"the baseline scenario" if scenarioID == 0 else scenarioName}?
+            {"the baseline scenario" if scenario_id == 0 else scenarioName}?
         """)
         # TODO: Should precision be a parameter on the dashboard?
         st.info(
@@ -104,20 +96,20 @@ by ±0.02.
             community = session.get("community", "newcastle")
 
             # Load JSON
-            if usePresetParams:
+            if USE_PRESET_PARAMS:
                 filename = f"default{"NoNPI" if useInterventions else ""}.json"
                 with open(f"ClientResources/Templates/{filename}", "r") as f:
                     params = Parameters.model_validate_json(f.read())
             else:
                 params = createTemplate(
-                    scenarioID, includeInterventions=False, includeDashboard=False
+                    scenario_id, includeInterventions=False, includeDashboard=False
                 )
             schema = overrideTemplate(
                 name=community, description=str(targetR0), parameters=params
             ).model_dump_json(indent=4, exclude_unset=True)
             # TODO: Just save ID instead of name?
             session.calibScenarioName = scenarioName
-            session.calibSavedScenarioID = scenarioID
+            session.calib_saved_id = scenario_id
 
             # Prepare model call parameters
             statusParams = {
@@ -133,16 +125,13 @@ by ±0.02.
                         "Server shut down before calibration could finish",
                     ),
                 },
-                "progress": calibCurrentProgress,
-                "status": calibStatusQueue,
-                "results": calibResultQueue,
-                "error": calibErrorQueue,
+                "request_queue": R0_CALIBRATION_STATUS,
             }
 
             # Clear the status queue
-            calibCurrentProgress.append(0.0)
-            calibStatusQueue.clear()
-            calibStatusQueue.append("Connecting to server...")
+            R0_CALIBRATION_STATUS.progress.append(0.0)
+            R0_CALIBRATION_STATUS.tasks.clear()
+            R0_CALIBRATION_STATUS.tasks.append("Connecting to server...")
             session["calibrationError"] = None
 
             # Make the model call
@@ -199,7 +188,7 @@ def stopCalibrationButton():
             "stop_circle",
             None,
         )
-        calibCurrentProgress.append(-1.0)
+        R0_CALIBRATION_STATUS.progress.append(-1.0)
 
         # Stop the runModel thread
         calibCancelFlag.set()
@@ -224,14 +213,16 @@ def calculateR0Button() -> None:
     calcPending = bool(session.get("confirmCalculateButton"))
 
     # Get scenario to calculate
-    scenarioID = session.get("rCalculateScenario", 0)
+    scenario_id = session.get("rCalculateScenario", 0)
     scenarioName = (
-        "Baseline Scenario" if scenarioID == 0 else session[f"scenarioName{scenarioID}"]
+        "Baseline Scenario"
+        if scenario_id == 0
+        else session[f"scenarioName{scenario_id}"]
     )
 
     # Display any errors
     # TODO: Hide scenario errors that are copies of baseline errors
-    severeErrorsFound = errorChecker(scenarioID, f"Errors in {scenarioName}")
+    severeErrorsFound = errorChecker(scenario_id, f"Errors in {scenarioName}")
     if severeErrorsFound:
         st.error(
             """
@@ -245,7 +236,7 @@ def calculateR0Button() -> None:
         # TODO: Estimate calculation runtime
         st.markdown(f"""
             Are you sure you want to calculate the basic reproduction number for
-            {"the baseline scenario" if scenarioID == 0 else scenarioName}?
+            {"the baseline scenario" if scenario_id == 0 else scenarioName}?
         """)
         if st.button(
             "Confirm",
@@ -268,13 +259,13 @@ def calculateR0Button() -> None:
             community = session.get("community", "newcastle")
 
             # Load JSON
-            if usePresetParams:
+            if USE_PRESET_PARAMS:
                 filename = f"default{"NoNPI" if useInterventions else ""}.json"
                 with open(f"ClientResources/Templates/{filename}", "r") as f:
                     params = Parameters.model_validate_json(f.read())
             else:
                 params = createTemplate(
-                    scenarioID, includeInterventions=False, includeDashboard=False
+                    scenario_id, includeInterventions=False, includeDashboard=False
                 )
             schema = communityOverride(
                 name=community, parameters=params
@@ -295,16 +286,13 @@ def calculateR0Button() -> None:
                         "Server shut down before calculation could finish",
                     ),
                 },
-                "progress": calcCurrentProgress,
-                "status": calcStatusQueue,
-                "results": calcResultQueue,
-                "error": calcErrorQueue,
+                "result_queue": R0_CALCULATION_STATUS,
             }
 
             # Clear the status queue
-            calcCurrentProgress.append(0.0)
-            calcStatusQueue.clear()
-            calcStatusQueue.append("Connecting to server...")
+            R0_CALCULATION_STATUS.progress.append(0.0)
+            R0_CALCULATION_STATUS.tasks.clear()
+            R0_CALCULATION_STATUS.tasks.append("Connecting to server...")
             session["calculationError"] = None
 
             # Make the model call
@@ -360,7 +348,7 @@ def stopCalculationButton():
             "stop_circle",
             None,
         )
-        calcCurrentProgress.append(-1.0)
+        R0_CALCULATION_STATUS.progress.append(-1.0)
 
         # Stop the runModel thread
         calcCancelFlag.set()
@@ -387,12 +375,12 @@ st.markdown("""
 # Global parameters
 # Advanced parameters toggle
 # TODO: Move advanced parameters to either the sidebar or a separate settings page
-loadKey("showAdvanced", default=False, noZeroDefault=True)
+load_key("showAdvanced", default=False, no_zero_default=True)
 showAdvanced = st.toggle(
     "Show Advanced Parameters",
     False,
     key="_showAdvanced",
-    on_change=saveKey,
+    on_change=save_key,
     args=["showAdvanced"],
     help="""
 Toggle whether to include parameters that control more fine-grain aspects
@@ -407,13 +395,13 @@ st.markdown("""
     and other elements of the community that is simulated in the calculation, chosen
     from one of two Australian cities.
 """)
-loadKey("community", default="newcastle")
+load_key("community", default="newcastle")
 community = st.selectbox(
     "Simulated Community",
-    communityPopulation.keys(),
+    POPULATION.keys(),
     key="_community",
     format_func=lambda x: x.capitalize(),
-    on_change=saveKey,
+    on_change=save_key,
     args=["community"],
     help="""
 The Australian city whose community data will be used as the
@@ -431,9 +419,9 @@ population of 140402 (as of 2011 when this data was collected)
 and has a higher Indigenous population compared to Newcastle.
     """,
 )
-scenarioCount = session.get("scenarioCount", 0) + 1
+scenario_count = session.get("scenario_count", 0) + 1
 scenarioNames = ["Baseline Scenario"] + [
-    session[f"scenarioName{i}"] for i in range(1, scenarioCount)
+    session[f"scenarioName{i}"] for i in range(1, scenario_count)
 ]
 
 # Calibration
@@ -448,7 +436,7 @@ st.markdown("""
 leftCalib, centerCalib, rightCalib = st.columns(3, vertical_alignment="center")
 
 
-loadKey("targetR", default=1.5)
+load_key("targetR", default=1.5)
 leftCalib.number_input(
     label="Target $R_0$",
     min_value=0.0,
@@ -456,7 +444,7 @@ leftCalib.number_input(
     step=0.1,
     format="%0.8g",
     key="_targetR",
-    on_change=saveKey,
+    on_change=save_key,
     args=["targetR"],
     help="""
 The desired basic reproduction number, i.e. the average number of new infections
@@ -466,14 +454,14 @@ simulate a disease with this basic reproduction number.
     """,
 )
 
-loadKey("rCalibrateScenario", default=0)
+load_key("rCalibrateScenario", default=0)
 centerCalib.selectbox(
     "Scenario to Calibrate",
     range(len(scenarioNames)),
     index=0,
     format_func=lambda x: scenarioNames[x],
     key="_rCalibrateScenario",
-    on_change=saveKey,
+    on_change=save_key,
     args=["rCalibrateScenario"],
     help="""
 The scenario that the transmission parameters will be calculated for.
@@ -485,12 +473,12 @@ are listed by the names assigned to them.
 )
 
 if showAdvanced:
-    loadKey("rCalibrateInterventionsToggle", default=False)
+    load_key("rCalibrateInterventionsToggle", default=False)
     rightCalib.toggle(
         "Include Vaccinations and NPIs",
         False,
         key="_rCalibrateInterventionsToggle",
-        on_change=saveKey,
+        on_change=save_key,
         args=["rCalibrateInterventionsToggle"],
         help="""
     Traditionally, the basic reproduction number is calculated without the influence
@@ -539,7 +527,7 @@ calibResultsContainer = st.empty()
 # TODO: Since buttons can't be made in fragments, find a more robust way
 # to ensure this appearance is synchronised with the fragment
 calibrationResults = session.get("r0Calibration")
-idToUpdate = session.get("calibSavedScenarioID")
+idToUpdate = session.get("calib_saved_id")
 if calibrationResults is not None and idToUpdate is not None:
     scenarioName = session["calibScenarioName"]
     beta = session["r0CalibrationBeta"]
@@ -579,14 +567,14 @@ st.markdown("""
 
 leftCalc, rightCalc = st.columns(2, vertical_alignment="center")
 
-loadKey("rCalculateScenario", default=0)
+load_key("rCalculateScenario", default=0)
 leftCalc.selectbox(
     "Scenario to Calculate",
     range(len(scenarioNames)),
     index=0,
     format_func=lambda x: scenarioNames[x],
     key="_rCalculateScenario",
-    on_change=saveKey,
+    on_change=save_key,
     args=["rCalculateScenario"],
     help="""
 The scenario that the basic reproduction number will be
@@ -598,12 +586,12 @@ are listed by the names assigned to them.
 )
 
 if showAdvanced:
-    loadKey("rCalculateInterventionsToggle", default=False)
+    load_key("rCalculateInterventionsToggle", default=False)
     rightCalc.toggle(
         "Include Vaccinations and NPIs",
         False,
         key="_rCalculateInterventionsToggle",
-        on_change=saveKey,
+        on_change=save_key,
         args=["rCalculateInterventionsToggle"],
         help="""
     Traditionally, the basic reproduction number is calculated without the influence
@@ -647,7 +635,7 @@ def showR0Results():
     """
     if session.showCalibProgress:
         try:
-            progress = calibCurrentProgress[0]
+            progress = R0_CALIBRATION_STATUS.progress[0]
         except IndexError:
             progress = 0.0
             # TODO: Use status to list the estimates that have occurred
@@ -693,7 +681,7 @@ to {r0}.
 
     if session.showCalcProgress:
         try:
-            progress = calcCurrentProgress[0]
+            progress = R0_CALCULATION_STATUS.progress[0]
         except IndexError:
             progress = 0.0
         if progress < 0.0:

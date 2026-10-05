@@ -12,9 +12,9 @@ from typing import Any
 import streamlit as st
 
 from ClientResources.DownloadFunctions import (
-    createConfig,
-    loadConfig,
-    uploadDownloadBar,
+    create_config,
+    load_config,
+    upload_download_bar,
 )
 from ClientResources.InterfaceFunctions import (
     errorChecker,
@@ -22,25 +22,21 @@ from ClientResources.InterfaceFunctions import (
     timeString,
 )
 from ClientResources.ParameterFunctions import (
-    idGet,
-    loadKey,
-    saveKey,
-    timeScaleChange,
+    id_get,
+    load_key,
+    save_key,
+    time_scale_change,
 )
 from ClientResources.ServerFunctions import taskWrapper
-from ClientResources.SharedResources import (
-    AnalysisFile,
-    communityPopulation,
-    presetJSONPath,
-    saveJSON,
-    simCurrentProgress,
-    simErrorQueue,
-    simResultQueue,
-    simStatusQueue,
-    splitPoint,
-    usePresetData,
-    usePresetParams,
+from ClientResources.Constants import (
+    POPULATION,
+    PRESET_JSON_PATH,
+    LOG_PARAM_JSON,
+    PROGRESS_SPLIT_POINT,
+    USE_PRESET_DATA,
+    USE_PRESET_PARAMS,
 )
+from ClientResources.Types import SIM_STATUS, AnalysisFile, SimParams
 
 # Logging
 runSimLog = logging.getLogger(__name__)
@@ -104,7 +100,7 @@ def runModelProgress(
     }
 
     # Scenario status
-    scenarioSegments = (splitPoint - 0.02) / len(scenarioNames)
+    scenarioSegments = (PROGRESS_SPLIT_POINT - 0.02) / len(scenarioNames)
     progressDict |= {
         f"runningSim{i}": (
             scenarioSegments * i + 0.02,
@@ -115,35 +111,38 @@ def runModelProgress(
     # Analysis status
     # Note that ASIR gets twice the progress length as epidemic
     if useVaccines:
-        analysisSegments = (1 - splitPoint - 0.02) / 6
+        analysisSegments = (1 - PROGRESS_SPLIT_POINT - 0.02) / 6
         progressDict |= {
             "toolboxAnalysis0": (
-                splitPoint,
+                PROGRESS_SPLIT_POINT,
                 "Extracting cumulative infections...",
             ),
             "toolboxAnalysis1": (
-                analysisSegments + splitPoint,
+                analysisSegments + PROGRESS_SPLIT_POINT,
                 "Extracting daily infections...",
             ),
             "toolboxAnalysis2": (
-                3 * analysisSegments + splitPoint,
+                3 * analysisSegments + PROGRESS_SPLIT_POINT,
                 "Extracting age-based infections...",
             ),
             "toolboxAnalysis3": (
-                5 * analysisSegments + splitPoint,
+                5 * analysisSegments + PROGRESS_SPLIT_POINT,
                 "Extracting vaccine-based infections...",
             ),
         }
     else:
-        analysisSegments = (1 - splitPoint - 0.02) / 4
+        analysisSegments = (1 - PROGRESS_SPLIT_POINT - 0.02) / 4
         progressDict |= {
-            "toolboxAnalysis0": (splitPoint, "Extracting cumulative infections..."),
+            "toolboxAnalysis0": (
+                PROGRESS_SPLIT_POINT,
+                "Extracting cumulative infections...",
+            ),
             "toolboxAnalysis1": (
-                analysisSegments + splitPoint,
+                analysisSegments + PROGRESS_SPLIT_POINT,
                 "Extracting daily infections...",
             ),
             "toolboxAnalysis2": (
-                3 * analysisSegments + splitPoint,
+                3 * analysisSegments + PROGRESS_SPLIT_POINT,
                 "Extracting age-based infections...",
             ),
         }
@@ -160,8 +159,8 @@ def runSimulationButton() -> None:
     runPending = bool(session.get("confirmRunButton"))
 
     # List scenarios
-    scenarioCount = session.get("scenarioCount", 0) + 1
-    if scenarioCount == 1:
+    scenario_count = session.get("scenario_count", 0) + 1
+    if scenario_count == 1:
         st.markdown(f"""
 With the current parameters, this modelling experiment will use the
 "{session.get('community', 'newcastle').capitalize()}"
@@ -171,21 +170,21 @@ community data to simulate the baseline scenario.
         st.markdown(f"""
 With the current parameters, this modelling experiment will use the
 "{session.get('community', 'newcastle').capitalize()}"
-community data to simulate each of the following {scenarioCount} scenarios:
+community data to simulate each of the following {scenario_count} scenarios:
         """)
-        with st.container() if scenarioCount < 11 else st.expander("Scenario Names"):
+        with st.container() if scenario_count < 11 else st.expander("Scenario Names"):
             st.markdown(
                 "- Baseline\n"
                 + "\n".join(
                     f"- {session[f'scenarioName{id}']}"
-                    for id in range(1, scenarioCount)
+                    for id in range(1, scenario_count)
                 )
             )
 
     # Display any errors
     # TODO: Hide scenario errors that are copies of baseline errors
     severeErrorsFound = False
-    for id in range(scenarioCount):
+    for id in range(scenario_count):
         severeErrorsFound = (
             errorChecker(
                 id,
@@ -202,7 +201,7 @@ community data to simulate each of the following {scenarioCount} scenarios:
             icon=":material/error:",
         )
     else:
-        if usePresetData:
+        if USE_PRESET_DATA:
             st.error(
                 """
 The debug settings of the dashboard are set such that visualisations use
@@ -211,7 +210,7 @@ of any simulations you run unless this setting is disabled.
                 """,
                 icon=":material/bug_report:",
             )
-        if usePresetParams:
+        if USE_PRESET_PARAMS:
             st.warning(
                 """
 The debug settings of the dashboard are set such that simulations use
@@ -234,9 +233,9 @@ simulation.
             )
 
         # Get estimated simulation runtime
-        cycleCount = session.get("cycleCount", 360)
+        cycle_count = session.get("cycle_count", 360)
         runCount = session.get("runCount", 24)
-        estimatedTime = simRuntimeEstimate(cycleCount, runCount, scenarioCount)
+        estimatedTime = simRuntimeEstimate(cycle_count, runCount, scenario_count)
         st.metric(
             f"Estimated Time to Run Simulation Experiment",
             value=timeString(estimatedTime),
@@ -270,35 +269,33 @@ already busy with a different task.
 
             # Create the final model JSON
             # Load debug parameters from file
-            if usePresetParams:
-                with open(presetJSONPath, "r") as f:
+            if USE_PRESET_PARAMS:
+                with open(PRESET_JSON_PATH, "r") as f:
                     parameterJSON = f.read()
-                if loadConfig(parameterJSON, loud=False):
+                if load_config(parameterJSON, loud=False):
                     return
-                scenarioCount = session.get("scenarioCount", 0) + 1
+                scenario_count = session.get("scenario_count", 0) + 1
 
             # Create JSON for selected parameters
             else:
-                parameterJSON = createConfig(
-                    scenarioCount, includeDashboard=False
+                parameterJSON = create_config(
+                    scenario_count, includeDashboard=False
                 ).model_dump_json(indent=4, exclude_unset=True)
-                if saveJSON:
+                if LOG_PARAM_JSON:
                     with open("./savedJSON.json", "w") as file:
                         file.write(parameterJSON)
 
             # Save current parameter values that'll be used for
             # visualisation when the user has potentially changed them
             scenarioNames = ["Baseline"] + [
-                session[f"scenarioName{i}"] for i in range(1, scenarioCount)
+                session[f"scenarioName{i}"] for i in range(1, scenario_count)
             ]
-            simParams: dict[str, Any] = {"Scenario Names": scenarioNames}
             community = session.get("community", "newcastle")
-            simParams["Community"] = community
             schema = json.loads(parameterJSON)
             useAdvanced = session.get("showAdvanced", False)
             useVaccines = "+vaccine" in schema.get("middle_joint")
             if useVaccines:
-                simParams["Analysis Formats"] = [
+                analysisFormats = [
                     AnalysisFile(
                         tool="epidemic", names=scenarioNames, useCumulative=True
                     ),
@@ -309,7 +306,7 @@ already busy with a different task.
                     AnalysisFile(tool="asir", names=scenarioNames, vaccinated=True),
                 ]
             else:
-                simParams["Analysis Formats"] = [
+                analysisFormats = [
                     AnalysisFile(
                         tool="epidemic", names=scenarioNames, useCumulative=True
                     ),
@@ -319,58 +316,62 @@ already busy with a different task.
                     AnalysisFile(tool="asir", names=scenarioNames),
                 ]
 
-            simParams["Scaling Factor"] = (
-                session.get("scalingPopulation", communityPopulation[community])
-                / communityPopulation[community]
+            scalingFactor = (
+                session.get("scalingPopulation", POPULATION[community])
+                / POPULATION[community]
             )
-            simParams["Asymptomatic Rates"] = (
+            asymptomaticRates = (
                 [
                     [
-                        1 - idGet("asymptomaticChild", scenarioID, 0.35),
-                        1 - idGet("asymptomaticAdult", scenarioID, 0.35),
+                        1 - id_get("asymptomaticChild", scenario_id, 0.35),
+                        1 - id_get("asymptomaticAdult", scenario_id, 0.35),
                     ]
-                    for scenarioID in range(scenarioCount)
+                    for scenario_id in range(scenario_count)
                 ]
                 if useAdvanced
                 else [
-                    [1 - idGet("asymptomaticAdult", scenarioID, 0.35)] * 2
-                    for scenarioID in range(scenarioCount)
+                    [1 - id_get("asymptomaticAdult", scenario_id, 0.35)] * 2
+                    for scenario_id in range(scenario_count)
                 ]
             )
             basicRates, ageRates = healthOutcomeStore(
                 scenarioNames,
                 useAges=useAdvanced,
             )
-            simParams["Health Outcome Rates"] = basicRates
-            simParams["Age-Specific Outcomes"] = ageRates
-            simParams["Waning In Simulation"] = useAdvanced and any(
-                idGet("naturalWaningToggle", scenarioID, False)
+            useWaning = useAdvanced and any(
+                id_get("naturalWaningToggle", scenario_id, False)
                 or (
-                    idGet("vaccineToggle", scenarioID, False)
+                    id_get("vaccineToggle", scenario_id, False)
                     and (
-                        idGet("vaccineWaningToggle", scenarioID, False)
-                        or idGet("boosterToggle", scenarioID, False)
+                        id_get("vaccineWaningToggle", scenario_id, False)
+                        or id_get("boosterToggle", scenario_id, False)
                     )
                 )
-                for scenarioID in range(scenarioCount)
+                for scenario_id in range(scenario_count)
             )
 
-            session.pendingSimParams = simParams
+            session.pending_sim_params = SimParams(
+                scenario_names=scenarioNames,
+                analysis_formats=analysisFormats,
+                symptomatic_rates=asymptomaticRates,
+                health_outcome_rates=basicRates,
+                age_health_outcome_rates=ageRates,
+                community=community,
+                scaling_factor=scalingFactor,
+                waning=useWaning,
+            )
 
             # Prepare model call parameters
             statusParams = {
                 "resultType": "zip",
                 "statusDecoder": runModelProgress(scenarioNames, useVaccines),
-                "progress": simCurrentProgress,
-                "status": simStatusQueue,
-                "results": simResultQueue,
-                "error": simErrorQueue,
+                "request_queue": SIM_STATUS,
             }
 
             # Clear the status queue
-            simCurrentProgress.append(0.0)
-            simStatusQueue.clear()
-            simStatusQueue.append("Connecting to server...")
+            SIM_STATUS.progress.append(0.0)
+            SIM_STATUS.tasks.clear()
+            SIM_STATUS.tasks.append("Connecting to server...")
             session["simulationError"] = None
 
             # Make the model call
@@ -428,7 +429,7 @@ def stopSimulationButton():
             "stop_circle",
             None,
         )
-        simCurrentProgress.append(-1.0)
+        SIM_STATUS.progress.append(-1.0)
 
         # Stop the runModel thread
         simCancelFlag.set()
@@ -460,16 +461,16 @@ st.markdown("""
 """)
 
 # Buttons to upload simulation parameters
-uploadDownloadBar()
+upload_download_bar()
 
 # Advanced parameters toggle
 # TODO: Move advanced parameters to either the sidebar or a separate settings page
-loadKey("showAdvanced", default=False, noZeroDefault=True)
+load_key("showAdvanced", default=False, no_zero_default=True)
 showAdvanced = st.toggle(
     "Show Advanced Parameters",
     False,
     key="_showAdvanced",
-    on_change=saveKey,
+    on_change=save_key,
     args=["showAdvanced"],
     help="""
 Toggle whether to display parameters that control more fine-grain aspects
@@ -483,13 +484,13 @@ st.markdown("""
     and other elements of the community that is simulated in the experiment, chosen
     from one of two Australian cities.
 """)
-loadKey("community", default="newcastle")
+load_key("community", default="newcastle")
 community = st.selectbox(
     "Simulated Community",
-    communityPopulation.keys(),
+    POPULATION.keys(),
     key="_community",
     format_func=lambda x: x.capitalize(),
-    on_change=saveKey,
+    on_change=save_key,
     args=["community"],
     help="""
 The Australian city whose community data will be used as the
@@ -513,15 +514,15 @@ st.markdown("""
     run should last for. Note that individual simulation runs may end earlier if
     no infections occur in a given cycle.
 """)
-loadKey("cycleCount", default=360)
+load_key("cycle_count", default=360)
 st.slider(
     "Length of Simulation (Days)",
     30,
     720,
     360,
     format="%f Day(s)",
-    key="_cycleCount",
-    on_change=timeScaleChange,
+    key="_cycle_count",
+    on_change=time_scale_change,
     help="""
 The length of the time period that will be simulated, measured in days.
 
@@ -539,14 +540,14 @@ st.markdown("""
     the model's stochasticity to generate reliable average values and reduce the
     likelihood of outliers.
 """)
-loadKey("runCount", default=24)
+load_key("runCount", default=24)
 st.slider(
     "Number of Simulation Runs",
     min_value=16,
     max_value=64,
     value=24,
     key="_runCount",
-    on_change=saveKey,
+    on_change=save_key,
     args=["runCount"],
     help="""
 How many times each scenario will be simulated. The results
@@ -562,7 +563,7 @@ if showAdvanced:
         first day of the experiment. Individuals in the simulation visit different
         locations on weekends, so this may affect the initial spread of the disease.
     """)
-    loadKey("startDay", default="Random")
+    load_key("startDay", default="Random")
     st.radio(
         "Starting Day of the Week",
         (
@@ -578,7 +579,7 @@ if showAdvanced:
         index=0,
         horizontal=True,
         key="_startDay",
-        on_change=saveKey,
+        on_change=save_key,
         args=["startDay"],
         help="""
     The day of the week that the first day of the simulation will be. If this is "Random", the starting day will be chosen randomly for each simulation.
@@ -588,13 +589,13 @@ if showAdvanced:
     st.markdown("""
         - The scaling population will be used to adjust simulation results for populations larger than the simulated population. For instance, if you simulate Newcastle (whose population is 272,407) and set the scaling population to 544,814, all health burdens will be doubled to make them proportional to the new value.
     """)
-    loadKey("scalingPopulation", default=communityPopulation[community])
+    load_key("scalingPopulation", default=POPULATION[community])
     st.number_input(
         "Scaling Population",
         min_value=1,
-        value=communityPopulation[community],
+        value=POPULATION[community],
         key=f"_scalingPopulation",
-        on_change=saveKey,
+        on_change=save_key,
         args=["scalingPopulation"],
         placeholder="Enter the size of the desired population",
         help="""
@@ -637,8 +638,9 @@ def simulationProgressBar():
     Fragment to generate a progress bar showing how far along the simulation is
     """
     # TODO: Display how long each step took
+    status_queue = SIM_STATUS.tasks
     try:
-        progress = simCurrentProgress[0]
+        progress = SIM_STATUS.progress[0]
     except IndexError:
         progress = 0.0
     if progress < 0.0:
@@ -657,7 +659,7 @@ def simulationProgressBar():
         simStatus = st.status(
             label="Experiment stopped due to error (click for more info)", state="error"
         )
-        for newStatus in simStatusQueue:
+        for newStatus in status_queue:
             simStatus.write(newStatus)
         simStatus.error(f"Error: {errorBody}", icon=f":material/{errorIcon}:")
         if errorObject is not None:
@@ -665,13 +667,13 @@ def simulationProgressBar():
     else:
         st.progress(
             progress,
-            simStatusQueue[-1] if simStatusQueue else "Initialising parameters...",
+            status_queue[-1] if status_queue else "Initialising parameters...",
         )
         simStatus = st.status(
             "Experiment in progress..." if progress < 1.0 else "Experiment complete!",
             state="running" if progress < 1.0 else "complete",
         )
-        for newStatus in simStatusQueue:
+        for newStatus in status_queue:
             simStatus.write(newStatus)
 
 

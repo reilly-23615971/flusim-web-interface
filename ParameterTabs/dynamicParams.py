@@ -10,14 +10,14 @@ import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import paramError
+from ClientResources.InterfaceFunctions import param_error
 from ClientResources.ModelSchema import Parameters, dynamicIntervention
 from ClientResources.ParameterFunctions import (
-    hasDuplicates,
-    idGet,
-    loadKey,
-    saveKey,
-    updateTableFromSchema,
+    has_duplicates,
+    id_get,
+    load_key,
+    save_key,
+    update_table_from_schema,
 )
 
 # Logging
@@ -76,15 +76,15 @@ def buildDynamicTab(id: int):
     """)
 
     # Get simulation length for error checking
-    simLength = session.get("cycleCount", 360)
+    simLength = session.get("cycle_count", 360)
 
     # Infection Seeding Rate
     st.subheader("Infection Seeding Rate")
     st.markdown("Double-click a cell in this table to edit its value.")
 
-    baseSeedValue = idGet("seedRate", id, 0.25)
-    seedStart, seedEnd = idGet("seedPeriod", id, (1, 30))
-    loadKey(
+    baseSeedValue = id_get("seedRate", id, 0.25)
+    seedStart, seedEnd = id_get("seedPeriod", id, (1, 30))
+    load_key(
         "seedTimeForm",
         id,
         pd.DataFrame(
@@ -100,7 +100,7 @@ def buildDynamicTab(id: int):
         height="content",
         num_rows="dynamic",
         key=f"_seedTimeForm{id}",
-        on_change=saveKey,
+        on_change=save_key,
         args=["seedTimeForm", id],
         kwargs={"dataframe": True},
         placeholder="Enter a value",
@@ -129,10 +129,10 @@ each day of the simulation is 2 cycles.
             ),
         },
     )
-    paramError(
+    param_error(
         "seedingTimeFormDuplicates",
         id,
-        lambda: hasDuplicates(seedTimeForm, "Day to Update Parameter"),
+        lambda: has_duplicates(seedTimeForm, "Day to Update Parameter"),
         f"""
             Error: The dynamic infection seeding form used by the {
                 'baseline scenario' if id == 0
@@ -152,11 +152,11 @@ each day of the simulation is 2 cycles.
 
     # School Closure Compliance
     st.subheader("School Closure Compliance")
-    closeActive = idGet("schoolClosureToggle", id, False)
-    baseCloseValue = idGet("schoolClosureCompliance", id, 0.9)
+    closeActive = id_get("schoolClosureToggle", id, False)
+    baseCloseValue = id_get("schoolClosureCompliance", id, 0.9)
     closeStart, closeEnd = (
-        idGet("schoolClosurePeriod", id, (1, 60))
-        if idGet("schoolClosureTrigger", id, "Always") == "Timed"
+        id_get("schoolClosurePeriod", id, (1, 60))
+        if id_get("schoolClosureTrigger", id, "Always") == "Timed"
         else (1, simLength)
     )
     if not closeActive:
@@ -174,7 +174,7 @@ each day of the simulation is 2 cycles.
         )
     else:
         st.markdown("Double-click a cell in this table to edit its value.")
-    loadKey(
+    load_key(
         "closeTimeForm",
         id,
         pd.DataFrame(
@@ -190,7 +190,7 @@ each day of the simulation is 2 cycles.
         height="content",
         num_rows="dynamic",
         key=f"_closeTimeForm{id}",
-        on_change=saveKey,
+        on_change=save_key,
         args=["closeTimeForm", id],
         kwargs={"dataframe": True},
         placeholder=(
@@ -225,10 +225,11 @@ they are closed after the specified point in the simulation.
             ),
         },
     )
-    paramError(
+    param_error(
         "schoolClosureTimeFormDuplicates",
         id,
-        lambda: closeActive and hasDuplicates(closeTimeForm, "Day to Update Parameter"),
+        lambda: closeActive
+        and has_duplicates(closeTimeForm, "Day to Update Parameter"),
         f"""
             Error: The dynamic school closure compliance form used by the {
                 'baseline scenario' if id == 0
@@ -245,11 +246,11 @@ they are closed after the specified point in the simulation.
 
     # Reduced Background Contact Count
     st.subheader("Reduced Background Contact Count")
-    bccActive = idGet("bccToggle", id, False)
-    baseBCCValue = idGet("bccReducedRate", id, 0.2)
+    bccActive = id_get("bccToggle", id, False)
+    baseBCCValue = id_get("bccReducedRate", id, 0.2)
     bccStart, bccEnd = (
-        idGet("bccPeriod", id, (1, 60))
-        if idGet("bccTrigger", id, "Always") == "Timed"
+        id_get("bccPeriod", id, (1, 60))
+        if id_get("bccTrigger", id, "Always") == "Timed"
         else (1, simLength)
     )
     if not bccActive:
@@ -267,7 +268,7 @@ they are closed after the specified point in the simulation.
         )
     else:
         st.markdown("Double-click a cell in this table to edit its value.")
-    loadKey(
+    load_key(
         "bccTimeForm",
         id,
         pd.DataFrame(
@@ -283,7 +284,7 @@ they are closed after the specified point in the simulation.
         height="content",
         num_rows="dynamic",
         key=f"_bccTimeForm{id}",
-        on_change=saveKey,
+        on_change=save_key,
         args=["bccTimeForm", id],
         kwargs={"dataframe": True},
         placeholder=(
@@ -323,10 +324,10 @@ effect, overwriting the normal BCC rate.
             ),
         },
     )
-    paramError(
+    param_error(
         "bccReductionTimeFormDuplicates",
         id,
-        lambda: bccActive and hasDuplicates(bccTimeForm, "Day to Update Parameter"),
+        lambda: bccActive and has_duplicates(bccTimeForm, "Day to Update Parameter"),
         f"""
             Error: The dynamic background contact count reduction form used by the {
                 'baseline scenario' if id == 0
@@ -403,14 +404,14 @@ def dynamicSaveSchema(schema: Parameters, id: int = 0):
             "seed": pd.DataFrame(
                 {
                     "Day to Update Parameter": [None],
-                    "New Infection Seeding Rate": [idGet("seedRate", id, 0.25)],
+                    "New Infection Seeding Rate": [id_get("seedRate", id, 0.25)],
                 },
             ),
             "close": pd.DataFrame(
                 {
                     "Day to Update Parameter": [None],
                     "New School Closure Compliance": [
-                        idGet("schoolClosureCompliance", id, 0.9)
+                        id_get("schoolClosureCompliance", id, 0.9)
                     ],
                 },
             ),
@@ -418,19 +419,19 @@ def dynamicSaveSchema(schema: Parameters, id: int = 0):
                 {
                     "Day to Update Parameter": [None],
                     "New Reduced Background Contact Count": [
-                        idGet("bccReducedRate", id, 0.2)
+                        id_get("bccReducedRate", id, 0.2)
                     ],
                 },
             ),
         }.items():
-            timeForm = idGet(f"{prefix}TimeForm", id, default)
-            for time, newValue in zip(timeForm.iloc[:, 0], timeForm.iloc[:, 1]):
+            timeForm = id_get(f"{prefix}TimeForm", id, default)
+            for time, new_value in zip(timeForm.iloc[:, 0], timeForm.iloc[:, 1]):
                 if time:
                     dynamicChanges.append(
                         dynamicIntervention(
                             Name=paramCast(prefix),
                             CycleOffset=(time - 1) * 2,
-                            NewValue=newValue,
+                            NewValue=new_value,
                         )
                     )
 
@@ -447,7 +448,7 @@ def dynamicSaveSchema(schema: Parameters, id: int = 0):
         raise e
 
 
-def dynamicLoadSchema(schema: Parameters, scenarioID: int = 0):
+def dynamicLoadSchema(schema: Parameters, scenario_id: int = 0):
     """
     Function to read dynamic parameters from a schema and set the
     dashboard's widgets to the specified values.
@@ -479,13 +480,13 @@ def dynamicLoadSchema(schema: Parameters, scenarioID: int = 0):
         ),
     }
     dynamicPeriods = {
-        "seed_rate": idGet("seedPeriod", scenarioID, (1, 30)),
-        "school_closure": idGet("schoolClosurePeriod", scenarioID, (1, 60)),
-        "bcc_reduction": idGet("bccPeriod", scenarioID, (1, 60)),
+        "seed_rate": id_get("seedPeriod", scenario_id, (1, 30)),
+        "school_closure": id_get("schoolClosurePeriod", scenario_id, (1, 60)),
+        "bcc_reduction": id_get("bccPeriod", scenario_id, (1, 60)),
     }
     for update in dynamicChanges:
         # Get value and append to correct dataframe
-        param, time, newValue = (
+        param, time, new_value = (
             update.Name,
             round(update.CycleOffset / 2) + 1,
             update.NewValue,
@@ -493,7 +494,7 @@ def dynamicLoadSchema(schema: Parameters, scenarioID: int = 0):
         minTime, maxTime = dynamicPeriods[param]
         time = min(maxTime, max(minTime, time))
         currentTable = dynamicTables[param]
-        currentTable.loc[currentTable.shape[0]] = [time, newValue]
+        currentTable.loc[currentTable.shape[0]] = [time, new_value]
 
     # Set the new tables into st.session_state, if they were updated at all
     paramConvert = {
@@ -502,7 +503,9 @@ def dynamicLoadSchema(schema: Parameters, scenarioID: int = 0):
             pd.DataFrame(
                 {
                     "Day to Update Parameter": [None],
-                    "New Infection Seeding Rate": [idGet("seedRate", scenarioID, 0.25)],
+                    "New Infection Seeding Rate": [
+                        id_get("seedRate", scenario_id, 0.25)
+                    ],
                 },
             ),
         ),
@@ -512,7 +515,7 @@ def dynamicLoadSchema(schema: Parameters, scenarioID: int = 0):
                 {
                     "Day to Update Parameter": [None],
                     "New School Closure Compliance": [
-                        idGet("schoolClosureCompliance", scenarioID, 0.9)
+                        id_get("schoolClosureCompliance", scenario_id, 0.9)
                     ],
                 },
             ),
@@ -523,11 +526,11 @@ def dynamicLoadSchema(schema: Parameters, scenarioID: int = 0):
                 {
                     "Day to Update Parameter": [None],
                     "New Reduced Background Contact Count": [
-                        idGet("bccReducedRate", scenarioID, 0.2)
+                        id_get("bccReducedRate", scenario_id, 0.2)
                     ],
                 },
             ),
         ),
     }
     for parameter, (key, default) in paramConvert.items():
-        updateTableFromSchema(key, dynamicTables[parameter], scenarioID, default)
+        update_table_from_schema(key, dynamicTables[parameter], scenario_id, default)

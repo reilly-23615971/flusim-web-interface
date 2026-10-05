@@ -1,6 +1,6 @@
 # Flusim Web Interface Application
 # Developed by Reilly Evans
-# Functions used for creating and downloading files (e.g. parameter schema)
+# Functions used for creating and downloading files (e.g. parameter schema files)
 
 # Imports
 import logging
@@ -13,7 +13,8 @@ from typing import Optional
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import uniqueName, validationErrorFormatting
+from ClientResources.Constants import POPULATION
+from ClientResources.InterfaceFunctions import unique_name, validationErrorFormatting
 from ClientResources.ModelSchema import (
     Parameters,
     commandArgument,
@@ -25,8 +26,7 @@ from ClientResources.ModelSchema import (
     simulation,
     simulationSet,
 )
-from ClientResources.ParameterFunctions import idGet, updateParamFromSchema
-from ClientResources.SharedResources import communityPopulation
+from ClientResources.ParameterFunctions import id_get, update_param_from_schema
 from ParameterTabs.communityParams import (
     buildCommunityTab,
     communityLoadSchema,
@@ -60,18 +60,18 @@ downloadLog = logging.getLogger(__name__)
 session = st.session_state
 
 
-def uploadDownloadBar():
+def upload_download_bar():
     """
     Wrapper to create buttons for downloading and uploading parameters
     """
     download, upload = st.columns(2)
     with download:
-        parameterDownload()
+        parameter_download()
     with upload:
         st.button(
             label="Upload Parameters from File",
             width="stretch",
-            on_click=parameterUpload,
+            on_click=parameter_upload,
             icon=":material/upload_file:",
             help="""
 Upload a JSON file containing parameter settings for the simulation. These
@@ -83,7 +83,7 @@ simulation engine settings) will be replaced with the values in the uploaded fil
         )
 
 
-def parameterDownload():
+def parameter_download():
     """
     Function to create a button that downloads the JSON of the current
     parameter set when clicked. Uses a `st.popover` container due to
@@ -96,7 +96,7 @@ def parameterDownload():
         "Download Parameters to File",
         icon=":material/download:",
         width="stretch",
-        key="parameterDownloadContainer",
+        key="parameter_downloadContainer",
         on_change="rerun",
         help="""
 Download the currently selected parameters as a JSON file that can
@@ -113,25 +113,25 @@ included in this file.
             """)
             st.download_button(
                 "Confirm",
-                createConfig(
-                    session.get("scenarioCount", 0) + 1, includeDashboard=True
+                create_config(
+                    session.get("scenario_count", 0) + 1, includeDashboard=True
                 ).model_dump_json(indent=4, exclude_unset=True),
                 f"FlusimParameterSettings_{time.strftime('%Y.%m.%d_%I.%M.%S%p')}.json",
                 mime="application/json",
-                key="parameterDownloadConfirm",
-                on_click=lambda: session.update({"parameterDownloadContainer": False}),
+                key="parameter_downloadConfirm",
+                on_click=lambda: session.update({"parameter_downloadContainer": False}),
             )
 
 
 @st.dialog("Upload Parameters from File", width="large", icon=":material/upload_file:")
-def parameterUpload():
+def parameter_upload():
     """
     Dialog wrapper function to upload parameter settings from a JSON file.
     """
     # TODO: This still blanks the page occasionally (sometimes displays the following:)
     # Life Stage	Pre-Symptomatic
     # Length (Days)	1
-    uploadPending = bool(session.get("parameterUpload") is not None)
+    uploadPending = bool(session.get("parameter_upload") is not None)
     st.info(
         body="""
             Loading parameters from a file wil overwrite any parameters that have
@@ -152,7 +152,7 @@ def parameterUpload():
     uploadedParameters = st.file_uploader(
         "Upload Parameters from File",
         type="json",
-        key="parameterUpload",
+        key="parameter_upload",
         disabled=uploadPending,
         help="""
 Upload a JSON file containing parameter settings for the simulation. These
@@ -163,15 +163,17 @@ simulation engine settings) will be replaced with the values in the uploaded fil
         """,
     )
     if uploadedParameters is not None:
-        loadConfig(uploadedParameters)
+        load_config(uploadedParameters)
 
 
-def createConfig(scenarioCount: int, includeDashboard: bool = False) -> modelGuideFile:
+def create_config(
+    scenario_count: int, includeDashboard: bool = False
+) -> modelGuideFile:
     """
     Function to generate a JSON config file using the selected parameters.
 
     Parameters:
-        scenarioCount (int): The number of scenarios to define in the config.
+        scenario_count (int): The number of scenarios to define in the config.
 
         includeDashboard (bool): Set to `True` to include dashboard-exclusive
             parameters like scaling population in the generated schema.
@@ -183,7 +185,7 @@ def createConfig(scenarioCount: int, includeDashboard: bool = False) -> modelGui
 
     # Set up schema objects
     session = st.session_state
-    scenarioParams = [Parameters() for _ in range(scenarioCount)]
+    scenarioParams = [Parameters() for _ in range(scenario_count)]
 
     # Populate parameters with session_state values
     # TODO: Add setting that forces tables to have baseline duplicates removed
@@ -213,14 +215,14 @@ def createConfig(scenarioCount: int, includeDashboard: bool = False) -> modelGui
     engineParams = Parameters(
         Command_Argument=commandArgument(
             n_runs=session.get("runCount", 24),
-            n_cycles=session.get("cycleCount", 360) * 2,
+            n_cycles=session.get("cycle_count", 360) * 2,
         )
     )
     if includeDashboard:
         dashboardParams = dashboardParameters(show_advanced_parameters=useAdvanced)
         if useAdvanced:
             dashboardParams.scaling_population = session.get(
-                "scalingPopulation", communityPopulation[community]
+                "scalingPopulation", POPULATION[community]
             )
         engineParams.Dashboard_Parameter = dashboardParams
     if useAdvanced:
@@ -266,14 +268,14 @@ def createConfig(scenarioCount: int, includeDashboard: bool = False) -> modelGui
                         name=session[f"scenarioName{i}"],
                         override_setting=overrideParams(parameters=scenarioParams[i]),
                     )
-                    for i in range(1, scenarioCount)
+                    for i in range(1, scenario_count)
                 ],
             )
         ],
     )
 
 
-def loadConfig(file: BytesIO | str, loud: bool = True) -> bool:
+def load_config(file: BytesIO | str, loud: bool = True) -> bool:
     """
     Function to read a JSON config file and set the dashboard's parameters
     to correspond to it.
@@ -311,7 +313,7 @@ def loadConfig(file: BytesIO | str, loud: bool = True) -> bool:
                 supports simulating a single community at a time; please
                 remove any excess communities from the JSON file.
             """)
-        if schema.community_used[0] not in communityPopulation:
+        if schema.community_used[0] not in POPULATION:
             raise AssertionError(f"""
                 The selected parameter schema uses the community
                 "{schema.community_used[0]}". The dashboard currently only
@@ -336,7 +338,7 @@ def loadConfig(file: BytesIO | str, loud: bool = True) -> bool:
                 session.scalingPopulation = (
                     dashboardSettings.scaling_population
                     if dashboardSettings.scaling_population is not None
-                    else communityPopulation[engineSettings.name]
+                    else POPULATION[engineSettings.name]
                 )
 
             engineParams = engineSettings.parameters.Scenario_Parameter
@@ -359,7 +361,7 @@ def loadConfig(file: BytesIO | str, loud: bool = True) -> bool:
             if commandArgs is not None:
                 # TODO: Make sure these don't mess with the sliders when None
                 session.runCount = commandArgs.n_runs
-                session.cycleCount = (
+                session.cycle_count = (
                     commandArgs.n_cycles // 2
                     if commandArgs.n_cycles is not None
                     else None
@@ -385,27 +387,27 @@ def loadConfig(file: BytesIO | str, loud: bool = True) -> bool:
                 JSON file so that there is only one `simulation_sets` object.
             """)
         simulationList = schema.simulation_sets[0].simulations
-        scenarioCount = session.get("scenarioCount", 0)
+        scenario_count = session.get("scenario_count", 0)
         # Delete current scenarios in order to start fresh
-        while scenarioCount > 0:
-            deleteScenario(scenarioCount)
-            scenarioCount = session.get("scenarioCount", 0)
+        while scenario_count > 0:
+            deleteScenario(scenario_count)
+            scenario_count = session.get("scenario_count", 0)
         # Populate new scenarios
-        for scenarioID, scenario in enumerate(simulationList):
-            if scenarioID != 0:
+        for scenario_id, scenario in enumerate(simulationList):
+            if scenario_id != 0:
                 addScenario()
-                updateParamFromSchema("scenarioName", scenario.name, scenarioID)
+                update_param_from_schema("scenarioName", scenario.name, scenario_id)
                 if scenario.override_setting:
                     scenarioParams = scenario.override_setting.parameters
-                    diseaseLoadSchema(scenarioParams, scenarioID)
-                    communityLoadSchema(scenarioParams, scenarioID)
-                    vaccineLoadSchema(scenarioParams, scenarioID)
-                    npiLoadSchema(scenarioParams, scenarioID)
-                    dynamicLoadSchema(scenarioParams, scenarioID)
+                    diseaseLoadSchema(scenarioParams, scenario_id)
+                    communityLoadSchema(scenarioParams, scenario_id)
+                    vaccineLoadSchema(scenarioParams, scenario_id)
+                    npiLoadSchema(scenarioParams, scenario_id)
+                    dynamicLoadSchema(scenarioParams, scenario_id)
         # Load tabs briefly to initialise errors
         useAdvanced = session.get("showAdvanced", False)
         placeholderContainer = st.empty()
-        for testID in range(scenarioCount + 1):
+        for testID in range(scenario_count + 1):
             # TODO: Find a less hacky way to initialise errors
             with placeholderContainer.popover(
                 "Loading parameters...", icon="spinner", disabled=True
@@ -437,13 +439,13 @@ def loadConfig(file: BytesIO | str, loud: bool = True) -> bool:
 
 
 def createTemplate(
-    scenarioID: int, includeInterventions: bool = True, includeDashboard: bool = False
+    scenario_id: int, includeInterventions: bool = True, includeDashboard: bool = False
 ) -> Parameters:
     """
     Function to generate a JSON config object from a single scenario's parameters.
 
     Parameters:
-        scenarioID (int): The ID representing the scenario to make a template from.
+        scenario_id (int): The ID representing the scenario to make a template from.
 
         includeInterventions (bool): Set to True to not include any vaccination or
             NPI parameters in the template, such as when performing R0 analysis.
@@ -462,28 +464,30 @@ def createTemplate(
     template = Parameters()
     baseline = (
         createTemplate(0, includeInterventions, includeDashboard)
-        if scenarioID > 0
+        if scenario_id > 0
         else None
     )
 
-    diseaseSaveSchema(template, scenarioID, useAdvanced, baseline, includeDashboard)
-    communitySaveSchema(template, scenarioID, useAdvanced, baseline)
+    diseaseSaveSchema(template, scenario_id, useAdvanced, baseline, includeDashboard)
+    communitySaveSchema(template, scenario_id, useAdvanced, baseline)
     if includeInterventions:
-        vaccineSaveSchema(template, scenarioID, useAdvanced, baseline, includeDashboard)
-        npiSaveSchema(template, scenarioID, useAdvanced, baseline, includeDashboard)
+        vaccineSaveSchema(
+            template, scenario_id, useAdvanced, baseline, includeDashboard
+        )
+        npiSaveSchema(template, scenario_id, useAdvanced, baseline, includeDashboard)
     if useAdvanced:
-        dynamicSaveSchema(template, scenarioID)
+        dynamicSaveSchema(template, scenario_id)
     return template
 
 
 def loadTemplate(
-    scenarioID: int, template: Parameters | str, templateName: Optional[str] = None
+    scenario_id: int, template: Parameters | str, templateName: Optional[str] = None
 ):
     """
     Function to set a single scenario's parameters to match a given template.
 
     Parameters:
-        scenarioID (int): The ID representing the scenario to make a template from.
+        scenario_id (int): The ID representing the scenario to make a template from.
 
         template (Parameters or str): Either the object containing the parameters
             to initialise in the selected scenario, or the path to the file
@@ -511,13 +515,13 @@ def loadTemplate(
 
     try:
         # Load the parameters
-        if scenarioID != 0:
-            resetScenario(scenarioID, loud=False)
-        diseaseLoadSchema(templateData, scenarioID)
-        communityLoadSchema(templateData, scenarioID)
-        vaccineLoadSchema(templateData, scenarioID)
-        npiLoadSchema(templateData, scenarioID)
-        dynamicLoadSchema(templateData, scenarioID)
+        if scenario_id != 0:
+            resetScenario(scenario_id, loud=False)
+        diseaseLoadSchema(templateData, scenario_id)
+        communityLoadSchema(templateData, scenario_id)
+        vaccineLoadSchema(templateData, scenario_id)
+        npiLoadSchema(templateData, scenario_id)
+        dynamicLoadSchema(templateData, scenario_id)
 
         # Load tabs briefly to initialise errors
         # TODO: Find a less hacky way to initialise errors
@@ -526,13 +530,13 @@ def loadTemplate(
         with placeholderContainer.popover(
             "Loading parameters...", icon="spinner", disabled=True
         ):
-            buildDiseaseTab(scenarioID, useAdvanced)
-            buildCommunityTab(scenarioID, useAdvanced)
-            buildVaccinationTab(scenarioID, useAdvanced)
-            buildNPITab(scenarioID, useAdvanced)
-            buildDynamicTab(scenarioID)
-            if scenarioID == 0:
-                for testID in range(1, session.get("scenarioCount", 0) + 1):
+            buildDiseaseTab(scenario_id, useAdvanced)
+            buildCommunityTab(scenario_id, useAdvanced)
+            buildVaccinationTab(scenario_id, useAdvanced)
+            buildNPITab(scenario_id, useAdvanced)
+            buildDynamicTab(scenario_id)
+            if scenario_id == 0:
+                for testID in range(1, session.get("scenario_count", 0) + 1):
                     buildDiseaseTab(testID, useAdvanced)
                     buildCommunityTab(testID, useAdvanced)
                     buildVaccinationTab(testID, useAdvanced)
@@ -564,14 +568,14 @@ def addScenario(openTab: Optional[str] = None):
     Parameters:
         openTab (str, optional): The scenario's tab, to be opened immediately.
     """
-    newCount = session["scenarioCount"] + 1
-    session["scenarioCount"] = newCount
-    session["scenarioSetParams"][newCount] = set()
-    session["scenarioSetParamsExtra"][newCount] = set()
+    newCount = session["scenario_count"] + 1
+    session["scenario_count"] = newCount
+    session["scenario_set_params"][newCount] = set()
+    session["scenario_extra_params"][newCount] = set()
     session["activeErrors"][newCount] = {}
 
     # Ensure new name is unique
-    newName = uniqueName(
+    newName = unique_name(
         "New Scenario",
         {session.get(f"scenarioName{i}", "New Scenario") for i in range(1, newCount)},
     )
@@ -582,88 +586,90 @@ def addScenario(openTab: Optional[str] = None):
         st.toast("Scenario added!", icon=":material/add:")
 
 
-def deleteScenario(scenarioID: int, openTab: Optional[str] = None):
+def deleteScenario(scenario_id: int, openTab: Optional[str] = None):
     """
     Function that removes a scenario from the dashboard, shifting up other
     scenario values if necessary.
 
     Parameters:
-        scenarioID (int): The ID representing the scenario to be deleted.
+        scenario_id (int): The ID representing the scenario to be deleted.
 
         openTab (str, optional): The scenario's tab, to open the next scenario.
     """
     # Get set of saved params
-    scenarioCount = session.get("scenarioCount", 0)
-    savedParams = session["scenarioSetParams"]
-    savedExtraParams = session["scenarioSetParamsExtra"]
+    scenario_count = session.get("scenario_count", 0)
+    savedParams = session["scenario_set_params"]
+    savedExtraParams = session["scenario_extra_params"]
 
     # Shift existing values down
-    for s in range(scenarioID, scenarioCount):
+    for s in range(scenario_id, scenario_count):
         paramsToConsider = savedParams[s] | savedParams[s + 1] | {"scenarioName"}
         for param in paramsToConsider:
-            newValue = idGet(param, s + 1, None)
-            if newValue is None:
+            new_value = id_get(param, s + 1, None)
+            if new_value is None:
                 del session[f"{param}{s}"]
             else:
-                session[f"{param}{s}"] = newValue
+                session[f"{param}{s}"] = new_value
         extraParamsToConsider = savedExtraParams[s] | savedExtraParams[s + 1]
         for param, extra in extraParamsToConsider:
-            newValue = idGet(param, s + 1, None, extra=extra)
-            if newValue is None:
+            new_value = id_get(param, s + 1, None, extra=extra)
+            if new_value is None:
                 del session[f"{param}{s}{extra}"]
             else:
-                session[f"{param}{s}{extra}"] = newValue
-        session["scenarioSetParams"][s] = savedParams[s + 1]
-        session["scenarioSetParamsExtra"][s] = savedExtraParams[s + 1]
+                session[f"{param}{s}{extra}"] = new_value
+        session["scenario_set_params"][s] = savedParams[s + 1]
+        session["scenario_extra_params"][s] = savedExtraParams[s + 1]
         session["activeErrors"][s] = session["activeErrors"][s + 1]
 
     # Delete duplicated end scenario params
-    for param in savedParams[scenarioCount] | {"scenarioName"}:
-        del session[f"{param}{scenarioCount}"]
-    for param, extra in savedExtraParams[scenarioCount]:
-        del session[f"{param}{scenarioCount}{extra}"]
-    del session["scenarioSetParams"][scenarioCount]
-    del session["scenarioSetParamsExtra"][scenarioCount]
-    del session["activeErrors"][scenarioCount]
+    for param in savedParams[scenario_count] | {"scenarioName"}:
+        del session[f"{param}{scenario_count}"]
+    for param, extra in savedExtraParams[scenario_count]:
+        del session[f"{param}{scenario_count}{extra}"]
+    del session["scenario_set_params"][scenario_count]
+    del session["scenario_extra_params"][scenario_count]
+    del session["activeErrors"][scenario_count]
 
     # Update selected scenarios for R0 calculation
-    for widget in {"rCalibrateScenario", "calibSavedScenarioID", "rCalculateScenario"}:
+    for widget in {"rCalibrateScenario", "calib_saved_id", "rCalculateScenario"}:
         currentIndex = session.get(widget)
-        if currentIndex == scenarioID:
+        if currentIndex == scenario_id:
             del session[widget]
-        elif currentIndex is not None and currentIndex > scenarioID:
+        elif currentIndex is not None and currentIndex > scenario_id:
             session[widget] -= 1
 
     # Update scenario count
-    session["scenarioCount"] -= 1
+    session["scenario_count"] -= 1
 
     # Open the scenario taking the deleted one's place
     # TODO: If programmatic anchor tags are possible (append to URL?),
     # move user to the top of the tab container
     if openTab is not None:
-        if scenarioCount > 1:
-            openCount = scenarioID if scenarioID < scenarioCount else scenarioCount - 1
+        if scenario_count > 1:
+            openCount = (
+                scenario_id if scenario_id < scenario_count else scenario_count - 1
+            )
             session[openTab] = f"**#{openCount}** {session[f"scenarioName{openCount}"]}"
             session.tabReloader = not session.get("tabReloader", False)
         st.toast("Scenario removed!", icon=":material/delete:")
 
 
-def resetScenario(scenarioID: int, loud: bool = True):
+def resetScenario(scenario_id: int, loud: bool = True):
     """
     Function that resets all parameters in a scenario to their baseline values.
 
     Parameters:
-        scenarioID (int): The ID representing the scenario to be reset.
+        scenario_id (int): The ID representing the scenario to be reset.
 
         loud (bool): Set to true to show a notification upon resetting.
     """
     # Delete scenario parameters (excluding the name)
-    for param in session["scenarioSetParams"][scenarioID] - {"scenarioName"}:
-        del session[f"{param}{scenarioID}"]
-    for param, extra in session["scenarioSetParamsExtra"][scenarioID]:
-        del session[f"{param}{scenarioID}{extra}"]
-    session["scenarioSetParams"][scenarioID] = set()
-    session["scenarioSetParamsExtra"][scenarioID] = set()
-    session["activeErrors"][scenarioID] = session["activeErrors"][0]
+    for param in session["scenario_set_params"][scenario_id] - {"scenarioName"}:
+        del session[f"{param}{scenario_id}"]
+    for param, extra in session["scenario_extra_params"][scenario_id]:
+        del session[f"{param}{scenario_id}{extra}"]
+    session["scenario_set_params"][scenario_id] = set()
+    session["scenario_extra_params"][scenario_id] = set()
+    session["activeErrors"][scenario_id] = session["activeErrors"][0]
     if loud:
         st.toast("Scenario reset!", icon=":material/settings_backup_restore:")

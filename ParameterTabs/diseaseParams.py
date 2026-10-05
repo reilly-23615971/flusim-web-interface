@@ -4,7 +4,7 @@
 
 # Imports
 import logging
-from typing import Optional
+from typing import Any, Optional, cast
 
 import altair as alt
 import pandas as pd
@@ -18,7 +18,7 @@ from ClientResources.InterfaceFunctions import (
     backgroundColour,
     dayCount,
     dualError,
-    paramError,
+    param_error,
     plural,
     schemaRemoveBaseline,
     schemaUpdate,
@@ -31,15 +31,15 @@ from ClientResources.ModelSchema import (
     strainParameters,
 )
 from ClientResources.ParameterFunctions import (
-    dynamicScaleChange,
-    hasDuplicates,
-    idGet,
-    loadKey,
-    saveKey,
-    updateParamFromSchema,
-    updateTableFromSchema,
+    dynamic_scale_change,
+    has_duplicates,
+    id_get,
+    load_key,
+    save_key,
+    update_param_from_schema,
+    update_table_from_schema,
 )
-from ClientResources.SharedResources import ageTimeDict
+from ClientResources.Types import AGE_GROUP_KEYS, AGE_KEY_CONVERTER, AgeGroupKey
 
 # Logging
 diseaseLog = logging.getLogger(__name__)
@@ -126,7 +126,7 @@ def buildDiseaseTab(id: int, advanced: bool = False):
 
             # Beta and symptom multipliers
             # Previous default for beta was 0.11
-            loadKey("beta", id, 0.0616)
+            load_key("beta", id, 0.0616)
             st.number_input(
                 "Basic Transmission Parameter (β)",
                 min_value=0.00001,
@@ -135,7 +135,7 @@ def buildDiseaseTab(id: int, advanced: bool = False):
                 step=0.001,
                 format="%0.5g",
                 key=f"_beta{id}",
-                on_change=saveKey,
+                on_change=save_key,
                 args=["beta", id],
                 help="""
 The value of the basic transmission parameter
@@ -147,7 +147,7 @@ the pathogen in any interaction with infected individuals.
                 """,
             )
             leftCol, rightCol = st.columns(2)
-            loadKey("betaAsymptomatic", id, 0.55)
+            load_key("betaAsymptomatic", id, 0.55)
             leftCol.number_input(
                 "Asymptomatic Transmission ($sym(I_i)$)",
                 min_value=0.00001,
@@ -155,7 +155,7 @@ the pathogen in any interaction with infected individuals.
                 value=0.55,
                 step=0.01,
                 format="%0.5g",
-                on_change=saveKey,
+                on_change=save_key,
                 args=["betaAsymptomatic", id],
                 key=f"_betaAsymptomatic{id}",
                 help="""
@@ -172,7 +172,7 @@ uninfected individuals to contract the pathogen when
 interacting with asymptomatic individuals.
                 """,
             )
-            loadKey("betaPostSymptomatic", id, 0.55)
+            load_key("betaPostSymptomatic", id, 0.55)
             rightCol.number_input(
                 "Post-Symptomatic Transmission ($sym(I_i)$)",
                 min_value=0.00001,
@@ -180,7 +180,7 @@ interacting with asymptomatic individuals.
                 value=0.55,
                 step=0.01,
                 format="%0.5g",
-                on_change=saveKey,
+                on_change=save_key,
                 args=["betaPostSymptomatic", id],
                 key=f"_betaPostSymptomatic{id}",
                 help="""
@@ -196,7 +196,7 @@ individuals.
             )
             # Transmission multipliers (only if advanced params are enabled)
             if advanced:
-                loadKey("schoolKappa", id, 1.0)
+                load_key("schoolKappa", id, 1.0)
                 leftCol.number_input(
                     "School Transmission ($\\kappa$)",
                     min_value=0.00001,
@@ -205,7 +205,7 @@ individuals.
                     step=0.01,
                     format="%0.5g",
                     key=f"_schoolKappa{id}",
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["schoolKappa", id],
                     help="""
 The value of the transmissibility modifier
@@ -216,7 +216,7 @@ the pathogen when interacting with infected
 individuals in schools.
                     """,
                 )
-                loadKey("workKappa", id, 1.0)
+                load_key("workKappa", id, 1.0)
                 rightCol.number_input(
                     "Workplace Transmission ($\\kappa$)",
                     min_value=0.00001,
@@ -225,7 +225,7 @@ individuals in schools.
                     step=0.01,
                     format="%0.5g",
                     key=f"_workKappa{id}",
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["workKappa", id],
                     help="""
 The value of the transmissibility modifier
@@ -236,7 +236,7 @@ the pathogen when interacting with infected
 individuals in workplaces.
                         """,
                 )
-                loadKey("householdKappa", id, 2.2)
+                load_key("householdKappa", id, 2.2)
                 leftCol.number_input(
                     "Household Transmission ($\\kappa$)",
                     min_value=0.00001,
@@ -245,7 +245,7 @@ individuals in workplaces.
                     step=0.01,
                     format="%0.5g",
                     key=f"_householdKappa{id}",
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["householdKappa", id],
                     help="""
 The value of the transmissibility modifier
@@ -256,7 +256,7 @@ the pathogen when interacting with infected
 individuals in households.
                         """,
                 )
-                loadKey("backgroundKappa", id, 1.0)
+                load_key("backgroundKappa", id, 1.0)
                 rightCol.number_input(
                     "Background Contact Transmission ($\\kappa$)",
                     min_value=0.00001,
@@ -265,7 +265,7 @@ individuals in households.
                     step=0.01,
                     format="%0.5g",
                     key=f"_backgroundKappa{id}",
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["backgroundKappa", id],
                     help="""
 The value of the transmissibility modifier
@@ -293,7 +293,7 @@ are not specified for a specific age group.
                 any ages not added to this form will use values of $inf(I_i)$
                 and $susc(I_s)$ equal to 1.
             """)
-            loadKey(
+            load_key(
                 "transAgeForm",
                 id,
                 pd.DataFrame(
@@ -310,7 +310,7 @@ are not specified for a specific age group.
                 height="content",
                 num_rows="dynamic",
                 key=f"_transAgeForm{id}",
-                on_change=saveKey,
+                on_change=save_key,
                 args=["transAgeForm", id],
                 kwargs={"dataframe": True},
                 placeholder="Enter a value",
@@ -318,7 +318,7 @@ are not specified for a specific age group.
                     "Age Group": st.column_config.SelectboxColumn(
                         "Age Group",
                         required=True,
-                        options=ageTimeDict.keys(),
+                        options=AGE_GROUP_KEYS,
                         format_func=ageDisplay,
                         help="""
 The age group whose infectiousness and susceptibility will be modified.
@@ -350,10 +350,10 @@ group to contract the pathogen when interacting with infected individuals.
                     ),
                 },
             )
-            paramError(
+            param_error(
                 "transmissionAgeFormDuplicates",
                 id,
-                lambda: hasDuplicates(transAgeForm),
+                lambda: has_duplicates(transAgeForm),
                 f"""
                     Error: The age-specific infectiousness/susceptibility
                     form used by the {
@@ -411,7 +411,7 @@ group to contract the pathogen when interacting with infected individuals.
                 The following parameters configure the length of each
                 stage in the pathogen's life cycle.
             """)
-            loadKey("latencyPeriod", id, 0.5)
+            load_key("latencyPeriod", id, 0.5)
             # Previous default was 10
             latencyPeriod = st.slider(
                 "Latent Period Length (Days)",
@@ -420,7 +420,7 @@ group to contract the pathogen when interacting with infected individuals.
                 value=0.5,
                 step=0.5,
                 format="%f Day(s)",
-                on_change=saveKey,
+                on_change=save_key,
                 args=["latencyPeriod", id],
                 key=f"_latencyPeriod{id}",
                 help="""
@@ -429,7 +429,7 @@ i.e. the length of time between a person
 initially being infected by the pathogen and becoming infectious themselves.
                 """,
             )
-            loadKey("preSymptomPeriod", id, 1.0)
+            load_key("preSymptomPeriod", id, 1.0)
             # Previous default was 2
             preSymptomPeriod = st.slider(
                 "Pre-Symptomatic Period Length (Days)",
@@ -439,7 +439,7 @@ initially being infected by the pathogen and becoming infectious themselves.
                 step=0.5,
                 format="%f Day(s)",
                 key=f"_preSymptomPeriod{id}",
-                on_change=saveKey,
+                on_change=save_key,
                 args=["preSymptomPeriod", id],
                 help="""
 The length in days of the pathogen's pre-symptomatic
@@ -447,7 +447,7 @@ period, i.e. the length of time between a person becoming
 infectious and beginning to show symptoms.
                 """,
             )
-            loadKey("symptomPeriod", id, 2.0)
+            load_key("symptomPeriod", id, 2.0)
             # Previous default was 7
             symptomPeriod = st.slider(
                 "Symptomatic Period Length (Days)",
@@ -456,7 +456,7 @@ infectious and beginning to show symptoms.
                 value=2.0,
                 step=0.5,
                 format="%f Day(s)",
-                on_change=saveKey,
+                on_change=save_key,
                 args=["symptomPeriod", id],
                 key=f"_symptomPeriod{id}",
                 help="""
@@ -465,7 +465,7 @@ period, i.e. the length of time during which an
 infected individual will show symptoms of the pathogen.
                 """,
             )
-            loadKey("postSymptomPeriod", id, 2.5)
+            load_key("postSymptomPeriod", id, 2.5)
             # Previous default was 1
             postSymptomPeriod = st.slider(
                 "Post-Symptomatic Period Length (Days)",
@@ -475,7 +475,7 @@ infected individual will show symptoms of the pathogen.
                 step=0.5,
                 format="%f Day(s)",
                 key=f"_postSymptomPeriod{id}",
-                on_change=saveKey,
+                on_change=save_key,
                 args=["postSymptomPeriod", id],
                 help="""
 The length in days of the pathogen's
@@ -630,14 +630,14 @@ pathogen to others.
                 individuals take steps to avoid spreading the disease.
             """)
             if advanced:
-                loadKey("asymptomaticChild", id, 0.35)
+                load_key("asymptomaticChild", id, 0.35)
                 st.slider(
                     "Probability of Young (0-24) Asymptomatic Case",
                     min_value=0.0,
                     max_value=1.0,
                     value=0.35,
                     format="percent",
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["asymptomaticChild", id],
                     key=f"_asymptomaticChild{id}",
                     help="""
@@ -646,14 +646,14 @@ the simulation will be asymptomatic (i.e. they never show any symptoms of the
 pathogen despite being infectious).
                     """,
                 )
-                loadKey("asymptomaticAdult", id, 0.35)
+                load_key("asymptomaticAdult", id, 0.35)
                 st.slider(
                     "Probability of Adult (24+) Asymptomatic Case",
                     min_value=0.0,
                     max_value=1.0,
                     value=0.35,
                     format="percent",
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["asymptomaticAdult", id],
                     key=f"_asymptomaticAdult{id}",
                     help="""
@@ -663,14 +663,14 @@ pathogen despite being infectious).
                     """,
                 )
             else:
-                loadKey("asymptomaticAdult", id, 0.35)
+                load_key("asymptomaticAdult", id, 0.35)
                 st.slider(
                     "Probability of Asymptomatic Case",
                     min_value=0.0,
                     max_value=1.0,
                     value=0.35,
                     format="percent",
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["asymptomaticAdult", id],
                     key=f"_asymptomaticAdult{id}",
                     help="""
@@ -681,7 +681,7 @@ being infectious).
                 )
 
     # Seeding Parameters
-    simLength = session.get("cycleCount", 360)
+    simLength = session.get("cycle_count", 360)
     with st.expander(
         "Infection Seeding", key=f"infectionSeedingContainer{id}", on_change="rerun"
     ) as seedingContainer:
@@ -704,7 +704,7 @@ being infectious).
                 rate is a decimal, the number of infections is chosen randomly
                 each cycle such that it averages out to the desired rate.
             """)
-            loadKey("seedRate", id, 0.25)
+            load_key("seedRate", id, 0.25)
             # TODO: Elaborate on decimal seeding rate mechanics?
             st.slider(
                 "Infection Seeding Rate (Average Individuals per Cycle)",
@@ -713,7 +713,7 @@ being infectious).
                 value=0.25,
                 step=0.05,
                 key=f"_seedRate{id}",
-                on_change=saveKey,
+                on_change=save_key,
                 args=["seedRate", id],
                 format="%0.4g",
                 help="""
@@ -726,14 +726,14 @@ desired rate. For instance, if the seeding rate is 3.2, the simulation will infe
 3 people 80% of the time and 4 people 20% of the time.
                 """,
             )
-            loadKey("seedPeriod", id, (1, 30))
+            load_key("seedPeriod", id, (1, 30))
             st.slider(
                 "Infection Seeding Time Period (Days)",
                 min_value=1,
                 max_value=simLength,
                 value=(1, 30),
                 format="Day %i",
-                on_change=dynamicScaleChange,
+                on_change=dynamic_scale_change,
                 args=[
                     "seedPeriod",
                     "seedTimeForm",
@@ -811,7 +811,7 @@ set to affect the value on Day 45 will be changed to affect it on Day 30 instead
             # Health Burden Outcomes
             # TODO: Can the percents be turned into sliders?
             leftCol, rightCol = st.columns(2)
-            loadKey("caseRatio", id, 50.0)
+            load_key("caseRatio", id, 50.0)
             leftCol.number_input(
                 "Diagnosis Rate (% Percentage of Cases)",
                 min_value=0.0,
@@ -821,14 +821,14 @@ set to affect the value on Day 45 will be changed to affect it on Day 30 instead
                 format="%0.3g",
                 placeholder="Enter a percentage between 0 and 100",
                 key=f"_caseRatio{id}",
-                on_change=saveKey,
+                on_change=save_key,
                 args=["caseRatio", id],
                 help="""
 The percentage of infected, symptomatic individuals who will be formally
 diagnosed as a confirmed case of the pathogen.
                 """,
             )
-            loadKey("gpRatio", id, 17.0)
+            load_key("gpRatio", id, 17.0)
             rightCol.number_input(
                 "GP Visit Rate (% Percentage of Cases)",
                 min_value=0.0,
@@ -838,14 +838,14 @@ diagnosed as a confirmed case of the pathogen.
                 format="%0.3g",
                 placeholder="Enter a percentage between 0 and 100",
                 key=f"_gpRatio{id}",
-                on_change=saveKey,
+                on_change=save_key,
                 args=["gpRatio", id],
                 help="""
 The percentage of infected, symptomatic individuals who will visit their
 general practitioner (GP) as a result of the pathogen.
                 """,
             )
-            loadKey("hospitalRatio", id, 320.0)
+            load_key("hospitalRatio", id, 320.0)
             hospitalRate = leftCol.number_input(
                 "Hospitalisation Rate (per 100,000 Cases)",
                 min_value=0.0,
@@ -855,14 +855,14 @@ general practitioner (GP) as a result of the pathogen.
                 format="%0.5g",
                 placeholder="Enter a number between 0 and 100000",
                 key=f"_hospitalRatio{id}",
-                on_change=saveKey,
+                on_change=save_key,
                 args=["hospitalRatio", id],
                 help="""
 The average number of infected individuals who will be admitted to a hospital
 for every 100,000 symptomatic cases of the pathogen.
                 """,
             )
-            loadKey("icuRatio", id, 20.0)
+            load_key("icuRatio", id, 20.0)
             rightCol.number_input(
                 "ICU Visit Rate (% Percentage of Hospitalisations)",
                 min_value=0.0,
@@ -872,14 +872,14 @@ for every 100,000 symptomatic cases of the pathogen.
                 format="%0.3g",
                 placeholder="Enter a percentage between 0 and 100",
                 key=f"_icuRatio{id}",
-                on_change=saveKey,
+                on_change=save_key,
                 args=["icuRatio", id],
                 help="""
 The percentage of infected, hospitalised individuals who will be admitted to
 a hospital's intensive care unit (ICU) as a result of the pathogen.
                 """,
             )
-            loadKey("deathRatio", id, 12.0)
+            load_key("deathRatio", id, 12.0)
             deathRate = st.number_input(
                 "Mortality Rate (per 100,000 Cases)",
                 min_value=0.0,
@@ -889,7 +889,7 @@ a hospital's intensive care unit (ICU) as a result of the pathogen.
                 format="%0.5g",
                 placeholder="Enter a number between 0 and 100000",
                 key=f"_deathRatio{id}",
-                on_change=saveKey,
+                on_change=save_key,
                 args=["deathRatio", id],
                 help="""
 The average number of infected individuals who will die for every 100,000
@@ -907,7 +907,7 @@ defined for each age group, overriding the global rates defined above.
                     """,
                 )
                 st.markdown("Double-click a cell in this table to edit its value.")
-                loadKey(
+                load_key(
                     "burdenAgeForm",
                     id,
                     pd.DataFrame(
@@ -924,7 +924,7 @@ defined for each age group, overriding the global rates defined above.
                     height="content",
                     num_rows="dynamic",
                     key=f"_burdenAgeForm{id}",
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["burdenAgeForm", id],
                     kwargs={"dataframe": True},
                     placeholder="Enter a value",
@@ -932,7 +932,7 @@ defined for each age group, overriding the global rates defined above.
                         "Age Group": st.column_config.SelectboxColumn(
                             "Age Group",
                             required=True,
-                            options=ageTimeDict.keys(),
+                            options=AGE_GROUP_KEYS,
                             format_func=ageDisplay,
                             help="""
 An age group that will have specific health burden outcome rates defined for it,
@@ -965,10 +965,10 @@ for every 100,000 cases of the pathogen in this age group.
                         ),
                     },
                 )
-                paramError(
+                param_error(
                     "burdenAgeFormDuplicates",
                     id,
-                    lambda: hasDuplicates(burdenAgeForm),
+                    lambda: has_duplicates(burdenAgeForm),
                     f"""
                         Error: The age-specific health burden rate form used by the {
                             'baseline scenario' if id == 0
@@ -1011,11 +1011,11 @@ for every 100,000 cases of the pathogen in this age group.
                     their immunity will begin waning from 100% again once they recover.
 
                 """)
-                loadKey("naturalWaningToggle", id, False)
+                load_key("naturalWaningToggle", id, False)
                 waningToggle = st.toggle(
                     "Enable Natural Immunity Waning",
                     value=False,
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["naturalWaningToggle", id],
                     key=f"_naturalWaningToggle{id}",
                     help="""
@@ -1025,14 +1025,14 @@ infected again after recovering from a previous infection.
                     """,
                 )
                 # TODO: No more months
-                loadKey("naturalImmunityDuration", id, 2)
+                load_key("naturalImmunityDuration", id, 2)
                 st.slider(
                     "Natural Immunity Waning Delay (Months)",
                     0,
                     12,
                     2,
                     disabled=not waningToggle,
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["naturalImmunityDuration", id],
                     key=f"_naturalImmunityDuration{id}",
                     help="""
@@ -1047,14 +1047,14 @@ The number of months after an individual fully recovers from the pathogen
 before the immunity conferred by having been infected begins to diminish,
 where a month is 30 days.
                 """
-                loadKey("naturalWaningRate", id, 6)
+                load_key("naturalWaningRate", id, 6)
                 st.slider(
                     "Natural Immunity Waning Duration (Months)",
                     0,
                     12,
                     6,
                     disabled=not waningToggle,
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["naturalWaningRate", id],
                     key=f"_naturalWaningRate{id}",
                     help="""
@@ -1079,7 +1079,7 @@ the final immunity probability defined above.
 If this parameter is set to 0, the immunity
 provided by recovering from the pathogen will never diminish.
                 """
-                loadKey("naturalWanedEfficacy", id, 0.5)
+                load_key("naturalWanedEfficacy", id, 0.5)
                 st.slider(
                     "Natural Immunity Minimum Efficacy (Probability)",
                     min_value=0.0,
@@ -1088,7 +1088,7 @@ provided by recovering from the pathogen will never diminish.
                     format="percent",
                     disabled=not waningToggle,
                     key=f"_naturalWanedEfficacy{id}",
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["naturalWanedEfficacy", id],
                     help="""
 The efficacy of an individual's natural immunity after the full waning duration,
@@ -1104,12 +1104,12 @@ after their immunity is fully waned.
                 """
 
 
-def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
+def diseaseDescribe(scenario_id: int = 0, advanced: bool = False):
     """
     Function to describe the current pathogen parameters in natural language.
 
     Parameters:
-        scenarioID (int): An integer that will be used to differentiate the parameters
+        scenario_id (int): An integer that will be used to differentiate the parameters
             in different instances of the tab by adding a number to the Streamlit
             session state variables. A value of 0 means that this is the
             baseline scenario and will be treated accordingly.
@@ -1134,9 +1134,9 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
     """)
     # Get infectiousness/susceptibility values
     transValues, suscValues = {}, {}
-    transAgeForm = idGet(
+    transAgeForm = id_get(
         "transAgeForm",
-        scenarioID,
+        scenario_id,
         pd.DataFrame(
             {
                 "Age Group": [None],
@@ -1167,7 +1167,7 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
             ((age, value),) = transValues.items()
             transString = f"""
           When the infected individual $I_i$ belongs to
-        the age group "{ageTimeDict[age]}", $inf(I_i)$ will be equal to {value:.5g}.
+        the age group "{AGE_KEY_CONVERTER[age]}", $inf(I_i)$ will be equal to {value:.5g}.
         For all other age groups, $inf(I_i)$ will be equal to 1.
             """
         case _:
@@ -1178,7 +1178,7 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
             """
             for age, value in sorted(transValues.items(), key=ageSort):
                 transString += f"""\n
-          - {ageTimeDict[age]}: {value:.5g}
+          - {AGE_KEY_CONVERTER[age]}: {value:.5g}
                 """
             if len(transValues) < 10:
                 transString += """\n
@@ -1195,7 +1195,7 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
             ((age, value),) = suscValues.items()
             suscString = f"""
           When the healthy individual $I_s$ belongs to
-        the age group "{ageTimeDict[age]}", $susc(I_s)$ will be equal to {value:.5g}.
+        the age group "{AGE_KEY_CONVERTER[age]}", $susc(I_s)$ will be equal to {value:.5g}.
         For all other age groups, $susc(I_s)$ will be equal to 1.
             """
         case _:
@@ -1206,7 +1206,7 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
             """
             for age, value in sorted(suscValues.items(), key=ageSort):
                 suscString += f"""\n
-          - {ageTimeDict[age]}: {value:.5g}
+          - {AGE_KEY_CONVERTER[age]}: {value:.5g}
                 """
             if len(suscValues) < 10:
                 suscString += """\n
@@ -1265,24 +1265,24 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
         interactions that occur during the background phase (i.e. outside of the
         previous three locations), $\\kappa$ will be equal to {background:.5g}.
     """.format(
-            beta=idGet("beta", scenarioID, 0.0616),
-            asym=idGet("betaAsymptomatic", scenarioID, 0.55),
-            postsym=idGet("betaPostSymptomatic", scenarioID, 0.55),
+            beta=id_get("beta", scenario_id, 0.0616),
+            asym=id_get("betaAsymptomatic", scenario_id, 0.55),
+            postsym=id_get("betaPostSymptomatic", scenario_id, 0.55),
             trans=transString,
             susc=suscString,
-            household=idGet("householdKappa", scenarioID, 2.2),
-            workplace=idGet("workKappa", scenarioID, 1.0),
-            school=idGet("schoolKappa", scenarioID, 1.0),
-            background=idGet("backgroundKappa", scenarioID, 1.0),
+            household=id_get("householdKappa", scenario_id, 2.2),
+            workplace=id_get("workKappa", scenario_id, 1.0),
+            school=id_get("schoolKappa", scenario_id, 1.0),
+            background=id_get("backgroundKappa", scenario_id, 1.0),
         )
     )
 
     # Life Cycle
     st.subheader("Infection Life Cycle")
-    latentPeriod = idGet("latencyPeriod", scenarioID, 0.5)
-    preSymptomPeriod = idGet("preSymptomPeriod", scenarioID, 1.0)
-    symptomPeriod = idGet("symptomPeriod", scenarioID, 2.0)
-    postSymptomPeriod = idGet("postSymptomPeriod", scenarioID, 2.5)
+    latentPeriod = id_get("latencyPeriod", scenario_id, 0.5)
+    preSymptomPeriod = id_get("preSymptomPeriod", scenario_id, 1.0)
+    symptomPeriod = id_get("symptomPeriod", scenario_id, 2.0)
+    postSymptomPeriod = id_get("postSymptomPeriod", scenario_id, 2.5)
     st.markdown(
         """
         When an individual in the simulation is infected with a pathogen, the
@@ -1346,14 +1346,14 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
             infectious=dayCount(
                 preSymptomPeriod + symptomPeriod + postSymptomPeriod
             ).lower(),
-            youngAsym=idGet("asymptomaticChild", scenarioID, 0.35),
-            oldAsym=idGet("asymptomaticAdult", scenarioID, 0.35),
+            youngAsym=id_get("asymptomaticChild", scenario_id, 0.35),
+            oldAsym=id_get("asymptomaticAdult", scenario_id, 0.35),
         )
     )
 
     # Seeding
     st.subheader("Infection Seeding")
-    seedRate = idGet("seedRate", scenarioID, 0.25)
+    seedRate = id_get("seedRate", scenario_id, 0.25)
     if seedRate.is_integer():
         seedString = f"""
         During each cycle of the simulation (i.e. twice per day), infection
@@ -1369,7 +1369,7 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
         {highSeed:.0g} each cycle; there is a {seedRate % 1:.0%} chance that
         there will be {highSeed:.0g} seeded infection{plural(highSeed)}.
         """
-    startDay, endDay = idGet("seedPeriod", scenarioID, (1, 30))
+    startDay, endDay = id_get("seedPeriod", scenario_id, (1, 30))
     st.markdown("""
         When a simulation experiment begins, everyone within the simulation is
         healthy. Infection seeding is used to kickstart the spread of the pathogen
@@ -1384,8 +1384,8 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
 
     # Health Burdens
     st.subheader("Health Burden Outcomes")
-    hospitalRate = idGet("hospitalRatio", scenarioID, 320.0)
-    deathRate = idGet("deathRatio", scenarioID, 12.0)
+    hospitalRate = id_get("hospitalRatio", scenario_id, 320.0)
+    deathRate = id_get("deathRatio", scenario_id, 12.0)
     st.markdown(
         """
         Health burden outcomes are adverse consequences that may result from an
@@ -1430,17 +1430,17 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
            For every 100,000 symptomatic individuals in the simulation, an average
         of {death:.10g} individual(s) will die.
     """.format(
-            diagnosis=idGet("caseRatio", scenarioID, 50.0),
-            gp=idGet("gpRatio", scenarioID, 17.0),
+            diagnosis=id_get("caseRatio", scenario_id, 50.0),
+            gp=id_get("gpRatio", scenario_id, 17.0),
             hospitalisation=hospitalRate,
-            icu=idGet("icuRatio", scenarioID, 20.0),
+            icu=id_get("icuRatio", scenario_id, 20.0),
             death=deathRate,
         )
     )
     burdenAgeForm = (
-        idGet(
+        id_get(
             "burdenAgeForm",
-            scenarioID,
+            scenario_id,
             pd.DataFrame(
                 {
                     "Age Group": [None],
@@ -1478,16 +1478,16 @@ def diseaseDescribe(scenarioID: int = 0, advanced: bool = False):
     # Waning
     # TODO: Come up with a more readable way of generating this description
     st.subheader("Natural Immunity")
-    if not (advanced and idGet("naturalWaningToggle", scenarioID, False)):
+    if not (advanced and id_get("naturalWaningToggle", scenario_id, False)):
         waningString = """
         Currently, natural immunity in the simulation lasts indefinitely; once an
         individual has recovered from the disease, they cannot be infected again
         for the remainder of the simulation.
         """
     else:
-        waningDelay = idGet("naturalImmunityDuration", scenarioID, 2)
-        waningDuration = idGet("naturalWaningRate", scenarioID, 6)
-        wanedEfficacy = idGet("naturalWanedEfficacy", scenarioID, 0.5)
+        waningDelay = id_get("naturalImmunityDuration", scenario_id, 2)
+        waningDuration = id_get("naturalWaningRate", scenario_id, 6)
+        wanedEfficacy = id_get("naturalWanedEfficacy", scenario_id, 0.5)
         if waningDelay == 0 and waningDuration == 0:
             if wanedEfficacy == 0:
                 # No immunity
@@ -1594,14 +1594,14 @@ def diseaseSaveSchema(
             raise ValueError("schema should be a Parameters object")
 
         # Load reused parameters immediately to save time
-        seedPeriod = idGet("seedPeriod", id, (1, 30))
-        latencyPeriod = idGet("latencyPeriod", id, 0.5)
-        preSymptomPeriod = idGet("preSymptomPeriod", id, 1.0)
-        symptomPeriod = idGet("symptomPeriod", id, 2.0)
-        postSymptomPeriod = idGet("postSymptomPeriod", id, 2.5)
-        globalHospitalRate = round(idGet("hospitalRatio", id, 320.0) / 100000, 10)
-        globalDeathRate = round(idGet("deathRatio", id, 12.0) / 100000, 10)
-        burdenAgeForm = idGet(
+        seedPeriod = id_get("seedPeriod", id, (1, 30))
+        latencyPeriod = id_get("latencyPeriod", id, 0.5)
+        preSymptomPeriod = id_get("preSymptomPeriod", id, 1.0)
+        symptomPeriod = id_get("symptomPeriod", id, 2.0)
+        postSymptomPeriod = id_get("postSymptomPeriod", id, 2.5)
+        globalHospitalRate = round(id_get("hospitalRatio", id, 320.0) / 100000, 10)
+        globalDeathRate = round(id_get("deathRatio", id, 12.0) / 100000, 10)
+        burdenAgeForm = id_get(
             "burdenAgeForm",
             id,
             pd.DataFrame(
@@ -1614,7 +1614,7 @@ def diseaseSaveSchema(
         )
 
         # Strain Parameters
-        beta = idGet("beta", id, 0.0616)
+        beta = id_get("beta", id, 0.0616)
         baseBeta = (
             baseline.Scenario_Strain[0].Beta
             if baseline is not None and baseline.Scenario_Strain is not None
@@ -1622,7 +1622,7 @@ def diseaseSaveSchema(
         )
         if baseBeta is None or baseBeta != beta:
             schema.Scenario_Strain = [
-                strainParameters(StrainId=0, Beta=idGet("beta", id, 0.0616))
+                strainParameters(StrainId=0, Beta=id_get("beta", id, 0.0616))
             ]
 
         # Scenario Parameters With Age Prefix
@@ -1634,16 +1634,16 @@ def diseaseSaveSchema(
 
         # Advanced parameter differences
         if advanced:
-            scenarioParams.prob_asymptomatic_young = idGet(
+            scenarioParams.prob_asymptomatic_young = id_get(
                 "asymptomaticChild", id, 0.35
             )
-            scenarioParams.prob_asymptomatic = idGet("asymptomaticAdult", id, 0.35)
-            scenarioParams.kappa_household = idGet("householdKappa", id, 2.2)
-            scenarioParams.kappa_child_education = idGet("schoolKappa", id, 1.0)
-            scenarioParams.kappa_workplace = idGet("workKappa", id, 1.0)
-            scenarioParams.kappa_background = idGet("backgroundKappa", id, 1.0)
+            scenarioParams.prob_asymptomatic = id_get("asymptomaticAdult", id, 0.35)
+            scenarioParams.kappa_household = id_get("householdKappa", id, 2.2)
+            scenarioParams.kappa_child_education = id_get("schoolKappa", id, 1.0)
+            scenarioParams.kappa_workplace = id_get("workKappa", id, 1.0)
+            scenarioParams.kappa_background = id_get("backgroundKappa", id, 1.0)
 
-            for age in ageTimeDict:
+            for age in AGE_KEY_CONVERTER:
                 if age in burdenAgeForm["Age Group"].values:
                     mort = burdenAgeForm.loc[
                         burdenAgeForm["Age Group"] == age, "Mortality Rate"
@@ -1652,16 +1652,16 @@ def diseaseSaveSchema(
                 else:
                     setattr(scenarioParams, f"{age}_mort", globalDeathRate)
         else:
-            probAsymptomatic = idGet("asymptomaticAdult", id, 0.35)
+            probAsymptomatic = id_get("asymptomaticAdult", id, 0.35)
             scenarioParams.prob_asymptomatic_young = probAsymptomatic
             scenarioParams.prob_asymptomatic = probAsymptomatic
 
         # Immunity Waning
-        if advanced and idGet("naturalWaningToggle", id, False):
-            wanedEfficacy = idGet("naturalWanedEfficacy", id, 0.5)
-            waningRate = idGet("naturalWaningRate", id, 6) * 60
+        if advanced and id_get("naturalWaningToggle", id, False):
+            wanedEfficacy = id_get("naturalWanedEfficacy", id, 0.5)
+            waningRate = id_get("naturalWaningRate", id, 6) * 60
             scenarioParams.infection_waning_cycle_delay = (
-                idGet("naturalImmunityDuration", id, 2) * 60
+                id_get("naturalImmunityDuration", id, 2) * 60
             )
             scenarioParams.infection_waned_protection = wanedEfficacy
             scenarioParams.infection_waning_rate_per_cycle = (
@@ -1671,12 +1671,12 @@ def diseaseSaveSchema(
             # Set rate to 0
             scenarioParams.infection_waning_rate_per_cycle = 0
         # Infection Seeding
-        scenarioParams.seed_rate = idGet("seedRate", id, 0.25)
+        scenarioParams.seed_rate = id_get("seedRate", id, 0.25)
         scenarioParams.seeding_start_cycle = (seedPeriod[0] - 1) * 2
         scenarioParams.seeding_duration = (seedPeriod[1] - seedPeriod[0] + 1) * 2
         # Transmission
-        scenarioParams.beta_asymptomatic = idGet("betaAsymptomatic", id, 0.55)
-        scenarioParams.beta_post_symptomatic = idGet("betaPostSymptomatic", id, 0.55)
+        scenarioParams.beta_asymptomatic = id_get("betaAsymptomatic", id, 0.55)
+        scenarioParams.beta_post_symptomatic = id_get("betaPostSymptomatic", id, 0.55)
         # Life Cycle
         scenarioParams.transmissibility_delay = latencyPeriod * 2
         scenarioParams.symptom_latency = (latencyPeriod + preSymptomPeriod) * 2
@@ -1687,11 +1687,11 @@ def diseaseSaveSchema(
             latencyPeriod + preSymptomPeriod + symptomPeriod + postSymptomPeriod
         ) * 2
         # Health Burden Outcomes
-        scenarioParams.prob_diagnosis = round(idGet("caseRatio", id, 50.0) / 100, 6)
-        hospitalRate = idGet("hospitalRatio", id, 320.0) / 100000
+        scenarioParams.prob_diagnosis = round(id_get("caseRatio", id, 50.0) / 100, 6)
+        hospitalRate = id_get("hospitalRatio", id, 320.0) / 100000
         scenarioParams.prob_hospitalisation = round(hospitalRate, 10)
         # Age-Specific Parameters
-        transAgeForm = idGet(
+        transAgeForm = id_get(
             "transAgeForm",
             id,
             pd.DataFrame(
@@ -1703,7 +1703,7 @@ def diseaseSaveSchema(
             ),
         )
         # TODO: Make sure there's no chance of this getting duplicate rows
-        for age in ageTimeDict:
+        for age in AGE_KEY_CONVERTER:
             if age in transAgeForm["Age Group"].values:
                 ageRow = transAgeForm.loc[transAgeForm["Age Group"] == age]
                 setattr(scenarioParams, f"{age}_trans", ageRow["Infectiousness"].item())
@@ -1716,7 +1716,10 @@ def diseaseSaveSchema(
         # TODO: Find a better way to prevent needing to include every table age
         # (maybe omit all ages if they're empty/unchanged from baseline?)
         ageTableParams = set().union(
-            *[{f"{age}_trans", f"{age}_susc", f"{age}_mort"} for age in ageTimeDict]
+            *[
+                {f"{age}_trans", f"{age}_susc", f"{age}_mort"}
+                for age in AGE_KEY_CONVERTER
+            ]
         )
         if baseline is not None and id > 0:
             schemaRemoveBaseline(
@@ -1731,9 +1734,9 @@ def diseaseSaveSchema(
         # Dashboard Parameters
         if includeDashboard:
             dashboardParams = dashboardParameters()
-            dashboardParams.prob_gp = round(idGet("gpRatio", id, 17.0) / 100, 6)
-            dashboardParams.prob_icu = round(idGet("icuRatio", id, 20.0) / 100, 6)
-            for age in ageTimeDict:
+            dashboardParams.prob_gp = round(id_get("gpRatio", id, 17.0) / 100, 6)
+            dashboardParams.prob_icu = round(id_get("icuRatio", id, 20.0) / 100, 6)
+            for age in AGE_KEY_CONVERTER:
                 if age in burdenAgeForm["Age Group"].values:
                     hosp = burdenAgeForm.loc[
                         burdenAgeForm["Age Group"] == age, "Hospitalisation Rate"
@@ -1746,7 +1749,7 @@ def diseaseSaveSchema(
                 schemaRemoveBaseline(
                     dashboardParams,
                     baseline.Dashboard_Parameter,
-                    ignore={f"{age}_hosp" for age in ageTimeDict},
+                    ignore={f"{age}_hosp" for age in AGE_KEY_CONVERTER},
                 )
             schemaUpdate(schema, "Dashboard_Parameter", dashboardParams)
     except (ValueError, ValidationError) as e:
@@ -1759,7 +1762,7 @@ def diseaseSaveSchema(
         raise e
 
 
-def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
+def diseaseLoadSchema(schema: Parameters, scenario_id: int = 0):
     """
     Function to read pathogen parameters from a schema and set the
     dashboard's widgets to the specified values.
@@ -1781,22 +1784,22 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
     # Strain Parameters
     schemaStrain = schema.Scenario_Strain
     if schemaStrain is not None:
-        updateParamFromSchema("beta", schemaStrain[0].Beta, scenarioID)
+        update_param_from_schema("beta", schemaStrain[0].Beta, scenario_id)
 
     # Global Age Parameters
     schemaAge = schema.Scenario_ParameterWithAgePrefix
     if schemaAge is not None and schemaAge.mort is not None:
         globalDeathRate = round(schemaAge.mort * 100000, 6)
-        updateParamFromSchema("deathRatio", globalDeathRate, scenarioID)
+        update_param_from_schema("deathRatio", globalDeathRate, scenario_id)
     else:
-        globalDeathRate = idGet("deathRatio", 0, 12.0)
+        globalDeathRate = id_get("deathRatio", 0, 12.0)
 
     # Dashboard Parameters
     schemaDash = schema.Dashboard_Parameter
     if schemaDash is not None:
         if schemaDash.prob_gp is not None:
-            updateParamFromSchema(
-                "gpRatio", round(schemaDash.prob_gp * 100, 6), scenarioID
+            update_param_from_schema(
+                "gpRatio", round(schemaDash.prob_gp * 100, 6), scenario_id
             )
         rawHospParams = {
             p.removesuffix("_hosp"): v
@@ -1811,7 +1814,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
     # General Scenario Parameters
     schemaParameters = schema.Scenario_Parameter
     if schemaParameters is not None:
-        simLength = session.get("cycleCount", 360)
+        simLength = session.get("cycle_count", 360)
         paramDict = schemaParameters.model_dump(exclude_unset=True, exclude_none=True)
 
         # Use dictionary to convert schema parameters into dashboard values
@@ -1834,14 +1837,14 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
         }
         simpleParams = {p: v for p, v in paramConvert.items() if p in paramDict}
         for parameter, (key, formatFunc) in simpleParams.items():
-            updateParamFromSchema(key, formatFunc(paramDict[parameter]), scenarioID)
+            update_param_from_schema(key, formatFunc(paramDict[parameter]), scenario_id)
 
         # Natural immunity waning
         if "infection_waning_rate_per_cycle" in paramDict:
             useWaning = paramDict["infection_waning_rate_per_cycle"] > 0
-            updateParamFromSchema("naturalWaningToggle", useWaning, scenarioID)
+            update_param_from_schema("naturalWaningToggle", useWaning, scenario_id)
         else:
-            useWaning = idGet("naturalWaningToggle", 0, False)
+            useWaning = id_get("naturalWaningToggle", 0, False)
 
         # Period definitions
         # TODO: Handle baseline validation errors better
@@ -1855,15 +1858,15 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             # Ensure baseline has all values
             wanedEfficacy = schemaParameters.infection_waned_protection
             waningRate = schemaParameters.infection_waning_rate_per_cycle
-            if None in {wanedEfficacy, waningRate} and scenarioID == 0:
+            if None in {wanedEfficacy, waningRate} and scenario_id == 0:
                 raise AssertionError("""
                     Waning efficacy parameters were only partially
                     defined for the baseline scenario
                 """)
 
             # Use baseline values to plug None gaps
-            baseWanedEfficacy = idGet("naturalWanedEfficacy", 0, 0.5)
-            baseWaningDuration = idGet("naturalWaningRate", 0, 6)
+            baseWanedEfficacy = id_get("naturalWanedEfficacy", 0, 0.5)
+            baseWaningDuration = id_get("naturalWaningRate", 0, 6)
             if wanedEfficacy is None:
                 wanedEfficacy = baseWanedEfficacy
             if waningRate is None:
@@ -1874,14 +1877,16 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                 )
 
             # Calculate efficacy waning duration
-            updateParamFromSchema("naturalWaningEfficacy", wanedEfficacy, scenarioID)
+            update_param_from_schema(
+                "naturalWaningEfficacy", wanedEfficacy, scenario_id
+            )
             if waningRate in {0.0, 1.0}:
-                updateParamFromSchema("naturalWaningRate", 0, scenarioID)
+                update_param_from_schema("naturalWaningRate", 0, scenario_id)
             else:
-                updateParamFromSchema(
+                update_param_from_schema(
                     "naturalWaningRate",
                     int((1.0 - wanedEfficacy) / (waningRate * 60)),
-                    scenarioID,
+                    scenario_id,
                 )
 
         if {"seeding_start_cycle", "seeding_duration"}.intersection(paramDict):
@@ -1889,14 +1894,14 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             # Ensure baseline has all values
             seedStart = schemaParameters.seeding_start_cycle
             seedLength = schemaParameters.seeding_duration
-            if None in {seedStart, seedLength} and scenarioID == 0:
+            if None in {seedStart, seedLength} and scenario_id == 0:
                 raise AssertionError("""
                     Infection seeding period parameters were only partially
                     defined for the baseline scenario
                 """)
 
             # Use baseline values to plug None gaps
-            basePeriodStart, basePeriodEnd = idGet("seedPeriod", 0, (1, 30))
+            basePeriodStart, basePeriodEnd = id_get("seedPeriod", 0, (1, 30))
             if seedStart is None:
                 seedStart = (basePeriodStart - 1) * 2
             if seedLength is None:
@@ -1905,8 +1910,8 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
             # Calculate seeding period
             seedPeriodStart = (seedStart // 2) + 1
             seedPeriodEnd = min(simLength, (seedStart + seedLength) // 2)
-            updateParamFromSchema(
-                "seedPeriod", (seedPeriodStart, seedPeriodEnd), scenarioID
+            update_param_from_schema(
+                "seedPeriod", (seedPeriodStart, seedPeriodEnd), scenario_id
             )
 
         if {
@@ -1929,7 +1934,7 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                     generationTime,
                     infectionDuration,
                 }
-                and scenarioID == 0
+                and scenario_id == 0
             ):
                 raise AssertionError("""
                     Infection life cycle parameters were only partially 
@@ -1937,10 +1942,10 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                 """)
 
             # Use baseline values to plug None gaps
-            baseLatency = idGet("latencyPeriod", 0, 0.5)
-            basePreSymptom = idGet("preSymptomPeriod", 0, 1.0)
-            baseSymptom = idGet("symptomPeriod", 0, 2.0)
-            basePostSymptom = idGet("postSymptomPeriod", 0, 2.5)
+            baseLatency = id_get("latencyPeriod", 0, 0.5)
+            basePreSymptom = id_get("preSymptomPeriod", 0, 1.0)
+            baseSymptom = id_get("symptomPeriod", 0, 2.0)
+            basePostSymptom = id_get("postSymptomPeriod", 0, 2.5)
             if transmissibilityDelay is None:
                 transmissibilityDelay = baseLatency * 2
             if symptomLatency is None:
@@ -1952,23 +1957,23 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
                     baseLatency + basePreSymptom + baseSymptom + basePostSymptom
                 ) * 2
 
-            updateParamFromSchema(
-                "latencyPeriod", transmissibilityDelay / 2, scenarioID
+            update_param_from_schema(
+                "latencyPeriod", transmissibilityDelay / 2, scenario_id
             )
-            updateParamFromSchema(
+            update_param_from_schema(
                 "preSymptomPeriod",
                 (symptomLatency - transmissibilityDelay) / 2,
-                scenarioID,
+                scenario_id,
             )
-            updateParamFromSchema(
+            update_param_from_schema(
                 "symptomPeriod",
                 (generationTime - symptomLatency) / 2,
-                scenarioID,
+                scenario_id,
             )
-            updateParamFromSchema(
+            update_param_from_schema(
                 "postSymptomPeriod",
                 (infectionDuration - generationTime) / 2,
-                scenarioID,
+                scenario_id,
             )
 
         # Tables
@@ -1977,29 +1982,29 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
         transTable = pd.DataFrame(
             columns=("Age Group", "Infectiousness", "Susceptibility")
         )
-        transParams = {
-            p.removesuffix("_trans"): v
+        transParams: dict[AgeGroupKey, Any] = {
+            cast(AgeGroupKey, p.removesuffix("_trans")): v
             for p, v in paramDict.items()
             if p.endswith("_trans") and v != 1.0
         }
-        suscParams = {
-            p.removesuffix("_susc"): v
+        suscParams: dict[AgeGroupKey, Any] = {
+            cast(AgeGroupKey, p.removesuffix("_susc")): v
             for p, v in paramDict.items()
             if p.endswith("_susc") and v != 1.0
         }
         # TODO: Leave table to inherit baseline if ages are unchanged
         transAges = sorted(
             set(transParams.keys()) | set(suscParams.keys()),
-            key=lambda x: list(ageTimeDict).index(x),
+            key=lambda x: list(AGE_KEY_CONVERTER).index(x),
         )
         for age in transAges:
             transValue = transParams.get(age, 1.0)
             suscValue = suscParams.get(age, 1.0)
             transTable.loc[transTable.shape[0]] = [age, transValue, suscValue]
-        updateTableFromSchema(
+        update_table_from_schema(
             "transAgeForm",
             transTable,
-            scenarioID,
+            scenario_id,
             pd.DataFrame(
                 {
                     "Age Group": [None],
@@ -2011,38 +2016,42 @@ def diseaseLoadSchema(schema: Parameters, scenarioID: int = 0):
 
         # Age-specific health burdens
         globalHospitalRate = paramDict.get(
-            "prob_hospitalisation", idGet("hospitalRatio", 0, 320.0)
+            "prob_hospitalisation", id_get("hospitalRatio", 0, 320.0)
         )
         burdenTable = pd.DataFrame(
             columns=("Age Group", "Hospitalisation Rate", "Mortality Rate")
         )
-        hospParams = {
-            p: round(v * 100000, 6)
+        hospParams: dict[AgeGroupKey, Any] = {
+            cast(AgeGroupKey, p): round(v * 100000, 6)
             for p, v in rawHospParams.items()
             if v != globalHospitalRate
         }
-        mortParams = {
-            p.removesuffix("_mort"): round(v * 100000, 6) if v is not None else None
+        mortParams: dict[AgeGroupKey, Any] = {
+            cast(AgeGroupKey, p.removesuffix("_mort")): (
+                round(v * 100000, 6) if v is not None else None
+            )
             for p, v in paramDict.items()
             if p.endswith("_mort") and v != globalDeathRate
         }
         burdenAges = sorted(
             set(hospParams.keys()) | set(mortParams.keys()),
-            key=lambda x: list(ageTimeDict).index(x),
+            key=lambda x: list(AGE_KEY_CONVERTER).index(x),
         )
         for age in burdenAges:
             hospValue = hospParams.get(age, globalHospitalRate)
             mortValue = mortParams.get(age, globalDeathRate)
             burdenTable.loc[burdenTable.shape[0]] = [age, hospValue, mortValue]
-        updateTableFromSchema(
+        update_table_from_schema(
             "burdenAgeForm",
             burdenTable,
-            scenarioID,
+            scenario_id,
             pd.DataFrame(
                 {
                     "Age Group": [None],
-                    "Hospitalisation Rate": [idGet("hospitalRatio", scenarioID, 320.0)],
-                    "Mortality Rate": [idGet("deathRatio", scenarioID, 12.0)],
+                    "Hospitalisation Rate": [
+                        id_get("hospitalRatio", scenario_id, 320.0)
+                    ],
+                    "Mortality Rate": [id_get("deathRatio", scenario_id, 12.0)],
                 },
             ),
         )

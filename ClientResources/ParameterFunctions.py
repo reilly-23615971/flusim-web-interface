@@ -3,62 +3,74 @@
 # Functions used for parameters and their relevant widgets
 
 # Imports
-import logging
-import time
 from typing import Any, Callable, Optional
 
 import pandas as pd
 import streamlit as st
 
-# Logging
-paramFunctionLog = logging.getLogger(__name__)
-
 # Store st.session_state as variable for efficiency
 session = st.session_state
 
+# List of parameters that will be affected by changing cycle_count
+# TODO: Add additional parameters or devise a way to automate their addition
+TIME_PARAMS = [
+    ("seedPeriod", "Infection Seeding Time Period"),
+    ("schoolClosurePeriod", "School Closure Time Period"),
+    ("withdrawalIncreasePeriod", "Withdrawal Increase Time Period"),
+    ("reducedGroupPeriod", "Reduced Group Size Time Period"),
+    ("bccPeriod", "BCC Reduction Time Period"),
+]
+
+# List of parameters that modify dynamic parameter forms when changed
+DYNAMIC_PARAMS = {
+    "seedPeriod": ("seedTimeForm", "Infection Seeding Rate"),
+    "schoolClosurePeriod": ("closeTimeForm", "School Closure Compliance"),
+    "bccPeriod": ("bccTimeForm", "Reduced Background Contact Count"),
+}
+
 
 # Widget Functions
-def containerSave(
+def container_save(
     key: str,
-    scenarioID: int = -1,
+    scenario_id: int = -1,
     containers: set[str] = set(),
-    specialContainers: dict[str, str] = {},
+    special_containers: dict[str, str] = {},
 ):
     """
-    Wrapper for `saveKey` that keeps specific containers open, used for
+    Wrapper for `save_key` that keeps specific containers open, used for
     advanced parameters and scenario names.
 
     Parameters:
         key (str): The string used to identify the widget.
 
-        scenarioID (int): The integer representing the scenario the widget
+        scenario_id (int): The integer representing the scenario the widget
             is part of. If this is negative, no ID will be added, allowing for
             parameters that are not associated with scenarios to be saved.
 
         containers (set of str): String used to identify each container to open.
 
-        specialContainers (dict of str): String used to identify containers
+        special_containers (dict of str): String used to identify containers
             that must be set to specific values (i.e. scenario tabs whose
             names change). Including `{id}` or `{value}` in one of the values
-            for these will replace them with the value of `scenarioID` or the
+            for these will replace them with the value of `scenario_id` or the
             value of the widget that is being saved, respectively.
     """
 
-    displayID = scenarioID if scenarioID >= 0 else ""
-    saveKey(key, scenarioID)
+    display_id = scenario_id if scenario_id >= 0 else ""
+    save_key(key, scenario_id)
     for container in containers:
         session[container] = session.get(container)
-    for container, value in specialContainers.items():
+    for container, value in special_containers.items():
         session[container] = value.format(
-            id=displayID, value=session.get(f"{key}{displayID}")
+            id=display_id, value=session.get(f"{key}{display_id}")
         )
 
 
-def saveKey(
+def save_key(
     key: str,
-    scenarioID: int = -1,
+    scenario_id: int = -1,
     extra: Optional[str] = None,
-    notScenario=False,
+    not_scenario=False,
     dataframe=False,
 ):
     """
@@ -67,14 +79,14 @@ def saveKey(
     Parameters:
         key (str): The string used to identify the widget.
 
-        scenarioID (int): The integer representing the scenario the widget
+        scenario_id (int): The integer representing the scenario the widget
             is part of. If this is negative, no ID will be added, allowing for
             parameters that are not associated with scenarios to be saved.
 
         extra (str, optional): An additional part of the key used to distinguish
             variable-length forms.
 
-        notScenario (bool): Set to `True` if the widget isn't a parameter for scenarios.
+        not_scenario (bool): Set to `True` if the widget isn't a parameter for scenarios.
 
         dataframe (bool): Set to `True` if the widget is a dataframe that requires
             manual application of changes.
@@ -84,47 +96,49 @@ def saveKey(
     # (e.g. by having None/NA cells with the placeholder "Same as baseline")
 
     # Prevent invalid calls after deleting scenarios
-    if scenarioID > session["scenarioCount"]:
+    if scenario_id > session["scenario_count"]:
         return
-    keyString = f"{key}{scenarioID if scenarioID >= 0 else ""}{extra if extra else ""}"
+    key_string = (
+        f"{key}{scenario_id if scenario_id >= 0 else ""}{extra if extra else ""}"
+    )
     if dataframe:
         # Load both data and changes
-        currentData = session[keyString].copy()
-        modifiedData = session[f"_{keyString}"]
+        current_data = session[key_string].copy()
+        modified_data = session[f"_{key_string}"]
 
         # Row changes
-        for row, edit in modifiedData["edited_rows"].items():
-            for column, newValue in edit.items():
-                currentData.loc[row, column] = newValue
+        for row, edit in modified_data["edited_rows"].items():
+            for column, new_value in edit.items():
+                current_data.loc[row, column] = new_value
 
         # Row additions
-        for newRow in modifiedData["added_rows"]:
-            currentData.loc[currentData.shape[0]] = newRow
+        for new_row in modified_data["added_rows"]:
+            current_data.loc[current_data.shape[0]] = new_row
 
         # Row removals
-        currentData = currentData.drop(modifiedData["deleted_rows"]).reset_index(
+        current_data = current_data.drop(modified_data["deleted_rows"]).reset_index(
             drop=True
         )
 
         # Save the edited data
-        session[keyString] = currentData
+        session[key_string] = current_data
     else:
-        session[keyString] = session.get(f"_{keyString}")
+        session[key_string] = session.get(f"_{key_string}")
 
     # Add to scenario param lists if it's a scenario param (ID > 0)
-    if not notScenario and scenarioID > 0:
+    if not not_scenario and scenario_id > 0:
         if extra:
-            session["scenarioSetParamsExtra"][scenarioID].add((key, extra))
+            session["scenario_extra_params"][scenario_id].add((key, extra))
         else:
-            session["scenarioSetParams"][scenarioID].add(key)
+            session["scenario_set_params"][scenario_id].add(key)
 
 
-def loadKey(
+def load_key(
     key: str,
-    scenarioID: int = -1,
+    scenario_id: int = -1,
     default=None,
     extra: Optional[str] = None,
-    noZeroDefault=False,
+    no_zero_default=False,
     dataframe=False,
 ):
     """
@@ -133,7 +147,7 @@ def loadKey(
     Parameters:
         key (str): The string used to identify the widget.
 
-        scenarioID (int): The integer representing the scenario the widget
+        scenario_id (int): The integer representing the scenario the widget
             is part of. If this is negative, no ID will be added, allowing for
             parameters that are not associated with scenarios to be saved.
 
@@ -142,150 +156,134 @@ def loadKey(
         extra (str, optional): An additional part of the key used to distinguish
             variable-length forms.
 
-        noZeroDefault (bool): Set to `True` if the widget shouldn't fall back
+        no_zero_default (bool): Set to `True` if the widget shouldn't fall back
             on baseline values.
 
         dataframe (bool): Set to `True` for dataframe widgets that load
             their data differently.
     """
 
-    keyString = f"{key}{scenarioID if scenarioID >= 0 else ""}{extra if extra else ""}"
-    hiddenPrefix = "_" if not dataframe else ""
-    if noZeroDefault or scenarioID < 0:
-        session[f"{hiddenPrefix}{keyString}"] = session.get(f"{keyString}", default)
+    key_string = (
+        f"{key}{scenario_id if scenario_id >= 0 else ""}{extra if extra else ""}"
+    )
+    hidden_prefix = "_" if not dataframe else ""
+    if no_zero_default or scenario_id < 0:
+        session[f"{hidden_prefix}{key_string}"] = session.get(f"{key_string}", default)
     else:
-        session[f"{hiddenPrefix}{keyString}"] = (
-            idGet(key, scenarioID, default, extra).copy()
+        session[f"{hidden_prefix}{key_string}"] = (
+            id_get(key, scenario_id, default, extra).copy()
             if dataframe
-            else idGet(key, scenarioID, default, extra)
+            else id_get(key, scenario_id, default, extra)
         )
     # Ensure dataframes are properly cleaned up even if never edited
-    if dataframe and scenarioID > 0:
+    if dataframe and scenario_id > 0:
         if extra:
-            session["scenarioSetParamsExtra"][scenarioID].add((key, extra))
+            session["scenario_extra_params"][scenario_id].add((key, extra))
         else:
-            session["scenarioSetParams"][scenarioID].add(key)
+            session["scenario_set_params"][scenario_id].add(key)
 
 
-# List of parameters that will be affected by changing cycleCount
-# TODO: Add additional parameters or devise a way to automate their addition
-timeParamList = [
-    ("seedPeriod", "Infection Seeding Time Period"),
-    ("schoolClosurePeriod", "School Closure Time Period"),
-    ("withdrawalIncreasePeriod", "Withdrawal Increase Time Period"),
-    ("reducedGroupPeriod", "Reduced Group Size Time Period"),
-    ("bccPeriod", "BCC Reduction Time Period"),
-]
-
-# List of parameters that modify dynamic parameter forms when changed
-dynamicParamList = {
-    "seedPeriod": ("seedTimeForm", "Infection Seeding Rate"),
-    "schoolClosurePeriod": ("closeTimeForm", "School Closure Compliance"),
-    "bccPeriod": ("bccTimeForm", "Reduced Background Contact Count"),
-}
-
-
-def timeScaleChange():
+def time_scale_change():
     """
     Function to update the ranges of time-based parameters.
     """
-    saveKey("cycleCount")
-    newLength = session["cycleCount"]
-    changedList = []
-    for id in range(session["scenarioCount"] + 1):
-        for key, name in timeParamList:
-            fullKey = f"{key}{id}"
-            oldValue = session.get(fullKey, None)
-            if oldValue is not None:
-                if oldValue[1] > newLength:
-                    changedList.append(name)
-                session[fullKey] = (
-                    min(oldValue[0], newLength),
-                    min(oldValue[1], newLength),
+    save_key("cycle_count")
+    new_length = session["cycle_count"]
+    changed_list = []
+    for id in range(session["scenario_count"] + 1):
+        for key, name in TIME_PARAMS:
+            full_key = f"{key}{id}"
+            old_value = session.get(full_key, None)
+            if old_value is not None:
+                if old_value[1] > new_length:
+                    changed_list.append(name)
+                session[full_key] = (
+                    min(old_value[0], new_length),
+                    min(old_value[1], new_length),
                 )
-    for param, (form, name) in dynamicParamList.items():
-        dynamicScaleChange(param, form, name, 0, noSave=True)
-    if changedList:
+    for param, (form, name) in DYNAMIC_PARAMS.items():
+        dynamic_scale_change(param, form, name, 0, no_save=True)
+    if changed_list:
         # TODO: Note which scenario these were present in
         st.toast(
             f"""
 These parameters were above the new simulation length,
-so they have been reduced:\n""" + "\n".join(f"- {name}" for name in changedList),
+so they have been reduced:\n""" + "\n".join(f"- {name}" for name in changed_list),
             icon=":material/timer_arrow_down:",
             duration="infinite",
         )
 
 
-def dynamicScaleChange(
-    key: str,
-    formKey: str,
-    paramName: str,
-    scenarioID: int,
+def dynamic_scale_change(
+    scale_key: str,
+    form_key: str,
+    param_name: str,
+    scenario_id: int,
     condition: Optional[Callable[[], bool]] = None,
-    noSave=False,
+    no_save=False,
 ):
     """
     Function to update the ranges of dynamic parameters.
 
     Parameters:
-        key (str): The identifier used to distinguish the dynamic parameter
-            being modified.
+        scale_key (str): The identifier used to distinguish the dynamic
+            parameter being modified.
 
-        formKey (str): The identifier used to distinguish the form
+        form_key (str): The identifier used to distinguish the form
             whose ranges must be updated.
 
-        paramName (str): The name of the parameter, to display in messages
+        param_name (str): The name of the parameter, to display in messages
             indicating that something has changed.
 
-        scenarioID (int): The integer representing the scenario the widget
+        scenario_id (int): The integer representing the scenario the widget
             is part of.
 
         condition (callable, returns bool, optional): A criteria that skips
             the range update if fulfilled, formatted as a function that
             returns `True` when the criteria is met.
 
-        noSave (bool): Set to `True` if running this function from a different
+        no_save (bool): Set to `True` if running this function from a different
             page where saving the widget value would instead set it to `None`.
     """
 
-    if not noSave:
-        saveKey(key, scenarioID)
+    if not no_save:
+        save_key(scale_key, scenario_id)
     if condition is None or condition():
-        hasChanged = False
-        newMin, newMax = idGet(key, scenarioID, (1, 720))
-        if scenarioID == 0:
+        has_changed = False
+        new_min, new_max = id_get(scale_key, scenario_id, (1, 720))
+        if scenario_id == 0:
             # Check all scenarios if the baseline was modified
-            for id in range(session["scenarioCount"] + 1):
-                fullKey = f"{formKey}{id}"
-                scenarioMin, scenarioMax = idGet(key, id, (newMin, newMax))
-                form = session.get(fullKey, None)
+            for id in range(session["scenario_count"] + 1):
+                full_key = f"{form_key}{id}"
+                scenario_min, scenario_max = id_get(scale_key, id, (new_min, new_max))
+                form = session.get(full_key, None)
                 if form is not None and not form.empty:
-                    newDays = form["Day to Update Parameter"].clip(
-                        lower=scenarioMin, upper=scenarioMax
+                    new_days = form["Day to Update Parameter"].clip(
+                        lower=scenario_min, upper=scenario_max
                     )
-                    if not newDays.equals(form["Day to Update Parameter"]):
-                        hasChanged = True
-                    form["Day to Update Parameter"] = newDays
-                    session[fullKey] = form
+                    if not new_days.equals(form["Day to Update Parameter"]):
+                        has_changed = True
+                    form["Day to Update Parameter"] = new_days
+                    session[full_key] = form
         else:
             # Only update the relevant scenario
-            fullKey = f"{formKey}{scenarioID}"
-            form = session.get(fullKey, None)
+            full_key = f"{form_key}{scenario_id}"
+            form = session.get(full_key, None)
             if form is not None and not form.empty:
-                newDays = form["Day to Update Parameter"].clip(
-                    lower=newMin, upper=newMax
+                new_days = form["Day to Update Parameter"].clip(
+                    lower=new_min, upper=new_max
                 )
-                if not newDays.equals(form["Day to Update Parameter"]):
-                    hasChanged = True
-                form["Day to Update Parameter"] = newDays
-                session[fullKey] = form
+                if not new_days.equals(form["Day to Update Parameter"]):
+                    has_changed = True
+                form["Day to Update Parameter"] = new_days
+                session[full_key] = form
 
         # Notify any changes
-        if hasChanged:
+        if has_changed:
             st.toast(
                 f"""
-Some of the dynamic update points for {paramName} were outside
-of the new period where {paramName.rsplit(' ', 1)[0]} is active.
+Some of the dynamic update points for {param_name} were outside
+of the new period where {param_name.rsplit(' ', 1)[0]} is active.
 They have been adjusted to fit the new period.
             """,
                 icon=":material/timer_arrow_down:",
@@ -293,7 +291,7 @@ They have been adjusted to fit the new period.
             )
 
 
-def idGet(key: str, scenarioID: int, defaultValue, extra: Optional[str] = None):
+def id_get(key: str, scenario_id: int, default_value, extra: Optional[str] = None):
     """
     Simple function to get a specific session state value with a specific
     ID, checking ID 0 if the specified one doesn't exist before falling
@@ -302,25 +300,25 @@ def idGet(key: str, scenarioID: int, defaultValue, extra: Optional[str] = None):
     Parameters:
         key (str): The string component of the session state variable to get.
 
-        scenarioID (int): The integer representing the scenario the value is part of.
+        scenario_id (int): The integer representing the scenario the value is part of.
 
-        defaultValue: The value to return if neither the specified key nor the
+        default_value: The value to return if neither the specified key nor the
             baseline have values in `st.session_state`.
 
         extra (str, optional): An additional part of the key used to distinguish
             variable-length forms.
     """
     if not extra:
-        return session.get(f"{key}{scenarioID}", session.get(f"{key}0", defaultValue))
+        return session.get(f"{key}{scenario_id}", session.get(f"{key}0", default_value))
     else:
         return session.get(
-            f"{key}{scenarioID}{extra}",
-            session.get(f"{key}0{extra}", defaultValue),
+            f"{key}{scenario_id}{extra}",
+            session.get(f"{key}0{extra}", default_value),
         )
 
 
 # Variable-Length Form Functions
-def hasDuplicates(df: pd.DataFrame, column: str = "Age Group"):
+def has_duplicates(df: pd.DataFrame, column: str = "Age Group"):
     """
     Simple function to check if there are duplicates in a given dataframe row.
 
@@ -332,7 +330,7 @@ def hasDuplicates(df: pd.DataFrame, column: str = "Age Group"):
     return len(set(df[column])) != len(df[column])
 
 
-def replaceTableNA(df: pd.DataFrame, columnDict: dict[str, Any]) -> pd.DataFrame:
+def replace_table_na(df: pd.DataFrame, column_dict: dict[str, Any]) -> pd.DataFrame:
     """
     Function to fill NA values in specific dataframe columns, accounting for
     values that don't work with pandas' built-in `fillna` function like the empty list.
@@ -340,25 +338,25 @@ def replaceTableNA(df: pd.DataFrame, columnDict: dict[str, Any]) -> pd.DataFrame
     Parameters:
         df (DataFrame): The dataframe to modify.
 
-        columnDict (dict with str keys): A dictionary containing column names
+        column_dict (dict with str keys): A dictionary containing column names
             and the value to replace NA values with.
 
     Returns:
         Dataframe: The dataframe with NA values replaced as needed.
     """
-    newTable = df.copy()
-    for column, value in columnDict.items():
-        if column in newTable.columns:
-            for row in newTable.loc[newTable[column].isnull(), column].index:
-                newTable.at[row, column] = value
-    return newTable
+    new_table = df.copy()
+    for column, value in column_dict.items():
+        if column in new_table.columns:
+            for row in new_table.loc[new_table[column].isnull(), column].index:
+                new_table.at[row, column] = value
+    return new_table
 
 
 # Schema loading functions
-def updateParamFromSchema(
+def update_param_from_schema(
     key: str,
     value: Any,
-    scenarioID: int,
+    scenario_id: int,
     extra: Optional[str] = None,
 ):
     """
@@ -370,25 +368,25 @@ def updateParamFromSchema(
 
         value (any): The new value from the schema.
 
-        scenarioID (int): The integer representing the scenario the parameter
+        scenario_id (int): The integer representing the scenario the parameter
             is part of.
 
         extra (str, optional): An additional part of the key used to distinguish
             variable-length forms.
     """
-    session[f"{key}{scenarioID}{extra if extra else ""}"] = value
-    if scenarioID:
+    session[f"{key}{scenario_id}{extra if extra else ""}"] = value
+    if scenario_id:
         if extra:
-            session["scenarioSetParamsExtra"][scenarioID].add((key, extra))
+            session["scenario_extra_params"][scenario_id].add((key, extra))
         else:
-            session["scenarioSetParams"][scenarioID].add(key)
+            session["scenario_set_params"][scenario_id].add(key)
 
 
-def updateTableFromSchema(
+def update_table_from_schema(
     key: str,
-    newTable: pd.DataFrame,
-    scenarioID: int,
-    defaultTable: pd.DataFrame,
+    new_table: pd.DataFrame,
+    scenario_id: int,
+    default_table: pd.DataFrame,
     extra: Optional[str] = None,
 ):
     """
@@ -398,185 +396,22 @@ def updateTableFromSchema(
     Parameters:
         key (str): The string used to identify the table.
 
-        newTable (DataFrame): The new table data from the schema.
+        new_table (DataFrame): The new table data from the schema.
 
-        scenarioID (int): The integer representing the scenario the table is part of.
+        scenario_id (int): The integer representing the scenario the table is part of.
 
-        defaultTable (DataFrame): The table to load if neither `newTable` nor
+        default_table (DataFrame): The table to load if neither `new_table` nor
             the baseline scenario have any data to utilise.
 
         extra (str, optional): An additional part of the key used to distinguish
             variable-length forms.
     """
-    session[f"{key}{scenarioID}{extra if extra else ""}"] = (
-        defaultTable if newTable.empty else newTable.reset_index(drop=True)
+    session[f"{key}{scenario_id}{extra if extra else ""}"] = (
+        default_table if new_table.empty else new_table.reset_index(drop=True)
     )
     # Add to scenario parameters for ease of deletion
-    if scenarioID:
+    if scenario_id:
         if extra:
-            session["scenarioSetParamsExtra"][scenarioID].add((key, extra))
+            session["scenario_extra_params"][scenario_id].add((key, extra))
         else:
-            session["scenarioSetParams"][scenarioID].add(key)
-
-
-# All functions beyond this point are currently unused
-def getRemainingGroups(groupSets, possibleValues):
-    """
-    Function to update what parameters are selectable for different
-    parts of a form, to avoid duplicates.
-
-    Parameters:
-        groupSets: A dictionary with strings as keys and tuples containing
-            two strings as values, representing the form sections where age
-            groups need to be kept unique. The key strings are the Streamlit
-            session state variables holding the groups that haven't been
-            selected already. The first string of each value tuple is the
-            variable holding the number of rows in the corresponding age
-            selection form. The second string is the prefix used to identify
-            variables holding the groups that have already been used.
-
-        possibleValues: A tuple containing strings representing the
-            possible values that can be selected in the form
-    """
-    for set, (rowCount, prefix) in groupSets.items():
-        # Calculate age groups that haven't been used yet
-        remainingGroups = dict.fromkeys(possibleValues)
-        takenGroups = [session.get(f"{prefix}{i}") for i in range(session[rowCount])]
-        for group in takenGroups:
-            if group:
-                remainingGroups.pop(group, None)
-        # Save the new age groups
-        session[set] = list(remainingGroups.keys())
-
-
-def addFormRow(rowCounter, forceSetParams=None):
-    """
-    Function to add an additional row to a specific variable-length form.
-
-    Parameters:
-        rowCounter: A string representing the Streamlit session state
-            variable storing the current number of rows in the form.
-
-        forceSetParams: A dictionary of strings representing Streamlit
-            state variables and values to assign to them. Used to preload
-            widgets and keep drop-down selections up-to-date.
-    """
-    session[rowCounter] += 1
-    if forceSetParams:
-        for var, value in forceSetParams.items():
-            if value is not None:
-                session[var] = value
-
-
-def deleteFormRow(deletedRowIndex, rowCounter, inputPrefixes, minRows=0):
-    """
-    Function to remove a row from a specific variable-length form.
-
-    Parameters:
-        deletedRowIndex: An integer representing the index (first is 0) of
-            the row that is to be deleted from the form.
-
-        rowCounter: A string representing the Streamlit session state
-            variable storing the current number of rows in the form.
-
-        inputPrefixes: A set of strings representing the prefixes that
-            denote the input widgets within the rows of the form.
-
-        minRows: An integer representing the minimum number of rows the
-            form can have.
-    """
-    numberOfRows = session[rowCounter]
-    # paramFunctionLog.info(f'Deleting row {deletedRowIndex} from the row
-    # moderated by {rowCounter}; there\'s {numberOfRows} here, and
-    # we\'re modifying the values ')
-    # Make sure there's at least 1 row remaining
-    if numberOfRows <= minRows:
-        raise ValueError("""
-            Tried to delete a row from a form that already has the minimum
-            number of rows.
-        """)
-
-    # Shift any rows below the deleted one up
-    for row in range(deletedRowIndex, numberOfRows - 1):
-        for input in inputPrefixes:
-            session[f"{input}{row}"] = session[f"{input}{row+1}"]
-
-    # Erase any lingering data
-    for input in inputPrefixes:
-        del session[f"{input}{numberOfRows - 1}"]
-    session[rowCounter] -= 1
-
-
-# Parameter Classes (unfinished)
-'''
-class Parameter:
-    def __init__(self, key: str, scenarioID: int, paramName: str, defaultValue):
-        self.key = key
-        self.scenarioID = scenarioID
-        self.fullKey = f"{key}_{scenarioID}"
-        self.internalKey = f"_{key}_{scenarioID}"
-        self.paramName = paramName
-        self.defaultValue = defaultValue
-        self._value = defaultValue
-
-    @property
-    def value(self):
-        """Get the current value for this parameter."""
-        return session.get(self.fullKey, self.defaultValue)
-
-    def loadKey(self, noZeroDefault=False):
-        """Update the value for this parameter's widget."""
-        if noZeroDefault:
-            session[self.internalKey] = session.get(self.fullKey, self.defaultValue)
-        else:
-            session[self.internalKey] = idGet(
-                self.key, self.scenarioID, self.defaultValue
-            )
-
-    def saveKey(self):
-        """Save the new value for this parameter set by its widget."""
-        session[self.fullKey] = session.get(self.internalKey)
-        if self.scenarioID != 0:
-            session["scenarioSetParams"][self.scenarioID].add(self.key)
-
-    def populateSchema(self, schema):
-        """Populate a schema with this parameter's value."""
-        setattr(schema, self.paramName, self.value)
-
-
-
-"""
-Subclass for parameters that use sliders
-"""
-
-
-class SliderParam(Parameter):
-
-    def __init__(
-        self,
-        key: str,
-        scenarioID: int,
-        paramName: str,
-        defaultValue: int | float,
-        min: int | float,
-        max: int | float,
-        step: int | float,
-        title: str,
-        format: Optional[str],
-        help: Optional[str],
-    ):
-        super().__init__(key, scenarioID, paramName, defaultValue)
-        self.loadKey
-        self.widget = st.slider(
-            title,
-            min_value=min,
-            max_value=max,
-            value=defaultValue,
-            step=step,
-            format=format,
-            key=self.internalKey,
-            help=help,
-            on_change=self.saveKey,
-        )
-
-'''
+            session["scenario_set_params"][scenario_id].add(key)

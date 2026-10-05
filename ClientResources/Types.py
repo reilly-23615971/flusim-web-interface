@@ -1,0 +1,171 @@
+# Flusim Web Interface Application
+# Developed by Reilly Evans
+# Types, classes and associated constants used by the client application
+
+# Imports
+from collections import deque
+from dataclasses import dataclass
+from queue import Queue
+from typing import Literal, Optional, Sequence, Union, get_args
+
+# Age groups used by the simulator and displayed on the dashboard
+# Names used on the dashboard itself
+type AgeGroup = Literal[
+    "Young Infant (0-6 Months)",
+    "Infant (7-24 Months)",
+    "Young Child (3-5 Years)",
+    "Child (6-12 Years)",
+    "Adolescent (13-17 Years)",
+    "Young Adult (18-24 Years)",
+    "Adult (25-44 Years)",
+    "Older Adult (45-64 Years)",
+    "Senior (65-79 Years)",
+    "Older Senior (80+ Years)",
+]
+AGE_GROUPS = get_args(AgeGroup)
+# Names plus total, for results tables
+type AgeWithTotal = Union[AgeGroup, Literal["Total"]]
+AGE_WITH_TOTAL = AGE_GROUPS + tuple("Total")
+# Keys (snake case used in JSON schema)
+type AgeGroupKey = Literal[
+    "young_infant",  # 0-6 months
+    "infant",  # 7-24 months (0.5-2 years)
+    "young_child",  # 3-5 years
+    "child",  # 6-12 years
+    "adolescent",  # 13-17 years
+    "young_adult",  # 18-24 years
+    "adult",  # 25-44 years
+    "older_adult",  # 45-64 years
+    "senior",  # 65-79 years
+    "older_senior",  # 80+ years
+]
+AGE_GROUP_KEYS = get_args(AgeGroupKey)
+# Convert between keys and names
+AGE_KEY_CONVERTER: dict[AgeGroupKey, AgeGroup] = {
+    key: name for key, name in zip(AGE_GROUP_KEYS, AGE_GROUPS)
+}
+
+
+# Types of vaccine dose administered in the simulation
+type BoosterType = Literal["primary", "booster"]
+
+# Communities that can be modelled
+type Community = Literal["albany", "cairns", "newcastle"]
+
+# Health burden outcomes that can be calculated by the dashboard
+type HealthOutcome = Literal[
+    "Symptomatic Infections",
+    "Diagnosed Cases",
+    "GP Visits",
+    "Hospitalisations",
+    "ICU Visits",
+    "Deaths",
+]
+HEALTH_OUTCOMES = get_args(HealthOutcome)
+
+# Conditions that control the enabling and disabling of interventions
+type TriggerCondition = Literal[
+    "none",
+    "timed",
+    "per_school_cases",
+    "community_cases",
+    "community_rate",
+    "per_primary_high_school_cases",
+]
+# Dictionary to convert the names of conditions to keys
+TRIGGER_KEY_CONVERTER: dict[str, TriggerCondition] = {
+    "None": "none",
+    "Always": "timed",
+    "Timed": "timed",
+    "Community Case Rate": "community_rate",
+    "Community Case Total": "community_cases",
+    "Cases per School": "per_school_cases",
+    # "Cases per K-12 School": "per_primary_high_school_cases",
+}
+
+
+# Used by VisualisationFunctions to describe table columns
+type VaccineStatus = Literal["All", "Vaccinated", "Unvaccinated"]
+type ColumnDetails = tuple[
+    HealthOutcome,  # health burden outcome
+    Sequence[AgeWithTotal],  # age groups included in the column
+    VaccineStatus,  # whether vaccinated individuals only should be included
+    bool,  # display as percentages
+    bool,  # display as difference from baseline
+]
+
+
+@dataclass
+class AnalysisFile:
+    """
+    Class for descriptions of analysis files and what data they hold
+    """
+
+    def __init__(
+        self,
+        tool: Literal["epidemic", "asir"],
+        names: list[str],
+        summaryValue: Literal["mean", "median"] = "median",
+        outcome: HealthOutcome = "Symptomatic Infections",
+        **kwargs,
+    ):
+        self.tool = tool
+        self.names = names
+        self.summaryValue = summaryValue
+        self.outcome = outcome
+        # Check required values for different tools
+        if tool == "epidemic":
+            self.useCumulative = kwargs.get("useCumulative", False)
+            self.splitByAge = kwargs.get("splitByAge", False)
+            self.dataTag = f"Epidemic{"Cumulative" if self.useCumulative else "Daily"}"
+        if tool == "asir":
+            self.useProportion = kwargs.get("useProportion", False)
+            self.differenceType = kwargs.get("differenceType", "")
+            self.vaccinatedOnly = kwargs.get("vaccinated", False)
+            self.dataTag = f"Asir{"Vaccinated" if self.vaccinatedOnly else "Full"}"
+
+
+@dataclass
+class SimParams:
+    """
+    Class for storing parameter details relevant for simulation run handling
+    """
+
+    scenario_names: list[str]
+    analysis_formats: list[AnalysisFile]
+    community: Community
+    scaling_factor: float = 1.0
+    symptomatic_rates: list[list[float]] = []
+    health_outcome_rates: dict[str, dict] = {}
+    age_health_outcome_rates: dict[str, dict] = {}
+    waning: bool = False
+
+
+# Information on errors encountered while making requests to the server
+# Tuple elements:
+
+type RequestErrorData = tuple[
+    str,  # brief description of the error
+    str,  # long explanation of the error
+    str,  # name of Material Symbols icon to display error with
+    Optional[Exception],  # specific exception raised by server
+]
+
+
+# Queues used to store data from server requests
+@dataclass
+class RequestStatus:
+    """
+    Class for storing queues monitoring server request results
+    """
+
+    results = Queue[list | dict]()  # Data returned by the request
+    errors = Queue[RequestErrorData]()  # Error messages
+    tasks = list[str]()  # Tasks completed as part of the request
+    progress = deque[float](maxlen=1)  # Percent of request done
+
+
+# Define a queue for each task type
+SIM_STATUS = RequestStatus()
+R0_CALIBRATION_STATUS = RequestStatus()
+R0_CALCULATION_STATUS = RequestStatus()

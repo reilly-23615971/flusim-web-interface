@@ -12,7 +12,7 @@ from ClientResources.DownloadFunctions import (
     loadTemplate,
     resetScenario,
 )
-from ClientResources.SharedResources import templateDict
+from ClientResources.Constants import TEMPLATES
 
 # Logging
 templateLog = logging.getLogger(__name__)
@@ -22,12 +22,12 @@ session = st.session_state
 
 
 @st.dialog("Load Scenario as Template", width="large", icon=":material/list_alt_add:")
-def defaultTemplateButton(scenarioID: int, templatePath: str, templateName: str):
+def defaultTemplateButton(scenario_id: int, templatePath: str, templateName: str):
     """
     Dialog wrapper to confirm replacing scenario parameters with template values.
 
     Parameters:
-        scenarioID (int): The ID representing the scenario to replace the values of.
+        scenario_id (int): The ID representing the scenario to replace the values of.
 
         templatePath (str): The path to the JSON file holding the template
             parameter values.
@@ -45,13 +45,13 @@ change the name of the scenario.
         """.format(
             name=(
                 "baseline scenario"
-                if scenarioID == 0
-                else f'scenario named "{session[f"scenarioName{scenarioID}"]}"'
+                if scenario_id == 0
+                else f'scenario named "{session[f"scenarioName{scenario_id}"]}"'
             ),
             template=templateName,
         )
     )
-    if scenarioID == 0 and session.get("scenarioCount"):
+    if scenario_id == 0 and session.get("scenario_count"):
         st.warning(
             body="""
                 Updating the baseline scenario's parameter values with a
@@ -65,7 +65,7 @@ change the name of the scenario.
         icon="spinner" if templatePending else None,
         disabled=templatePending,
     ):
-        loadTemplate(scenarioID, templatePath)
+        loadTemplate(scenario_id, templatePath)
 
 
 @st.dialog("Load Scenario as Template", width="large", icon=":material/list_alt_add:")
@@ -126,15 +126,15 @@ Note that this will not change the names of either scenario.
     width="large",
     icon=":material/settings_backup_restore:",
 )
-def scenarioResetButton(scenarioID: int):
+def scenarioResetButton(scenario_id: int):
     """
     Dialog wrapper to confirm the resetting of a scenario to baseline values.
 
     Parameters:
-        scenarioID (int): The ID representing the scenario to be reset.
+        scenario_id (int): The ID representing the scenario to be reset.
     """
     # Validate scenario ID
-    if scenarioID == 0:
+    if scenario_id == 0:
         templateLog.error(
             "[scenarioResetButton] Tried to reset baseline scenario to itself"
         )
@@ -145,7 +145,7 @@ def scenarioResetButton(scenarioID: int):
 
     st.markdown(f"""
 Are you sure you want to reset the parameter values in the scenario named
-"{session[f"scenarioName{scenarioID}"]}" to the values from the baseline
+"{session[f"scenarioName{scenario_id}"]}" to the values from the baseline
 scenario? Note that this will not change the scenario's name.
     """)
     if st.button(
@@ -154,18 +154,18 @@ scenario? Note that this will not change the scenario's name.
         icon="spinner" if templatePending else None,
         disabled=templatePending,
     ):
-        resetScenario(scenarioID)
+        resetScenario(scenario_id)
         st.rerun()
 
 
 # @st.fragment
-def buildTemplateTab(scenarioID: int):
+def buildTemplateTab(scenario_id: int):
     """
     Function to generate template loading buttons in a specified container
     with scenario differentiation.
 
     Parameters:
-        scenarioID (int): An integer that will be used to differentiate the
+        scenario_id (int): An integer that will be used to differentiate the
             parameters in different instances of the tab by adding a number
             to the Streamlit session state variables.
     """
@@ -187,18 +187,18 @@ disease or situation.
     )
     # TODO: Load parameter defaults directly from flu template
     # rather than having them be hardcoded
-    for templateName, (icon, templatePath, description) in templateDict.items():
+    for templateName, (icon, templatePath, description) in TEMPLATES.items():
         st.button(
             templateName,
             icon=f":material/{icon}:",
             on_click=defaultTemplateButton,
-            args=[scenarioID, templatePath, templateName],
+            args=[scenario_id, templatePath, templateName],
             help=description,
         )
 
     # Scenario Templates
-    scenarioCount = session.get("scenarioCount", 0)
-    if scenarioCount > 0:
+    scenario_count = session.get("scenario_count", 0)
+    if scenario_count > 0:
         st.subheader(
             "Scenario Templates",
             help="""
@@ -212,14 +212,14 @@ settings onto a different scenario.
             icon=":material/settings_backup_restore:",
             key="_scenarioTemplateButton0",
             on_click=scenarioResetButton,
-            args=[scenarioID],
-            disabled=scenarioID == 0,
+            args=[scenario_id],
+            disabled=scenario_id == 0,
             help=(
                 """
 Resets the values of all parameters in the current scenario to match the
 values set in the baseline scenario.
                 """
-                if scenarioID != 0
+                if scenario_id != 0
                 else """
 You cannot reset the baseline scenario back to itself. If you wish to reset
 all parameters to the values they had when first opening the dashboard, load
@@ -227,22 +227,22 @@ the "Influenza" template.
                 """
             ),
         )
-        for templateID in range(1, scenarioCount + 1):
+        for templateID in range(1, scenario_count + 1):
             scenarioName = session[f"scenarioName{templateID}"]
             st.button(
                 f"Load {scenarioName} as Template",
                 icon=":material/list_alt_add:",
                 key=f"_scenarioTemplateButton{templateID}",
                 on_click=scenarioTemplateButton,
-                args=[scenarioID, templateID],
-                disabled=templateID == scenarioID,
+                args=[scenario_id, templateID],
+                disabled=templateID == scenario_id,
                 help=(
                     f"""
 Set the parameter values in the current scenario to match the values set in the
 scenario named {scenarioName}. Note that this will override all parameters
 currently set for this scenario.
                 """
-                    if templateID != scenarioID
+                    if templateID != scenario_id
                     else """
 A scenario cannot use its own parameters as a template.
                 """

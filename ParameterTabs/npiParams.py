@@ -12,10 +12,9 @@ from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import (
     ageDisplay,
-    paramError,
+    param_error,
     schemaRemoveBaseline,
     schemaUpdate,
-    trigCast,
 )
 from ClientResources.ModelSchema import (
     Parameters,
@@ -24,20 +23,21 @@ from ClientResources.ModelSchema import (
     scenarioParameters,
 )
 from ClientResources.ParameterFunctions import (
-    dynamicScaleChange,
-    hasDuplicates,
-    idGet,
-    loadKey,
-    saveKey,
-    updateParamFromSchema,
-    updateTableFromSchema,
+    dynamic_scale_change,
+    has_duplicates,
+    id_get,
+    load_key,
+    save_key,
+    update_param_from_schema,
+    update_table_from_schema,
 )
-from ClientResources.SharedResources import (
-    ageTimeDict,
-    communityPopulation,
-    npiCamel,
-    npis,
-    triggerConditions,
+from ClientResources.Constants import (
+    POPULATION,
+)
+from ClientResources.Types import (
+    AGE_GROUP_KEYS,
+    AGE_KEY_CONVERTER,
+    TRIGGER_KEY_CONVERTER,
 )
 
 # Logging
@@ -45,6 +45,17 @@ npiLog = logging.getLogger(__name__)
 
 # Store st.session_state as variable for efficiency
 session = st.session_state
+
+# Names of the possible NPIs
+NPI_NAMES = (
+    # "Vaccination",
+    "School Closure",
+    "Withdrawal Increase",
+    "Reduced Group Size",
+    "Background Contact Count Reduction",
+)
+NPI_TAGS = ("schoolClosure", "withdrawalIncrease", "reducedGroup", "bcc")
+# "vaccination",
 
 
 # @st.fragment
@@ -61,8 +72,8 @@ def buildNPITab(id: int, advanced: bool = False):
         advanced (bool): Set to `True` to show more complex parameters like
             NPI trigger thresholds.
     """
-    simLength = session.get("cycleCount", 360)
-    triggerNames = list(triggerConditions.keys())[1:]
+    simLength = session.get("cycle_count", 360)
+    triggerNames = list(TRIGGER_KEY_CONVERTER.keys())[1:]
 
     # Tab Content
     st.header("Non-Pharmaceutical Intervention Parameters")
@@ -88,11 +99,11 @@ def buildNPITab(id: int, advanced: bool = False):
             """)
 
             # Case Isolation
-            loadKey("caseIsolation", id, False)
+            load_key("caseIsolation", id, False)
             st.toggle(
                 "Enable Diagnosed Case Isolation",
                 value=False,
-                on_change=saveKey,
+                on_change=save_key,
                 args=["caseIsolation", id],
                 key=f"_caseIsolation{id}",
                 help="""
@@ -104,11 +115,11 @@ forced to isolate at home.
 
             # Class Dismissal (if advanced parameters are enabled)
             if advanced:
-                loadKey("classDismissal", id, False)
+                load_key("classDismissal", id, False)
                 classDismissal = st.toggle(
                     "Enable Class Dismissal",
                     value=False,
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["classDismissal", id],
                     key=f"_classDismissal{id}",
                     help="""
@@ -137,11 +148,11 @@ as their trigger threshold.
                     )
 
             # Social distancing
-            loadKey("socialDistancingToggle", id, False)
+            load_key("socialDistancingToggle", id, False)
             useSocialDistancingToggle = st.toggle(
                 "Enable Social Distancing",
                 value=False,
-                on_change=saveKey,
+                on_change=save_key,
                 args=["socialDistancingToggle", id],
                 key=f"_socialDistancingToggle{id}",
                 help="""
@@ -150,7 +161,7 @@ interventions are implemented in the
 simulation, overriding other social distancing parameters.
                 """,
             )
-            loadKey("socialDistancingCompliance", id, 0.9)
+            load_key("socialDistancingCompliance", id, 0.9)
             socialDistancingCompliance = round(
                 st.slider(
                     "Social Distancing Compliance (Probability)",
@@ -159,7 +170,7 @@ simulation, overriding other social distancing parameters.
                     value=0.9,
                     format="percent",
                     disabled=not useSocialDistancingToggle,
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["socialDistancingCompliance", id],
                     key=f"_socialDistancingCompliance{id}",
                     help="""
@@ -183,7 +194,7 @@ defined above.
                 )
                 if useSocialDistancingToggle:
                     st.markdown("Double-click a cell in this table to edit its value.")
-                loadKey(
+                load_key(
                     "distanceAgeForm",
                     id,
                     pd.DataFrame(
@@ -201,7 +212,7 @@ defined above.
                     height="content",
                     num_rows="dynamic",
                     key=f"_distanceAgeForm{id}",
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["distanceAgeForm", id],
                     kwargs={"dataframe": True},
                     disabled=not useSocialDistancingToggle,
@@ -214,7 +225,7 @@ defined above.
                         "Age Group": st.column_config.SelectboxColumn(
                             "Age Group",
                             required=True,
-                            options=ageTimeDict.keys(),
+                            options=AGE_GROUP_KEYS,
                             format_func=ageDisplay,
                             help="""
 An age group that will have a specific social distancing compliance
@@ -235,10 +246,10 @@ social distancing interventions in the simulation.
                         ),
                     },
                 )
-                paramError(
+                param_error(
                     "distanceAgeFormDuplicates",
                     id,
-                    lambda: hasDuplicates(distanceAgeForm),
+                    lambda: has_duplicates(distanceAgeForm),
                     f"""
                         Error: The age-specific social distancing
                         compliance form used by the {
@@ -256,7 +267,7 @@ social distancing interventions in the simulation.
                 )
         else:
             # Make sure triggers account for class dismissal
-            classDismissal = idGet("classDismissal", id, False)
+            classDismissal = id_get("classDismissal", id, False)
 
     # School Closure
     st.html('<span id = "schoolClosureTriggerCondition"></span>')
@@ -267,11 +278,11 @@ social distancing interventions in the simulation.
             These parameters control if and when schools will
             close as a result of the pathogen.
         """)
-        loadKey("schoolClosureToggle", id, False)
+        load_key("schoolClosureToggle", id, False)
         useSchoolClosureToggle = st.toggle(
             "Enable School Closures",
             value=False,
-            on_change=saveKey,
+            on_change=save_key,
             args=["schoolClosureToggle", id],
             key=f"_schoolClosureToggle{id}",
             help="""
@@ -284,12 +295,12 @@ simulation, overriding other school closure parameters.
         # School closure triggers (if advanced parameters are enabled)
         if advanced:
             with st.container(border=True):
-                loadKey("schoolClosureTrigger", id, "Always")
+                load_key("schoolClosureTrigger", id, "Always")
                 schoolClosureTrigger = st.selectbox(
                     "School Closure Trigger Condition",
                     key=f"_schoolClosureTrigger{id}",
                     options=triggerNames,
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["schoolClosureTrigger", id],
                     disabled=not useSchoolClosureToggle,
                     help="""
@@ -329,7 +340,7 @@ rest of the simulation.
                 # Show additional parameters based on trigger value
                 # Timed triggers
                 if schoolClosureTrigger == "Timed":
-                    loadKey("schoolClosurePeriod", id, (1, 60))
+                    load_key("schoolClosurePeriod", id, (1, 60))
                     st.slider(
                         "School Closure Time Period",
                         min_value=1,
@@ -337,7 +348,7 @@ rest of the simulation.
                         value=(1, 60),
                         format="Day %i",
                         key=f"_schoolClosurePeriod{id}",
-                        on_change=dynamicScaleChange,
+                        on_change=dynamic_scale_change,
                         args=[
                             "schoolClosurePeriod",
                             "closeTimeForm",
@@ -399,7 +410,7 @@ on Day 45 will be changed to affect it on Day 30 instead.
                     )
 
         # School closure compliance
-        loadKey("schoolClosureCompliance", id, 0.9)
+        load_key("schoolClosureCompliance", id, 0.9)
         st.slider(
             "School Closure Compliance (Probability)",
             min_value=0.0,
@@ -407,7 +418,7 @@ on Day 45 will be changed to affect it on Day 30 instead.
             value=0.9,
             format="percent",
             disabled=not useSchoolClosureToggle,
-            on_change=saveKey,
+            on_change=save_key,
             args=["schoolClosureCompliance", id],
             key=f"_schoolClosureCompliance{id}",
             help="""
@@ -432,11 +443,11 @@ not attend schools when they are closed in the simulation.
             is not active can be configured in the "Withdrawals
             and Diagnosis" section of the "Community" tab.
         """)
-        loadKey("withdrawalIncreaseToggle", id, False)
+        load_key("withdrawalIncreaseToggle", id, False)
         useWithdrawalIncreaseToggle = st.toggle(
             "Enable Withdrawal Increases",
             value=False,
-            on_change=saveKey,
+            on_change=save_key,
             args=["withdrawalIncreaseToggle", id],
             key=f"_withdrawalIncreaseToggle{id}",
             help="""
@@ -449,13 +460,13 @@ increase parameters.
 
         # Withdrawal increase triggers (if advanced parameters are enabled)
         if advanced:
-            loadKey("withdrawalIncreaseTrigger", id, "Always")
+            load_key("withdrawalIncreaseTrigger", id, "Always")
             with st.container(border=True):
                 withdrawalIncreaseTrigger = st.selectbox(
                     "Withdrawal Increase Trigger Condition",
                     key=f"_withdrawalIncreaseTrigger{id}",
                     options=triggerNames[:-1],
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["withdrawalIncreaseTrigger", id],
                     disabled=not useWithdrawalIncreaseToggle,
                     help="""
@@ -492,7 +503,7 @@ simulation.
                 # Show additional parameters based on trigger value
                 # Timed triggers
                 if withdrawalIncreaseTrigger == "Timed":
-                    loadKey("withdrawalIncreasePeriod", id, (1, 60))
+                    load_key("withdrawalIncreasePeriod", id, (1, 60))
                     st.slider(
                         "Withdrawal Increase Time Period",
                         min_value=1,
@@ -501,7 +512,7 @@ simulation.
                         format="Day %i",
                         key=f"_withdrawalIncreasePeriod{id}",
                         disabled=not useWithdrawalIncreaseToggle,
-                        on_change=saveKey,
+                        on_change=save_key,
                         args=["withdrawalIncreasePeriod", id],
                         help="""
 The time period during which withdrawal
@@ -547,7 +558,7 @@ rates will return to normal.
                     )
 
         # Increased Withdrawal
-        loadKey("withdrawalIncreaseAdult", id, 0.9)
+        load_key("withdrawalIncreaseAdult", id, 0.9)
         withdrawalIncreaseAdult = st.slider(
             "Increased Work Withdrawal Rate (Probability)",
             min_value=0.0,
@@ -555,7 +566,7 @@ rates will return to normal.
             value=0.9,
             format="percent",
             disabled=not useWithdrawalIncreaseToggle,
-            on_change=saveKey,
+            on_change=save_key,
             args=["withdrawalIncreaseAdult", id],
             key=f"_withdrawalIncreaseAdult{id}",
             help="""
@@ -566,7 +577,7 @@ intervention is in effect, overwriting the
 normal withdrawal rate.
             """,
         )
-        loadKey("withdrawalIncreaseChild", id, 1.0)
+        load_key("withdrawalIncreaseChild", id, 1.0)
         withdrawalIncreaseChild = st.slider(
             "Increased School Withdrawal Rate (Probability)",
             min_value=0.0,
@@ -574,7 +585,7 @@ normal withdrawal rate.
             value=1.0,
             format="percent",
             disabled=not useWithdrawalIncreaseToggle,
-            on_change=saveKey,
+            on_change=save_key,
             args=["withdrawalIncreaseChild", id],
             key=f"_withdrawalIncreaseChild{id}",
             help="""
@@ -587,9 +598,9 @@ normal withdrawal rate.
         )
 
         # Show error if initial proportion is above target
-        baseAdultWithdrawal = idGet("withdrawalWork", id, 0.5)
-        baseChildWithdrawal = idGet("withdrawalSchool", id, 0.9)
-        paramError(
+        baseAdultWithdrawal = id_get("withdrawalWork", id, 0.5)
+        baseChildWithdrawal = id_get("withdrawalSchool", id, 0.9)
+        param_error(
             "withdrawalNPIBelowBaseAdult",
             id,
             lambda: useWithdrawalIncreaseToggle
@@ -616,7 +627,7 @@ normal withdrawal rate.
             """,
             True,
         )
-        paramError(
+        param_error(
             "withdrawalNPIBelowBaseChild",
             id,
             lambda: useWithdrawalIncreaseToggle
@@ -659,11 +670,11 @@ normal withdrawal rate.
             is not active can be configured in the "Population
             Behaviours" section of the "Community" tab.
         """)
-        loadKey("reducedGroupToggle", id, False)
+        load_key("reducedGroupToggle", id, False)
         useReducedGroupToggle = st.toggle(
             "Enable Group Size Reductions",
             value=False,
-            on_change=saveKey,
+            on_change=save_key,
             args=["reducedGroupToggle", id],
             key=f"_reducedGroupToggle{id}",
             help="""
@@ -676,13 +687,13 @@ reduction parameters.
 
         # Reduced workgroup triggers (if advanced parameters are enabled)
         if advanced:
-            loadKey("reducedGroupTrigger", id, "Always")
+            load_key("reducedGroupTrigger", id, "Always")
             with st.container(border=True):
                 reducedGroupTrigger = st.selectbox(
                     "Reduced Group Size Trigger Condition",
                     key=f"_reducedGroupTrigger{id}",
                     options=triggerNames[:-1],
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["reducedGroupTrigger", id],
                     disabled=not useReducedGroupToggle,
                     help="""
@@ -718,7 +729,7 @@ reduced size for the rest of the simulation.
                 # Show additional parameters based on trigger value
                 # Timed triggers
                 if reducedGroupTrigger == "Timed":
-                    loadKey("reducedGroupPeriod", id, (1, 60))
+                    load_key("reducedGroupPeriod", id, (1, 60))
                     st.slider(
                         "Reduced Group Size Time Period",
                         min_value=1,
@@ -727,7 +738,7 @@ reduced size for the rest of the simulation.
                         format="Day %i",
                         key=f"_reducedGroupPeriod{id}",
                         disabled=not useReducedGroupToggle,
-                        on_change=saveKey,
+                        on_change=save_key,
                         args=["reducedGroupPeriod", id],
                         help="""
 The time period during which work
@@ -773,14 +784,14 @@ return to normal.
                     )
 
         # Reduced group size
-        loadKey("reducedGroupSize", id, 5)
+        load_key("reducedGroupSize", id, 5)
         reducedGroupSize = st.slider(
             "Reduced Work Group Size (Number of People)",
             0,
             25,
             5,
             disabled=not useReducedGroupToggle,
-            on_change=saveKey,
+            on_change=save_key,
             args=["reducedGroupSize", id],
             format="%f Person(s)",
             key=f"_reducedGroupSize{id}",
@@ -792,8 +803,8 @@ overwriting the normal maximum.
         )
 
         # Show error if reduced size is more than base
-        baseGroupSize = idGet("maxWorkGroupSize", id, 10)
-        paramError(
+        baseGroupSize = id_get("maxWorkGroupSize", id, 10)
+        param_error(
             "groupNPIAboveBase",
             id,
             lambda: useReducedGroupToggle and reducedGroupSize >= baseGroupSize,
@@ -837,11 +848,11 @@ overwriting the normal maximum.
             "Population Behaviours" section of the "Community"
             tab.
         """)
-        loadKey("bccToggle", id, False)
+        load_key("bccToggle", id, False)
         useBCCToggle = st.toggle(
             "Enable BCC Reduction",
             value=False,
-            on_change=saveKey,
+            on_change=save_key,
             args=["bccToggle", id],
             key=f"_bccToggle{id}",
             help="""
@@ -853,13 +864,13 @@ simulation, overriding other BCC reduction parameters.
 
         # BCC triggers (if advanced parameters are enabled)
         if advanced:
-            loadKey("bccTrigger", id, "Always")
+            load_key("bccTrigger", id, "Always")
             with st.container(border=True):
                 bccTrigger = st.selectbox(
                     "BCC Reduction Trigger Condition",
                     key=f"_bccTrigger{id}",
                     options=triggerNames[:-1],
-                    on_change=saveKey,
+                    on_change=save_key,
                     args=["bccTrigger", id],
                     disabled=not useBCCToggle,
                     help="""
@@ -896,7 +907,7 @@ simulation.
                 # Show additional parameters based on trigger value
                 # Timed triggers
                 if bccTrigger == "Timed":
-                    loadKey("bccPeriod", id, (1, 60))
+                    load_key("bccPeriod", id, (1, 60))
                     st.slider(
                         "BCC Reduction Time Period",
                         min_value=1,
@@ -905,7 +916,7 @@ simulation.
                         format="Day %i",
                         key=f"_bccPeriod{id}",
                         disabled=not useBCCToggle,
-                        on_change=dynamicScaleChange,
+                        on_change=dynamic_scale_change,
                         args=[
                             "bccPeriod",
                             "bccTimeForm",
@@ -954,7 +965,7 @@ the day on which BCC will return to normal.
 
         # Reduced BCC rate
         # TODO: Is this precise slider too difficult to control?
-        loadKey("bccReducedRate", id, 0.2)
+        load_key("bccReducedRate", id, 0.2)
         bccReducedRate = st.slider(
             "Reduced Background Contact Count (Interactions per Person per Day)",
             min_value=0.0,
@@ -962,7 +973,7 @@ the day on which BCC will return to normal.
             value=0.2,
             step=0.05,
             disabled=not useBCCToggle,
-            on_change=saveKey,
+            on_change=save_key,
             args=["bccReducedRate", id],
             key=f"_bccReducedRate{id}",
             help="""
@@ -976,8 +987,8 @@ effect, overwriting the normal BCC rate.
         )
 
         # Show error if initial proportion is above target
-        baseBCC = idGet("bccRate", id, 4.0)
-        paramError(
+        baseBCC = id_get("bccRate", id, 4.0)
+        param_error(
             "bccNPIAboveBase",
             id,
             lambda: useBCCToggle and bccReducedRate >= baseBCC,
@@ -1085,21 +1096,21 @@ effect, overwriting the normal BCC rate.
                             else ""
                         )
                         + "".join(
-                            f"\n- [{npis[i]}](#{npiCamel[i]}TriggerCondition)"
+                            f"\n- [{NPI_NAMES[i]}](#{NPI_TAGS[i]}TriggerCondition)"
                             for i in usesRates
                         )
                     )
 
                     # Set rate thresholds
                     # TODO: Are the slider mins/maxes realistic?
-                    loadKey("rateStartThreshold", id, 10)
+                    load_key("rateStartThreshold", id, 10)
                     rateStartThreshold = st.slider(
                         "Start Trigger Threshold Rate (Cases per Day)",
                         min_value=0,
                         max_value=100,
                         value=10,
                         key=f"_rateStartThreshold{id}",
-                        on_change=saveKey,
+                        on_change=save_key,
                         args=["rateStartThreshold", id],
                         help="""
 Any interventions set to trigger using the
@@ -1108,14 +1119,14 @@ taking effect in the simulation once the
 number of newly diagnosed cases per day exceeds this value.
                         """,
                     )
-                    loadKey("rateRelaxThreshold", id, 5)
+                    load_key("rateRelaxThreshold", id, 5)
                     rateRelaxThreshold = st.slider(
                         "Relaxation Trigger Threshold Rate (Cases per Day)",
                         min_value=0,
                         max_value=100,
                         value=5,
                         key=f"_rateRelaxThreshold{id}",
-                        on_change=saveKey,
+                        on_change=save_key,
                         args=["rateRelaxThreshold", id],
                         help="""
 Any active interventions set to trigger
@@ -1130,7 +1141,7 @@ per day goes below this value.
                     # Note that this theoretically can be done error-free with
                     # dynamic parameter maximums and/or a 2-element slider,
                     # but those would be less intuitive to the user
-                    paramError(
+                    param_error(
                         "relaxAboveTrigger",
                         id,
                         lambda: rateRelaxThreshold > rateStartThreshold,
@@ -1170,21 +1181,21 @@ per day goes below this value.
                             that intervention.\n\n
                         """
                         + "".join(
-                            f"\n- [{npis[i]}](#{npiCamel[i]}TriggerCondition)"
+                            f"\n- [{NPI_NAMES[i]}](#{NPI_TAGS[i]}TriggerCondition)"
                             for i in usesTotals
                         )
                     )
 
                     # Set total threshold
                     # TODO: Use population as maximum
-                    loadKey("caseTotalThreshold", id, 1000)
+                    load_key("caseTotalThreshold", id, 1000)
                     caseTotalThreshold = st.number_input(
                         "Start Trigger Case Threshold (Total Community Cases)",
                         0,
                         300000,
                         1000,
                         key=f"_caseTotalThreshold{id}",
-                        on_change=saveKey,
+                        on_change=save_key,
                         args=["caseTotalThreshold", id],
                         placeholder="Enter a whole number of cases",
                         help="""
@@ -1200,10 +1211,8 @@ Total") or in each individual school (for
 
                     # Show error if relax threshold is above trigger
                     # TODO: See if this can be replaced with a max value too
-                    population = communityPopulation[
-                        session.get("community", "newcastle")
-                    ]
-                    paramError(
+                    population = POPULATION[session.get("community", "newcastle")]
+                    param_error(
                         "triggerAbovePopulation",
                         id,
                         lambda: caseTotalThreshold >= population,
@@ -1276,8 +1285,8 @@ def npiSaveSchema(
         # Also, Adult might be the only age group to care about SD
         # due to the KLUDGE SD code being commented out
         # TODO: Test in simulation and remove if necessary
-        socialDistanceToggle = idGet("socialDistancingToggle", id, False)
-        globalCompliance = idGet("socialDistancingCompliance", id, 0.9)
+        socialDistanceToggle = id_get("socialDistancingToggle", id, False)
+        globalCompliance = id_get("socialDistancingCompliance", id, 0.9)
 
         dashboardParams = dashboardParameters()
         if includeDashboard:
@@ -1291,7 +1300,7 @@ def npiSaveSchema(
             ageScenarioParams = ageScenarioParameters()
             if socialDistanceToggle:
                 ageScenarioParams.social_distance = globalCompliance
-                distanceAgeForm = idGet(
+                distanceAgeForm = id_get(
                     "distanceAgeForm",
                     id,
                     pd.DataFrame(
@@ -1304,7 +1313,7 @@ def npiSaveSchema(
                 distanceAgeForm["Social Distancing Compliance"] = (
                     distanceAgeForm["Social Distancing Compliance"].div(100.0).round(6)
                 )
-                for age in ageTimeDict:
+                for age in AGE_KEY_CONVERTER:
                     if age in distanceAgeForm["Age Group"].values:
                         compliance = distanceAgeForm.loc[
                             distanceAgeForm["Age Group"] == age,
@@ -1325,113 +1334,123 @@ def npiSaveSchema(
             schemaUpdate(schema, "Scenario_ParameterWithAgePrefix", ageScenarioParams)
 
             # Miscellaneous advanced trigger parameters
-            scenarioParams.class_dismissal = idGet("classDismissal", id, False)
-            scenarioParams.case_trigger_threshold = idGet(
+            scenarioParams.class_dismissal = id_get("classDismissal", id, False)
+            scenarioParams.case_trigger_threshold = id_get(
                 "caseTotalThreshold", id, 1000
             )
-            scenarioParams.rate_trigger_threshold = idGet("rateStartThreshold", id, 10)
-            scenarioParams.rate_relaxation_threshold = idGet(
+            scenarioParams.rate_trigger_threshold = id_get("rateStartThreshold", id, 10)
+            scenarioParams.rate_relaxation_threshold = id_get(
                 "rateRelaxThreshold", id, 5
             )
             scenarioParams.maximum_trigger_count = 250
 
         # School Closure
-        if idGet("schoolClosureToggle", id, False):
-            scenarioParams.school_closure_compliance = idGet(
+        if id_get("schoolClosureToggle", id, False):
+            scenarioParams.school_closure_compliance = id_get(
                 "schoolClosureCompliance", id, 0.9
             )
             scenarioParams.close_child_education = True
             schoolTrigger = (
-                idGet("schoolClosureTrigger", id, "Always") if advanced else "Always"
+                id_get("schoolClosureTrigger", id, "Always") if advanced else "Always"
             )
-            scenarioParams.school_closure_trigger = trigCast(schoolTrigger)
-            scenarioParams.school_closure_relaxation = trigCast(schoolTrigger)
+            scenarioParams.school_closure_trigger = TRIGGER_KEY_CONVERTER[schoolTrigger]
+            scenarioParams.school_closure_relaxation = TRIGGER_KEY_CONVERTER[
+                schoolTrigger
+            ]
             if schoolTrigger == "Always":
                 scenarioParams.school_closure_delay = 0
                 scenarioParams.school_closure_duration = 9999
             elif schoolTrigger == "Timed":
                 schoolPeriod = [
-                    i - 1 for i in idGet("schoolClosurePeriod", id, (1, 60))
+                    i - 1 for i in id_get("schoolClosurePeriod", id, (1, 60))
                 ]
                 scenarioParams.school_closure_delay = schoolPeriod[0] * 2
                 scenarioParams.school_closure_duration = (
                     schoolPeriod[1] - schoolPeriod[0] + 1
                 ) * 2
         else:
-            scenarioParams.school_closure_trigger = trigCast("None")
+            scenarioParams.school_closure_trigger = TRIGGER_KEY_CONVERTER["None"]
         # Withdrawal Increase
-        if idGet("withdrawalIncreaseToggle", id, False):
-            scenarioParams.increased_withdrawal = idGet(
+        if id_get("withdrawalIncreaseToggle", id, False):
+            scenarioParams.increased_withdrawal = id_get(
                 "withdrawalIncreaseAdult", id, 0.9
             )
-            scenarioParams.increased_withdrawal_child = idGet(
+            scenarioParams.increased_withdrawal_child = id_get(
                 "withdrawalIncreaseChild", id, 1.0
             )
             withdrawalTrigger = (
-                idGet("withdrawalIncreaseTrigger", id, "Always")
+                id_get("withdrawalIncreaseTrigger", id, "Always")
                 if advanced
                 else "Always"
             )
-            scenarioParams.withdrawal_increase_trigger = trigCast(withdrawalTrigger)
-            scenarioParams.withdrawal_increase_relaxation = trigCast(withdrawalTrigger)
+            scenarioParams.withdrawal_increase_trigger = TRIGGER_KEY_CONVERTER[
+                withdrawalTrigger
+            ]
+            scenarioParams.withdrawal_increase_relaxation = TRIGGER_KEY_CONVERTER[
+                withdrawalTrigger
+            ]
             if withdrawalTrigger == "Always":
                 scenarioParams.withdrawal_increase_delay = 0
                 scenarioParams.withdrawal_increase_duration = 9999
             elif withdrawalTrigger == "Timed":
                 withdrawalPeriod = [
-                    i - 1 for i in idGet("withdrawalIncreasePeriod", id, (1, 60))
+                    i - 1 for i in id_get("withdrawalIncreasePeriod", id, (1, 60))
                 ]
                 scenarioParams.withdrawal_increase_delay = withdrawalPeriod[0] * 2
                 scenarioParams.withdrawal_increase_duration = (
                     withdrawalPeriod[1] - withdrawalPeriod[0] + 1
                 ) * 2
         else:
-            scenarioParams.withdrawal_increase_trigger = trigCast("None")
+            scenarioParams.withdrawal_increase_trigger = TRIGGER_KEY_CONVERTER["None"]
         # Reduced Group Size
-        if idGet("reducedGroupToggle", id, False):
-            scenarioParams.reduced_workgroup_size = idGet("reducedGroupSize", id, 5)
+        if id_get("reducedGroupToggle", id, False):
+            scenarioParams.reduced_workgroup_size = id_get("reducedGroupSize", id, 5)
             reducedGroupTrigger = (
-                idGet("reducedGroupTrigger", id, "Always") if advanced else "Always"
+                id_get("reducedGroupTrigger", id, "Always") if advanced else "Always"
             )
-            scenarioParams.reduced_workgroup_trigger = trigCast(reducedGroupTrigger)
-            scenarioParams.reduced_workgroup_relaxation = trigCast(reducedGroupTrigger)
+            scenarioParams.reduced_workgroup_trigger = TRIGGER_KEY_CONVERTER[
+                reducedGroupTrigger
+            ]
+            scenarioParams.reduced_workgroup_relaxation = TRIGGER_KEY_CONVERTER[
+                reducedGroupTrigger
+            ]
             if reducedGroupTrigger == "Always":
                 scenarioParams.reduced_workgroup_delay = 0
                 scenarioParams.reduced_workgroup_duration = 9999
             elif reducedGroupTrigger == "Timed":
                 reducedGroupPeriod = [
-                    i - 1 for i in idGet("reducedGroupPeriod", id, (1, 60))
+                    i - 1 for i in id_get("reducedGroupPeriod", id, (1, 60))
                 ]
                 scenarioParams.reduced_workgroup_delay = reducedGroupPeriod[0] * 2
                 scenarioParams.reduced_workgroup_duration = (
                     reducedGroupPeriod[1] - reducedGroupPeriod[0] + 1
                 ) * 2
         else:
-            scenarioParams.reduced_workgroup_trigger = trigCast("None")
+            scenarioParams.reduced_workgroup_trigger = TRIGGER_KEY_CONVERTER["None"]
         # BCC Reduction
-        if idGet("bccToggle", id, False):
-            scenarioParams.bcc_reduction = idGet("bccReducedRate", id, 0.2) / idGet(
+        if id_get("bccToggle", id, False):
+            scenarioParams.bcc_reduction = id_get("bccReducedRate", id, 0.2) / id_get(
                 "bccRate", id, 4.0
             )
-            bccTrigger = idGet("bccTrigger", id, "Always") if advanced else "Always"
-            scenarioParams.bcc_reduction_trigger = trigCast(bccTrigger)
-            scenarioParams.bcc_reduction_relaxation = trigCast(bccTrigger)
+            bccTrigger = id_get("bccTrigger", id, "Always") if advanced else "Always"
+            scenarioParams.bcc_reduction_trigger = TRIGGER_KEY_CONVERTER[bccTrigger]
+            scenarioParams.bcc_reduction_relaxation = TRIGGER_KEY_CONVERTER[bccTrigger]
             if bccTrigger == "Always":
                 scenarioParams.bcc_reduction_delay = 0
                 scenarioParams.bcc_reduction_duration = 9999
             elif bccTrigger == "Timed":
-                bccPeriod = [i - 1 for i in idGet("bccPeriod", id, (1, 60))]
+                bccPeriod = [i - 1 for i in id_get("bccPeriod", id, (1, 60))]
                 scenarioParams.bcc_reduction_delay = bccPeriod[0] * 2
                 scenarioParams.bcc_reduction_duration = (
                     bccPeriod[1] - bccPeriod[0] + 1
                 ) * 2
         else:
-            scenarioParams.bcc_reduction_trigger = trigCast("None")
+            scenarioParams.bcc_reduction_trigger = TRIGGER_KEY_CONVERTER["None"]
         # Other NPIs
-        scenarioParams.diagnosed_case_isolation = idGet("caseIsolation", id, False)
+        scenarioParams.diagnosed_case_isolation = id_get("caseIsolation", id, False)
 
         # Save the updated parameters, removing redundant baseline values
-        distanceTableParams = {f"{age}_social_distance" for age in ageTimeDict}
+        distanceTableParams = {f"{age}_social_distance" for age in AGE_KEY_CONVERTER}
         if id > 0 and baseline is not None:
             schemaRemoveBaseline(
                 scenarioParams, baseline.Scenario_Parameter, ignore=distanceTableParams
@@ -1447,7 +1466,7 @@ def npiSaveSchema(
         raise e
 
 
-def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
+def npiLoadSchema(schema: Parameters, scenario_id: int = 0):
     """
     Function to read NPI parameters from a schema and set the
     dashboard's widgets to the specified values.
@@ -1462,24 +1481,24 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
             baseline scenario and will be treated accordingly.
     """
     # Load sim length early
-    simLength = session.get("cycleCount", 360)
+    simLength = session.get("cycle_count", 360)
 
     # Dashboard Parameters
     schemaDash = schema.Dashboard_Parameter
     if schemaDash is not None and schemaDash.enable_social_distancing is not None:
-        updateParamFromSchema(
+        update_param_from_schema(
             "socialDistancingToggle",
             schemaDash.enable_social_distancing,
-            scenarioID,
+            scenario_id,
         )
 
     # Global Age Parameters
     schemaAge = schema.Scenario_ParameterWithAgePrefix
     if schemaAge is not None and schemaAge.social_distance is not None:
         compliance = schemaAge.social_distance
-        updateParamFromSchema("socialDistancingCompliance", compliance, scenarioID)
+        update_param_from_schema("socialDistancingCompliance", compliance, scenario_id)
     else:
-        compliance = idGet("socialDistanceCompliance", 0, 0.9)
+        compliance = id_get("socialDistanceCompliance", 0, 0.9)
 
     # General Scenario Parameters
     schemaParameters = schema.Scenario_Parameter
@@ -1499,24 +1518,24 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
         }
         simpleParams = {p: key for p, key in paramConvert.items() if p in paramDict}
         for parameter, key in simpleParams.items():
-            updateParamFromSchema(key, paramDict[parameter], scenarioID)
+            update_param_from_schema(key, paramDict[parameter], scenario_id)
 
         # BCC Reduction
         if "bcc_reduction" in paramDict:
-            updateParamFromSchema(
+            update_param_from_schema(
                 "bccReducedRate",
-                paramDict["bcc_reduction"] * idGet("bccRate", scenarioID, 4.0),
-                scenarioID,
+                paramDict["bcc_reduction"] * id_get("bccRate", scenario_id, 4.0),
+                scenario_id,
             )
-        elif scenarioID != 0:
-            scenarioBCCRate = idGet("bccRate", scenarioID, 4.0)
-            baselineBCCRate = idGet("bccRate", 0, 4.0)
+        elif scenario_id != 0:
+            scenarioBCCRate = id_get("bccRate", scenario_id, 4.0)
+            baselineBCCRate = id_get("bccRate", 0, 4.0)
             if scenarioBCCRate != baselineBCCRate:
-                bccRatio = idGet("bccReducedRate", 0, 0.05) / baselineBCCRate
-                updateParamFromSchema(
+                bccRatio = id_get("bccReducedRate", 0, 0.05) / baselineBCCRate
+                update_param_from_schema(
                     "bccReducedRate",
                     round(scenarioBCCRate * bccRatio, 8),
-                    scenarioID,
+                    scenario_id,
                 )
 
         # NPI periods
@@ -1541,35 +1560,35 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
             # Relaxation always matches start on dashboard, so don't look for it
             startTrigger = paramDict.get(f"{npi}_trigger")
             if startTrigger is not None:
-                updateParamFromSchema(
-                    f"{prefix}Toggle", startTrigger != "none", scenarioID
+                update_param_from_schema(
+                    f"{prefix}Toggle", startTrigger != "none", scenario_id
                 )
                 if startTrigger == "timed" and npiDelay == 0 and npiDuration == 9999:
-                    updateParamFromSchema(f"{prefix}Trigger", "Always", scenarioID)
+                    update_param_from_schema(f"{prefix}Trigger", "Always", scenario_id)
                 elif startTrigger != "none":
-                    updateParamFromSchema(
-                        f"{prefix}Trigger", triggerDict[startTrigger], scenarioID
+                    update_param_from_schema(
+                        f"{prefix}Trigger", triggerDict[startTrigger], scenario_id
                     )
             # Disambiguate between Timed and Always via baseline trigger
-            elif scenarioID != 0:
-                baselineTrigger = idGet(f"{prefix}Trigger", 0, None)
+            elif scenario_id != 0:
+                baselineTrigger = id_get(f"{prefix}Trigger", 0, None)
                 if baselineTrigger == "Timed" and npiDuration == 9999:
-                    updateParamFromSchema(f"{prefix}Trigger", "Always", scenarioID)
+                    update_param_from_schema(f"{prefix}Trigger", "Always", scenario_id)
                 elif baselineTrigger == "Always" and (
                     npiDelay not in {None, 0} or npiDuration not in {None, 9999}
                 ):
-                    updateParamFromSchema(f"{prefix}Trigger", "Timed", scenarioID)
+                    update_param_from_schema(f"{prefix}Trigger", "Timed", scenario_id)
 
             # Periods
             if npiDelay is not None or npiDuration is not None:
                 # Ensure baseline has all values
-                if None in {npiDelay, npiDuration} and scenarioID == 0:
+                if None in {npiDelay, npiDuration} and scenario_id == 0:
                     raise AssertionError(f"""
                         {npi} activation period parameters were only partially
                         defined for the baseline scenario
                     """)
                 # Use baseline values to plug None gaps
-                basePeriodStart, basePeriodEnd = idGet(f"{prefix}Period", 0, (1, 60))
+                basePeriodStart, basePeriodEnd = id_get(f"{prefix}Period", 0, (1, 60))
                 if npiDelay is None:
                     npiDelay = (basePeriodStart - 1) * 2
                 if npiDuration is None:
@@ -1578,8 +1597,8 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
                 # Calculate NPI period
                 npiPeriodStart = (npiDelay // 2) + 1
                 npiPeriodEnd = min(simLength, (npiDelay + npiDuration) // 2)
-                updateParamFromSchema(
-                    f"{prefix}Period", (npiPeriodStart, npiPeriodEnd), scenarioID
+                update_param_from_schema(
+                    f"{prefix}Period", (npiPeriodStart, npiPeriodEnd), scenario_id
                 )
 
         # Social Distancing Table
@@ -1598,16 +1617,16 @@ def npiLoadSchema(schema: Parameters, scenarioID: int = 0):
             distanceTable["Social Distancing Compliance"] = (
                 distanceTable["Social Distancing Compliance"].mul(100.0).round(6)
             )
-        updateTableFromSchema(
+        update_table_from_schema(
             "distanceAgeForm",
             distanceTable,
-            scenarioID,
+            scenario_id,
             pd.DataFrame(
                 {
                     "Age Group": [None],
                     "Social Distancing Compliance": [
                         paramDict.get(
-                            idGet("socialDistancingCompliance", scenarioID, 0.0),
+                            id_get("socialDistancingCompliance", scenario_id, 0.0),
                         )
                     ],
                 },

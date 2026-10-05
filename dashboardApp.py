@@ -12,16 +12,11 @@ from typing import Any
 import streamlit as st
 
 from ClientResources.InterfaceFunctions import timeString
-from ClientResources.SharedResources import (
-    calcCurrentProgress,
-    calcErrorQueue,
-    calcResultQueue,
-    calibCurrentProgress,
-    calibErrorQueue,
-    calibResultQueue,
-    simCurrentProgress,
-    simErrorQueue,
-    simResultQueue,
+from ClientResources.Types import (
+    R0_CALCULATION_STATUS,
+    R0_CALIBRATION_STATUS,
+    SIM_STATUS,
+    SimParams,
 )
 from ClientResources.VisualisationFunctions import formatData
 
@@ -65,9 +60,9 @@ sessionParameters = {
     "showSimProgress": False,
     "showCalibProgress": False,
     "showCalcProgress": False,
-    "scenarioCount": 0,
-    "scenarioSetParamsExtra": {},
-    "scenarioSetParams": {},
+    "scenario_count": 0,
+    "scenario_extra_params": {},
+    "scenario_set_params": {},
     "activeErrors": {0: {}},
 }
 for parameter, default in sessionParameters.items():
@@ -145,31 +140,33 @@ st.sidebar.link_button(
 )
 
 
-# TODO: Fix the "fragment no longer exists" issues
 @st.fragment(run_every=1)
-def updateData() -> None:
+def update_data() -> None:
     """
     Fragment to regularly check if server results have been received yet.
     """
     resultsObtained = False
     # Simulation Results
-    simHasResults, simHasError = not simResultQueue.empty(), not simErrorQueue.empty()
+    simHasResults, simHasError = (
+        not SIM_STATUS.results.empty(),
+        not SIM_STATUS.errors.empty(),
+    )
     if session.simulationInProgress and (simHasResults or simHasError):
         if simHasResults and not simHasError:
             # Reset pending simulation variables
             # TODO: Add a check to ensure visualisations can't use the new values
             # while this function is still processing the data
-            simParams = session["pendingSimParams"]
-            session.SimParams = simParams
+            current_params: SimParams = session["pending_sim_params"]
+            session.sim_params = current_params
 
             # Process data and ensure there is no formatting errors
-            returnedData = simResultQueue.get()
-            appLog.info(f"[updateData] Processing the following data:\n{returnedData}")
+            returnedData = SIM_STATUS.results.get()
+            appLog.info(f"[update_data] Processing the following data:\n{returnedData}")
 
             # Remove any old session data that is no longer valid
             # TODO: Make more robust when number of returned values can vary more
-            scenarioCount = len(simParams["Scenario Names"])
-            dataForms = simParams["Analysis Formats"]
+            scenario_count = len(current_params.scenario_names)
+            dataForms = current_params.analysis_formats
             if len(dataForms) < 4:
                 session.pop("modelDataAsirVaccinated", None)
 
@@ -178,7 +175,7 @@ def updateData() -> None:
 
             # Check for any errors in the data
             if any(len(data) == 0 for data in formattedData):
-                simErrorQueue.put(
+                SIM_STATUS.errors.put(
                     (
                         "Simulation results were empty",
                         """
@@ -192,10 +189,10 @@ Please make sure your parameters do not possess any errors and try again.
                 simHasError = True
             elif any(
                 form.tool == "epidemic"
-                and len(data["Scenario"].value_counts()) != scenarioCount
+                and len(data["Scenario"].value_counts()) != scenario_count
                 for data, form in zip(formattedData, dataForms)
             ):
-                simErrorQueue.put(
+                SIM_STATUS.errors.put(
                     (
                         "Some scenarios were not run properly",
                         """
@@ -221,12 +218,12 @@ ensure all scenarios do not possess any errors and try again.
                     icon=":material/check_circle:",
                     duration="infinite",
                 )
-                appLog.info("[updateData] Data processing is complete.")
+                appLog.info("[update_data] Data processing is complete.")
                 session.ChartGenerated = False
         if simHasError:
             # Notify user of errors, but leave displaying them to runSimulations
-            session["simulationError"] = simErrorQueue.get()
-            simCurrentProgress.append(-1.0)
+            session["simulationError"] = SIM_STATUS.errors.get()
+            SIM_STATUS.progress.append(-1.0)
             st.toast(
                 """
 Simulation encountered an error; see
@@ -244,38 +241,53 @@ Simulation encountered an error; see
 
     # R0 Calibration Results
     calibHasResults, calibHasError = (
-        not calibResultQueue.empty(),
-        not calibErrorQueue.empty(),
+        not R0_CALIBRATION_STATUS.results.empty(),
+        not R0_CALIBRATION_STATUS.results.empty(),
     )
     if session.calibrationInProgress and (calibHasResults or calibHasError):
         if calibHasResults and not calibHasError:
             # Get calculation results
-            calibrationData: dict[str, Any] = calibResultQueue.get()
+            calibrationData = R0_CALIBRATION_STATUS.results.get()
             appLog.info(
-                f"[updateData] Obtained the following calibration data:\n{calibrationData}"
+                f"[update_data] Obtained the following calibration data:\n{calibrationData}"
             )
-            r0 = calibrationData["r0"]
-            lowCI, highCI = calibrationData["interval"]
-            beta = calibrationData["beta"]
-            scenarioName = session.get("calibScenarioName")
-            session["r0Calibration"] = r0
-            session["r0CalibrationBeta"] = beta
+            if isinstance(calibrationData, dict):
+                r0 = calibrationData["r0"]
+                lowCI, highCI = calibrationData["interval"]
+                beta = calibrationData["beta"]
+                scenarioName = session.get("calibScenarioName")
+                session["r0Calibration"] = r0
+                session["r0CalibrationBeta"] = beta
 
-            # session.calculationEndTime = datetime.now()
-            # totalTime = session.calculationEndTime - session.calculationStartTime
-            # formattedTime = timeString(totalTime.total_seconds())
-            st.toast(
-                f"""
-$R_0$ of {r0} for {scenarioName} achieved with transmission value of {beta}
+                # session.calculationEndTime = datetime.now()
+                # totalTime = session.calculationEndTime - session.calculationStartTime
+                # formattedTime = timeString(totalTime.total_seconds())
+
+                st.toast(
+                    f"""
+                $R_0$ of {r0} for {scenarioName} achieved with transmission value of {beta}
                 """,
-                icon=":material/partner_exchange:",
-                duration="infinite",
-            )
-            appLog.info("[updateData] R0 calibration is complete.")
+                    icon=":material/partner_exchange:",
+                    duration="infinite",
+                )
+                appLog.info("[update_data] R0 calibration is complete.")
+            else:
+                R0_CALIBRATION_STATUS.errors.put(
+                    (
+                        "Calibration results were incorrectly formatted",
+                        """
+The results of the $R_0$ calibration process were formatted incorrectly. This
+is likely an error with the server; contact a developer to resolve the issue.
+                    """,
+                        "error",
+                        None,
+                    )
+                )
+                calibHasError = True
         if calibHasError:
             # Notify user of errors, but leave displaying them to runSimulations
-            session["calibrationError"] = calibErrorQueue.get()
-            calibCurrentProgress.append(-1.0)
+            session["calibrationError"] = R0_CALIBRATION_STATUS.errors.get()
+            R0_CALIBRATION_STATUS.progress.append(-1.0)
             st.toast(
                 """
 Error calibrating $R_0$; see
@@ -293,36 +305,50 @@ Error calibrating $R_0$; see
 
     # R0 Calculation Results
     calcHasResults, calcHasError = (
-        not calcResultQueue.empty(),
-        not calcErrorQueue.empty(),
+        not R0_CALCULATION_STATUS.results.empty(),
+        not R0_CALCULATION_STATUS.errors.empty(),
     )
     if session.calculationInProgress and (calcHasResults or calcHasError):
         if calcHasResults and not calcHasError:
             # Get calculation results
-            calculationData: dict[str, Any] = calcResultQueue.get()
+            calculationData = R0_CALCULATION_STATUS.results.get()
             appLog.info(
-                f"[updateData] Obtained the following calculation data:\n{calculationData}"
+                f"[update_data] Obtained the following calculation data:\n{calculationData}"
             )
-            r0 = calculationData["r0"]
-            lowCI, highCI = calculationData["interval"]
-            scenarioName = session.get("calcScenarioName")
-            session["r0Calculation"] = r0
-            session["r0CalculationInterval"] = (lowCI, highCI)
+            if isinstance(calculationData, dict):
+                r0 = calculationData["r0"]
+                lowCI, highCI = calculationData["interval"]
+                scenarioName = session.get("calcScenarioName")
+                session["r0Calculation"] = r0
+                session["r0CalculationInterval"] = (lowCI, highCI)
 
-            # session.calculationEndTime = datetime.now()
-            # totalTime = session.calculationEndTime - session.calculationStartTime
-            # formattedTime = timeString(totalTime.total_seconds())
-            st.toast(
-                f"""
-$R_0$ for {scenarioName} is {r0} with a 95% confidence interval of [{lowCI}, {highCI}]
-                """,
-                icon=":material/calculate:",
-            )
-            appLog.info("[updateData] R0 calculation is complete.")
+                # session.calculationEndTime = datetime.now()
+                # totalTime = session.calculationEndTime - session.calculationStartTime
+                # formattedTime = timeString(totalTime.total_seconds())
+                st.toast(
+                    f"""
+    $R_0$ for {scenarioName} is {r0} with a 95% confidence interval of [{lowCI}, {highCI}]
+                    """,
+                    icon=":material/calculate:",
+                )
+                appLog.info("[update_data] R0 calculation is complete.")
+            else:
+                R0_CALCULATION_STATUS.errors.put(
+                    (
+                        "Calculation results were incorrectly formatted",
+                        """
+The results of the $R_0$ calculation process were formatted incorrectly. This
+is likely an error with the server; contact a developer to resolve the issue.
+                    """,
+                        "error",
+                        None,
+                    )
+                )
+                calibHasError = True
         if calcHasError:
             # Notify user of errors, but leave displaying them to runSimulations
-            session["calculationError"] = calcErrorQueue.get()
-            calcCurrentProgress.append(-1.0)
+            session["calculationError"] = R0_CALCULATION_STATUS.errors.get()
+            R0_CALCULATION_STATUS.progress.append(-1.0)
             st.toast(
                 """
 Error calculating $R_0$; see
@@ -342,4 +368,4 @@ Error calculating $R_0$; see
         st.rerun()
 
 
-updateData()
+update_data()

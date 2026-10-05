@@ -9,9 +9,9 @@ from typing import Optional
 import streamlit as st
 from streamlit.elements.lib.mutable_tab_container import TabContainer
 
-from ClientResources.DownloadFunctions import uploadDownloadBar
+from ClientResources.DownloadFunctions import upload_download_bar
 from ClientResources.InterfaceFunctions import errorChecker
-from ClientResources.ParameterFunctions import containerSave, loadKey
+from ClientResources.ParameterFunctions import container_save, load_key
 from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.diseaseParams import buildDiseaseTab
 from ParameterTabs.dynamicParams import buildDynamicTab
@@ -52,20 +52,20 @@ st.markdown("""
 """)
 
 # Buttons to upload simulation parameters
-uploadDownloadBar()
+upload_download_bar()
 
 # Fragment to display errors
 # TODO: Errors aren't removed from here when fixed until page rerun
 errorChecker(0, "Errors in Baseline Scenario")
 
 # Advanced parameters toggle
-loadKey("showAdvanced", default=False, noZeroDefault=True)
+load_key("showAdvanced", default=False, no_zero_default=True)
 containersToOpen: set[str] = {"paramTabs0"}
 showAdvanced = st.toggle(
     "Show Advanced Parameters",
     False,
     key="_showAdvanced",
-    on_change=containerSave,
+    on_change=container_save,
     args=["showAdvanced"],
     kwargs={"containers": containersToOpen},
     help="""

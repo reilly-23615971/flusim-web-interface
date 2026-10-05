@@ -12,11 +12,11 @@ from streamlit.elements.lib.mutable_tab_container import TabContainer
 from ClientResources.DownloadFunctions import (
     addScenario,
     deleteScenario,
-    uploadDownloadBar,
+    upload_download_bar,
 )
 from ClientResources.InterfaceFunctions import errorChecker, saveName
-from ClientResources.ParameterFunctions import containerSave, loadKey
-from ClientResources.SharedResources import maxScenarios
+from ClientResources.ParameterFunctions import container_save, load_key
+from ClientResources.Constants import MAX_SCENARIOS
 from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.diseaseParams import buildDiseaseTab
 from ParameterTabs.dynamicParams import buildDynamicTab
@@ -31,21 +31,21 @@ scenarioLog = logging.getLogger(__name__)
 session = st.session_state
 
 # Load scenario count early for efficiency
-scenarioCount = session.get("scenarioCount", 0)
+scenario_count = session.get("scenario_count", 0)
 
 
 @st.dialog("Remove Scenario", width="large", icon=":material/delete:")
-def deleteScenarioDialog(scenarioID: int):
+def deleteScenarioDialog(scenario_id: int):
     """
     Dialog function that removes a scenario from the dashboard if confirmed.
 
     Parameters:
-        scenarioID (int): The ID representing the scenario to be deleted.
+        scenario_id (int): The ID representing the scenario to be deleted.
     """
     # Disable button if it's taking a while to delete
     deletePending = bool(session.get("confirmDeleteButton"))
     st.markdown(f"""
-        Removing the "{session[f'scenarioName{scenarioID}']}"
+        Removing the "{session[f'scenarioName{scenario_id}']}"
         scenario will erase any unique parameter values set for it. Are
         you sure you want to remove this scenario?
     """)
@@ -56,7 +56,7 @@ def deleteScenarioDialog(scenarioID: int):
         icon="spinner" if deletePending else None,
         disabled=deletePending,
     ):
-        deleteScenario(scenarioID, "scenarioTabs")
+        deleteScenario(scenario_id, "scenarioTabs")
         st.rerun()
 
 
@@ -75,7 +75,7 @@ st.markdown(f"""
     in different scenarios by the simulation. To allow for direct
     comparison of different parameter sets, you may define a series of
     scenarios in which different parameter values are used. Up to
-    {maxScenarios} additional scenarios plus the baseline can be run in
+    {MAX_SCENARIOS} additional scenarios plus the baseline can be run in
     a single simulation.
 
     Select a tab to view or modify the parameters under that category.
@@ -87,7 +87,7 @@ st.markdown(f"""
 """)
 
 # Buttons to upload simulation parameters
-uploadDownloadBar()
+upload_download_bar()
 
 # Button to add another scenario
 # TODO: Allow copying an existing scenario instead of starting from the baseline
@@ -98,48 +98,50 @@ st.button(
     on_click=addScenario,
     args=["scenarioTabs"],
     key=f"scenarioAdd{id}",
-    disabled=not scenarioCount < maxScenarios,
+    disabled=not scenario_count < MAX_SCENARIOS,
     help=(
         """
 Add another scenario to the simulation, where you can configure
 different parameter values to use instead of the baseline values.
         """
-        if scenarioCount < maxScenarios
+        if scenario_count < MAX_SCENARIOS
         else f"""
-To keep the number of scenarios manageable, no more than {maxScenarios}
+To keep the number of scenarios manageable, no more than {MAX_SCENARIOS}
 scenarios plus the baseline may be added to the simulation set at once.
     """
     ),
 )
 
 # Use tabs to separate scenarios
-if scenarioCount > 0:
+if scenario_count > 0:
     scenarioTabs = st.tabs(
         [
             f"**#{i}** {session.get(f"scenarioName{i}", "New Scenario")}"
-            for i in range(1, scenarioCount + 1)
+            for i in range(1, scenario_count + 1)
         ],
         key="scenarioTabs",
         on_change="rerun",
     )
     for index, tab in enumerate(scenarioTabs):
-        scenarioID = index + 1
+        scenario_id = index + 1
         with tab:
             if tab.open:
-                st.header(f"Scenario #{scenarioID}")
+                st.header(f"Scenario #{scenario_id}")
                 # Scenario name
                 nameField = st.empty()
                 nameError = st.container()
-                loadKey("scenarioName", scenarioID, "New Scenario")
+                load_key("scenarioName", scenario_id, "New Scenario")
                 scenarioName = nameField.text_input(
                     "Name of Scenario",
-                    f"Scenario #{scenarioID}",
+                    f"Scenario #{scenario_id}",
                     max_chars=50,
-                    key=f"_scenarioName{scenarioID}",
+                    key=f"_scenarioName{scenario_id}",
                     autocomplete="off",
                     on_change=saveName,
-                    args=["scenarioName", scenarioID, nameError],
-                    kwargs={"specialContainers": {"scenarioTabs": "**#{id}** {value}"}},
+                    args=["scenarioName", scenario_id, nameError],
+                    kwargs={
+                        "special_containers": {"scenarioTabs": "**#{id}** {value}"}
+                    },
                     placeholder="Enter a name for this scenario",
                     help="""
 The name to give to this scenario, which will display
@@ -150,18 +152,18 @@ in tables and graphs generated by the dashboard.
                 st.subheader("Parameters")
 
                 # Place to put warnings and errors in the current parameter selection
-                errorChecker(scenarioID, f"Errors in {scenarioName}")
+                errorChecker(scenario_id, f"Errors in {scenarioName}")
 
                 # Advanced parameters toggle
-                loadKey("showAdvanced", default=False, noZeroDefault=True)
+                load_key("showAdvanced", default=False, no_zero_default=True)
                 containersToOpen: set[str] = {
-                    f"paramTabs{id}" for id in range(1, scenarioCount + 1)
+                    f"paramTabs{id}" for id in range(1, scenario_count + 1)
                 }
                 showAdvanced = st.toggle(
                     "Show Advanced Parameters",
                     False,
                     key="_showAdvanced",
-                    on_change=containerSave,
+                    on_change=container_save,
                     args=["showAdvanced"],
                     kwargs={"containers": containersToOpen},
                     help="""
@@ -191,7 +193,7 @@ in tables and graphs generated by the dashboard.
                             ":material/list_alt: Templates",
                         ],
                         on_change="rerun",
-                        key=f"paramTabs{scenarioID}",
+                        key=f"paramTabs{scenario_id}",
                     )
                 else:
                     diseaseTab, communityTab, vaccineTab, npiTab, templateTab = st.tabs(
@@ -203,42 +205,42 @@ in tables and graphs generated by the dashboard.
                             ":material/list_alt: Templates",
                         ],
                         on_change="rerun",
-                        key=f"paramTabs{scenarioID}",
+                        key=f"paramTabs{scenario_id}",
                     )
                 if diseaseTab.open:
                     with diseaseTab:
-                        buildDiseaseTab(scenarioID, showAdvanced)
+                        buildDiseaseTab(scenario_id, showAdvanced)
                 if communityTab.open:
                     with communityTab:
-                        buildCommunityTab(scenarioID, showAdvanced)
+                        buildCommunityTab(scenario_id, showAdvanced)
                 if vaccineTab.open:
                     with vaccineTab:
-                        buildVaccinationTab(scenarioID, showAdvanced)
+                        buildVaccinationTab(scenario_id, showAdvanced)
                 if npiTab.open:
                     containersToOpen |= {
-                        f"npiContainer{scenarioID}",
-                        f"schoolClosureContainer{scenarioID}",
-                        f"withdrawalContainer{scenarioID}",
-                        f"workGroupContainer{scenarioID}",
-                        f"bccContainer{scenarioID}",
+                        f"npiContainer{scenario_id}",
+                        f"schoolClosureContainer{scenario_id}",
+                        f"withdrawalContainer{scenario_id}",
+                        f"workGroupContainer{scenario_id}",
+                        f"bccContainer{scenario_id}",
                     }
                     with npiTab:
-                        buildNPITab(scenarioID, showAdvanced)
+                        buildNPITab(scenario_id, showAdvanced)
                 if dynamicTab is not None and dynamicTab.open:
                     with dynamicTab:
-                        buildDynamicTab(scenarioID)
+                        buildDynamicTab(scenario_id)
                 if templateTab.open:
                     with templateTab:
-                        buildTemplateTab(scenarioID)
+                        buildTemplateTab(scenario_id)
 
                 # Remove button
                 st.button(
                     label="Remove Scenario",
                     icon=":material/delete:",
                     type="primary",
-                    key=f"scenarioRemove{scenarioID}",
+                    key=f"scenarioRemove{scenario_id}",
                     on_click=deleteScenarioDialog,
-                    args=[scenarioID],
+                    args=[scenario_id],
                     help="""
 Remove this scenario from the simulation set, thus ensuring that it is not
 ran when you run the simulation.

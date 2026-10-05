@@ -17,10 +17,10 @@ from ClientResources.InterfaceFunctions import (
 )
 from ClientResources.ModelSchema import Parameters, scenarioParameters
 from ClientResources.ParameterFunctions import (
-    idGet,
-    loadKey,
-    saveKey,
-    updateParamFromSchema,
+    id_get,
+    load_key,
+    save_key,
+    update_param_from_schema,
 )
 
 # Logging
@@ -76,14 +76,14 @@ def buildCommunityTab(id: int, advanced: bool = False):
     st.subheader("Withdrawals and Contact", divider="grey")
 
     # The parameters in question
-    loadKey("withdrawalWork", id, 0.5)
+    load_key("withdrawalWork", id, 0.5)
     st.slider(
         "Work Withdrawal Rate (Probability)",
         min_value=0.0,
         max_value=1.0,
         value=0.5,
         format="percent",
-        on_change=saveKey,
+        on_change=save_key,
         args=["withdrawalWork", id],
         key=f"_withdrawalWork{id}",
         help="""
@@ -92,14 +92,14 @@ simulation not going to work after
 becoming symptomatic.
         """,
     )
-    loadKey("withdrawalSchool", id, 0.9)
+    load_key("withdrawalSchool", id, 0.9)
     st.slider(
         "School Withdrawal Rate (Probability)",
         min_value=0.0,
         max_value=1.0,
         value=0.9,
         format="percent",
-        on_change=saveKey,
+        on_change=save_key,
         args=["withdrawalSchool", id],
         key=f"_withdrawalSchool{id}",
         help="""
@@ -108,7 +108,7 @@ simulation not going to school
 after becoming symptomatic.
         """,
     )
-    loadKey("bccRate", id, 4.0)
+    load_key("bccRate", id, 4.0)
     # Note that this is daily, not once per cycle
     st.slider(
         "Background Contact Count (Interactions per Person per Day)",
@@ -117,7 +117,7 @@ after becoming symptomatic.
         value=4.0,
         step=0.25,
         key=f"_bccRate{id}",
-        on_change=saveKey,
+        on_change=save_key,
         args=["bccRate", id],
         help="""
 The average number of other people each individual will contact in the
@@ -131,7 +131,7 @@ as public transport.
         # Other Community Parameters
         st.subheader("Advanced Community Settings", divider="grey")
 
-        loadKey("diagnosisDelay", id, 0)
+        load_key("diagnosisDelay", id, 0)
         st.slider(
             "Case Diagnosis Delay (Days)",
             min_value=0.0,
@@ -139,7 +139,7 @@ as public transport.
             value=0.0,
             step=0.5,
             format="%f Day(s)",
-            on_change=saveKey,
+            on_change=save_key,
             args=["diagnosisDelay", id],
             key=f"_diagnosisDelay{id}",
             help="""
@@ -150,7 +150,7 @@ come into effect.
             """,
         )
 
-        loadKey("childSupervision", id, 1.0)
+        load_key("childSupervision", id, 1.0)
         st.slider(
             "Child Supervision Rate (Probability)",
             min_value=0.0,
@@ -158,7 +158,7 @@ come into effect.
             value=0.5,
             format="percent",
             key=f"_childSupervision{id}",
-            on_change=saveKey,
+            on_change=save_key,
             args=["childSupervision", id],
             help="""
 The probability that an adult in the simulation
@@ -168,7 +168,7 @@ one child present and no other adults are at home.
         )
 
         # Group Sizes
-        loadKey("maxClassSize", id, 10)
+        load_key("maxClassSize", id, 10)
         st.slider(
             "Maximum School Class Size (Number of People)",
             0,
@@ -176,7 +176,7 @@ one child present and no other adults are at home.
             10,
             key=f"_maxClassSize{id}",
             format="%f Person(s)",
-            on_change=saveKey,
+            on_change=save_key,
             args=["maxClassSize", id],
             help="""
 The maximum size of classes within schools in the simulation.
@@ -184,13 +184,13 @@ The maximum size of classes within schools in the simulation.
             # TODO: if childcare becomes relevant again mention it in the tooltip
         )
 
-        '''loadKey("maxClassCount", id, 1)
+        '''load_key("maxClassCount", id, 1)
         st.slider(
             "Number of School Class Subgroups",
             1,
             5,
             1,
-            on_change=saveKey,
+            on_change=save_key,
             args=["maxClassCount", id],
             key=f"_maxClassCount{id}",
             help="""
@@ -201,7 +201,7 @@ regularly interact with each other but not with the
 rest of the class.
             """,
         )'''
-        loadKey("maxWorkGroupSize", id, 10)
+        load_key("maxWorkGroupSize", id, 10)
         st.slider(
             "Maximum Work Group Size (Number of People)",
             0,
@@ -209,7 +209,7 @@ rest of the class.
             10,
             format="%f Person(s)",
             key=f"_maxWorkGroupSize{id}",
-            on_change=saveKey,
+            on_change=save_key,
             args=["maxWorkGroupSize", id],
             help="""
 The maximum size of groups within workplaces in the simulation.
@@ -217,12 +217,12 @@ The maximum size of groups within workplaces in the simulation.
         )
 
 
-def communityDescribe(scenarioID: int = 0, advanced: bool = False):
+def communityDescribe(scenario_id: int = 0, advanced: bool = False):
     """
     Function to describe the current community parameters in natural language.
 
     Parameters:
-        scenarioID (int): An integer that will be used to differentiate the parameters
+        scenario_id (int): An integer that will be used to differentiate the parameters
             in different instances of the tab by adding a number to the Streamlit
             session state variables. A value of 0 means that this is the
             baseline scenario and will be treated accordingly.
@@ -243,14 +243,14 @@ def communityDescribe(scenarioID: int = 0, advanced: bool = False):
         they are symptomatic. Adults (and adolescents) attending work have a
         {adult:.0%} chance of staying home if they are symptomatic.
         """.format(
-            child=idGet("withdrawalSchool", scenarioID, 0.9),
-            adult=idGet("withdrawalWork", scenarioID, 0.5),
+            child=id_get("withdrawalSchool", scenario_id, 0.9),
+            adult=id_get("withdrawalWork", scenario_id, 0.5),
         )
     )
 
     # BCC and Group Size
     st.subheader("Contact Between Individuals")
-    bccRate = idGet("bccRate", scenarioID, 4.0)
+    bccRate = id_get("bccRate", scenario_id, 4.0)
     if bccRate.is_integer():
         bccString = f"""
         During the simulation's background phase (i.e. once per day), every
@@ -293,15 +293,15 @@ def communityDescribe(scenarioID: int = 0, advanced: bool = False):
                 
         {bcc}
         """.format(
-            school=idGet("maxClassSize", scenarioID, 10) if advanced else 10,
-            work=idGet("maxWorkGroupSize", scenarioID, 10) if advanced else 10,
+            school=id_get("maxClassSize", scenario_id, 10) if advanced else 10,
+            work=id_get("maxWorkGroupSize", scenario_id, 10) if advanced else 10,
             bcc=bccString,
         )
     )
 
     # Other Community Parameters
     st.subheader("Other Community Parameters")
-    diagnosisDelay = idGet("diagnosisDelay", scenarioID, 0) if advanced else 0
+    diagnosisDelay = id_get("diagnosisDelay", scenario_id, 0) if advanced else 0
     if diagnosisDelay > 0:
         # TODO: Note that delay may affect deployment of NPIs if they exist
         diagnosisString = f"""
@@ -320,7 +320,7 @@ def communityDescribe(scenarioID: int = 0, advanced: bool = False):
         possesses the ability to add a delay between the onset of symptoms and
         official diagnosis; however, currently this delay is set to 0 days.
         """
-    childSupervision = idGet("childSupervision", scenarioID, 1.0)
+    childSupervision = id_get("childSupervision", scenario_id, 1.0)
     if childSupervision == 1:
         supervisionString = """
         While the locations that individuals go to are mostly determined independently
@@ -394,23 +394,23 @@ def communitySaveSchema(
         scenarioParams = scenarioParameters()
 
         # Withdrawals and Contact
-        scenarioParams.prob_withdrawal = idGet("withdrawalWork", id, 0.5)
-        scenarioParams.prob_school_withdrawal = idGet("withdrawalSchool", id, 0.9)
-        scenarioParams.background_contact_count = idGet("bccRate", id, 4.0)
+        scenarioParams.prob_withdrawal = id_get("withdrawalWork", id, 0.5)
+        scenarioParams.prob_school_withdrawal = id_get("withdrawalSchool", id, 0.9)
+        scenarioParams.background_contact_count = id_get("bccRate", id, 4.0)
 
         # The Rest
         if advanced:
-            scenarioParams.diagnosis_delay = idGet("diagnosisDelay", id, 0) * 2
-            scenarioParams.prob_child_supervision = idGet("childSupervision", id, 1.0)
-            # scenarioParams.max_class_count = idGet("maxClassCount", id, 1)
-            scenarioParams.max_class_size = idGet("maxClassSize", id, 10)
-            scenarioParams.max_workgroup_size = idGet("maxWorkGroupSize", id, 10)
+            scenarioParams.diagnosis_delay = id_get("diagnosisDelay", id, 0) * 2
+            scenarioParams.prob_child_supervision = id_get("childSupervision", id, 1.0)
+            # scenarioParams.max_class_count = id_get("maxClassCount", id, 1)
+            scenarioParams.max_class_size = id_get("maxClassSize", id, 10)
+            scenarioParams.max_workgroup_size = id_get("maxWorkGroupSize", id, 10)
             """
-            scenarioParams.max_adult_class_size = idGet("maxAdultClassSize", id, 10)
-            scenarioParams.max_neighbourgroup_size = idGet(
+            scenarioParams.max_adult_class_size = id_get("maxAdultClassSize", id, 10)
+            scenarioParams.max_neighbourgroup_size = id_get(
                 'maxNeighborGroupSize', id, 10
             )
-            scenarioParams.max_churchgroup_size = idGet(
+            scenarioParams.max_churchgroup_size = id_get(
                 'maxChurchGroupSize', id, 10
             )
             """
@@ -429,7 +429,7 @@ def communitySaveSchema(
         raise e
 
 
-def communityLoadSchema(schema: Parameters, scenarioID: int = 0):
+def communityLoadSchema(schema: Parameters, scenario_id: int = 0):
     """
     Function to read community parameters from a schema and set the
     dashboard's widgets to the specified values.
@@ -466,4 +466,4 @@ def communityLoadSchema(schema: Parameters, scenarioID: int = 0):
     }
     for parameter, value in validParams.items():
         key, formatFunc = paramConvert[parameter]
-        updateParamFromSchema(key, formatFunc(value), scenarioID)
+        update_param_from_schema(key, formatFunc(value), scenario_id)

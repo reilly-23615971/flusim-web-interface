@@ -3,7 +3,6 @@
 # Miscellaneous functions used by the client dashboard
 
 # Imports
-import logging
 import re
 from functools import partial
 from typing import Any, Callable, Literal, cast
@@ -13,30 +12,34 @@ import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.ParameterFunctions import containerSave, idGet
-from ClientResources.SharedResources import ageTimeDict, ageWithTime, triggerConditions
-
-# Logging
-functionLog = logging.getLogger(__name__)
+from ClientResources.ParameterFunctions import container_save, id_get
+from ClientResources.Types import (
+    AGE_GROUP_KEYS,
+    AGE_GROUPS,
+    AGE_KEY_CONVERTER,
+    AgeGroup,
+    AgeGroupKey,
+    AgeWithTotal,
+)
 
 # Store st.session_state as variable for efficiency
 session = st.session_state
 
 # Tools for error messages
 # Error Colours: Text #BD4043, Background #FFE9E9
-errorFormat = partial(st.error, icon=":material/error:")
+error_format = partial(st.error, icon=":material/error:")
 # Warning Colours: Text #926C05, Background #FFFFEC
-warnFormat = partial(st.warning, icon=":material/warning:")
+warn_format = partial(st.warning, icon=":material/warning:")
 # Use sRGB in the colour picker for the best display/code match
 
 
 # Error functions
-def paramError(
+def param_error(
     label: str,
-    scenarioID: int,
+    scenario_id: int,
     condition: Callable[[], bool | np.bool],
     message: str,
-    isSevere=False,
+    is_severe=False,
 ):
     """
     Function to display an error message if a condition is met.
@@ -44,7 +47,7 @@ def paramError(
     Parameters:
         label (str): A string to identify this specific error.
 
-        scenarioID (int): The integer representing the scenario this error applies to.
+        scenario_id (int): The integer representing the scenario this error applies to.
 
         condition (callable, returns bool): The criteria that must be fulfilled
             to display the error, formatted as a function that returns `True` when
@@ -52,7 +55,7 @@ def paramError(
 
         message (str): The text to display for the error message.
 
-        isSevere (bool): Set to `True` for red errors that prevent running
+        is_severe (bool): Set to `True` for red errors that prevent running
             the simulation if present.
     """
     # TODO: Allow errors to link to the affected parameter
@@ -60,19 +63,19 @@ def paramError(
     # TODO: Consider reworking errors so that you don't need to open
     # their tab to generate them
     if condition():
-        if isSevere:
-            errorFormat(message)
-            session["activeErrors"][scenarioID][label] = (message, True)
+        if is_severe:
+            error_format(message)
+            session["activeErrors"][scenario_id][label] = (message, True)
         else:
-            warnFormat(message)
-            session["activeErrors"][scenarioID][label] = (message, False)
+            warn_format(message)
+            session["activeErrors"][scenario_id][label] = (message, False)
     else:
-        session["activeErrors"][scenarioID].pop(label, None)
+        session["activeErrors"][scenario_id].pop(label, None)
 
 
 def dualError(
     label: str,
-    scenarioID: int,
+    scenario_id: int,
     errorCon: Callable[[], bool],
     warnCon: Callable[[], bool],
     errorMessage: str,
@@ -85,7 +88,7 @@ def dualError(
     Parameters:
         label (str): A string to identify this specific error.
 
-        scenarioID (int): The integer representing the scenario this error applies to.
+        scenario_id (int): The integer representing the scenario this error applies to.
 
         errorCon (callable, returns bool): The criteria for a red, run-blocking
             error, formatted as a function that returns `True` when the criteria
@@ -99,22 +102,22 @@ def dualError(
         warnMessage (str): The text to display for the yellow error message.
     """
     if errorCon():
-        errorFormat(errorMessage)
-        session["activeErrors"][scenarioID][label] = (errorMessage, True)
+        error_format(errorMessage)
+        session["activeErrors"][scenario_id][label] = (errorMessage, True)
     elif warnCon():
-        warnFormat(warnMessage)
-        session["activeErrors"][scenarioID][label] = (warnMessage, False)
+        warn_format(warnMessage)
+        session["activeErrors"][scenario_id][label] = (warnMessage, False)
     else:
-        session["activeErrors"][scenarioID].pop(label, None)
+        session["activeErrors"][scenario_id].pop(label, None)
 
 
 # @st.fragment(run_every=1)
-def errorChecker(scenarioID: int, name: str = "Errors in Current Scenario"):
+def errorChecker(scenario_id: int, name: str = "Errors in Current Scenario"):
     """
     Fragment to list errors from a specific scenario in a dropdown container.
 
     Parameters:
-        scenarioID (int): The integer representing the scenario to pull errors from.
+        scenario_id (int): The integer representing the scenario to pull errors from.
 
         name (str): The label of the dropdown container.
 
@@ -124,14 +127,14 @@ def errorChecker(scenarioID: int, name: str = "Errors in Current Scenario"):
     """
     # TODO: Consider removing the run_every parameter and defragmenting tabs
     severeErrorsFound = False
-    if session["activeErrors"].get(scenarioID, False):
+    if session["activeErrors"].get(scenario_id, False):
         with st.status(label=name, state="error"):
-            for message, isSevere in session["activeErrors"][scenarioID].values():
-                if isSevere:
-                    errorFormat(message)
+            for message, is_severe in session["activeErrors"][scenario_id].values():
+                if is_severe:
+                    error_format(message)
                     severeErrorsFound = True
                 else:
-                    warnFormat(message)
+                    warn_format(message)
     return severeErrorsFound
 
 
@@ -193,36 +196,6 @@ def timeString(time: int | float) -> str:
         )
 
 
-def trigCast(x: str) -> Literal[
-    "none",
-    "timed",
-    "per_school_cases",
-    "community_cases",
-    "community_rate",
-    "per_primary_high_school_cases",
-]:
-    """
-    Simple function to cast trigger strings into literals for validation.
-
-    Parameters:
-        x (str): The string to be cast.
-
-    Returns:
-        Literal: A literal with the same value as the string.
-    """
-    return cast(
-        Literal[
-            "none",
-            "timed",
-            "per_school_cases",
-            "community_cases",
-            "community_rate",
-            "per_primary_high_school_cases",
-        ],
-        triggerConditions[x],
-    )
-
-
 def healthOutcomeStore(
     scenarioNames: list[str], useAges: bool = True
 ) -> tuple[dict, dict]:
@@ -253,14 +226,14 @@ def healthOutcomeStore(
     singleRates = {}
     for outcome, (key, default, formatFunc) in outcomeRates.items():
         singleRates[outcome] = {
-            name: formatFunc(idGet(key, scenarioID, default))
-            for scenarioID, name in enumerate(scenarioNames)
+            name: formatFunc(id_get(key, scenario_id, default))
+            for scenario_id, name in enumerate(scenarioNames)
         }
 
     # ICU (dependent on hospitalisation)
     icuMultipliers = {
-        name: idGet("icuRatio", scenarioID, 20.0) / 100
-        for scenarioID, name in enumerate(scenarioNames)
+        name: id_get("icuRatio", scenario_id, 20.0) / 100
+        for scenario_id, name in enumerate(scenarioNames)
     }
     singleRates["ICU Visits"] = {
         name: rate * icuMultipliers[name]
@@ -273,16 +246,16 @@ def healthOutcomeStore(
     ageRates = {}
     if useAges:
         hospitalRates, icuRates, deathRates = {}, {}, {}
-        for scenarioID, name in enumerate(scenarioNames):
+        for scenario_id, name in enumerate(scenarioNames):
             # Get previously-extracted base rates
             baseHospitalRate = singleRates["Hospitalisations"][name]
             baseDeathRate = singleRates["Deaths"][name]
             baseICURate = icuMultipliers[name]
             # Format table with age-specific rates
             burdenAgeForm = (
-                idGet(
+                id_get(
                     "burdenAgeForm",
-                    scenarioID,
+                    scenario_id,
                     pd.DataFrame(
                         {
                             "Age Group": [None],
@@ -293,7 +266,7 @@ def healthOutcomeStore(
                 )
                 .copy()
                 .dropna()
-                .replace({"Age Group": ageTimeDict})
+                .replace({"Age Group": AGE_KEY_CONVERTER})
             )
             burdenAgeForm["Hospitalisation Rate"] = burdenAgeForm[
                 "Hospitalisation Rate"
@@ -308,14 +281,14 @@ def healthOutcomeStore(
                 .to_dict()
             )
             hospitalRates[name] = {
-                age: baseHospitalRate for age in ageWithTime
+                age: baseHospitalRate for age in AGE_GROUPS
             } | hospitalAgeDict
 
             icuAgeDict = {
                 age: rate * baseICURate for age, rate in hospitalAgeDict.items()
             }
             icuRates[name] = {
-                age: baseHospitalRate * baseICURate for age in ageWithTime
+                age: baseHospitalRate * baseICURate for age in AGE_GROUPS
             } | icuAgeDict
 
             mortAgeDict = (
@@ -323,7 +296,7 @@ def healthOutcomeStore(
                 .set_index("Age Group")["Mortality Rate"]
                 .to_dict()
             )
-            deathRates[name] = {age: baseDeathRate for age in ageWithTime} | mortAgeDict
+            deathRates[name] = {age: baseDeathRate for age in AGE_GROUPS} | mortAgeDict
         ageRates = {
             "Hospitalisations": hospitalRates,
             "ICU Visits": icuRates,
@@ -336,15 +309,15 @@ def healthOutcomeStore(
         ageRates = {
             "Hospitalisations": {
                 scenario: {
-                    age: hospitalFormat(idGet(hospitalKey, i, hospitalDefault))
-                    for age in ageWithTime
+                    age: hospitalFormat(id_get(hospitalKey, i, hospitalDefault))
+                    for age in AGE_GROUPS
                 }
                 for i, scenario in enumerate(scenarioNames)
             },
             "Deaths": {
                 scenario: {
-                    age: deathFormat(idGet(deathKey, i, deathDefault))
-                    for age in ageWithTime
+                    age: deathFormat(id_get(deathKey, i, deathDefault))
+                    for age in AGE_GROUPS
                 }
                 for i, scenario in enumerate(scenarioNames)
             },
@@ -363,34 +336,36 @@ def healthOutcomeStore(
 # Scenario name functions
 def saveName(
     key: str,
-    scenarioID: int,
+    scenario_id: int,
     errorContainer,
     containers: set[str] = set(),
-    specialContainers: dict[str, str] = {},
+    special_containers: dict[str, str] = {},
 ):
     """
-    Wrapper for `containerSave` that stops empty or duplicate names being saved.
+    Wrapper for `container_save` that stops empty or duplicate names being saved.
 
     Parameters:
         key (str): The string used to identify the name-setting widget.
 
-        scenarioID (int): The integer representing the scenario the widget
+        scenario_id (int): The integer representing the scenario the widget
             is naming.
 
         errorContainer: The container in which to display the error message.
 
         containers (set of str): String used to identify each container to open.
 
-        specialContainers (dict of str): String used to identify containers
+        special_containers (dict of str): String used to identify containers
             that must be set to specific values (i.e. scenario tabs whose
             names change). Including `{id}` or `{value}` in one of the values
-            for these will replace them with the value of `scenarioID` or the
+            for these will replace them with the value of `scenario_id` or the
             value of the widget that is being saved, respectively.
     """
-    newName = session.get(f"_{key}{scenarioID}")
-    scenarioCount = session.scenarioCount
+    newName = session.get(f"_{key}{scenario_id}")
+    scenario_count = session.scenario_count
     currentNames = {
-        session.get(f"{key}{i}") for i in range(1, scenarioCount + 1) if i != scenarioID
+        session.get(f"{key}{i}")
+        for i in range(1, scenario_count + 1)
+        if i != scenario_id
     }
     if newName == "":
         errorContainer.error(
@@ -409,12 +384,12 @@ def saveName(
         )
     else:
         # Update saved names for r0
-        if session.get("calibSavedScenarioID") == scenarioID:
+        if session.get("calib_saved_id") == scenario_id:
             session["calibScenarioName"] = newName
-        containerSave(key, scenarioID, containers, specialContainers)
+        container_save(key, scenario_id, containers, special_containers)
 
 
-def uniqueName(currentName: str, names: set[str]):
+def unique_name(currentName: str, names: set[str]):
     """
     Function to add a suffix to a string to make it unique compared to a set.
 
@@ -443,7 +418,7 @@ def uniqueName(currentName: str, names: set[str]):
 
 
 # Age functions
-def ageSort(age: tuple[str, Any]) -> int:
+def ageSort(age: tuple[AgeGroupKey, Any]) -> int:
     """
     Function to be used in `sorted()` for ordering age groups.
 
@@ -454,18 +429,7 @@ def ageSort(age: tuple[str, Any]) -> int:
     Returns:
         int: The numeric ordering index of the age group.
     """
-    return [
-        "young_infant",
-        "infant",
-        "young_child",
-        "child",
-        "adolescent",
-        "young_adult",
-        "adult",
-        "older_adult",
-        "senior",
-        "older_senior",
-    ].index(age[0])
+    return AGE_GROUP_KEYS.index(age[0])
 
 
 def ageSortSeries(ages: pd.Series) -> pd.Series:
@@ -478,39 +442,21 @@ def ageSortSeries(ages: pd.Series) -> pd.Series:
     Returns:
         Series: A Series containing the numeric ordering index of each age group.
     """
-    return ages.map(
-        {
-            age: index
-            for index, age in enumerate(
-                [
-                    "young_infant",
-                    "infant",
-                    "young_child",
-                    "child",
-                    "adolescent",
-                    "young_adult",
-                    "adult",
-                    "older_adult",
-                    "senior",
-                    "older_senior",
-                ]
-            )
-        }
-    )
+    return ages.map({age: index for index, age in enumerate(AGE_GROUP_KEYS)})
 
 
-def ageDisplay(option: Any) -> str:
+def ageDisplay(option) -> AgeGroup:
     """
     Function to be passed to format_func for displaying selectbox values
 
     Parameters:
-        option (any): The string to be converted from key to display value.
+        option (str): The string to be converted from key to display value.
 
     Returns:
         str: The display value corresponding to the selectbox option.
     """
 
-    return ageTimeDict[cast(str, option)]
+    return AGE_KEY_CONVERTER[option]
 
 
 def ageRangeString(lower: int | float, upper: int | float) -> str:
@@ -538,7 +484,7 @@ def ageRangeString(lower: int | float, upper: int | float) -> str:
         return f"{lower}-{upper - 1}"
 
 
-def ageRangeCombiner(ages: list[str]) -> str:
+def ageRangeCombiner(ages: list[AgeWithTotal]) -> str:
     """
     Function to convert a list of age brackets into a single string
     concisely listing them all.
@@ -554,7 +500,7 @@ def ageRangeCombiner(ages: list[str]) -> str:
         return (
             "All Ages" if ages[0] == "Total" else re.findall(r"\((.*?)\)", ages[0])[0]
         )
-    if set(ages) == set(ageWithTime):
+    if set(ages) == set(AGE_GROUPS):
         return "All Ages"
 
     # Dictionaries to get the starts/ends of each age bracket

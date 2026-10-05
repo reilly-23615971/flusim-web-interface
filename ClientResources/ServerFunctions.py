@@ -6,9 +6,7 @@
 import asyncio
 import json
 import logging
-from collections import deque
 from io import BytesIO
-from queue import Queue
 from threading import Event, Thread
 from typing import Literal, overload
 from zipfile import ZipFile
@@ -22,7 +20,8 @@ from aiohttp import (
     WSMsgType,
 )
 
-from ClientResources.SharedResources import serverUrl
+from ClientResources.Constants import SERVER_URL
+from ClientResources.Types import RequestStatus
 
 # Logging
 functionLog = logging.getLogger(__name__)
@@ -55,9 +54,9 @@ async def taskStart(route: str, parameterJSON: str) -> str:
 
     # Send POST request to server with parameters
     schema = json.loads(parameterJSON)
-    functionLog.info(f"[taskStart] Initialising session with base url {serverUrl}...")
-    functionLog.info(f"[taskStart] Contacting {serverUrl}/{route}...")
-    async with ClientSession(raise_for_status=False, base_url=serverUrl) as client:
+    functionLog.info(f"[taskStart] Initialising session with base url {SERVER_URL}...")
+    functionLog.info(f"[taskStart] Contacting {SERVER_URL}/{route}...")
+    async with ClientSession(raise_for_status=False, base_url=SERVER_URL) as client:
         async with client.post(route, json=schema) as response:
             if response.status == 422:
                 errorText = await response.text()
@@ -96,7 +95,7 @@ async def taskCancel(taskID: str):
     """
     # Send DELETE request to server with parameters
     functionLog.info(f"[taskCancel] Cancelling task {taskID}...")
-    async with ClientSession(base_url=serverUrl) as client:
+    async with ClientSession(base_url=SERVER_URL) as client:
         async with client.delete(f"cancel/{taskID}"):
             functionLog.info(f"[taskCancel] Task {taskID} successfully cancelled.")
 
@@ -141,7 +140,7 @@ async def taskResults(route: str, taskID: str, resultType: str) -> list[bytes] |
 
     # Send POST request to server with parameters
     functionLog.info(f"[taskDownload] Downloading results for task {taskID}...")
-    async with ClientSession(base_url=serverUrl) as client:
+    async with ClientSession(base_url=SERVER_URL) as client:
         # Download the analysis files
         async with client.get(f"{route}/results/{taskID}") as response:
             fileData = await response.read()
@@ -168,10 +167,8 @@ async def taskStatus(
     taskID: str,
     route: str,
     resultType: Literal["zip", "json"],
-    statuses: dict[str, tuple[float, str]],
-    progressValue: deque[float],
-    statusQueue: list[str],
-    resultQueue: Queue,
+    status_decoder: dict[str, tuple[float, str]],
+    request_queue: RequestStatus,
 ):
     """
     Async function to get status updates from the server via a websocket
@@ -185,16 +182,11 @@ async def taskStatus(
 
         resultType (str): A string indicating the format of the results.
 
-        statuses (dict): A dictionary used to decode status messages
+        status_decoder (dict): A dictionary used to decode status messages
             returned by the server.
 
-        progressValue (deque of float): A deque used to store the percentage
-            of the task that has been completed.
-
-        statusQueue (list of str): A list used to store the status messages
-            noting the steps of the task that have been completed.
-
-        resultQueue (Queue): A queue used to store the results of the task.
+        request_queue (RequestStatus): An object bundling together lists and
+            queues used to store the status and results of the task.
 
     Raises:
         RuntimeError: If the server returns the `error` status.
@@ -210,17 +202,17 @@ async def taskStatus(
                     data = json.loads(msg.data)
                     status = data.get("status")
                     functionLog.info(f"[taskStatus] Task {taskID} status: {status}")
-                    progress, message = statuses[status]
+                    progress, message = status_decoder[status]
                     # Prevent duplicate status messages
-                    if message not in statusQueue:
-                        progressValue.append(progress)
-                        statusQueue.append(message)
+                    if message not in request_queue.tasks:
+                        request_queue.progress.append(progress)
+                        request_queue.tasks.append(message)
                     # End the websocket if certain statuses are returned
                     match status:
                         case "completed":
                             # Download the analysis files
                             results = await taskResults(route, taskID, resultType)
-                            resultQueue.put(results)
+                            request_queue.results.put(results)
                             return
                         case "error":
                             functionLog.error(f"""
@@ -238,13 +230,13 @@ The simulation server shut down while attempting to complete the task.
                             """)
                 case WSMsgType.CLOSE:
                     if msg.data == 1008:
-                        statusQueue.append("Error: Server websocket not found")
+                        request_queue.tasks.append("Error: Server websocket not found")
                         raise WSMessageTypeError(
                             "Websocket with requested ID not found"
                         )
                     # TODO: Account for other closures
                 case WSMsgType.ERROR:
-                    statusQueue.append("Error: Server websocket had issues")
+                    request_queue.tasks.append("Error: Server websocket had issues")
                     socketError = ws.exception()
                     if socketError is not None:
                         raise socketError
@@ -268,17 +260,15 @@ async def taskWebsocket(route: str, taskID: str, cancelFlag: Event, statusParams
             to this task.
     """
 
-    async with ClientSession(base_url=serverUrl) as client:
+    async with ClientSession(base_url=SERVER_URL) as client:
         statusTask = asyncio.create_task(
             taskStatus(
                 client,
                 taskID,
                 route,
                 resultType=statusParams["resultType"],
-                statuses=statusParams["statusDecoder"],
-                progressValue=statusParams["progress"],
-                statusQueue=statusParams["status"],
-                resultQueue=statusParams["results"],
+                status_decoder=statusParams["statusDecoder"],
+                request_queue=statusParams["request_queue"],
             )
         )
         monitorTask = asyncio.create_task(taskMonitor(cancelFlag))
@@ -346,16 +336,17 @@ def taskWrapper(
     taskThread.start()
 
 
-def formatError(e: Exception, taskName: str, errorQueue: Queue):
+def formatError(e: Exception, taskName: str, request_queue: RequestStatus):
     """
     Function to format error messages for display on the dashboard.
 
     Parameters:
         e (Exception): The exception to format.
 
-        taskName (str): The name of the task being completed.
+        taskName (str): The name of the task being completed. Currently unused.
 
-        errorQueue (Queue): The queue to add error details to.
+        request_queue (RequestStatus): An object containing the queue errors
+            are logged to.
     """
 
     # Get error message based on error type
@@ -444,4 +435,4 @@ try again later.
 
     # Add to the queue
     functionLog.error(f"[taskWrapper] {errorShort}: {e}")
-    errorQueue.put((errorShort, errorBody, errorIcon, e))
+    request_queue.errors.put((errorShort, errorBody, errorIcon, e))
