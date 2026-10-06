@@ -218,9 +218,7 @@ def create_config(
     if includeDashboard:
         dashboardParams = DashboardParameters(show_advanced_parameters=useAdvanced)
         if useAdvanced:
-            dashboardParams.scaling_population = session.get(
-                "scalingPopulation", COMMUNITIES[community].population
-            )
+            dashboardParams.scaling_population = session.get("scalingPopulation")
         engineParams.Dashboard_Parameter = dashboardParams
     if useAdvanced:
         startDay = session.get("startDay", "Random")
@@ -332,11 +330,8 @@ def load_config(file: BytesIO | str, loud: bool = True) -> bool:
             dashboardSettings = engineSettings.parameters.Dashboard_Parameter
             if dashboardSettings is not None:
                 session.showAdvanced = bool(dashboardSettings.show_advanced_parameters)
-                session.scalingPopulation = (
-                    dashboardSettings.scaling_population
-                    if dashboardSettings.scaling_population is not None
-                    else COMMUNITIES[engineSettings.name].population
-                )
+                if dashboardSettings.scaling_population is not None:
+                    session.scalingPopulation = dashboardSettings.scaling_population
 
             engineParams = engineSettings.parameters.Scenario_Parameter
             if engineParams is not None:

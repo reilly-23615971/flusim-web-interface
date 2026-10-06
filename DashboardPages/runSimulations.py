@@ -620,6 +620,14 @@ if showAdvanced:
         - The scaling population will be used to adjust simulation results for populations larger than the simulated population. For instance, if you simulate Newcastle (whose population is 272,407) and set the scaling population to 544,814, all health burdens will be doubled to make them proportional to the new value.
     """)
     default_population = COMMUNITIES[community if community else "newcastle"].population
+    st.info(
+        f"""
+        The population used in the experiment for the current community
+        ({community.capitalize() if community else "Newcastle"})
+        is {default_population}.
+        """,
+        icon=":material/groups:",
+    )
     load_key("scalingPopulation", default=default_population)
     st.number_input(
         "Scaling Population",
