@@ -412,7 +412,7 @@ basis for the population and demographic distribution in the
 calculation. Note that the data used for these communities comes
 from 2011.
 
-##### Options:
+### Options:
 - Newcastle: A metropolitan area in New South Wales, Australia.
 It has a population of 272,407 (as of 2011 when this data was
 collected) and has a demographic distribution that more closely matches

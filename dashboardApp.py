@@ -28,7 +28,7 @@ st.set_page_config(
         ## Flusim Web Dashboard
         This dashboard is designed to work with the *Flusim* model
         designed by the UWA Infectious Disease Modelling Research Group.
-        ##### Additional Credits
+        ### Additional Credits
         Colour palette for scenarios created by Paul Tol
         https://sronpersonalpages.nl/~pault/
     """},

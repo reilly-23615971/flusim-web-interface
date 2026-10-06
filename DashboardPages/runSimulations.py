@@ -501,7 +501,7 @@ basis for the population and demographic distribution in the
 simulation. Note that the data used for these communities comes
 from 2011.
 
-##### Options:
+### Options:
 - Newcastle: A metropolitan area in New South Wales, Australia.
 It has a population of 272,407 (as of 2011 when this data was
 collected) and has a demographic distribution that more closely matches
@@ -573,7 +573,7 @@ st.markdown("""
 load_key("runCount", default=24)
 st.slider(
     "Number of Simulation Runs",
-    min_value=16,
+    min_value=1,
     max_value=64,
     value=24,
     key="_runCount",

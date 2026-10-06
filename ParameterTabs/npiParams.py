@@ -308,7 +308,7 @@ options for configuring the exact trigger
 condition will appear after selecting one
 of these options.
 
-##### Options:
+### Options:
 - Always: Schools will be closed throughout
 the entire simulation.
 - Timed: Schools will be closed within a
@@ -474,7 +474,7 @@ Additional options for configuring the
 exact trigger condition will appear after
 selecting one of these options.
 
-##### Options:
+### Options:
 - Always: Withdrawal rates will be
 increased throughout the entire simulation.
 - Timed: Withdrawal rates will be increased
@@ -701,7 +701,7 @@ Additional options for configuring the
 exact trigger condition will appear after
 selecting one of these options.
 
-##### Options:
+### Options:
 - Always: Work group sizes will be
 decreased throughout the entire simulation.
 - Timed: Work group sizes will be decreased
@@ -878,7 +878,7 @@ Additional options for configuring the
 exact trigger condition will appear after
 selecting one of these options.
 
-##### Options:
+### Options:
 - Always: Background contact count will be
 reduced throughout the entire simulation.
 - Timed: Background contact count will be

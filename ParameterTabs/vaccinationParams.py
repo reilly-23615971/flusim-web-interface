@@ -763,7 +763,7 @@ the pathogen.
 
                     # Age-Specific Waned Efficacy Field
                     st.markdown(
-                        "#### Age-Specific Minimum Efficacy",
+                        "### Age-Specific Minimum Efficacy",
                         help="""
 This table allows for unique minimum efficacy values
 to be defined for individual age groups in the simulation, overriding
@@ -1030,7 +1030,7 @@ pathogen all at once.
 
                 # Age-Specific Primary Efficacy Field
                 st.markdown(
-                    f"##### Age-Specific Vaccine Efficacy",
+                    f"### Age-Specific Vaccine Efficacy",
                     help=f"""
 This section allows unique vaccine efficacy values to be defined
 for individual age groups in the simulation, overriding the efficacy defined above.
