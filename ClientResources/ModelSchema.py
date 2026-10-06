@@ -1762,11 +1762,7 @@ receives, and how often they are administered.
                 return params
             # Identify duplicates in relevant category properties
             primary_key = params[0]._primary_key
-            configured_values = [
-                value
-                for key in [list(attrgetter(*primary_key)(item)) for item in params]
-                for value in key
-            ]
+            configured_values = [attrgetter(*primary_key)(item) for item in params]
             duplicate_values = [
                 item
                 for item in set(configured_values)
@@ -1780,12 +1776,12 @@ receives, and how often they are administered.
                     or info.field_name == "Scenario_VaccineDoseEfficacy"
                 ):
                     clear_values = [
-                        first + ("All Ages" if second is None else second)
+                        f"({" + ".join((first, "All Ages" if second is None else second))})"
                         for first, second in duplicate_values
                     ]
                 else:
                     clear_values = [
-                        ("All Ages" if item is None else item)
+                        str("All Ages" if item is None else item)
                         for item in duplicate_values
                     ]
                 raise AssertionError(f"""

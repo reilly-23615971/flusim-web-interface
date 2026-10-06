@@ -1911,12 +1911,12 @@ def diseaseLoadSchema(schema: Parameters, scenario_id: int = 0):
     if schema_patch is not None:
         patch_table = pd.DataFrame(columns=("Location", "Seeding Weight"))
         for patch in schema_patch:
-            if patch not in valid_patches:
+            name, weight = patch.Patch, patch.SeedingWeight
+            if name not in valid_patches:
                 raise AssertionError("""
                     Seeding weights were defined for locations that are not
                     in the selected community
                 """)
-            name, weight = patch.Patch, patch.SeedingWeight
             patch_table.loc[patch_table.shape[0]] = [
                 name,
                 round(weight if weight else 1.0, 6),

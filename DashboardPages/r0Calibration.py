@@ -7,15 +7,15 @@ import logging
 from datetime import datetime
 from threading import Event
 
+import pandas as pd
 import streamlit as st
 
-# from streamlit_push_notifications import send_push, send_alert
+from ClientResources.Constants import USE_PRESET_PARAMS
 from ClientResources.DownloadFunctions import createTemplate
 from ClientResources.InterfaceFunctions import error_checker
-from ClientResources.ModelSchema import Parameters, CommunityOverride, OverrideTemplate
-from ClientResources.ParameterFunctions import load_key, save_key
+from ClientResources.ModelSchema import CommunityOverride, OverrideTemplate, Parameters
+from ClientResources.ParameterFunctions import community_change, load_key, save_key
 from ClientResources.ServerFunctions import taskWrapper
-from ClientResources.Constants import USE_PRESET_PARAMS
 from ClientResources.Types import (
     COMMUNITY_NAMES,
     R0_CALCULATION_STATUS,
@@ -405,8 +405,7 @@ community = st.selectbox(
     COMMUNITY_NAMES,
     key="_community",
     format_func=lambda x: x.capitalize(),
-    on_change=save_key,
-    args=["community"],
+    on_change=community_change,
     help="""
 The Australian city whose community data will be used as the
 basis for the population and demographic distribution in the
@@ -426,10 +425,30 @@ communities.
 to the other communities.
     """,
 )
+
+# Warn if patch parameters are set
 scenario_count = session.get("scenario_count", 0) + 1
 scenario_names = ["Baseline Scenario"] + [
     session[f"scenarioName{i}"] for i in range(1, scenario_count)
 ]
+scenarios_with_patches = []
+for i in range(scenario_count):
+    current_patches = session.get(
+        f"seeding_patch_form{i}", pd.DataFrame(columns=["Location"])
+    )
+    if current_patches["Location"].notna().any():
+        scenarios_with_patches.append(scenario_names[i])
+if showAdvanced and scenarios_with_patches:
+    reset_scenario_list = ", ".join(scenarios_with_patches)
+    st.warning(
+        f"""
+        Warning: Location-specific seeding weights defined in some scenarios
+        ({reset_scenario_list}) rely on locations that only exist in the
+        currently selected community. Changing this community will reset the
+        location-specific seeding weights for these scenarios.
+        """,
+        icon=":material/wrong_location:",
+    )
 
 # Calibration
 

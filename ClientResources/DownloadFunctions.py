@@ -128,10 +128,7 @@ def parameter_upload():
     """
     Dialog wrapper function to upload parameter settings from a JSON file.
     """
-    # TODO: This still blanks the page occasionally (sometimes displays the following:)
-    # Life Stage	Pre-Symptomatic
-    # Length (Days)	1
-    uploadPending = bool(session.get("parameter_upload") is not None)
+    uploaded_file = session.get("parameter_upload")
     st.info(
         body="""
             Loading parameters from a file wil overwrite any parameters that have
@@ -149,11 +146,11 @@ def parameter_upload():
         """,
             icon=":material/av_timer:",
         )
-    uploadedParameters = st.file_uploader(
+    st.file_uploader(
         "Upload Parameters from File",
         type="json",
         key="parameter_upload",
-        disabled=uploadPending,
+        disabled=uploaded_file is not None,
         help="""
 Upload a JSON file containing parameter settings for the simulation. These
 files can be downloaded from the dashboard; they should be named
@@ -162,8 +159,8 @@ set on the dashboard (including baseline parameters, scenario parameters and
 simulation engine settings) will be replaced with the values in the uploaded file.
         """,
     )
-    if uploadedParameters is not None:
-        load_config(uploadedParameters)
+    if uploaded_file is not None:
+        load_config(uploaded_file)
 
 
 def create_config(
