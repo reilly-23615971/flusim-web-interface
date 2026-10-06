@@ -12,19 +12,18 @@ import streamlit as st
 from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import (
-    ageCast,
-    ageDisplay,
+    age_display,
     param_error,
-    schemaRemoveBaseline,
-    schemaUpdate,
+    schema_remove_baseline,
+    schema_update,
 )
 from ClientResources.ModelSchema import (
     Parameters,
-    dashboardParameters,
-    scenarioParameters,
-    vaccineCoverage,
-    vaccineDose,
-    vaccineEfficacy,
+    DashboardParameters,
+    GeneralParameters,
+    VaccineCoverage,
+    VaccineDose,
+    VaccineEfficacy,
 )
 from ClientResources.ParameterFunctions import (
     has_duplicates,
@@ -358,7 +357,7 @@ defined above.
                         "Age Group",
                         required=True,
                         options=AGE_GROUP_KEYS,
-                        format_func=ageDisplay,
+                        format_func=age_display,
                         help="""
 An age group that will have specific vaccine proportions defined for it,
 overriding the base proportions.
@@ -492,15 +491,15 @@ individual.
 
             if multiDoseToggle:
                 # Multiple doses
-                load_key("primaryDoseCount", id, 2)
-                primaryDoseCount = st.slider(
+                load_key("primary_dose_count", id, 2)
+                primary_dose_count = st.slider(
                     "Number of Vaccine Doses",
                     2,
                     5,
                     2,
-                    key=f"_primaryDoseCount{id}",
+                    key=f"_primary_dose_count{id}",
                     on_change=save_key,
-                    args=["primaryDoseCount", id],
+                    args=["primary_dose_count", id],
                     disabled=not useVaccinesToggle,
                     help="""
     The number of times each individual in the
@@ -586,7 +585,7 @@ pathogen all at once.
                     changing the "Number of Vaccine Doses" parameter
                     will affect how many sections are present here.
                 """)
-                for i in range(primaryDoseCount):
+                for i in range(primary_dose_count):
                     with st.container(border=True):
                         st.markdown(f"#### {ORDINALS[i+1]} Vaccine Dose")
                         load_key("primaryBaseEfficacy", id, 0.5, f"-{i}")
@@ -662,7 +661,7 @@ overriding the global efficacy value for this dose defined above.
                                     "Age Group",
                                     required=True,
                                     options=AGE_GROUP_KEYS,
-                                    format_func=ageDisplay,
+                                    format_func=age_display,
                                     help=f"""
 An age group that will have a specific
 {"initial " if waningToggle else ""}efficacy value defined
@@ -729,7 +728,7 @@ the pathogen.
                     percentWanedEfficacy = round(primaryWanedEfficacy * 100, 6)
                     # Last efficacy value is all that's cared about
                     # for error checking purposes
-                    finalDose = primaryDoseCount - 1
+                    finalDose = primary_dose_count - 1
                     finalInitialEfficacy = id_get(
                         "primaryBaseEfficacy", id, 0.5, f"-{finalDose}"
                     )
@@ -803,7 +802,7 @@ the global waned efficacy defined above.
                                 "Age Group",
                                 required=True,
                                 options=AGE_GROUP_KEYS,
-                                format_func=ageDisplay,
+                                format_func=age_display,
                                 help="""
 An age group that will have a specific final efficacy value after
 immunity waning defined for it, overriding the base value.
@@ -1073,7 +1072,7 @@ for individual age groups in the simulation, overriding the efficacy defined abo
                             "Age Group",
                             required=True,
                             options=AGE_GROUP_KEYS,
-                            format_func=ageDisplay,
+                            format_func=age_display,
                             help="""
 An age group that will have a specific vaccine efficacy value defined
 for it, overriding the base value.
@@ -1404,7 +1403,7 @@ global booster efficacy values defined above.
                             "Age Group",
                             required=True,
                             options=AGE_GROUP_KEYS,
-                            format_func=ageDisplay,
+                            format_func=age_display,
                             help="""
 An age group that will have specific booster vaccine efficacy values defined
 for it, overriding the base efficacy value for booster vaccines.
@@ -1556,11 +1555,13 @@ def vaccineSaveSchema(
                 == "Live Distribution"
             )
             if includeDashboard:
-                dashboardParams = dashboardParameters()
+                dashboardParams = DashboardParameters()
                 dashboardParams.live_vaccine_distribution = liveDistribution
                 if id > 0 and baseline is not None:
-                    schemaRemoveBaseline(dashboardParams, baseline.Dashboard_Parameter)
-                schemaUpdate(schema, "Dashboard_Parameter", dashboardParams)
+                    schema_remove_baseline(
+                        dashboardParams, baseline.Dashboard_Parameter
+                    )
+                schema_update(schema, "Dashboard_Parameter", dashboardParams)
 
             vacPropAgeForm = id_get(
                 "vacPropAgeForm",
@@ -1583,13 +1584,13 @@ def vaccineSaveSchema(
             # TODO: Scenario coverage with Age=None doesn't overwrite baseline coverage;
             # either add explicit entries for each age or modify the toolbox
             schema.Scenario_VaccineCoverage = [
-                vaccineCoverage(
+                VaccineCoverage(
                     Age=None,
                     Initial=initialProportion,
                     Target=targetProportion if liveDistribution else initialProportion,
                 )
             ] + [
-                vaccineCoverage(
+                VaccineCoverage(
                     Age=age,
                     Initial=initial,
                     Target=target if liveDistribution else initial,
@@ -1603,7 +1604,7 @@ def vaccineSaveSchema(
             ]
 
             # Scenario Parameters
-            scenarioParams = scenarioParameters()
+            scenarioParams = GeneralParameters()
 
             # TODO: See if these can be reintegrated onto the dashboard
             scenarioParams.vaccination_delay = 0
@@ -1624,12 +1625,12 @@ def vaccineSaveSchema(
             )
 
             if id > 0 and baseline is not None:
-                schemaRemoveBaseline(scenarioParams, baseline.Scenario_Parameter)
-            schemaUpdate(schema, "Scenario_Parameter", scenarioParams)
+                schema_remove_baseline(scenarioParams, baseline.Scenario_Parameter)
+            schema_update(schema, "Scenario_Parameter", scenarioParams)
 
             # Vaccine Doses and Efficacy
             if multiDoseToggle:
-                primDoseCount = id_get("primaryDoseCount", id, 2)
+                primDoseCount = id_get("primary_dose_count", id, 2)
 
                 # Individual Dose Efficacy Parameters
                 primBaseEfficacy = [
@@ -1643,7 +1644,7 @@ def vaccineSaveSchema(
 
                 # Base Primary Efficacy Values
                 efficacyParams = [
-                    vaccineEfficacy(
+                    VaccineEfficacy(
                         DoseType="primary",
                         Age=None,
                         WanedEfficacy=primWanedEfficacy,
@@ -1712,9 +1713,9 @@ def vaccineSaveSchema(
                 )
 
                 efficacyParams += [
-                    vaccineEfficacy(
+                    VaccineEfficacy(
                         DoseType="primary",
-                        Age=ageCast(age),
+                        Age=age,
                         Efficacy=ageInitialDict[age],
                         WanedEfficacy=ageWaneDict[age],
                     )
@@ -1726,7 +1727,7 @@ def vaccineSaveSchema(
                 # Dose Parameters
                 primWaningDuration = id_get("primaryWaningRate", id, 12) * 60
                 doseParams = [
-                    vaccineDose(
+                    VaccineDose(
                         DoseType="primary",
                         Count=primDoseCount,
                         DoseSpacingCycles=id_get("primaryDelay", id, 3) * 60,
@@ -1772,16 +1773,16 @@ def vaccineSaveSchema(
                 )
 
                 efficacyParams = [
-                    vaccineEfficacy(
+                    VaccineEfficacy(
                         DoseType="primary",
                         Age=None,
                         WanedEfficacy=singleWanedEfficacy,
                         Efficacy=[singleEfficacy],
                     )
                 ] + [
-                    vaccineEfficacy(
+                    VaccineEfficacy(
                         DoseType="primary",
-                        Age=ageCast(age),
+                        Age=age,
                         WanedEfficacy=waned if waningToggle else 0.0,
                         Efficacy=[initial],
                     )
@@ -1796,7 +1797,7 @@ def vaccineSaveSchema(
                 # Dose Parameters
                 primWaningDuration = id_get("primaryWaningRate", id, 12) * 60
                 doseParams = [
-                    vaccineDose(
+                    VaccineDose(
                         DoseType="primary",
                         Count=1,
                         DoseSpacingCycles=id_get("primaryDelay", id, 3) * 60,
@@ -1845,14 +1846,14 @@ def vaccineSaveSchema(
                     boostEfficacyAgeForm[boosterCols].div(100.0).round(6)
                 )
                 efficacyParams += [
-                    vaccineEfficacy(
+                    VaccineEfficacy(
                         DoseType="booster",
                         Age=None,
                         Efficacy=boostBaseEfficacy,
                         WanedEfficacy=boostWanedEfficacy,
                     )
                 ] + [
-                    vaccineEfficacy(
+                    VaccineEfficacy(
                         DoseType="booster",
                         Age=age,
                         Efficacy=initial,
@@ -1868,7 +1869,7 @@ def vaccineSaveSchema(
 
                 boostWaningDuration = id_get("boosterWaningRate", id, 6) * 60
                 doseParams += [
-                    vaccineDose(
+                    VaccineDose(
                         DoseType="booster",
                         Count=id_get("boosterDoseCount", id, 3),
                         DoseSpacingCycles=id_get("boosterDelay", id, 3) * 60,
@@ -2024,11 +2025,11 @@ def vaccineLoadSchema(schema: Parameters, scenario_id: int = 0):
     # TODO: See which of these can become None to avoid
     # propagating values not in the schema itself
     setDoseCount = False
-    primaryDoseCount = id_get("primaryDoseCount", 0, 2)
+    primary_dose_count = id_get("primary_dose_count", 0, 2)
     boosterDoseCount = id_get("boosterDoseCount", 0, 3)
     primaryRatePerCycle = id_get("primaryWaningRate", 0, 12)
     boosterRatePerCycle = id_get("boosterWaningRate", 0, 6)
-    baseFull = [id_get("primaryBaseEfficacy", 0, 0.5, f"-{primaryDoseCount - 1}")]
+    baseFull = [id_get("primaryBaseEfficacy", 0, 0.5, f"-{primary_dose_count - 1}")]
     baseWaned = id_get("primaryWanedEfficacy", 0, 0.0)
     baseBoostFull = id_get("boosterBaseEfficacy", 0, 0.9)
     baseBoostWaned = id_get("boosterWanedEfficacy", 0, 0.6)
@@ -2039,22 +2040,24 @@ def vaccineLoadSchema(schema: Parameters, scenario_id: int = 0):
 
         # Primary vaccines
         if any(dose.DoseType == "primary" for dose in schemaDose):
-            primaryDose = [dose for dose in schemaDose if dose.DoseType == "primary"][0]
-            primaryDoseCount = primaryDose.Count
-            useMultiDose = bool(primaryDoseCount != 1)
+            primary_dose = [dose for dose in schemaDose if dose.DoseType == "primary"][
+                0
+            ]
+            primary_dose_count = primary_dose.Count
+            useMultiDose = bool(primary_dose_count != 1)
             setDoseCount = True
             if useMultiDose:
                 update_param_from_schema(
-                    "primaryDoseCount", primaryDoseCount, scenario_id
+                    "primary_dose_count", primary_dose_count, scenario_id
                 )
             update_param_from_schema(
-                "primaryDelay", primaryDose.DoseSpacingCycles // 60, scenario_id
+                "primaryDelay", primary_dose.DoseSpacingCycles // 60, scenario_id
             )
-            waningDelay = primaryDose.WaningDelay
+            waningDelay = primary_dose.WaningDelay
             update_param_from_schema("primaryDuration", waningDelay // 60, scenario_id)
             # Efficacy needs to be logged so that waning rate per cycle
             # can be calculated
-            primaryRatePerCycle = primaryDose.WaningRatePerCycle
+            primaryRatePerCycle = primary_dose.WaningRatePerCycle
             update_param_from_schema(
                 "vaccineWaningToggle", bool(primaryRatePerCycle), scenario_id
             )
@@ -2096,7 +2099,7 @@ def vaccineLoadSchema(schema: Parameters, scenario_id: int = 0):
                 baseFull = [baseEfficacy.Efficacy]
             else:
                 baseFull = baseEfficacy.Efficacy
-            if setDoseCount and len(baseFull) != primaryDoseCount:
+            if setDoseCount and len(baseFull) != primary_dose_count:
                 # Throw error if dose and efficacy disagree on dose count
                 scenarioName = id_get(
                     "scenarioName", scenario_id, f"Scenario #{scenario_id}"
@@ -2109,8 +2112,8 @@ def vaccineLoadSchema(schema: Parameters, scenario_id: int = 0):
                         else f"scenario named {scenarioName}"
                     }
                 """)
-            primaryDoseCount = len(baseFull)
-            useMultiDose = useMultiDose or primaryDoseCount > 1
+            primary_dose_count = len(baseFull)
+            useMultiDose = useMultiDose or primary_dose_count > 1
             update_param_from_schema("primarySingleEfficacy", baseFull[0], scenario_id)
             for index, value in enumerate(baseFull):
                 update_param_from_schema(
@@ -2126,14 +2129,14 @@ def vaccineLoadSchema(schema: Parameters, scenario_id: int = 0):
         else:
             baseFull = [
                 id_get("primaryBaseEfficacy", 0, 0.5, f"-{i}")
-                for i in range(primaryDoseCount)
+                for i in range(primary_dose_count)
             ]
             baseWaned = id_get("primaryWanedEfficacy", 0, 0.0)
 
         # Iterate over each efficacy age
         primaryEfficacyTables = [
             pd.DataFrame(columns=("Age Group", "Initial Dose Efficacy"))
-            for _ in range(primaryDoseCount)
+            for _ in range(primary_dose_count)
         ]
         primaryWanedTable = pd.DataFrame(
             columns=("Age Group", "Dose Efficacy After Waning")

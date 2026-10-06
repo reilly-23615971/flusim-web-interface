@@ -10,7 +10,7 @@ import streamlit as st
 from streamlit.elements.lib.mutable_tab_container import TabContainer
 
 from ClientResources.DownloadFunctions import upload_download_bar
-from ClientResources.InterfaceFunctions import errorChecker
+from ClientResources.InterfaceFunctions import error_checker
 from ClientResources.ParameterFunctions import container_save, load_key
 from ParameterTabs.communityParams import buildCommunityTab
 from ParameterTabs.diseaseParams import buildDiseaseTab
@@ -56,7 +56,7 @@ upload_download_bar()
 
 # Fragment to display errors
 # TODO: Errors aren't removed from here when fixed until page rerun
-errorChecker(0, "Errors in Baseline Scenario")
+error_checker(0, "Errors in Baseline Scenario")
 
 # Advanced parameters toggle
 load_key("showAdvanced", default=False, no_zero_default=True)

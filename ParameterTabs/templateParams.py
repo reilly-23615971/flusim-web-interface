@@ -94,13 +94,13 @@ use resetScenario for that!
     # Disable button if it's taking a while to update parameters
     templatePending = bool(session.get("confirmTemplateButton"))
 
-    currentName = session[f"scenarioName{currentID}"]
-    newName = session[f"scenarioName{newID}"]
+    current_name = session[f"scenarioName{currentID}"]
+    new_name = session[f"scenarioName{newID}"]
     st.markdown(f"""
 Are you sure you want to replace the parameter values in the
-{"baseline scenario" if currentID == 0 else f'scenario named "{currentName}"'}
+{"baseline scenario" if currentID == 0 else f'scenario named "{current_name}"'}
 with the values from the
-{"baseline scenario" if newID == 0 else f'scenario named "{newName}"'}?
+{"baseline scenario" if newID == 0 else f'scenario named "{new_name}"'}?
 Note that this will not change the names of either scenario.
     """)
     if currentID == 0:

@@ -13,7 +13,7 @@ import pandas as pd
 import streamlit as st
 from matplotlib.colors import TwoSlopeNorm, to_hex
 
-from ClientResources.InterfaceFunctions import healthOutcomeStore
+from ClientResources.InterfaceFunctions import health_outcome_store
 from ClientResources.ParameterFunctions import (
     id_get,
     load_key,
@@ -111,19 +111,19 @@ def generateTable() -> None:
 
     # Debug code for loading data in testing
     if USE_PRESET_DATA:
-        # Set default session_state params
+        # Set default session_state parameters
         useAdvanced = session.get("showAdvanced", False)
-        scenarioNames = PRESET_SCENARIO_NAMES
-        basicRates, ageRates = healthOutcomeStore(
-            scenarioNames,
-            useAges=useAdvanced,
+        scenario_names = PRESET_SCENARIO_NAMES
+        basicRates, age_rates = health_outcome_store(
+            scenario_names,
+            use_ages=useAdvanced,
         )
         session.sim_params = SimParams(
-            scenario_names=scenarioNames,
+            scenario_names=scenario_names,
             analysis_formats=[],
             community=PRESET_COMMUNITY,
             health_outcome_rates=basicRates,
-            age_health_outcome_rates=ageRates,
+            age_health_outcome_rates=age_rates,
             scaling_factor=session.get("scalingPopulation", 272407) / 272407,
             symptomatic_rates=(
                 [
@@ -143,16 +143,16 @@ def generateTable() -> None:
 
         # Load test data from files
         with open(PRESET_DATA_PATHS["ASIR"], "rb") as csv:
-            fullData = formatAsir(csv.read(), scenarioNames)
+            fullData = formatAsir(csv.read(), scenario_names)
         if PRESET_DATA_PATHS.get("ASIR") is not None:
             with open(PRESET_DATA_PATHS["Vaccinated"], "rb") as csv:
-                vaccineData = formatAsir(csv.read(), scenarioNames)
+                vaccineData = formatAsir(csv.read(), scenario_names)
         else:
             vaccineData = None
 
     # Load data from session_state
     else:
-        scenarioNames = session.sim_params.scenario_names
+        scenario_names = session.sim_params.scenario_names
         vaccineData = session.get("modelDataAsirVaccinated")
 
     ageSeparation = session.get("healthOutcomeAgeSeparation", "Combined")
@@ -203,7 +203,7 @@ def generateTable() -> None:
             if outcome
         ],
     )
-    scenariosUsed = session.get("healthOutcomeScenariosToUse", scenarioNames)
+    scenariosUsed = session.get("healthOutcomeScenariosToUse", scenario_names)
     agesUsed = (
         session.get("healthOutcomeAgesToUse", AGE_WITH_TOTAL)
         if ageSeparation == "By Row"
@@ -212,14 +212,14 @@ def generateTable() -> None:
     useColour = session.get("colourToggle", True)
     tableLog.info(f"""
         [generateTable] Formatting Asir data using the scenarios
-        {scenariosUsed} (of {scenarioNames}), the age groups {agesUsed}
+        {scenariosUsed} (of {scenario_names}), the age groups {agesUsed}
         and the following columns: {columnDetails}'
     """)
 
     assert fullData is not None, "ASIR data was not defined"
     ageData, columnConfig, percSet, diffSet = generateAsir(
         fullData,
-        scenarioNames,
+        scenario_names,
         ageSeparation,
         columnDetails,
         includedScenarios=scenariosUsed,
@@ -264,10 +264,10 @@ def generateTable() -> None:
             **{"background-color": "#F7F7F7", "color": "black"}, subset=None
         )
         # Generate and map scenario colour palette
-        scenarioColourMap = MUTED_CODES[: len(scenarioNames)]
+        scenarioColourMap = MUTED_CODES[: len(scenario_names)]
         scenarioColourDictionary = {
             scenario: to_hex(scenarioColourMap[index])
-            for index, scenario in enumerate(scenarioNames)
+            for index, scenario in enumerate(scenario_names)
         }
 
         # Apply the colours to the scenario column
@@ -401,17 +401,17 @@ def downloadPresetTable(
     if USE_PRESET_DATA:
         # Set default session_state params
         useAdvanced = session.get("showAdvanced", False)
-        scenarioNames = PRESET_SCENARIO_NAMES
-        basicRates, ageRates = healthOutcomeStore(
-            scenarioNames,
-            useAges=useAdvanced,
+        scenario_names = PRESET_SCENARIO_NAMES
+        basicRates, age_rates = health_outcome_store(
+            scenario_names,
+            use_ages=useAdvanced,
         )
         session.sim_params = SimParams(
-            scenario_names=scenarioNames,
+            scenario_names=scenario_names,
             analysis_formats=[],
             community=PRESET_COMMUNITY,
             health_outcome_rates=basicRates,
-            age_health_outcome_rates=ageRates,
+            age_health_outcome_rates=age_rates,
             symptomatic_rates=(
                 [
                     [
@@ -431,28 +431,28 @@ def downloadPresetTable(
 
         # Load test data from files
         with open(PRESET_DATA_PATHS["ASIR"], "rb") as csv:
-            fullData = formatAsir(csv.read(), scenarioNames)
+            fullData = formatAsir(csv.read(), scenario_names)
         if PRESET_DATA_PATHS.get("ASIR") is not None:
             with open(PRESET_DATA_PATHS["Vaccinated"], "rb") as csv:
-                vaccineData = formatAsir(csv.read(), scenarioNames)
+                vaccineData = formatAsir(csv.read(), scenario_names)
         else:
             vaccineData = None
 
     # Load data from session_state
     else:
-        scenarioNames = session.sim_params.scenario_names
+        scenario_names = session.sim_params.scenario_names
         vaccineData = session.get("modelDataAsirVaccinated")
 
     tableLog.info(f"""
         [downloadPresetTable] Formatting Asir data for the preset {name},
-        using the scenarios {includedScenarios} (of {scenarioNames}),
+        using the scenarios {includedScenarios} (of {scenario_names}),
         the age groups {includedAges} and the following columns: {columns}'
     """)
 
     assert fullData is not None, "ASIR data was not defined"
     ageData, _, _, _ = generateAsir(
         fullData,
-        scenarioNames,
+        scenario_names,
         ageSeparation,
         columns,
         includedScenarios=includedScenarios,
@@ -567,13 +567,13 @@ with tableSettings:
 
     # Scenario and age group selection
     st.subheader("Scenario and Age Group Selection")
-    scenarioNames = sim_params.scenario_names
+    scenario_names = sim_params.scenario_names
     if current_dataExists:
-        load_key("healthOutcomeScenariosToUse", default=scenarioNames)
+        load_key("healthOutcomeScenariosToUse", default=scenario_names)
         scenariosToUse: Optional[list[str]] = st.multiselect(
             "Scenarios to Include in Table",
-            scenarioNames,
-            default=scenarioNames,
+            scenario_names,
+            default=scenario_names,
             key="_healthOutcomeScenariosToUse",
             on_change=save_key,
             args=["healthOutcomeScenariosToUse"],

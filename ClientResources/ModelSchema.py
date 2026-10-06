@@ -27,7 +27,7 @@ from ClientResources.Types import (
 )
 
 # Logging
-validationLog = logging.getLogger(__name__)
+validation_log = logging.getLogger(__name__)
 
 # Annotated Type Definitions
 type VaccinePriority = Literal["elderly", "healthcare", "essential_workers", "other"]
@@ -44,7 +44,7 @@ type EfficacyValue = Annotated[float, Ge(0), Le(1)]
 
 
 # Set of parameters used exclusively by the dashboard
-class dashboardParameters(BaseModel):
+class DashboardParameters(BaseModel):
     prob_icu: Optional[Probability] = Field(
         title="ICU Visit Probability",
         default=0.2,
@@ -180,8 +180,8 @@ be hospitalised as a result of the pathogen.
     )
 
 
-# Set of scenario parameters set collectively for all age groups
-class ageScenarioParameters(BaseModel):
+# Set of scenario parameters with defaults assigned to all age groups
+class AllAgesParameters(BaseModel):
     trans: Optional[float] = Field(
         title="Transmission",
         default=None,
@@ -221,7 +221,7 @@ The probability of complying with social distancing procedures for all age group
 
 
 # Set of scenario parameters modifying the simulation
-class scenarioParameters(BaseModel):
+class GeneralParameters(BaseModel):
     # Seeding Parameters
     seed_rate: Optional[float] = Field(
         title="Seeding Rate",
@@ -876,7 +876,7 @@ The number of cycles before a BCC reduction NPI is automatically relaxed, when
 
     # Vaccination Parameters
     vaccination_priority: Optional[list[VaccinePriority]] = Field(
-        default=list(get_args(VaccinePriority)),
+        default=list(get_args(VaccinePriority.__value__)),
         title="Vaccination Priority",
         description="""
 A list of notable demographics in the population. Individuals who are part of
@@ -1309,7 +1309,7 @@ result of the pathogen.
 
 
 # Key-value arguments passed directly to the simulator
-class commandArgument(BaseModel):
+class CommandArgument(BaseModel):
     n_runs: Optional[int] = Field(
         title="Number of Runs",
         default=24,
@@ -1330,7 +1330,7 @@ The number of simulation cycles to run before ending the simulation.
 
 
 # Probability of recovering from multiple strains at once
-class crossImmunity(BaseModel):
+class CrossImmunity(BaseModel):
     FromStrainId: int = Field(
         title="Initial Strain ID",
         description="""
@@ -1357,7 +1357,7 @@ recover from the additional strain.
 
 
 # Simulation parameters whose value will change at specific times
-class dynamicIntervention(BaseModel):
+class DynamicIntervention(BaseModel):
     Name: Literal[
         "work_nonattendance",
         "bcc_reduction",
@@ -1379,7 +1379,7 @@ class dynamicIntervention(BaseModel):
 
 
 # Parameters for different locations in the simulated community
-class patch_parameters(BaseModel):
+class PatchParameters(BaseModel):
     Patch: CommunityPatch = Field(
         title="Patch",
         description="The name used to refer to this simulation location.",
@@ -1397,7 +1397,7 @@ in this patch, proportional to other strains in the simulation.
 
 
 # Seeding of naturally immune individuals into the population
-class seededImmunity(BaseModel):
+class SeededImmunity(BaseModel):
     StrainId: int = Field(
         title="Strain ID",
         description="""
@@ -1442,7 +1442,7 @@ simulation will stop seeding additional natural immunity into the population.
 
 
 # Parameters for different strains to simulate in the same population
-class strainParameters(BaseModel):
+class StrainParameters(BaseModel):
     StrainId: int = Field(
         title="Strain ID",
         description="The integer used to refer to this infection strain.",
@@ -1464,7 +1464,7 @@ proportional to other strains in the simulation.
 
 
 # Parameters for vaccine coverage across different age groups
-class vaccineCoverage(BaseModel):
+class VaccineCoverage(BaseModel):
     Age: Optional[AgeGroupKey] = Field(
         title="Age",
         default=None,
@@ -1494,7 +1494,7 @@ end up being vaccinated.
 
 
 # Parameters for different vaccine dose types
-class vaccineDose(BaseModel):
+class VaccineDose(BaseModel):
     DoseType: BoosterType = Field(
         title="Dose Type",
         description="The type of vaccine dose these parameters apply to.",
@@ -1535,7 +1535,7 @@ pathogen each cycle, once immunity waning has begun.
 
 
 # Parameters controlling efficacy of different vaccine doses
-class vaccineEfficacy(BaseModel):
+class VaccineEfficacy(BaseModel):
     DoseType: BoosterType = Field(
         title="Dose Type",
         description="The type of vaccine dose these parameters apply to.",
@@ -1578,7 +1578,7 @@ has waned.
     _primary_key: list[str] = ["DoseType", "Age"]
 
     @model_validator(mode="after")
-    def efficacyValidation(self) -> Self:
+    def efficacy_validation(self) -> Self:
         """
         Function to validate parameter sets by ensuring that vaccine efficacy
         is a list for primary vaccines and a single value for booster vaccines.
@@ -1600,20 +1600,20 @@ dose type is "booster".
                 """)
             return self
         except TypeError as e:
-            validationLog.error(
-                f"[vaccineEfficacy] Encountered {type(e).__name__}: {e}"
+            validation_log.error(
+                f"[VaccineEfficacy] Encountered {type(e).__name__}: {e}"
             )
             raise ValueError("Efficacy values had the wrong type") from e
 
 
 # Class for compiling all parameter types into one object
 class Parameters(BaseModel):
-    Command_Argument: Optional[commandArgument] = Field(
+    Command_Argument: Optional[CommandArgument] = Field(
         title="Command Arguments",
         default=None,
         description="Parameters passed to the simulation on the command line.",
     )
-    Dashboard_Parameter: Optional[dashboardParameters] = Field(
+    Dashboard_Parameter: Optional[DashboardParameters] = Field(
         title="Dashboard Parameters",
         default=None,
         description="""
@@ -1621,7 +1621,7 @@ Parameters not used by the simulation itself, but which are used by the dashboar
 to aid in tasks such as settings configuration or health burden calculation.
         """,
     )
-    Scenario_ParameterWithAgePrefix: Optional[ageScenarioParameters] = Field(
+    Scenario_ParameterWithAgePrefix: Optional[AllAgesParameters] = Field(
         title="Age-Based Scenario Parameters",
         default=None,
         description="""
@@ -1629,7 +1629,7 @@ Parameters that will be used as the default value for age-specific parameters
 in the simulation that are not explicitly defined for every age group.
         """,
     )
-    Scenario_Parameter: Optional[scenarioParameters] = Field(
+    Scenario_Parameter: Optional[GeneralParameters] = Field(
         title="Scenario Parameters",
         default=None,
         description="""
@@ -1639,7 +1639,7 @@ by the simulation.
     )
     # Note that the rest of the parameters are defined as lists of their
     # respective classes, not single objects
-    Scenario_CrossImmunity: Optional[list[crossImmunity]] = Field(
+    Scenario_CrossImmunity: Optional[list[CrossImmunity]] = Field(
         title="Cross Immunity Parameters",
         default=None,
         description="""
@@ -1647,21 +1647,21 @@ Parameters controlling how an individual recovering from one infection strain
 can gain immunity to other infection strains.
         """,
     )
-    Scenario_DynamicIntervention: Optional[list[dynamicIntervention]] = Field(
+    Scenario_DynamicIntervention: Optional[list[DynamicIntervention]] = Field(
         title="Dynamic Intervention Parameters",
         default=None,
         description="""
 Parameters whose values will change at specific points in the simulation.
         """,
     )
-    Scenario_Patch: Optional[list[patch_parameters]] = Field(
+    Scenario_Patch: Optional[list[PatchParameters]] = Field(
         title="Patch Parameters",
         default=None,
         description="""
 Parameters controlling different locations within the modelled community.
         """,
     )
-    Scenario_SeededNaturalImmunity: Optional[list[seededImmunity]] = Field(
+    Scenario_SeededNaturalImmunity: Optional[list[SeededImmunity]] = Field(
         title="Seeded Natural Immunity Parameters",
         default=None,
         description="""
@@ -1669,7 +1669,7 @@ Parameters controlling how individuals naturally gain immunity to the pathogen
 without requiring infection or vaccination.
         """,
     )
-    Scenario_Strain: Optional[list[strainParameters]] = Field(
+    Scenario_Strain: Optional[list[StrainParameters]] = Field(
         title="Strain Parameters",
         default=None,
         description="""
@@ -1677,12 +1677,12 @@ Parameters defining different strains of the infection to simulate in the same
 population.
         """,
     )
-    Scenario_VaccineCoverage: Optional[list[vaccineCoverage]] = Field(
+    Scenario_VaccineCoverage: Optional[list[VaccineCoverage]] = Field(
         title="Vaccine Coverage Parameters",
         default=None,
         description="Parameters defining how much of the population receives vaccines.",
     )
-    Scenario_VaccineDose: Optional[list[vaccineDose]] = Field(
+    Scenario_VaccineDose: Optional[list[VaccineDose]] = Field(
         title="Vaccine Dose Parameters",
         default=None,
         description="""
@@ -1690,7 +1690,7 @@ Parameters defining how many doses of different vaccine types the population
 receives, and how often they are administered.
         """,
     )
-    Scenario_VaccineDoseEfficacy: Optional[list[vaccineEfficacy]] = Field(
+    Scenario_VaccineDoseEfficacy: Optional[list[VaccineEfficacy]] = Field(
         title="Vaccine Dose Efficacy Parameters",
         default=None,
         description="Parameters defining the efficacy of different vaccine doses.",
@@ -1702,7 +1702,7 @@ receives, and how often they are administered.
         "Scenario_VaccineDoseEfficacy",
         mode="plain",
     )
-    def nullAgeSerialize(self, value):
+    def null_age_serialize(self, value):
         """
         Function to ensure that age fields where `None` is meaningful are never omitted
         """
@@ -1733,7 +1733,7 @@ receives, and how often they are administered.
             return value
 
     # Parameter sets that require unique values
-    type UniqueListParams = crossImmunity | patch_parameters | seededImmunity | strainParameters | vaccineCoverage | vaccineDose | vaccineEfficacy
+    type UniqueListParams = CrossImmunity | PatchParameters | SeededImmunity | StrainParameters | VaccineCoverage | VaccineDose | VaccineEfficacy
 
     @field_validator(
         "Scenario_CrossImmunity",
@@ -1746,7 +1746,7 @@ receives, and how often they are administered.
         mode="after",
     )
     @classmethod
-    def noDuplicateCategories(
+    def no_duplicate_categories(
         cls, params: Optional[list[UniqueListParams]], info: ValidationInfo
     ) -> Optional[list[UniqueListParams]]:
         """
@@ -1762,43 +1762,43 @@ receives, and how often they are administered.
                 return params
             # Identify duplicates in relevant category properties
             primary_key = params[0]._primary_key
-            configuredValues = [
+            configured_values = [
                 value
                 for key in [list(attrgetter(*primary_key)(item)) for item in params]
                 for value in key
             ]
-            duplicateValues = [
+            duplicate_values = [
                 item
-                for item in set(configuredValues)
-                if configuredValues.count(item) > 1
+                for item in set(configured_values)
+                if configured_values.count(item) > 1
             ]
-            if duplicateValues:
+            if duplicate_values:
                 # Replace any None values for age with
                 # 'All Ages' for clarity in error messages
                 if (
                     info.field_name == "Scenario_SeededNaturalImmunity"
                     or info.field_name == "Scenario_VaccineDoseEfficacy"
                 ):
-                    clearValues = [
+                    clear_values = [
                         first + ("All Ages" if second is None else second)
-                        for first, second in duplicateValues
+                        for first, second in duplicate_values
                     ]
                 else:
-                    clearValues = [
+                    clear_values = [
                         ("All Ages" if item is None else item)
-                        for item in duplicateValues
+                        for item in duplicate_values
                     ]
                 raise AssertionError(f"""
 The Flusim configuration file defined multiple {info.field_name} objects with
 the same values for the {' and '.join(primary_key)}
 attribute(s), making it ambiguous which values apply to the following
-categories: {', '.join(clearValues)}. Ensure each {info.field_name} object has
+categories: {', '.join(clear_values)}. Ensure each {info.field_name} object has
 unique values for these attributes.
                 """)
             return params
         except AssertionError as e:
-            validationLog.error(
-                f"[vaccineEfficacy] Encountered {type(e).__name__}: {e}"
+            validation_log.error(
+                f"[VaccineEfficacy] Encountered {type(e).__name__}: {e}"
             )
             raise e
 
@@ -1806,7 +1806,7 @@ unique values for these attributes.
         validate_assignment = True
 
     @model_validator(mode="after")
-    def efficacyCount(self) -> Self:
+    def efficacy_count(self) -> Self:
         """
         Validation function to ensure that the number of doses matches
         the number of defined efficacy values.
@@ -1816,7 +1816,7 @@ unique values for these attributes.
                 dose count.
         """
         if self.Scenario_VaccineDose and self.Scenario_VaccineDoseEfficacy:
-            primaryDose = next(
+            primary_dose = next(
                 (
                     item
                     for item in self.Scenario_VaccineDose
@@ -1824,17 +1824,17 @@ unique values for these attributes.
                 ),
                 None,
             )
-            primaryEfficacy = (
+            primary_efficacy = (
                 item
                 for item in self.Scenario_VaccineDoseEfficacy
                 if item.DoseType == "primary"
             )
             if (
-                primaryDose
-                and primaryEfficacy
+                primary_dose
+                and primary_efficacy
                 and any(
-                    len(cast(list[EfficacyValue], item.Efficacy)) != primaryDose.Count
-                    for item in primaryEfficacy
+                    len(cast(list[EfficacyValue], item.Efficacy)) != primary_dose.Count
+                    for item in primary_efficacy
                 )
             ):
                 raise ValueError("""
@@ -1849,7 +1849,7 @@ is "primary".
 
 
 # Model for parameters to modify in simulations on a specific community
-class communityOverride(BaseModel):
+class CommunityOverride(BaseModel):
     name: CommunityName = Field(
         title="Name",
         description="The name of the community these parameters apply to.",
@@ -1875,7 +1875,7 @@ class communityOverride(BaseModel):
 
 
 # Model for templates used by simulation sets to modify parameters
-class overrideTemplate(BaseModel):
+class OverrideTemplate(BaseModel):
     name: str = Field(title="Name", description="The name of the template.")
     description: Optional[str] = Field(
         title="Description",
@@ -1893,14 +1893,14 @@ class overrideTemplate(BaseModel):
 
 
 # Model for defining parameters for override templates or simulations
-class overrideParams(BaseModel):
+class OverrideParams(BaseModel):
     parameters: Parameters = Field(
         title="Parameters", description="The parameters to apply."
     )
 
 
 def check_patches(
-    params: communityOverride | overrideTemplate | overrideParams,
+    params: CommunityOverride | OverrideTemplate | OverrideParams,
     valid: set[CommunityPatch],
 ):
     """
@@ -1927,7 +1927,7 @@ Ensure that `Scenario_Patch` only defines locations that are present in
 
 
 # Model for individual simulations and their parameters
-class simulation(BaseModel):
+class Simulation(BaseModel):
     name: str = Field(title="Name", description="The name of this simulation.")
     apply_template: Optional[list[str]] = Field(
         title="Applied Templates",
@@ -1937,7 +1937,7 @@ A list of names of override templates whose parameter values will be used by
 this simulation.
         """,
     )
-    override_setting: Optional[overrideParams] = Field(
+    override_setting: Optional[OverrideParams] = Field(
         title="Override Settings",
         default=None,
         description="Parameters that will be applied to this simulation alone.",
@@ -1945,7 +1945,7 @@ this simulation.
 
 
 # Model for collections of simulations to run together
-class simulationSet(BaseModel):
+class SimulationSet(BaseModel):
     name: str = Field(title="Name", description="""The name of this set.""")
     version: int | float = Field(
         title="Version",
@@ -1959,7 +1959,7 @@ the simulations, after the middle joint.
         default=False,
         description="If true, the model will not run this set of simulations.",
     )
-    simulations: list[simulation] = Field(
+    simulations: list[Simulation] = Field(
         title="Simulations", description="A list of scenarios to run in this set."
     )
 
@@ -1977,7 +1977,7 @@ the simulations, after the middle joint.
 
     @field_validator("simulations", mode="after")
     @classmethod
-    def noDuplicateNames(cls, value: list[simulation]) -> list[simulation]:
+    def no_duplicate_names(cls, value: list[Simulation]) -> list[Simulation]:
         """
         Validation function to detect duplicate simulation names within the same set.
 
@@ -1985,9 +1985,11 @@ the simulations, after the middle joint.
             AssertionError: If there are duplicate simulation names.
         """
         try:
-            simulationNames = [sim.name for sim in value]
+            simulation_names = [sim.name for sim in value]
             if [
-                name for name in set(simulationNames) if simulationNames.count(name) > 1
+                name
+                for name in set(simulation_names)
+                if simulation_names.count(name) > 1
             ]:
                 raise AssertionError("""
 The Flusim configuration file defined multiple simulations with the same name.
@@ -1996,12 +1998,12 @@ a given simulation set.
                 """)
             return value
         except AssertionError as e:
-            validationLog.error(f"[simulationSet] Encountered {type(e).__name__}: {e}")
+            validation_log.error(f"[simulationSet] Encountered {type(e).__name__}: {e}")
             raise e
 
 
 # Model for the full configuration JSON file
-class modelGuideFile(BaseModel):
+class ModelGuideFile(BaseModel):
     name: str = Field(
         title="Name", description="The name of the simulation guide file."
     )
@@ -2031,19 +2033,19 @@ The communities to repeat all scenarios across, corresponding with the names of
 the communities configured in "toolbox_config.json".
         """,
     )
-    shared_overrides: Optional[overrideParams] = Field(
+    shared_overrides: Optional[OverrideParams] = Field(
         title="Shared Overrides",
         default=None,
         description="Parameters that will be applied to all scenarios in the file.",
     )
-    community_overrides: Optional[list[communityOverride]] = Field(
+    community_overrides: Optional[list[CommunityOverride]] = Field(
         title="Community Overrides",
         default=None,
         description="""
 Parameters that will only be applied to simulations using specific communities.
         """,
     )
-    override_templates: Optional[list[overrideTemplate]] = Field(
+    override_templates: Optional[list[OverrideTemplate]] = Field(
         title="Override Templates",
         default=None,
         description="""
@@ -2051,7 +2053,7 @@ Templates containing a set of parameters that can be applied selectively to
 different scenarios.
         """,
     )
-    simulation_sets: list[simulationSet] = Field(
+    simulation_sets: list[SimulationSet] = Field(
         title="Simulation Sets",
         description="A list of sets containing scenarios to run together.",
     )
@@ -2070,7 +2072,7 @@ different scenarios.
             return value
 
     @model_validator(mode="after")
-    def communityMatch(self) -> Self:
+    def community_match(self) -> Self:
         """
         Validation function to ensure communities in `community_overrides` are
         ones present in `community_used`.
@@ -2079,18 +2081,18 @@ different scenarios.
             ValueError: If `community_overrides` includes communities not in
                 `community_used`.
         """
-        validCommunities = self.community_used
+        valid_communities = self.community_used
         valid_patches: set[CommunityPatch] = {
             patch
             for patches in [
-                COMMUNITIES[community].patches for community in validCommunities
+                COMMUNITIES[community].patches for community in valid_communities
             ]
             for patch in patches
         }
         # Check community overrides
         if self.community_overrides:
             for override in self.community_overrides:
-                if override.name not in validCommunities:
+                if override.name not in valid_communities:
                     raise ValueError("""
 `community_overrides` includes communities not present in `community_used`.
 Ensure the `name` property of each override in `community_overrides` matches a
@@ -2121,7 +2123,7 @@ community in `community_used`.
     """
 
     @field_serializer("shared_overrides", mode="plain", when_used="json-unless-none")
-    def baselineSerialize(self, value):
+    def baseline_serialize(self, value):
         """
         Function that ensures the baseline scenario's parameters are all
         included in JSON serialisations.
@@ -2132,7 +2134,7 @@ community in `community_used`.
         # are totally unused and which can be added to the dashboard.
         # Also test vaccination_trigger and friends,
         # plus age_social_distance that isn't Adult
-        excludedParams = {
+        excluded_params = {
             "parameters": {
                 "Dashboard_Parameter": {"show_advanced_parameters"},
                 "Scenario_Parameter": {
@@ -2160,7 +2162,7 @@ community in `community_used`.
                 },
             }
         }
-        return value.model_dump(exclude_none=True, exclude=excludedParams)
+        return value.model_dump(exclude_none=True, exclude=excluded_params)
 
     @field_serializer(
         "community_overrides",
@@ -2168,7 +2170,7 @@ community in `community_used`.
         mode="plain",
         when_used="json-unless-none",
     )
-    def scenarioSerialize(self, value):
+    def scenario_serialize(self, value):
         """
         Function that ensures non-baseline parameters can default to baseline values.
         """

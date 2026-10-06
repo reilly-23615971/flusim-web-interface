@@ -23,9 +23,9 @@ from ClientResources.DownloadFunctions import (
     upload_download_bar,
 )
 from ClientResources.InterfaceFunctions import (
-    errorChecker,
-    healthOutcomeStore,
-    timeString,
+    error_checker,
+    health_outcome_store,
+    time_string,
 )
 from ClientResources.ParameterFunctions import (
     id_get,
@@ -76,13 +76,13 @@ def simRuntimeEstimate(days: int, runs: int, scenarios: int) -> int:
 
 
 def runModelProgress(
-    scenarioNames: list[str], useVaccines: bool = False
+    scenario_names: list[str], useVaccines: bool = False
 ) -> dict[str, tuple[float, str]]:
     """
     Function to generate the status dictionary used for the simulation progress bar.
 
     Parameters:
-        scenarioNames (list of str): The names of the scenarios in the simulation.
+        scenario_names (list of str): The names of the scenarios in the simulation.
 
         useVaccines (bool): Set to `True` to add an extra status point for
             vaccine-based infections.
@@ -104,13 +104,13 @@ def runModelProgress(
     }
 
     # Scenario status
-    scenarioSegments = (PROGRESS_SPLIT_POINT - 0.02) / len(scenarioNames)
+    scenarioSegments = (PROGRESS_SPLIT_POINT - 0.02) / len(scenario_names)
     progressDict |= {
         f"runningSim{i}": (
             scenarioSegments * i + 0.02,
             f'Running scenario "{name}"...',
         )
-        for i, name in enumerate(scenarioNames)
+        for i, name in enumerate(scenario_names)
     }
     # Analysis status
     # Note that ASIR gets twice the progress length as epidemic
@@ -187,16 +187,16 @@ community data to simulate each of the following {scenario_count} scenarios:
 
     # Display any errors
     # TODO: Hide scenario errors that are copies of baseline errors
-    severeErrorsFound = False
+    severe_errors_found = False
     for id in range(scenario_count):
-        severeErrorsFound = (
-            errorChecker(
+        severe_errors_found = (
+            error_checker(
                 id,
                 f"Errors in {session[f'scenarioName{id}'] if id > 0 else 'Baseline'}",
             )
-            or severeErrorsFound
+            or severe_errors_found
         )
-    if severeErrorsFound:
+    if severe_errors_found:
         st.error(
             """
                 The simulation cannot be ran due to the errors displayed above.
@@ -242,7 +242,7 @@ simulation.
         estimatedTime = simRuntimeEstimate(cycle_count, runCount, scenario_count)
         st.metric(
             f"Estimated Time to Run Simulation Experiment",
-            value=timeString(estimatedTime),
+            value=time_string(estimatedTime),
             border=True,
             help="""
 This estimate is based on the length of each simulation run, the number of runs
@@ -291,7 +291,7 @@ already busy with a different task.
 
             # Save current parameter values that'll be used for
             # visualisation when the user has potentially changed them
-            scenarioNames = ["Baseline"] + [
+            scenario_names = ["Baseline"] + [
                 session[f"scenarioName{i}"] for i in range(1, scenario_count)
             ]
             community = session.get("community", "newcastle")
@@ -302,23 +302,23 @@ already busy with a different task.
             if useVaccines:
                 analysisFormats = [
                     AnalysisFile(
-                        tool="epidemic", names=scenarioNames, useCumulative=True
+                        tool="epidemic", names=scenario_names, useCumulative=True
                     ),
                     AnalysisFile(
-                        tool="epidemic", names=scenarioNames, useCumulative=False
+                        tool="epidemic", names=scenario_names, useCumulative=False
                     ),
-                    AnalysisFile(tool="asir", names=scenarioNames),
-                    AnalysisFile(tool="asir", names=scenarioNames, vaccinated=True),
+                    AnalysisFile(tool="asir", names=scenario_names),
+                    AnalysisFile(tool="asir", names=scenario_names, vaccinated=True),
                 ]
             else:
                 analysisFormats = [
                     AnalysisFile(
-                        tool="epidemic", names=scenarioNames, useCumulative=True
+                        tool="epidemic", names=scenario_names, useCumulative=True
                     ),
                     AnalysisFile(
-                        tool="epidemic", names=scenarioNames, useCumulative=False
+                        tool="epidemic", names=scenario_names, useCumulative=False
                     ),
-                    AnalysisFile(tool="asir", names=scenarioNames),
+                    AnalysisFile(tool="asir", names=scenario_names),
                 ]
 
             scalingFactor = session.get("scalingPopulation", population) / population
@@ -336,9 +336,9 @@ already busy with a different task.
                     for scenario_id in range(scenario_count)
                 ]
             )
-            basicRates, ageRates = healthOutcomeStore(
-                scenarioNames,
-                useAges=useAdvanced,
+            basicRates, age_rates = health_outcome_store(
+                scenario_names,
+                use_ages=useAdvanced,
             )
             useWaning = useAdvanced and any(
                 id_get("naturalWaningToggle", scenario_id, False)
@@ -353,11 +353,11 @@ already busy with a different task.
             )
 
             session.pending_sim_params = SimParams(
-                scenario_names=scenarioNames,
+                scenario_names=scenario_names,
                 analysis_formats=analysisFormats,
                 symptomatic_rates=asymptomaticRates,
                 health_outcome_rates=basicRates,
-                age_health_outcome_rates=ageRates,
+                age_health_outcome_rates=age_rates,
                 community=community,
                 scaling_factor=scalingFactor,
                 waning=useWaning,
@@ -366,7 +366,7 @@ already busy with a different task.
             # Prepare model call parameters
             statusParams = {
                 "resultType": "zip",
-                "statusDecoder": runModelProgress(scenarioNames, useVaccines),
+                "statusDecoder": runModelProgress(scenario_names, useVaccines),
                 "request_queue": SIM_STATUS,
             }
 
@@ -502,12 +502,15 @@ from 2011.
 
 ##### Options:
 - Newcastle: A metropolitan area in New South Wales, Australia.
-It has a population of 272407, the second-largest in the state,
-and has a demographic distribution that more closely matches
-that of Australia as a whole compared to Cairns.
-- Cairns: A major city in Queensland, Australia. It has a
-population of 140402 (as of 2011 when this data was collected)
-and has a higher Indigenous population compared to Newcastle.
+It has a population of 272,407 (as of 2011 when this data was
+collected) and has a demographic distribution that more closely matches
+that of Australia as a whole compared to the other communities.
+- Cairns: A major city in Queensland, Australia. It has a population of
+140,402 and has a higher Indigenous population compared to the other
+communities.
+- Albany: A major city in Western Australia. It has a population of
+55,109 and has a higher proportion of older adults and seniors compared
+to the other communities.
     """,
 )
 

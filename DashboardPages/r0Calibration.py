@@ -11,8 +11,8 @@ import streamlit as st
 
 # from streamlit_push_notifications import send_push, send_alert
 from ClientResources.DownloadFunctions import createTemplate
-from ClientResources.InterfaceFunctions import errorChecker
-from ClientResources.ModelSchema import Parameters, communityOverride, overrideTemplate
+from ClientResources.InterfaceFunctions import error_checker
+from ClientResources.ModelSchema import Parameters, CommunityOverride, OverrideTemplate
 from ClientResources.ParameterFunctions import load_key, save_key
 from ClientResources.ServerFunctions import taskWrapper
 from ClientResources.Constants import USE_PRESET_PARAMS
@@ -53,8 +53,8 @@ def calibrateR0Button() -> None:
 
     # Display any errors
     # TODO: Hide scenario errors that are copies of baseline errors
-    severeErrorsFound = errorChecker(scenario_id, f"Errors in {scenarioName}")
-    if severeErrorsFound:
+    severe_errors_found = error_checker(scenario_id, f"Errors in {scenarioName}")
+    if severe_errors_found:
         st.error(
             """
                 The basic reproduction number cannot be calibrated due to the
@@ -108,11 +108,11 @@ by ±0.02.
                 params = createTemplate(
                     scenario_id, includeInterventions=False, includeDashboard=False
                 )
-            schema = overrideTemplate(
+            schema = OverrideTemplate(
                 name=community, description=str(targetR0), parameters=params
             ).model_dump_json(indent=4, exclude_unset=True)
             # TODO: Just save ID instead of name?
-            session.calibScenarioName = scenarioName
+            session.calib_scenario_name = scenarioName
             session.calib_saved_id = scenario_id
 
             # Prepare model call parameters
@@ -226,8 +226,8 @@ def calculateR0Button() -> None:
 
     # Display any errors
     # TODO: Hide scenario errors that are copies of baseline errors
-    severeErrorsFound = errorChecker(scenario_id, f"Errors in {scenarioName}")
-    if severeErrorsFound:
+    severe_errors_found = error_checker(scenario_id, f"Errors in {scenarioName}")
+    if severe_errors_found:
         st.error(
             """
                 The basic reproduction number cannot be calculated due to the
@@ -271,7 +271,7 @@ def calculateR0Button() -> None:
                 params = createTemplate(
                     scenario_id, includeInterventions=False, includeDashboard=False
                 )
-            schema = communityOverride(
+            schema = CommunityOverride(
                 name=community, parameters=params
             ).model_dump_json(indent=4, exclude_unset=True)
             session.calcScenarioName = scenarioName
@@ -415,16 +415,19 @@ from 2011.
 
 ##### Options:
 - Newcastle: A metropolitan area in New South Wales, Australia.
-It has a population of 272407, the second-largest in the state,
-and has a demographic distribution that more closely matches
-that of Australia as a whole compared to Cairns.
-- Cairns: A major city in Queensland, Australia. It has a
-population of 140402 (as of 2011 when this data was collected)
-and has a higher Indigenous population compared to Newcastle.
+It has a population of 272,407 (as of 2011 when this data was
+collected) and has a demographic distribution that more closely matches
+that of Australia as a whole compared to the other communities.
+- Cairns: A major city in Queensland, Australia. It has a population of
+140,402 and has a higher Indigenous population compared to the other
+communities.
+- Albany: A major city in Western Australia. It has a population of
+55,109 and has a higher proportion of older adults and seniors compared
+to the other communities.
     """,
 )
 scenario_count = session.get("scenario_count", 0) + 1
-scenarioNames = ["Baseline Scenario"] + [
+scenario_names = ["Baseline Scenario"] + [
     session[f"scenarioName{i}"] for i in range(1, scenario_count)
 ]
 
@@ -461,9 +464,9 @@ simulate a disease with this basic reproduction number.
 load_key("rCalibrateScenario", default=0)
 centerCalib.selectbox(
     "Scenario to Calibrate",
-    range(len(scenarioNames)),
+    range(len(scenario_names)),
     index=0,
-    format_func=lambda x: scenarioNames[x],
+    format_func=lambda x: scenario_names[x],
     key="_rCalibrateScenario",
     on_change=save_key,
     args=["rCalibrateScenario"],
@@ -533,7 +536,7 @@ calibResultsContainer = st.empty()
 calibrationResults = session.get("r0Calibration")
 idToUpdate = session.get("calib_saved_id")
 if calibrationResults is not None and idToUpdate is not None:
-    scenarioName = session["calibScenarioName"]
+    scenarioName = session["calib_scenario_name"]
     beta = session["r0CalibrationBeta"]
 
     def updateBeta():
@@ -574,9 +577,9 @@ leftCalc, rightCalc = st.columns(2, vertical_alignment="center")
 load_key("rCalculateScenario", default=0)
 leftCalc.selectbox(
     "Scenario to Calculate",
-    range(len(scenarioNames)),
+    range(len(scenario_names)),
     index=0,
-    format_func=lambda x: scenarioNames[x],
+    format_func=lambda x: scenario_names[x],
     key="_rCalculateScenario",
     on_change=save_key,
     args=["rCalculateScenario"],
@@ -667,7 +670,7 @@ def showR0Results():
         elif session.get("r0Calibration") is not None:
             # TODO: Save scenario ID and make descriptions sound natural
             calibContents = calibResultsContainer.container()
-            scenarioName = session["calibScenarioName"]
+            scenarioName = session["calib_scenario_name"]
             r0 = session["r0Calibration"]
             beta = session["r0CalibrationBeta"]
             calibContents.metric(

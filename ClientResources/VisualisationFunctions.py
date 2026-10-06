@@ -15,7 +15,7 @@ import pandas as pd
 import streamlit as st
 from streamlit.elements.lib.column_types import ColumnConfig
 
-from ClientResources.InterfaceFunctions import ageRangeCombiner
+from ClientResources.InterfaceFunctions import age_range_combiner
 from ClientResources.Constants import ROUND_RESULTS, MUTED_CODES
 from ClientResources.Types import (
     AGE_GROUPS,
@@ -69,7 +69,7 @@ def formatData(data: bytes, settings: AnalysisFile) -> pd.DataFrame:
 
 def formatEpidemic(
     rawCSV: bytes,
-    scenarioNames: list[str],
+    scenario_names: list[str],
     outcomeName: HealthOutcome = "Symptomatic Infections",
     cumulative=False,
     splitByAge=False,
@@ -82,7 +82,7 @@ def formatEpidemic(
         rawCSV (bytes): The CSV output of the 'epidemic' analysis function, obtained
             from the server after running the simulation.
 
-        scenarioNames (list of str): A list of strings containing the names of the
+        scenario_names (list of str): A list of strings containing the names of the
             different scenarios that were simulated (since the CSV just uses
             non-descriptive placeholders).
 
@@ -106,20 +106,20 @@ def formatEpidemic(
             a format more easily used by Altair's charts.
 
     Raises:
-        ValueError: If `scenarioNames` is not a list of strings or `outcome`
+        ValueError: If `scenario_names` is not a list of strings or `outcome`
             is not one of the recognised health burden outcomes.
     """
 
     # Validate parameters
     try:
-        if not isinstance(scenarioNames, list) or not all(
-            isinstance(name, str) for name in scenarioNames
+        if not isinstance(scenario_names, list) or not all(
+            isinstance(name, str) for name in scenario_names
         ):
             raise ValueError(
-                f"scenarioNames should be a list of strings; was {type(scenarioNames)}."
+                f"scenario_names should be a list of strings; was {type(scenario_names)}."
             )
-        if not scenarioNames:
-            raise ValueError("scenarioNames should not be empty.")
+        if not scenario_names:
+            raise ValueError("scenario_names should not be empty.")
         if outcomeName not in HEALTH_OUTCOMES:
             raise ValueError(f"""
                 outcome should be either "Symptomatic Infections", "Diagnosed
@@ -144,7 +144,7 @@ def formatEpidemic(
         framedData = pd.read_csv(
             BytesIO(rawCSV),
             header=0,
-            names=["Days Since First Infection"] + scenarioNames,
+            names=["Days Since First Infection"] + scenario_names,
             dtype=typeMapping,
         )
 
@@ -173,7 +173,7 @@ def formatEpidemic(
 
 def plotEpidemic(
     data: pd.DataFrame,
-    scenarioNames: list[str],
+    scenario_names: list[str],
     includedScenarios: list[str],
     outcomeName: HealthOutcome = "Symptomatic Infections",
     cumulative=False,
@@ -186,7 +186,7 @@ def plotEpidemic(
         data (DataFrame): A dataframe containing the epidemic data, processed with
             the formatEpidemic function.
 
-        scenarioNames (list of str): An ordered list of all scenarios in
+        scenario_names (list of str): An ordered list of all scenarios in
             the data, included or otherwise.
 
         includedScenarios (list of str): A list of strings containing
@@ -227,7 +227,7 @@ def plotEpidemic(
         )
         raise e
     assert set(includedScenarios).issubset(
-        scenarioNames
+        scenario_names
     ), "Included scenarios not in data"
     outcome = "Infections"  # TODO: placeholder until other burdens can be graphed
 
@@ -240,7 +240,7 @@ def plotEpidemic(
     # Reusable chart components
     yLabel = f"Total {outcome}" if cumulative else f"{outcome} per Day"
     scenarioColours = [
-        MUTED_CODES[scenarioNames.index(scenario)] for scenario in includedScenarios
+        MUTED_CODES[scenario_names.index(scenario)] for scenario in includedScenarios
     ]
     tooltipSelection = alt.selection_point(
         fields=["Days Since First Infection"],
@@ -297,7 +297,7 @@ def plotEpidemic(
     return chartLines + chartPoints + chartRule
 
 
-def formatAsir(rawCSV: bytes, scenarioNames: list[str]) -> pd.DataFrame:
+def formatAsir(rawCSV: bytes, scenario_names: list[str]) -> pd.DataFrame:
     """
     Function to convert raw data from the age-specific infection rate
     ('asir') Flusim analysis tool into the desired dataframe format for
@@ -307,7 +307,7 @@ def formatAsir(rawCSV: bytes, scenarioNames: list[str]) -> pd.DataFrame:
         rawCSV (bytes): The CSV output of the 'asir' analysis function, obtained
             from the server after running the simulation.
 
-        scenarioNames (list of str): A list of strings containing the names of the
+        scenario_names (list of str): A list of strings containing the names of the
             different scenarios that were simulated (since the CSV just uses
             non-descriptive placeholders). This list should contain the names
             of all scenarios in the simulation, even if not all of them will be
@@ -315,13 +315,13 @@ def formatAsir(rawCSV: bytes, scenarioNames: list[str]) -> pd.DataFrame:
     """
     # Validate parameters
     try:
-        if not scenarioNames:
-            raise ValueError("scenarioNames should not be empty.")
-        if not isinstance(scenarioNames, list) or not all(
-            isinstance(name, str) for name in scenarioNames
+        if not scenario_names:
+            raise ValueError("scenario_names should not be empty.")
+        if not isinstance(scenario_names, list) or not all(
+            isinstance(name, str) for name in scenario_names
         ):
             raise ValueError(
-                f"scenarioNames should be a list of strings; was {type(scenarioNames)}."
+                f"scenario_names should be a list of strings; was {type(scenario_names)}."
             )
     except Exception as e:
         functionLog.error(
@@ -339,7 +339,7 @@ def formatAsir(rawCSV: bytes, scenarioNames: list[str]) -> pd.DataFrame:
         dtype=typeMapping,
     )
     functionLog.info(
-        f"Scenario names are {scenarioNames}; current index is {framedData.index}"
+        f"Scenario names are {scenario_names}; current index is {framedData.index}"
     )
     framedData.columns = pd.Index(AGE_WITH_TOTAL)
 
@@ -356,7 +356,7 @@ def formatAsir(rawCSV: bytes, scenarioNames: list[str]) -> pd.DataFrame:
     )
 
     # Reset indices
-    framedData.index = pd.Index(scenarioNames)
+    framedData.index = pd.Index(scenario_names)
     framedData.reset_index(names="Scenario", inplace=True)
 
     # Reshape data for better Streamlit usage with placeholder infections
@@ -391,7 +391,7 @@ def scaleAsirColumn(
     """
     # TODO: see if making rates parameters is more efficient
     healthRates = session.sim_params.health_outcome_rates
-    ageRates = session.sim_params.age_health_outcome_rates
+    age_rates = session.sim_params.age_health_outcome_rates
     match outcome:
         case "Symptomatic Infections":
             # No scaling necessary
@@ -399,13 +399,13 @@ def scaleAsirColumn(
             scaledBaseline = baselineData.copy()
         case "Hospitalisations" | "ICU Visits" | "Deaths":
             # Get age-specific rates
-            burdenRates = pd.DataFrame(ageRates[outcome]).T.stack()
+            burdenRates = pd.DataFrame(age_rates[outcome]).T.stack()
             dataIndexValues = pd.MultiIndex.from_frame(data[["Scenario", "Age Group"]])
             scaledColumn = data["Base Values"] * pd.Series(
                 dataIndexValues.map(burdenRates), index=data.index
             ).fillna(data["Scenario"].map(healthRates[outcome]))
 
-            baselineRates = ageRates[outcome][baselineScenario]
+            baselineRates = age_rates[outcome][baselineScenario]
             scaledBaseline = baselineData * (
                 data["Age Group"]
                 .map(baselineRates)
@@ -454,7 +454,7 @@ def recalculateTotals(
 
 def generateAsir(
     baseData: pd.DataFrame,
-    scenarioNames: list[str],
+    scenario_names: list[str],
     ageSeparation: Literal["Combined", "By Row", "By Column"] = "Combined",
     columns: Sequence[ColumnDetails] = [
         ("Symptomatic Infections", [], "All", False, False)
@@ -476,7 +476,7 @@ def generateAsir(
         baseData (DataFrame): A DataFrame containing the asir data, processed with
             the formatAsir function.
 
-        scenarioNames (list of str): A list of strings containing the names of the
+        scenario_names (list of str): A list of strings containing the names of the
             different scenarios that were simulated (since the CSV just uses
             non-descriptive placeholders). This list should contain the names
             of all scenarios in the simulation, even if not all of them will be
@@ -526,20 +526,20 @@ def generateAsir(
             each column that uses difference from baseline formatting.
 
     Raises:
-        ValueError: If `scenarioNames` is not a list of strings or columns
+        ValueError: If `scenario_names` is not a list of strings or columns
             are not formatted correctly.
     """
     # TODO: Improve efficiency (don't calculate age rows if ageSeparation isn't By Row)
 
     # Validate parameters
     try:
-        if not scenarioNames:
-            raise ValueError("scenarioNames should not be empty.")
-        if not isinstance(scenarioNames, list) or not all(
-            isinstance(name, str) for name in scenarioNames
+        if not scenario_names:
+            raise ValueError("scenario_names should not be empty.")
+        if not isinstance(scenario_names, list) or not all(
+            isinstance(name, str) for name in scenario_names
         ):
             raise ValueError(
-                f"scenarioNames should be a list of strings; was {type(scenarioNames)}."
+                f"scenario_names should be a list of strings; was {type(scenario_names)}."
             )
         if not columns:
             raise ValueError("columns should not be empty.")
@@ -560,7 +560,7 @@ def generateAsir(
         raise e
     # Convert None values for includedScenarios/Ages to refer to all values
     if includedScenarios is None:
-        includedScenarios = scenarioNames
+        includedScenarios = scenario_names
     if includedAges is None:
         includedAges = AGE_WITH_TOTAL
 
@@ -571,14 +571,14 @@ def generateAsir(
     # Useful constants
     fullData = baseData.copy()
     agePops = COMMUNITIES[session.sim_params.community].age_pops
-    scenario_count = len(scenarioNames)
+    scenario_count = len(scenario_names)
     ageIndices = {
         age: range(index * scenario_count, (index * scenario_count) + scenario_count)
         for index, age in enumerate(AGE_WITH_TOTAL)
     }
 
     # Generate baseline data for columns that need it
-    baselineScenario = scenarioNames[0]
+    baselineScenario = scenario_names[0]
     baselineRows = (
         fullData.loc[fullData["Scenario"] == baselineScenario]
         .drop("Scenario", axis=1)
@@ -665,7 +665,7 @@ def generateAsir(
             ).sum()
             currentColumn = pd.concat([columnSums] * 11, ignore_index=True)
             columnBaselines = pd.Series(columnSums[0], index=range(11 * scenario_count))
-            columnSuffix += f"{ageRangeCombiner(list(ageGroups))} "
+            columnSuffix += f"{age_range_combiner(list(ageGroups))} "
 
         # Apply proportion/difference modifications
         # TODO: Either fix or disable just proportion
@@ -706,7 +706,7 @@ def generateAsir(
         )
 
     # Remove any scenarios/age groups not specified in the data
-    if set(scenarioNames) != set(includedScenarios):
+    if set(scenario_names) != set(includedScenarios):
         fullData = fullData[fullData[("", "Scenario")].isin(includedScenarios)]
     if not includedAges:
         fullData = fullData[fullData[("", "Age Group")] == "Total"]
@@ -717,7 +717,7 @@ def generateAsir(
     # Make index columns categorical
     fullData.loc[:, ("", "Scenario")] = pd.Categorical(
         fullData[("", "Scenario")],
-        categories=scenarioNames,
+        categories=scenario_names,
         ordered=True,
     )
     if includedAges:

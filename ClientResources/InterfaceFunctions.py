@@ -5,7 +5,7 @@
 # Imports
 import re
 from functools import partial
-from typing import Any, Callable, Literal, cast
+from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
@@ -65,12 +65,12 @@ def param_error(
     if condition():
         if is_severe:
             error_format(message)
-            session["activeErrors"][scenario_id][label] = (message, True)
+            session["active_errors"][scenario_id][label] = (message, True)
         else:
             warn_format(message)
-            session["activeErrors"][scenario_id][label] = (message, False)
+            session["active_errors"][scenario_id][label] = (message, False)
     else:
-        session["activeErrors"][scenario_id].pop(label, None)
+        session["active_errors"][scenario_id].pop(label, None)
 
 
 def dual_error(
@@ -105,16 +105,16 @@ def dual_error(
     """
     if error_condition():
         error_format(error_message)
-        session["activeErrors"][scenario_id][label] = (error_message, True)
+        session["active_errors"][scenario_id][label] = (error_message, True)
     elif warn_condition():
         warn_format(warn_message)
-        session["activeErrors"][scenario_id][label] = (warn_message, False)
+        session["active_errors"][scenario_id][label] = (warn_message, False)
     else:
-        session["activeErrors"][scenario_id].pop(label, None)
+        session["active_errors"][scenario_id].pop(label, None)
 
 
 # @st.fragment(run_every=1)
-def errorChecker(scenario_id: int, name: str = "Errors in Current Scenario"):
+def error_checker(scenario_id: int, name: str = "Errors in Current Scenario"):
     """
     Fragment to list errors from a specific scenario in a dropdown container.
 
@@ -128,19 +128,19 @@ def errorChecker(scenario_id: int, name: str = "Errors in Current Scenario"):
             `False` otherwise.
     """
     # TODO: Consider removing the run_every parameter and defragmenting tabs
-    severeErrorsFound = False
-    if session["activeErrors"].get(scenario_id, False):
+    severe_errors_found = False
+    if session["active_errors"].get(scenario_id, False):
         with st.status(label=name, state="error"):
-            for message, is_severe in session["activeErrors"][scenario_id].values():
+            for message, is_severe in session["active_errors"][scenario_id].values():
                 if is_severe:
                     error_format(message)
-                    severeErrorsFound = True
+                    severe_errors_found = True
                 else:
                     warn_format(message)
-    return severeErrorsFound
+    return severe_errors_found
 
 
-def validationErrorFormatting(e: ValidationError):
+def validation_error_formatting(e: ValidationError):
     """
     Function to convert ValidationErrors raised by Pydantic into user-readable
     error messages.
@@ -165,7 +165,7 @@ def plural(value: int | float):
     return "" if value == 1 else "s"
 
 
-def dayCount(count: int | float):
+def day_count(count: int | float):
     """
     Simple function to convert a number into a string describing a number of days.
 
@@ -175,7 +175,7 @@ def dayCount(count: int | float):
     return "1 Day" if count == 1 else f"{count:g} Days"
 
 
-def timeString(time: int | float) -> str:
+def time_string(time: int | float) -> str:
     """
     Function to format a number of seconds in mm:ss (or h:mm:ss) format.
 
@@ -198,18 +198,18 @@ def timeString(time: int | float) -> str:
         )
 
 
-def healthOutcomeStore(
-    scenarioNames: list[str], useAges: bool = True
+def health_outcome_store(
+    scenario_names: list[str], use_ages: bool = True
 ) -> tuple[dict, dict]:
     """
     Function to format and store health burden outcome rates for a given set
     of scenarios.
 
     Parameters:
-        scenarioNames (list of str): The names of each scenario defined in
+        scenario_names (list of str): The names of each scenario defined in
             the simulation.
 
-        useAges (Boolean): Set to False to ignore age-specific health burdens
+        use_ages (Boolean): Set to False to ignore age-specific health burdens
             and define each of their values to be the same baseline value.
 
     Returns:
@@ -217,52 +217,52 @@ def healthOutcomeStore(
             health burden rates.
     """
     # Required values for outcome rates
-    outcomeRates = {
-        "Diagnosed Cases": ("caseRatio", 50.0, lambda x: x / 100),
-        "GP Visits": ("gpRatio", 17.0, lambda x: x / 100),
-        "Hospitalisations": ("hospitalRatio", 320.0, lambda x: x / 100000),
-        "Deaths": ("deathRatio", 12.0, lambda x: x / 100000),
+    outcome_rates = {
+        "Diagnosed Cases": ("case_ratio", 50.0, lambda x: x / 100),
+        "GP Visits": ("gp_ratio", 17.0, lambda x: x / 100),
+        "Hospitalisations": ("hospital_ratio", 320.0, lambda x: x / 100000),
+        "Deaths": ("death_ratio", 12.0, lambda x: x / 100000),
     }
 
     # Basic rates
-    singleRates = {}
-    for outcome, (key, default, formatFunc) in outcomeRates.items():
-        singleRates[outcome] = {
-            name: formatFunc(id_get(key, scenario_id, default))
-            for scenario_id, name in enumerate(scenarioNames)
+    single_rates = {}
+    for outcome, (key, default, format_func) in outcome_rates.items():
+        single_rates[outcome] = {
+            name: format_func(id_get(key, scenario_id, default))
+            for scenario_id, name in enumerate(scenario_names)
         }
 
     # ICU (dependent on hospitalisation)
-    icuMultipliers = {
-        name: id_get("icuRatio", scenario_id, 20.0) / 100
-        for scenario_id, name in enumerate(scenarioNames)
+    icu_multipliers = {
+        name: id_get("icu_ratio", scenario_id, 20.0) / 100
+        for scenario_id, name in enumerate(scenario_names)
     }
-    singleRates["ICU Visits"] = {
-        name: rate * icuMultipliers[name]
-        for name, rate in singleRates["Hospitalisations"].items()
+    single_rates["ICU Visits"] = {
+        name: rate * icu_multipliers[name]
+        for name, rate in single_rates["Hospitalisations"].items()
     }
 
     # Age-specific rates
-    hospitalKey, hospitalDefault, hospitalFormat = outcomeRates["Hospitalisations"]
-    deathKey, deathDefault, deathFormat = outcomeRates["Deaths"]
-    ageRates = {}
-    if useAges:
-        hospitalRates, icuRates, deathRates = {}, {}, {}
-        for scenario_id, name in enumerate(scenarioNames):
+    hospital_key, hospital_default, hospital_format = outcome_rates["Hospitalisations"]
+    death_key, death_default, death_format = outcome_rates["Deaths"]
+    age_rates = {}
+    if use_ages:
+        hospital_rates, icu_rates, death_rates = {}, {}, {}
+        for scenario_id, name in enumerate(scenario_names):
             # Get previously-extracted base rates
-            baseHospitalRate = singleRates["Hospitalisations"][name]
-            baseDeathRate = singleRates["Deaths"][name]
-            baseICURate = icuMultipliers[name]
+            base_hospital_rate = single_rates["Hospitalisations"][name]
+            base_death_rate = single_rates["Deaths"][name]
+            base_icu_rate = icu_multipliers[name]
             # Format table with age-specific rates
-            burdenAgeForm = (
+            burden_age_form = (
                 id_get(
-                    "burdenAgeForm",
+                    "burden_age_form",
                     scenario_id,
                     pd.DataFrame(
                         {
                             "Age Group": [None],
-                            "Hospitalisation Rate": [baseHospitalRate],
-                            "Mortality Rate": [baseDeathRate],
+                            "Hospitalisation Rate": [base_hospital_rate],
+                            "Mortality Rate": [base_death_rate],
                         },
                     ),
                 )
@@ -270,73 +270,75 @@ def healthOutcomeStore(
                 .dropna()
                 .replace({"Age Group": AGE_KEY_CONVERTER})
             )
-            burdenAgeForm["Hospitalisation Rate"] = burdenAgeForm[
+            burden_age_form["Hospitalisation Rate"] = burden_age_form[
                 "Hospitalisation Rate"
-            ].apply(hospitalFormat)
-            burdenAgeForm["Mortality Rate"] = burdenAgeForm["Mortality Rate"].apply(
-                deathFormat
+            ].apply(hospital_format)
+            burden_age_form["Mortality Rate"] = burden_age_form["Mortality Rate"].apply(
+                death_format
             )
             # Convert to dictionaries with base rate as default
-            hospitalAgeDict = (
-                burdenAgeForm[["Age Group", "Hospitalisation Rate"]]
+            hospital_age_dict = (
+                burden_age_form[["Age Group", "Hospitalisation Rate"]]
                 .set_index("Age Group")["Hospitalisation Rate"]
                 .to_dict()
             )
-            hospitalRates[name] = {
-                age: baseHospitalRate for age in AGE_GROUPS
-            } | hospitalAgeDict
+            hospital_rates[name] = {
+                age: base_hospital_rate for age in AGE_GROUPS
+            } | hospital_age_dict
 
-            icuAgeDict = {
-                age: rate * baseICURate for age, rate in hospitalAgeDict.items()
+            icu_age_dict = {
+                age: rate * base_icu_rate for age, rate in hospital_age_dict.items()
             }
-            icuRates[name] = {
-                age: baseHospitalRate * baseICURate for age in AGE_GROUPS
-            } | icuAgeDict
+            icu_rates[name] = {
+                age: base_hospital_rate * base_icu_rate for age in AGE_GROUPS
+            } | icu_age_dict
 
-            mortAgeDict = (
-                burdenAgeForm[["Age Group", "Mortality Rate"]]
+            mort_age_dict = (
+                burden_age_form[["Age Group", "Mortality Rate"]]
                 .set_index("Age Group")["Mortality Rate"]
                 .to_dict()
             )
-            deathRates[name] = {age: baseDeathRate for age in AGE_GROUPS} | mortAgeDict
-        ageRates = {
-            "Hospitalisations": hospitalRates,
-            "ICU Visits": icuRates,
-            "Deaths": deathRates,
+            death_rates[name] = {
+                age: base_death_rate for age in AGE_GROUPS
+            } | mort_age_dict
+        age_rates = {
+            "Hospitalisations": hospital_rates,
+            "ICU Visits": icu_rates,
+            "Deaths": death_rates,
         }
     else:
         # Just set every age to the base rate
         # TODO: Avoid this unnecessary iteration and just check elsewhere
         # that there's no age-specific rates in use
-        ageRates = {
+        age_rates = {
             "Hospitalisations": {
                 scenario: {
-                    age: hospitalFormat(id_get(hospitalKey, i, hospitalDefault))
+                    age: hospital_format(id_get(hospital_key, i, hospital_default))
                     for age in AGE_GROUPS
                 }
-                for i, scenario in enumerate(scenarioNames)
+                for i, scenario in enumerate(scenario_names)
             },
             "Deaths": {
                 scenario: {
-                    age: deathFormat(id_get(deathKey, i, deathDefault))
+                    age: death_format(id_get(death_key, i, death_default))
                     for age in AGE_GROUPS
                 }
-                for i, scenario in enumerate(scenarioNames)
+                for i, scenario in enumerate(scenario_names)
             },
         }
-        ageRates["ICU Visits"] = {
+        age_rates["ICU Visits"] = {
             name: {
-                age: rate * icuMultipliers[name]
-                for age, rate in ageRates["Hospitalisations"][name].items()
+                age: rate * icu_multipliers[name]
+                for age, rate in age_rates["Hospitalisations"][name].items()
             }
-            for name in scenarioNames
+            for name in scenario_names
         }
 
-    return singleRates, ageRates
+    return single_rates, age_rates
 
 
 # Scenario name functions
-def saveName(
+def save_name(
     key: str,
     scenario_id: int,
     error_container,
@@ -362,21 +364,19 @@ def saveName(
             for these will replace them with the value of `scenario_id` or the
             value of the widget that is being saved, respectively.
     """
-    newName = session.get(f"_{key}{scenario_id}")
+    new_name = session.get(f"_{key}{scenario_id}")
     scenario_count = session.scenario_count
-    currentNames = {
+    current_names = {
         session.get(f"{key}{i}")
         for i in range(1, scenario_count + 1)
         if i != scenario_id
     }
-    if newName == "":
+    if new_name == "":
         error_container.error(
-            """
-            Please enter a name.
-            """,
+            "Please enter a name.",
             icon=":material/remove_selection:",
         )
-    elif newName in currentNames:
+    elif new_name in current_names:
         error_container.error(
             """
             The selected name is already the name of a different scenario.
@@ -387,29 +387,29 @@ def saveName(
     else:
         # Update saved names for r0
         if session.get("calib_saved_id") == scenario_id:
-            session["calibScenarioName"] = newName
+            session["calib_scenario_name"] = new_name
         container_save(key, scenario_id, containers, special_containers)
 
 
-def unique_name(currentName: str, names: set[str]):
+def unique_name(current_name: str, names: set[str]):
     """
     Function to add a suffix to a string to make it unique compared to a set.
 
     Parameters:
-        currentName (str): The string to make unique.
+        current_name (str): The string to make unique.
 
         names (set of str): The other strings to compare with.
     """
-    if currentName not in names:
-        return currentName
+    if current_name not in names:
+        return current_name
 
     # Check if suffix is already present and increment if so
-    match = re.match(r"^(.*?)(?: (\d+))?$", currentName)
+    match = re.match(r"^(.*?)(?: (\d+))?$", current_name)
     if match is not None:
         base, num = match.groups()
         n = int(num) if num else 2
     else:
-        base = currentName
+        base = current_name
         n = 2
 
     candidate = f"{base} {n}"
@@ -420,7 +420,7 @@ def unique_name(currentName: str, names: set[str]):
 
 
 # Age functions
-def ageSort(age: tuple[AgeGroupKey, Any]) -> int:
+def age_sort(age: tuple[AgeGroupKey, Any]) -> int:
     """
     Function to be used in `sorted()` for ordering age groups.
 
@@ -434,7 +434,7 @@ def ageSort(age: tuple[AgeGroupKey, Any]) -> int:
     return AGE_GROUP_KEYS.index(age[0])
 
 
-def ageSortSeries(ages: pd.Series) -> pd.Series:
+def age_sort_series(ages: pd.Series) -> pd.Series:
     """
     Function to be used in `pd.sort_values` for ordering age groups
 
@@ -447,7 +447,7 @@ def ageSortSeries(ages: pd.Series) -> pd.Series:
     return ages.map({age: index for index, age in enumerate(AGE_GROUP_KEYS)})
 
 
-def ageDisplay(option) -> AgeGroup:
+def age_display(option) -> AgeGroup:
     """
     Function to be passed to format_func for displaying selectbox values
 
@@ -461,7 +461,7 @@ def ageDisplay(option) -> AgeGroup:
     return AGE_KEY_CONVERTER[option]
 
 
-def ageRangeString(lower: int | float, upper: int | float) -> str:
+def age_range_string(lower: int | float, upper: int | float) -> str:
     """
     Simple function to format 2 numbers as an age range, accounting for
     unbound ends and rendering decimal values as months.
@@ -486,7 +486,7 @@ def ageRangeString(lower: int | float, upper: int | float) -> str:
         return f"{lower}-{upper - 1}"
 
 
-def ageRangeCombiner(ages: list[AgeWithTotal]) -> str:
+def age_range_combiner(ages: list[AgeWithTotal]) -> str:
     """
     Function to convert a list of age brackets into a single string
     concisely listing them all.
@@ -506,7 +506,7 @@ def ageRangeCombiner(ages: list[AgeWithTotal]) -> str:
         return "All Ages"
 
     # Dictionaries to get the starts/ends of each age bracket
-    ageStarts = {
+    age_starts = {
         "Young Infant (0-6 Months)": 0,
         "Infant (7-24 Months)": 0.5,
         "Young Child (3-5 Years)": 3,
@@ -518,7 +518,7 @@ def ageRangeCombiner(ages: list[AgeWithTotal]) -> str:
         "Senior (65-79 Years)": 65,
         "Older Senior (80+ Years)": 80,
     }
-    ageEnds = {
+    age_ends = {
         "Young Infant (0-6 Months)": 0.5,
         "Infant (7-24 Months)": 3,
         "Young Child (3-5 Years)": 6,
@@ -533,82 +533,44 @@ def ageRangeCombiner(ages: list[AgeWithTotal]) -> str:
 
     # Sort the ages
     ages = ages.copy()
-    ages.sort(key=lambda x: ageStarts[x])
+    ages.sort(key=lambda x: age_starts[x])
 
     # Iteratively identify continuous age blocks and display as string
-    currentStart, currentEnd = ageStarts[ages[0]], ageEnds[ages[0]]
-    currentString = ""
+    current_start, current_end = age_starts[ages[0]], age_ends[ages[0]]
+    current_string = ""
     for age in ages[1:]:
-        if ageStarts[age] == currentEnd:
-            currentEnd = ageEnds[age]
+        if age_starts[age] == current_end:
+            current_end = age_ends[age]
         else:
-            currentString += f", {ageRangeString(currentStart, currentEnd)}"
-            currentStart, currentEnd = ageStarts[age], ageEnds[age]
-    currentString += f", {ageRangeString(currentStart, currentEnd)}"
-    currentString += " Years" if currentString[-6:] != "Months" else ""
-    return currentString[2:]
-
-
-def ageCast(x: str) -> Literal[
-    "young_infant",
-    "infant",
-    "young_child",
-    "child",
-    "adolescent",
-    "young_adult",
-    "adult",
-    "older_adult",
-    "senior",
-    "older_senior",
-]:
-    """
-    Simple function to cast age strings into literals for validation.
-
-    Parameters:
-        x (str): The string to be cast.
-
-    Returns:
-        Literal: A literal with the same value as the string.
-    """
-    return cast(
-        Literal[
-            "young_infant",
-            "infant",
-            "young_child",
-            "child",
-            "adolescent",
-            "young_adult",
-            "adult",
-            "older_adult",
-            "senior",
-            "older_senior",
-        ],
-        x,
-    )
+            current_string += f", {age_range_string(current_start, current_end)}"
+            current_start, current_end = age_starts[age], age_ends[age]
+    current_string += f", {age_range_string(current_start, current_end)}"
+    current_string += " Years" if current_string[-6:] != "Months" else ""
+    return current_string[2:]
 
 
 # Miscellaneous functions
-def schemaUpdate(schema: Any, paramGroup: str, newParams: Any):
+def schema_update(schema: Any, param_group: str, new_params: Any):
     """
     Function to update a parameter object with new schema values
 
     Parameters:
         schema: The object holding the current parameters.
 
-        paramGroup (str): The name of the group of parameters to be updated.
+        param_group (str): The name of the group of parameters to be updated.
 
-        newParams: The object containing the new parameter values.
+        new_params: The object containing the new parameter values.
     """
-    newParamsDict = newParams.model_dump(exclude_unset=True)
-    if newParamsDict:
-        if getattr(schema, paramGroup, None) is None:
-            setattr(schema, paramGroup, newParams)
+    new_params_dict = new_params.model_dump(exclude_unset=True)
+    if new_params_dict:
+        if getattr(schema, param_group, None) is None:
+            setattr(schema, param_group, new_params)
         else:
-            newSchema = getattr(schema, paramGroup).model_copy(update=newParamsDict)
-            setattr(schema, paramGroup, newSchema)
+            new_schema = getattr(schema, param_group).model_copy(update=new_params_dict)
+            setattr(schema, param_group, new_schema)
 
 
-def schemaRemoveBaseline(
+def schema_remove_baseline(
     scenario: Any,
     baseline: Any,
     ignore: set[str] = set(),
@@ -649,7 +611,7 @@ def schemaRemoveBaseline(
             delattr(scenario, param)
 
 
-def backgroundColour() -> str:
+def background_colour() -> str:
     """
     Simple function to get the background colour of the current theme.
 

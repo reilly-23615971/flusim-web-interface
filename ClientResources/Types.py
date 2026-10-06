@@ -4,7 +4,7 @@
 
 # Imports
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from queue import Queue
 from typing import Literal, Optional, Sequence, get_args
 
@@ -24,10 +24,10 @@ type AgeGroup = Literal[
     "Senior (65-79 Years)",
     "Older Senior (80+ Years)",
 ]
-AGE_GROUPS = get_args(AgeGroup)
+AGE_GROUPS = get_args(AgeGroup.__value__)
 # Names plus total, for results tables
 type AgeWithTotal = AgeGroup | Literal["Total"]
-AGE_WITH_TOTAL = AGE_GROUPS + tuple("Total")
+AGE_WITH_TOTAL = AGE_GROUPS + ("Total",)
 # Keys (snake case used in JSON schema)
 type AgeGroupKey = Literal[
     "young_infant",  # 0-6 months
@@ -41,7 +41,7 @@ type AgeGroupKey = Literal[
     "senior",  # 65-79 years
     "older_senior",  # 80+ years
 ]
-AGE_GROUP_KEYS = get_args(AgeGroupKey)
+AGE_GROUP_KEYS = get_args(AgeGroupKey.__value__)
 # Convert between keys and names
 AGE_KEY_CONVERTER: dict[AgeGroupKey, AgeGroup] = {
     key: name for key, name in zip(AGE_GROUP_KEYS, AGE_GROUPS)
@@ -53,7 +53,7 @@ type BoosterType = Literal["primary", "booster"]
 
 # Communities that can be modelled
 type CommunityName = Literal["albany", "cairns", "newcastle"]
-COMMUNITY_NAMES = get_args(CommunityName)
+COMMUNITY_NAMES = get_args(CommunityName.__value__)
 
 # Health burden outcomes that can be calculated by the dashboard
 type HealthOutcome = Literal[
@@ -64,9 +64,44 @@ type HealthOutcome = Literal[
     "ICU Visits",
     "Deaths",
 ]
-HEALTH_OUTCOMES = get_args(HealthOutcome)
+HEALTH_OUTCOMES = get_args(HealthOutcome.__value__)
 
 # Locations in the simulation
+type AlbanyPatch = Literal[
+    "Albany",
+    "Kojonup",
+    "Plantagenet",
+    "Stirling Range National Park",
+    "Denmark",
+    "McKail - Willyung",
+    "Gnowangerup",
+    "Albany Region",
+    "Little Grove - Elleker",
+    "Bayonet Head - Lower King",
+    "Katanning",
+]
+type CairnsPatch = Literal[
+    "Westcourt - Bungalow",
+    "Cairns City",
+    "Redlynch",
+    "White Rock",
+    "Trinity Beach - Smithfield",
+    "Earlville - Bayview Heights",
+    "Clifton Beach - Kewarra Beach",
+    "Freshwater - Stratford",
+    "Woree",
+    "Mount Sheridan",
+    "Bentley Park",
+    "Gordonvale - Trinity",
+    "Whitfield - Edge Hill",
+    "Brinsmead",
+    "Lamb Range",
+    "Kanimbla - Mooroobool",
+    "Manunda",
+    "Edmonton",
+    "Manoora",
+    "Yorkeys Knob - Machans Beach",
+]
 type NewcastlePatch = Literal[
     "Glendale - Cardiff - Hillsborough",
     "Maryland - Fletcher - Minmi",
@@ -92,31 +127,10 @@ type NewcastlePatch = Literal[
     "Mount Hutton - Windale",
     "Waratah - North Lambton",
 ]
-type CairnsPatch = Literal[
-    "Westcourt - Bungalow",
-    "Cairns City",
-    "Redlynch",
-    "White Rock",
-    "Trinity Beach - Smithfield",
-    "Earlville - Bayview Heights",
-    "Clifton Beach - Kewarra Beach",
-    "Freshwater - Stratford",
-    "Woree",
-    "Mount Sheridan",
-    "Bentley Park",
-    "Gordonvale - Trinity",
-    "Whitfield - Edge Hill",
-    "Brinsmead",
-    "Lamb Range",
-    "Kanimbla - Mooroobool",
-    "Manunda",
-    "Edmonton",
-    "Manoora",
-    "Yorkeys Knob - Machans Beach",
-]
-NEWCASTLE_PATCHES = get_args(NewcastlePatch)
-CAIRNS_PATCHES = get_args(CairnsPatch)
-type CommunityPatch = NewcastlePatch | CairnsPatch
+ALBANY_PATCHES = get_args(AlbanyPatch.__value__)
+CAIRNS_PATCHES = get_args(CairnsPatch.__value__)
+NEWCASTLE_PATCHES = get_args(NewcastlePatch.__value__)
+type CommunityPatch = AlbanyPatch | CairnsPatch | NewcastlePatch
 
 # Conditions that control the enabling and disabling of interventions
 type TriggerCondition = Literal[
@@ -194,23 +208,23 @@ class CommunityData:
 
 
 # Data for communities that can be modelled by the simulation
-NEWCASTLE = CommunityData(
-    name="Newcastle",
-    population=272407,
+ALBANY = CommunityData(
+    name="Albany",
+    population=55109,
     age_pops={
-        "Young Infant (0-6 Months)": 2742,
-        "Infant (7-24 Months)": 6641,
-        "Young Child (3-5 Years)": 10242,
-        "Child (6-12 Years)": 20603,
-        "Adolescent (13-17 Years)": 18513,
-        "Young Adult (18-24 Years)": 27015,
-        "Adult (25-44 Years)": 71299,
-        "Older Adult (45-64 Years)": 69949,
-        "Senior (65-79 Years)": 31384,
-        "Older Senior (80+ Years)": 14019,
-        "Total": 272407,
+        "Young Infant (0-6 Months)": 669,
+        "Infant (7-24 Months)": 1430,
+        "Young Child (3-5 Years)": 2312,
+        "Child (6-12 Years)": 4782,
+        "Adolescent (13-17 Years)": 4126,
+        "Young Adult (18-24 Years)": 4061,
+        "Adult (25-44 Years)": 12841,
+        "Older Adult (45-64 Years)": 15668,
+        "Senior (65-79 Years)": 6806,
+        "Older Senior (80+ Years)": 2414,
+        "Total": 55109,
     },
-    patches=NEWCASTLE_PATCHES,
+    patches=ALBANY_PATCHES,
 )
 CAIRNS = CommunityData(
     name="Cairns",
@@ -230,9 +244,28 @@ CAIRNS = CommunityData(
     },
     patches=CAIRNS_PATCHES,
 )
+NEWCASTLE = CommunityData(
+    name="Newcastle",
+    population=272407,
+    age_pops={
+        "Young Infant (0-6 Months)": 2742,
+        "Infant (7-24 Months)": 6641,
+        "Young Child (3-5 Years)": 10242,
+        "Child (6-12 Years)": 20603,
+        "Adolescent (13-17 Years)": 18513,
+        "Young Adult (18-24 Years)": 27015,
+        "Adult (25-44 Years)": 71299,
+        "Older Adult (45-64 Years)": 69949,
+        "Senior (65-79 Years)": 31384,
+        "Older Senior (80+ Years)": 14019,
+        "Total": 272407,
+    },
+    patches=NEWCASTLE_PATCHES,
+)
 COMMUNITIES: dict[CommunityName, CommunityData] = {
-    "newcastle": NEWCASTLE,
+    "albany": ALBANY,
     "cairns": CAIRNS,
+    "newcastle": NEWCASTLE,
 }
 
 
@@ -245,10 +278,10 @@ class SimParams:
     scenario_names: list[str]
     analysis_formats: list[AnalysisFile]
     community: CommunityName
+    symptomatic_rates: list[list[float]] = field(default_factory=list)
+    health_outcome_rates: dict[str, dict] = field(default_factory=dict)
+    age_health_outcome_rates: dict[str, dict] = field(default_factory=dict)
     scaling_factor: float = 1.0
-    symptomatic_rates: list[list[float]] = []
-    health_outcome_rates: dict[str, dict] = {}
-    age_health_outcome_rates: dict[str, dict] = {}
     waning: bool = False
 
 

@@ -12,10 +12,10 @@ from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import (
     plural,
-    schemaRemoveBaseline,
-    schemaUpdate,
+    schema_remove_baseline,
+    schema_update,
 )
-from ClientResources.ModelSchema import Parameters, scenarioParameters
+from ClientResources.ModelSchema import Parameters, GeneralParameters
 from ClientResources.ParameterFunctions import (
     id_get,
     load_key,
@@ -391,7 +391,7 @@ def communitySaveSchema(
             raise ValueError("schema should be a Parameters object")
 
         # Scenario Parameters
-        scenarioParams = scenarioParameters()
+        scenarioParams = GeneralParameters()
 
         # Withdrawals and Contact
         scenarioParams.prob_withdrawal = id_get("withdrawalWork", id, 0.5)
@@ -416,8 +416,8 @@ def communitySaveSchema(
             """
         # Save the updated parameters, removing redundant baseline values
         if id > 0 and baseline is not None:
-            schemaRemoveBaseline(scenarioParams, baseline.Scenario_Parameter)
-        schemaUpdate(schema, "Scenario_Parameter", scenarioParams)
+            schema_remove_baseline(scenarioParams, baseline.Scenario_Parameter)
+        schema_update(schema, "Scenario_Parameter", scenarioParams)
 
     except (ValueError, ValidationError) as e:
         communityLog.error(
@@ -465,5 +465,5 @@ def communityLoadSchema(schema: Parameters, scenario_id: int = 0):
         if p in paramConvert.keys()
     }
     for parameter, value in validParams.items():
-        key, formatFunc = paramConvert[parameter]
-        update_param_from_schema(key, formatFunc(value), scenario_id)
+        key, format_func = paramConvert[parameter]
+        update_param_from_schema(key, format_func(value), scenario_id)

@@ -11,16 +11,16 @@ import streamlit as st
 from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import (
-    ageDisplay,
+    age_display,
     param_error,
-    schemaRemoveBaseline,
-    schemaUpdate,
+    schema_remove_baseline,
+    schema_update,
 )
 from ClientResources.ModelSchema import (
     Parameters,
-    ageScenarioParameters,
-    dashboardParameters,
-    scenarioParameters,
+    AllAgesParameters,
+    DashboardParameters,
+    GeneralParameters,
 )
 from ClientResources.ParameterFunctions import (
     dynamic_scale_change,
@@ -223,7 +223,7 @@ defined above.
                             "Age Group",
                             required=True,
                             options=AGE_GROUP_KEYS,
-                            format_func=ageDisplay,
+                            format_func=age_display,
                             help="""
 An age group that will have a specific social distancing compliance
 probability defined for it, overriding the base probability.
@@ -1277,7 +1277,7 @@ def npiSaveSchema(
             raise ValueError("schema should be a Parameters object")
 
         # Initialising Scenario Parameters
-        scenarioParams = scenarioParameters()
+        scenarioParams = GeneralParameters()
 
         # Social Distancing
         # TODO: Pandemic alert might be necessary for SD to have an effect
@@ -1287,16 +1287,16 @@ def npiSaveSchema(
         socialDistanceToggle = id_get("socialDistancingToggle", id, False)
         globalCompliance = id_get("socialDistancingCompliance", id, 0.9)
 
-        dashboardParams = dashboardParameters()
+        dashboardParams = DashboardParameters()
         if includeDashboard:
             dashboardParams.enable_social_distancing = socialDistanceToggle
             if id > 0 and baseline is not None:
-                schemaRemoveBaseline(dashboardParams, baseline.Dashboard_Parameter)
-            schemaUpdate(schema, "Dashboard_Parameter", dashboardParams)
+                schema_remove_baseline(dashboardParams, baseline.Dashboard_Parameter)
+            schema_update(schema, "Dashboard_Parameter", dashboardParams)
         if socialDistanceToggle:
             scenarioParams.social_distance_compliance = globalCompliance
         if advanced:
-            ageScenarioParams = ageScenarioParameters()
+            ageScenarioParams = AllAgesParameters()
             if socialDistanceToggle:
                 ageScenarioParams.social_distance = globalCompliance
                 distanceAgeForm = id_get(
@@ -1327,10 +1327,10 @@ def npiSaveSchema(
                 ageScenarioParams.social_distance = 0.0
             # Save age-specific parameters
             if id > 0 and baseline is not None:
-                schemaRemoveBaseline(
+                schema_remove_baseline(
                     ageScenarioParams, baseline.Scenario_ParameterWithAgePrefix
                 )
-            schemaUpdate(schema, "Scenario_ParameterWithAgePrefix", ageScenarioParams)
+            schema_update(schema, "Scenario_ParameterWithAgePrefix", ageScenarioParams)
 
             # Miscellaneous advanced trigger parameters
             scenarioParams.class_dismissal = id_get("classDismissal", id, False)
@@ -1451,10 +1451,10 @@ def npiSaveSchema(
         # Save the updated parameters, removing default baseline values
         distanceTableParams = {f"{age}_social_distance" for age in AGE_GROUP_KEYS}
         if id > 0 and baseline is not None:
-            schemaRemoveBaseline(
+            schema_remove_baseline(
                 scenarioParams, baseline.Scenario_Parameter, ignore=distanceTableParams
             )
-        schemaUpdate(schema, "Scenario_Parameter", scenarioParams)
+        schema_update(schema, "Scenario_Parameter", scenarioParams)
     except (ValueError, ValidationError) as e:
         npiLog.error(
             (

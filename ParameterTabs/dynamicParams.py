@@ -11,7 +11,7 @@ import streamlit as st
 from pydantic import ValidationError
 
 from ClientResources.InterfaceFunctions import param_error
-from ClientResources.ModelSchema import Parameters, dynamicIntervention
+from ClientResources.ModelSchema import Parameters, DynamicIntervention
 from ClientResources.ParameterFunctions import (
     has_duplicates,
     id_get,
@@ -428,7 +428,7 @@ def dynamicSaveSchema(schema: Parameters, id: int = 0):
             for time, new_value in zip(timeForm.iloc[:, 0], timeForm.iloc[:, 1]):
                 if time:
                     dynamicChanges.append(
-                        dynamicIntervention(
+                        DynamicIntervention(
                             Name=paramCast(prefix),
                             CycleOffset=(time - 1) * 2,
                             NewValue=new_value,

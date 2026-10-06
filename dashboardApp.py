@@ -10,7 +10,7 @@ from datetime import datetime
 
 import streamlit as st
 
-from ClientResources.InterfaceFunctions import timeString
+from ClientResources.InterfaceFunctions import time_string
 from ClientResources.Types import (
     R0_CALCULATION_STATUS,
     R0_CALIBRATION_STATUS,
@@ -60,7 +60,7 @@ sessionParameters = {
     "scenario_count": 0,
     "scenario_extra_params": {},
     "scenario_set_params": {},
-    "activeErrors": {0: {}},
+    "active_errors": {0: {}},
 }
 for parameter, default in sessionParameters.items():
     session[parameter] = session.get(parameter, default)
@@ -70,7 +70,7 @@ for parameter, default in sessionParameters.items():
 # TODO: See if an extra cookie package like streamlit-cookie-controller
 # can preserve parameters between refreshed pages
 
-st.logo(":material/microbiology:")
+st.logo(image=":material/microbiology:")
 
 
 # Define application pages
@@ -209,7 +209,7 @@ ensure all scenarios do not possess any errors and try again.
                 # Tell the user what's happened
                 session.simulationEndTime = datetime.now()
                 totalTime = session.simulationEndTime - session.simulationStartTime
-                formattedTime = timeString(totalTime.total_seconds())
+                formattedTime = time_string(totalTime.total_seconds())
                 st.toast(
                     f"Simulation complete! Total duration: {formattedTime}",
                     icon=":material/check_circle:",
@@ -252,13 +252,13 @@ Simulation encountered an error; see
                 r0 = calibrationData["r0"]
                 lowCI, highCI = calibrationData["interval"]
                 beta = calibrationData["beta"]
-                scenarioName = session.get("calibScenarioName")
+                scenarioName = session.get("calib_scenario_name")
                 session["r0Calibration"] = r0
                 session["r0CalibrationBeta"] = beta
 
                 # session.calculationEndTime = datetime.now()
                 # totalTime = session.calculationEndTime - session.calculationStartTime
-                # formattedTime = timeString(totalTime.total_seconds())
+                # formattedTime = time_string(totalTime.total_seconds())
 
                 st.toast(
                     f"""
@@ -321,7 +321,7 @@ Error calibrating $R_0$; see
 
                 # session.calculationEndTime = datetime.now()
                 # totalTime = session.calculationEndTime - session.calculationStartTime
-                # formattedTime = timeString(totalTime.total_seconds())
+                # formattedTime = time_string(totalTime.total_seconds())
                 st.toast(
                     f"""
     $R_0$ for {scenarioName} is {r0} with a 95% confidence interval of [{lowCI}, {highCI}]

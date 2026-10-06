@@ -93,7 +93,7 @@ st.markdown("""
     To edit the values used for these parameters, visit the
     :primary-badge[:material/variable_insert: Baseline Parameters] page.
 """)
-errors = session["activeErrors"].get(0, {})
+errors = session["active_errors"].get(0, {})
 if errors:
     st.warning("""
         There are currently errors present in the parameter values used in the

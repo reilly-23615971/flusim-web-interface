@@ -13,17 +13,17 @@ from typing import Optional
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import unique_name, validationErrorFormatting
+from ClientResources.InterfaceFunctions import unique_name, validation_error_formatting
 from ClientResources.ModelSchema import (
     Parameters,
-    commandArgument,
-    communityOverride,
-    dashboardParameters,
-    modelGuideFile,
-    overrideParams,
-    scenarioParameters,
-    simulation,
-    simulationSet,
+    CommandArgument,
+    CommunityOverride,
+    DashboardParameters,
+    ModelGuideFile,
+    OverrideParams,
+    GeneralParameters,
+    Simulation,
+    SimulationSet,
 )
 from ClientResources.ParameterFunctions import id_get, update_param_from_schema
 from ClientResources.Types import COMMUNITIES, COMMUNITY_NAMES
@@ -168,7 +168,7 @@ simulation engine settings) will be replaced with the values in the uploaded fil
 
 def create_config(
     scenario_count: int, includeDashboard: bool = False
-) -> modelGuideFile:
+) -> ModelGuideFile:
     """
     Function to generate a JSON config file using the selected parameters.
 
@@ -179,7 +179,7 @@ def create_config(
             parameters like scaling population in the generated schema.
 
     Returns:
-        modelGuideFile: A Pydantic object storing the selected parameters
+        ModelGuideFile: A Pydantic object storing the selected parameters
             in a format that can be converted into JSON easily.
     """
 
@@ -213,13 +213,13 @@ def create_config(
     # Set up engine parameters
     community = session.get("community", "newcastle")
     engineParams = Parameters(
-        Command_Argument=commandArgument(
+        Command_Argument=CommandArgument(
             n_runs=session.get("runCount", 24),
             n_cycles=session.get("cycle_count", 360) * 2,
         )
     )
     if includeDashboard:
-        dashboardParams = dashboardParameters(show_advanced_parameters=useAdvanced)
+        dashboardParams = DashboardParameters(show_advanced_parameters=useAdvanced)
         if useAdvanced:
             dashboardParams.scaling_population = session.get(
                 "scalingPopulation", COMMUNITIES[community].population
@@ -228,7 +228,7 @@ def create_config(
     if useAdvanced:
         startDay = session.get("startDay", "Random")
         if startDay != "Random":
-            engineParams.Scenario_Parameter = scenarioParameters(
+            engineParams.Scenario_Parameter = GeneralParameters(
                 start_day_of_week=(
                     "Sunday",
                     "Monday",
@@ -242,7 +242,7 @@ def create_config(
     sessionID = int(datetime.now().timestamp())
 
     # Create config object
-    return modelGuideFile(
+    return ModelGuideFile(
         name="Flusim Web Dashboard Simulation",
         description=str(sessionID),
         output_folder="./results/",
@@ -250,23 +250,23 @@ def create_config(
         community_used=[community],
         # Community overrides are global parameters e.g. number of runs
         community_overrides=[
-            communityOverride(
+            CommunityOverride(
                 name=session.get("community", "newcastle"),
                 parameters=engineParams,
             )
         ],
         # Shared overrides are baseline parameters
-        shared_overrides=overrideParams(parameters=scenarioParams[0]),
+        shared_overrides=OverrideParams(parameters=scenarioParams[0]),
         # TODO: Omit override_setting from scenarios with identical params to baseline
         simulation_sets=[
-            simulationSet(
+            SimulationSet(
                 name="Dashboard Simulation Set",
                 version=sessionID,
-                simulations=[simulation(name="Baseline")]
+                simulations=[Simulation(name="Baseline")]
                 + [
-                    simulation(
+                    Simulation(
                         name=session[f"scenarioName{i}"],
-                        override_setting=overrideParams(parameters=scenarioParams[i]),
+                        override_setting=OverrideParams(parameters=scenarioParams[i]),
                     )
                     for i in range(1, scenario_count)
                 ],
@@ -292,11 +292,11 @@ def load_config(file: BytesIO | str, loud: bool = True) -> bool:
     """
     try:
         if isinstance(file, str):
-            schema = modelGuideFile.model_validate_json(file)
+            schema = ModelGuideFile.model_validate_json(file)
         else:
-            schema = modelGuideFile.model_validate_json(file.read())
+            schema = ModelGuideFile.model_validate_json(file.read())
     except ValidationError as e:
-        validationErrorFormatting(e)
+        validation_error_formatting(e)
         return True
 
     # Save a backup of st.session_state to ensure changes aren't left unfinished
@@ -317,9 +317,9 @@ def load_config(file: BytesIO | str, loud: bool = True) -> bool:
             raise AssertionError(f"""
                 The selected parameter schema uses the community
                 "{schema.community_used[0]}". The dashboard currently only
-                supports `newcastle` and `cairns` as communities; please
-                change the value in the JSON file's `community_used` field to
-                one of these.
+                supports `newcastle`, `cairns` and `albany` as communities;
+                please change the value in the JSON file's `community_used`
+                field to one of these.
             """)
         if schema.community_overrides:
             if len(schema.community_overrides) > 1:
@@ -572,16 +572,16 @@ def addScenario(openTab: Optional[str] = None):
     session["scenario_count"] = newCount
     session["scenario_set_params"][newCount] = set()
     session["scenario_extra_params"][newCount] = set()
-    session["activeErrors"][newCount] = {}
+    session["active_errors"][newCount] = {}
 
     # Ensure new name is unique
-    newName = unique_name(
+    new_name = unique_name(
         "New Scenario",
         {session.get(f"scenarioName{i}", "New Scenario") for i in range(1, newCount)},
     )
-    session[f"scenarioName{newCount}"] = newName
+    session[f"scenarioName{newCount}"] = new_name
     if openTab is not None:
-        session[openTab] = f"**#{newCount}** {newName}"
+        session[openTab] = f"**#{newCount}** {new_name}"
         session.tabReloader = not session.get("tabReloader", False)
         st.toast("Scenario added!", icon=":material/add:")
 
@@ -619,7 +619,7 @@ def deleteScenario(scenario_id: int, openTab: Optional[str] = None):
                 session[f"{param}{s}{extra}"] = new_value
         session["scenario_set_params"][s] = savedParams[s + 1]
         session["scenario_extra_params"][s] = savedExtraParams[s + 1]
-        session["activeErrors"][s] = session["activeErrors"][s + 1]
+        session["active_errors"][s] = session["active_errors"][s + 1]
 
     # Delete duplicated end scenario params
     for param in savedParams[scenario_count] | {"scenarioName"}:
@@ -628,7 +628,7 @@ def deleteScenario(scenario_id: int, openTab: Optional[str] = None):
         del session[f"{param}{scenario_count}{extra}"]
     del session["scenario_set_params"][scenario_count]
     del session["scenario_extra_params"][scenario_count]
-    del session["activeErrors"][scenario_count]
+    del session["active_errors"][scenario_count]
 
     # Update selected scenarios for R0 calculation
     for widget in {"rCalibrateScenario", "calib_saved_id", "rCalculateScenario"}:
@@ -670,6 +670,6 @@ def resetScenario(scenario_id: int, loud: bool = True):
         del session[f"{param}{scenario_id}{extra}"]
     session["scenario_set_params"][scenario_id] = set()
     session["scenario_extra_params"][scenario_id] = set()
-    session["activeErrors"][scenario_id] = session["activeErrors"][0]
+    session["active_errors"][scenario_id] = session["active_errors"][0]
     if loud:
         st.toast("Scenario reset!", icon=":material/settings_backup_restore:")
