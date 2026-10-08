@@ -295,7 +295,7 @@ def load_config(file: BytesIO | str, loud: bool = True) -> bool:
         return True
 
     # Save a backup of st.session_state to ensure changes aren't left unfinished
-    backupSession = deepcopy(dict(session))
+    backup_session = deepcopy(dict(session))
 
     # TODO: More error checks for parameter values allowed by the
     # simulation engine but not the dashboard
@@ -321,16 +321,18 @@ The selected parameter schema includes multiple `community_overrides` sections.
 The dashboard currently only supports simulating a single community at a time;
 please remove any excess community override sections from the JSON file.
                 """)
-            engineSettings = schema.community_overrides[0]
-            session.community = engineSettings.name
+            engine_settings = schema.community_overrides[0]
+            session.community = engine_settings.name
 
-            dashboardSettings = engineSettings.parameters.Dashboard_Parameter
-            if dashboardSettings is not None:
-                session.show_advanced = bool(dashboardSettings.show_advanced_parameters)
-                if dashboardSettings.scaling_population is not None:
-                    session.scaling_population = dashboardSettings.scaling_population
+            dashboard_settings = engine_settings.parameters.Dashboard_Parameter
+            if dashboard_settings is not None:
+                session.show_advanced = bool(
+                    dashboard_settings.show_advanced_parameters
+                )
+                if dashboard_settings.scaling_population is not None:
+                    session.scaling_population = dashboard_settings.scaling_population
 
-            engine_params = engineSettings.parameters.Scenario_Parameter
+            engine_params = engine_settings.parameters.Scenario_Parameter
             if engine_params is not None:
                 session.start_day = (
                     (
@@ -346,25 +348,25 @@ please remove any excess community override sections from the JSON file.
                     else "Random"
                 )
 
-            commandArgs = engineSettings.parameters.Command_Argument
-            if commandArgs is not None:
+            command_args = engine_settings.parameters.Command_Argument
+            if command_args is not None:
                 # TODO: Make sure these don't mess with the sliders when None
-                session.run_count = commandArgs.n_runs
+                session.run_count = command_args.n_runs
                 session.cycle_count = (
-                    commandArgs.n_cycles // 2
-                    if commandArgs.n_cycles is not None
+                    command_args.n_cycles // 2
+                    if command_args.n_cycles is not None
                     else None
                 )
 
         # Baseline parameters
         # TODO: Improve robustness of LoadSchema functions with invalid data
         if schema.shared_overrides is not None:
-            baselineParams = schema.shared_overrides.parameters
-            disease_load_schema(baselineParams, 0)
-            community_load_schema(baselineParams, 0)
-            vaccine_load_schema(baselineParams, 0)
-            npi_load_schema(baselineParams, 0)
-            dynamic_load_schema(baselineParams, 0)
+            baseline_params = schema.shared_overrides.parameters
+            disease_load_schema(baseline_params, 0)
+            community_load_schema(baseline_params, 0)
+            vaccine_load_schema(baseline_params, 0)
+            npi_load_schema(baseline_params, 0)
+            dynamic_load_schema(baseline_params, 0)
 
         # Scenario parameters
         if len(schema.simulation_sets) > 1:
@@ -374,16 +376,16 @@ Parameter files for the dashboard put all scenarios in a single set, such that
 there should be only one `simulation_sets` object. Please modify the JSON file
 so that there is only one `simulation_sets` object.
             """)
-        simulationList = schema.simulation_sets[0].simulations
+        simulation_list = schema.simulation_sets[0].simulations
         scenario_count = session.get("scenario_count", 0)
         # Delete current scenarios in order to start fresh
         while scenario_count > 0:
-            deleteScenario(scenario_count)
+            delete_scenario(scenario_count)
             scenario_count = session.get("scenario_count", 0)
         # Populate new scenarios
-        for scenario_id, scenario in enumerate(simulationList):
+        for scenario_id, scenario in enumerate(simulation_list):
             if scenario_id != 0:
-                addScenario()
+                add_scenario()
                 session.scenario_names[scenario_id] = scenario.name
                 if scenario.override_setting:
                     scenario_params = scenario.override_setting.parameters
@@ -394,17 +396,17 @@ so that there is only one `simulation_sets` object.
                     dynamic_load_schema(scenario_params, scenario_id)
         # Load tabs briefly to initialise errors
         use_advanced = session.get("show_advanced", False)
-        placeholderContainer = st.empty()
-        for testID in range(scenario_count + 1):
+        placeholder_container = st.empty()
+        for test_id in range(scenario_count + 1):
             # TODO: Find a less hacky way to initialise errors
-            with placeholderContainer.popover(
+            with placeholder_container.popover(
                 "Loading parameters...", icon="spinner", disabled=True
             ):
-                build_disease_tab(testID, use_advanced)
-                build_community_tab(testID, use_advanced)
-                build_vaccination_tab(testID, use_advanced)
-                build_npi_tab(testID, use_advanced)
-                build_dynamic_tab(testID)
+                build_disease_tab(test_id, use_advanced)
+                build_community_tab(test_id, use_advanced)
+                build_vaccination_tab(test_id, use_advanced)
+                build_npi_tab(test_id, use_advanced)
+                build_dynamic_tab(test_id)
 
     except AssertionError as e:
         # TODO: Give the errors icons and titles once updated to Streamlit 1.57
@@ -414,7 +416,7 @@ so that there is only one `simulation_sets` object.
         # TODO: Make sure this can't overrule simulation results or other changes
         # that may occur between starting the upload process and an error occurring
         session.clear()
-        session.update(backupSession)
+        session.update(backup_session)
         return True
     if loud:
         st.toast(
@@ -426,8 +428,10 @@ so that there is only one `simulation_sets` object.
     return False
 
 
-def createTemplate(
-    scenario_id: int, includeInterventions: bool = True, include_dashboard: bool = False
+def create_template(
+    scenario_id: int,
+    include_interventions: bool = True,
+    include_dashboard: bool = False,
 ) -> Parameters:
     """
     Function to generate a JSON config object from a single scenario's parameters.
@@ -435,7 +439,7 @@ def createTemplate(
     Parameters:
         scenario_id (int): The ID representing the scenario to make a template from.
 
-        includeInterventions (bool): Set to True to not include any vaccination or
+        include_interventions (bool): Set to True to not include any vaccination or
             NPI parameters in the template, such as when performing R0 analysis.
 
         include_dashboard (bool): Set to `True` to include dashboard-exclusive
@@ -451,7 +455,7 @@ def createTemplate(
     use_advanced = session.get("show_advanced", False)
     template = Parameters()
     baseline = (
-        createTemplate(0, includeInterventions, include_dashboard)
+        create_template(0, include_interventions, include_dashboard)
         if scenario_id > 0
         else None
     )
@@ -460,7 +464,7 @@ def createTemplate(
         template, scenario_id, use_advanced, baseline, include_dashboard
     )
     community_save_schema(template, scenario_id, use_advanced, baseline)
-    if includeInterventions:
+    if include_interventions:
         vaccine_save_schema(
             template, scenario_id, use_advanced, baseline, include_dashboard
         )
@@ -472,8 +476,8 @@ def createTemplate(
     return template
 
 
-def loadTemplate(
-    scenario_id: int, template: Parameters | str, templateName: Optional[str] = None
+def load_template(
+    scenario_id: int, template: Parameters | str, template_name: Optional[str] = None
 ):
     """
     Function to set a single scenario's parameters to match a given template.
@@ -485,41 +489,41 @@ def loadTemplate(
             to initialise in the selected scenario, or the path to the file
             containing said parameters.
 
-        templateName (str, optional): The name of the template being applied.
+        template_name (str, optional): The name of the template being applied.
     """
     if not isinstance(template, Parameters):
         try:
             with open(template, "r") as file:
-                templateData = Parameters.model_validate_json(file.read())
+                template_data = Parameters.model_validate_json(file.read())
         except FileNotFoundError as e:
-            download_log.error(f"[loadTemplate] Template file not found: {e}")
+            download_log.error(f"[load_template] Template file not found: {e}")
             raise e
         except ValidationError as e:
             download_log.error(
-                f"[loadTemplate] Template file had validation errors: {e}"
+                f"[load_template] Template file had validation errors: {e}"
             )
             raise e
     else:
-        templateData = template
+        template_data = template
 
     # Save a backup of st.session_state to ensure changes aren't left unfinished
-    backupSession = deepcopy(dict(session))
+    backup_session = deepcopy(dict(session))
 
     try:
         # Load the parameters
         if scenario_id != 0:
-            resetScenario(scenario_id, loud=False)
-        disease_load_schema(templateData, scenario_id)
-        community_load_schema(templateData, scenario_id)
-        vaccine_load_schema(templateData, scenario_id)
-        npi_load_schema(templateData, scenario_id)
-        dynamic_load_schema(templateData, scenario_id)
+            reset_scenario(scenario_id, loud=False)
+        disease_load_schema(template_data, scenario_id)
+        community_load_schema(template_data, scenario_id)
+        vaccine_load_schema(template_data, scenario_id)
+        npi_load_schema(template_data, scenario_id)
+        dynamic_load_schema(template_data, scenario_id)
 
         # Load tabs briefly to initialise errors
         # TODO: Find a less hacky way to initialise errors
         use_advanced = session.get("show_advanced", False)
-        placeholderContainer = st.empty()
-        with placeholderContainer.popover(
+        placeholder_container = st.empty()
+        with placeholder_container.popover(
             "Loading parameters...", icon="spinner", disabled=True
         ):
             build_disease_tab(scenario_id, use_advanced)
@@ -528,12 +532,12 @@ def loadTemplate(
             build_npi_tab(scenario_id, use_advanced)
             build_dynamic_tab(scenario_id)
             if scenario_id == 0:
-                for testID in range(1, session.get("scenario_count", 0) + 1):
-                    build_disease_tab(testID, use_advanced)
-                    build_community_tab(testID, use_advanced)
-                    build_vaccination_tab(testID, use_advanced)
-                    build_npi_tab(testID, use_advanced)
-                    build_dynamic_tab(testID)
+                for test_id in range(1, session.get("scenario_count", 0) + 1):
+                    build_disease_tab(test_id, use_advanced)
+                    build_community_tab(test_id, use_advanced)
+                    build_vaccination_tab(test_id, use_advanced)
+                    build_npi_tab(test_id, use_advanced)
+                    build_dynamic_tab(test_id)
 
     except AssertionError as e:
         st.error(body=e, icon=":material/error:")
@@ -542,7 +546,7 @@ def loadTemplate(
         # TODO: Make sure this can't overrule simulation results or other changes
         # that may occur between starting the upload process and an error occurring
         session.clear()
-        session.update(backupSession)
+        session.update(backup_session)
     else:
         st.toast(
             body="Template successfully loaded!",
@@ -553,29 +557,29 @@ def loadTemplate(
 
 
 # Scenario management functions
-def addScenario(openTab: Optional[str] = None):
+def add_scenario(open_tab: Optional[str] = None):
     """
     Simple function to initialise an empty scenario.
 
     Parameters:
-        openTab (str, optional): The scenario's tab, to be opened immediately.
+        open_tab (str, optional): The scenario's tab, to be opened immediately.
     """
-    newCount = session["scenario_count"] + 1
-    session["scenario_count"] = newCount
-    session["scenario_set_params"][newCount] = set()
-    session["scenario_extra_params"][newCount] = set()
-    session["active_errors"][newCount] = {}
+    updated_count = session["scenario_count"] + 1
+    session["scenario_count"] = updated_count
+    session["scenario_set_params"][updated_count] = set()
+    session["scenario_extra_params"][updated_count] = set()
+    session["active_errors"][updated_count] = {}
 
     # Ensure new name is unique
     new_name = unique_name("New Scenario", set(session.scenario_names))
     session.scenario_names.append(new_name)
-    if openTab is not None:
-        session[openTab] = f"**#{newCount}** {new_name}"
-        session.tabReloader = not session.get("tabReloader", False)
+    if open_tab is not None:
+        session[open_tab] = f"**#{updated_count}** {new_name}"
+        session.tab_reloader = not session.get("tab_reloader", False)
         st.toast("Scenario added!", icon=":material/add:")
 
 
-def deleteScenario(scenario_id: int, openTab: Optional[str] = None):
+def delete_scenario(scenario_id: int, open_tab: Optional[str] = None):
     """
     Function that removes a scenario from the dashboard, shifting up other
     scenario values if necessary.
@@ -583,38 +587,38 @@ def deleteScenario(scenario_id: int, openTab: Optional[str] = None):
     Parameters:
         scenario_id (int): The ID representing the scenario to be deleted.
 
-        openTab (str, optional): The scenario's tab, to open the next scenario.
+        open_tab (str, optional): The scenario's tab, to open the next scenario.
     """
     # Get set of saved params
     scenario_count = session.get("scenario_count", 0)
-    savedParams = session.scenario_set_params
-    savedExtraParams = session.scenario_extra_params
+    saved_params = session.scenario_set_params
+    saved_extra_params = session.scenario_extra_params
 
     # Shift existing values down
     for s in range(scenario_id, scenario_count):
-        paramsToConsider = savedParams[s] | savedParams[s + 1]
-        for param in paramsToConsider:
+        relevant_params = saved_params[s] | saved_params[s + 1]
+        for param in relevant_params:
             new_value = id_get(param, s + 1, None)
             if new_value is None:
                 del session[f"{param}{s}"]
             else:
                 session[f"{param}{s}"] = new_value
-        extraParamsToConsider = savedExtraParams[s] | savedExtraParams[s + 1]
-        for param, extra in extraParamsToConsider:
+        relevant_extra_params = saved_extra_params[s] | saved_extra_params[s + 1]
+        for param, extra in relevant_extra_params:
             new_value = id_get(param, s + 1, None, extra=extra)
             if new_value is None:
                 del session[f"{param}{s}{extra}"]
             else:
                 session[f"{param}{s}{extra}"] = new_value
-        session.scenario_set_params[s] = savedParams[s + 1]
-        session.scenario_extra_params[s] = savedExtraParams[s + 1]
+        session.scenario_set_params[s] = saved_params[s + 1]
+        session.scenario_extra_params[s] = saved_extra_params[s + 1]
         session.active_errors[s] = session.active_errors[s + 1]
         session.scenario_names[s] = session.scenario_names[s + 1]
 
     # Delete duplicated end scenario params
-    for param in savedParams[scenario_count]:
+    for param in saved_params[scenario_count]:
         del session[f"{param}{scenario_count}"]
-    for param, extra in savedExtraParams[scenario_count]:
+    for param, extra in saved_extra_params[scenario_count]:
         del session[f"{param}{scenario_count}{extra}"]
     del session.scenario_set_params[scenario_count]
     del session.scenario_extra_params[scenario_count]
@@ -622,11 +626,11 @@ def deleteScenario(scenario_id: int, openTab: Optional[str] = None):
     session.scenario_names.pop()
 
     # Update selected scenarios for R0 calculation
-    for widget in {"rCalibrateScenario", "calib_saved_id", "rCalculateScenario"}:
-        currentIndex = session.get(widget)
-        if currentIndex == scenario_id:
+    for widget in {"r_calibrate_scenario", "calib_saved_id", "r_calculate_scenario"}:
+        current_index = session.get(widget)
+        if current_index == scenario_id:
             del session[widget]
-        elif currentIndex is not None and currentIndex > scenario_id:
+        elif current_index is not None and current_index > scenario_id:
             session[widget] -= 1
 
     # Update scenario count
@@ -635,17 +639,19 @@ def deleteScenario(scenario_id: int, openTab: Optional[str] = None):
     # Open the scenario taking the deleted one's place
     # TODO: If programmatic anchor tags are possible (append to URL?),
     # move user to the top of the tab container
-    if openTab is not None:
+    if open_tab is not None:
         if scenario_count > 1:
-            openCount = (
+            open_count = (
                 scenario_id if scenario_id < scenario_count else scenario_count - 1
             )
-            session[openTab] = f"**#{openCount}** {session.scenario_names[openCount]}"
-            session.tabReloader = not session.get("tabReloader", False)
+            session[open_tab] = (
+                f"**#{open_count}** {session.scenario_names[open_count]}"
+            )
+            session.tab_reloader = not session.get("tab_reloader", False)
         st.toast("Scenario removed!", icon=":material/delete:")
 
 
-def resetScenario(scenario_id: int, loud: bool = True):
+def reset_scenario(scenario_id: int, loud: bool = True):
     """
     Function that resets all parameters in a scenario to their baseline values.
 

@@ -8,9 +8,9 @@ import logging
 import streamlit as st
 
 from ClientResources.DownloadFunctions import (
-    createTemplate,
-    loadTemplate,
-    resetScenario,
+    create_template,
+    load_template,
+    reset_scenario,
 )
 from ClientResources.Constants import TEMPLATES
 
@@ -22,7 +22,7 @@ session = st.session_state
 
 
 @st.dialog("Load Scenario as Template", width="large", icon=":material/list_alt_add:")
-def defaultTemplateButton(scenario_id: int, templatePath: str, templateName: str):
+def defaultTemplateButton(scenario_id: int, templatePath: str, template_name: str):
     """
     Dialog wrapper to confirm replacing scenario parameters with template values.
 
@@ -32,7 +32,7 @@ def defaultTemplateButton(scenario_id: int, templatePath: str, templateName: str
         templatePath (str): The path to the JSON file holding the template
             parameter values.
 
-        templateName (str): The name of the template.
+        template_name (str): The name of the template.
     """
     # Disable button if it's taking a while to update parameters
     templatePending = bool(session.get("confirmTemplateButton"))
@@ -48,7 +48,7 @@ change the name of the scenario.
                 if scenario_id == 0
                 else f'scenario named "{session.scenario_names[scenario_id]}"'
             ),
-            template=templateName,
+            template=template_name,
         )
     )
     if scenario_id == 0 and session.get("scenario_count"):
@@ -66,7 +66,7 @@ change the name of the scenario.
         disabled=templatePending,
     )
     if templatePending:
-        loadTemplate(scenario_id, templatePath)
+        load_template(scenario_id, templatePath)
 
 
 @st.dialog("Load Scenario as Template", width="large", icon=":material/list_alt_add:")
@@ -83,7 +83,7 @@ def scenarioTemplateButton(currentID: int, newID: int):
     if newID == 0:
         templateLog.error("""
 [scenarioTemplateButton] Tried to load baseline scenario as template;
-use resetScenario for that!
+use reset_scenario for that!
         """)
         st.rerun()
     if currentID == newID:
@@ -118,8 +118,8 @@ Note that this will not change the names of either scenario.
         icon="spinner" if templatePending else None,
         disabled=templatePending,
     ):
-        template = createTemplate(newID, include_dashboard=True)
-        loadTemplate(currentID, template)
+        template = create_template(newID, include_dashboard=True)
+        load_template(currentID, template)
 
 
 @st.dialog(
@@ -155,7 +155,7 @@ scenario? Note that this will not change the scenario's name.
         icon="spinner" if templatePending else None,
         disabled=templatePending,
     ):
-        resetScenario(scenario_id)
+        reset_scenario(scenario_id)
         st.rerun()
 
 
@@ -188,12 +188,12 @@ disease or situation.
     )
     # TODO: Load parameter defaults directly from flu template
     # rather than having them be hardcoded
-    for templateName, (icon, templatePath, description) in TEMPLATES.items():
+    for template_name, (icon, templatePath, description) in TEMPLATES.items():
         st.button(
-            templateName,
+            template_name,
             icon=f":material/{icon}:",
             on_click=defaultTemplateButton,
-            args=[scenario_id, templatePath, templateName],
+            args=[scenario_id, templatePath, template_name],
             help=description,
         )
 

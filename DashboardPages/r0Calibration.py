@@ -11,7 +11,7 @@ import pandas as pd
 import streamlit as st
 
 from ClientResources.Constants import USE_PRESET_PARAMS
-from ClientResources.DownloadFunctions import createTemplate
+from ClientResources.DownloadFunctions import create_template
 from ClientResources.InterfaceFunctions import error_checker
 from ClientResources.ModelSchema import CommunityOverride, OverrideTemplate, Parameters
 from ClientResources.ParameterFunctions import community_change, load_key, save_key
@@ -43,7 +43,7 @@ def calibrateR0Button() -> None:
     calibPending = bool(session.get("confirmCalibrateButton"))
 
     # Get scenario to calculate
-    scenario_id = session.get("rCalibrateScenario", 0)
+    scenario_id = session.get("r_calibrate_scenario", 0)
     scenario_name = session.scenario_names[scenario_id]
     targetR0 = session.get("targetR", 1.5)
 
@@ -102,8 +102,8 @@ by ±0.02.
                 with open(f"ClientResources/Templates/{filename}", "r") as f:
                     params = Parameters.model_validate_json(f.read())
             else:
-                params = createTemplate(
-                    scenario_id, includeInterventions=False, include_dashboard=False
+                params = create_template(
+                    scenario_id, include_interventions=False, include_dashboard=False
                 )
             schema = OverrideTemplate(
                 name=community, description=str(targetR0), parameters=params
@@ -214,7 +214,7 @@ def calculateR0Button() -> None:
     calcPending = bool(session.get("confirmCalculateButton"))
 
     # Get scenario to calculate
-    scenario_id = session.get("rCalculateScenario", 0)
+    scenario_id = session.get("r_calculate_scenario", 0)
     scenario_name = session.scenario_names[scenario_id]
 
     # Display any errors
@@ -262,8 +262,8 @@ def calculateR0Button() -> None:
                 with open(f"ClientResources/Templates/{filename}", "r") as f:
                     params = Parameters.model_validate_json(f.read())
             else:
-                params = createTemplate(
-                    scenario_id, includeInterventions=False, include_dashboard=False
+                params = create_template(
+                    scenario_id, include_interventions=False, include_dashboard=False
                 )
             schema = CommunityOverride(
                 name=community, parameters=params
@@ -472,15 +472,15 @@ simulate a disease with this basic reproduction number.
     """,
 )
 
-load_key("rCalibrateScenario", default=0)
+load_key("r_calibrate_scenario", default=0)
 centerCalib.selectbox(
     "Scenario to Calibrate",
     range(len(scenario_names)),
     index=0,
     format_func=lambda x: scenario_names[x],
-    key="_rCalibrateScenario",
+    key="_r_calibrate_scenario",
     on_change=save_key,
-    args=["rCalibrateScenario"],
+    args=["r_calibrate_scenario"],
     help="""
 The scenario that the transmission parameters will be calculated for.
 "Baseline Scenario" uses the parameters defined at the
@@ -585,15 +585,15 @@ st.markdown("""
 
 leftCalc, rightCalc = st.columns(2, vertical_alignment="center")
 
-load_key("rCalculateScenario", default=0)
+load_key("r_calculate_scenario", default=0)
 leftCalc.selectbox(
     "Scenario to Calculate",
     range(len(scenario_names)),
     index=0,
     format_func=lambda x: scenario_names[x],
-    key="_rCalculateScenario",
+    key="_r_calculate_scenario",
     on_change=save_key,
-    args=["rCalculateScenario"],
+    args=["r_calculate_scenario"],
     help="""
 The scenario that the basic reproduction number will be
 calculated for. "Baseline Scenario" uses the parameters defined at the
