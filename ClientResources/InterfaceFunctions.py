@@ -342,45 +342,53 @@ def save_name(
     key: str,
     scenario_id: int,
     error_container,
-    containers: set[str] = set(),
     special_containers: dict[str, str] = {},
 ):
     """
-    Wrapper for `container_save` that stops empty or duplicate names being saved.
+    Function to save scenario names into a list while stopping
+        empty or duplicate names being saved.
 
     Parameters:
         key (str): The string used to identify the name-setting widget.
 
         scenario_id (int): The integer representing the scenario the widget
-            is naming.
+            is naming. Should not be 0 (the baseline scenario with a fixed name).
 
         error_container: The container in which to display the error message.
-
-        containers (set of str): String used to identify each container to open.
 
         special_containers (dict of str): String used to identify containers
             that must be set to specific values (i.e. scenario tabs whose
             names change). Including `{id}` or `{value}` in one of the values
             for these will replace them with the value of `scenario_id` or the
             value of the widget that is being saved, respectively.
+
+    Raises:
+        ValueError: If an ID less than 1 is passed.
     """
+    if scenario_id <= 0:
+        raise ValueError("id for save_name must be greater than 0")
     new_name = session.get(f"_{key}{scenario_id}")
-    scenario_count = session.scenario_count
-    current_names = {
-        session.get(f"{key}{i}")
-        for i in range(1, scenario_count + 1)
-        if i != scenario_id
-    }
+    current_names = session.scenario_names
     if new_name == "":
+        # TODO: Can be replaced with required keyword in Streamlit 1.65
         error_container.error(
             "Please enter a name.",
             icon=":material/remove_selection:",
         )
-    elif new_name in current_names:
+    elif new_name == current_names[0]:
         error_container.error(
-            """
-            The selected name is already the name of a different scenario.
-            Please enter a different name.
+            f"""
+The name "{new_name}" is reserved for the scenario described at the
+:grey-badge[:material/variable_insert: Baseline Parameters] page. Please enter
+a different name.
+            """,
+            icon=":material/tab_close_inactive:",
+        )
+    elif new_name in current_names and new_name != current_names[scenario_id]:
+        error_container.error(
+            f"""
+"{new_name}" is already the name of a different scenario. Please enter a
+different name.
             """,
             icon=":material/tab_close_inactive:",
         )
@@ -388,7 +396,24 @@ def save_name(
         # Update saved names for r0
         if session.get("calib_saved_id") == scenario_id:
             session["calib_scenario_name"] = new_name
-        container_save(key, scenario_id, containers, special_containers)
+
+        session.scenario_names[scenario_id] = new_name
+        for container, value in special_containers.items():
+            session[container] = value.format(id=scenario_id, value=new_name)
+
+
+def load_name(key: str, scenario_id: int = -1):
+    """
+    Function to update scenario names with permanent session state variables.
+
+    Parameters:
+        key (str): The string used to identify the name-setting widget.
+
+        scenario_id (int): The integer representing the scenario the widget
+            is part of.
+    """
+    key_string = f"{key}{scenario_id if scenario_id >= 0 else ""}"
+    session[f"_{key_string}"] = session.scenario_names[scenario_id]
 
 
 def unique_name(current_name: str, names: set[str]):

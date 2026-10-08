@@ -107,9 +107,9 @@ included in this file.
     ) as pop:
         if pop.open:
             st.markdown("""
-                Would you like to download the currently selected parameter settings
-                as a JSON file? This will allow you to load the settings onto the
-                dashboard at a later date instead of manually setting them again.
+Would you like to download the currently selected parameter settings as a JSON
+file? This will allow you to load the settings onto the dashboard at a later
+date instead of manually setting them again.
             """)
             st.download_button(
                 "Confirm",
@@ -132,18 +132,17 @@ def parameter_upload():
     uploaded_file = session.get("parameter_upload")
     st.info(
         body="""
-            Loading parameters from a file wil overwrite any parameters that have
-            been manually set using the dashboard, including scenario parameters
-            and simulation engine settings. Are you sure you would like to upload
-            parameters from a file?
+Loading parameters from a file wil overwrite any parameters that have been
+manually set using the dashboard, including scenario parameters and simulation
+engine settings. Are you sure you would like to upload parameters from a file?
         """,
         icon=":material/database_off:",
     )
     if session.simulation_in_progress:
         st.warning(
             """
-            Uploading new parameters from a file will not affect the simulation
-            that is currently running.
+Uploading new parameters from a file will not affect the simulation that is
+currently running.
         """,
             icon=":material/av_timer:",
         )
@@ -261,7 +260,7 @@ def create_config(
                 simulations=[Simulation(name="Baseline")]
                 + [
                     Simulation(
-                        name=session[f"scenarioName{i}"],
+                        name=session.scenario_names[i],
                         override_setting=OverrideParams(parameters=scenario_params[i]),
                     )
                     for i in range(1, scenario_count)
@@ -304,26 +303,23 @@ def load_config(file: BytesIO | str, loud: bool = True) -> bool:
         # Simulation engine settings
         if len(schema.community_used) > 1:
             raise AssertionError("""
-                The selected parameter schema includes multiple
-                communities in `community_used`. The dashboard currently only
-                supports simulating a single community at a time; please
-                remove any excess communities from the JSON file.
+The selected parameter schema includes multiple communities in `community_used`.
+The dashboard currently only supports simulating a single community at a time;
+please remove any excess communities from the JSON file.
             """)
         if schema.community_used[0] not in COMMUNITY_NAMES:
             raise AssertionError(f"""
-                The selected parameter schema uses the community
-                "{schema.community_used[0]}". The dashboard currently only
-                supports `newcastle`, `cairns` and `albany` as communities;
-                please change the value in the JSON file's `community_used`
-                field to one of these.
+The selected parameter schema uses the community "{schema.community_used[0]}".
+The dashboard currently only supports `newcastle`, `cairns` and `albany` as
+communities; please change the value in the JSON file's `community_used` field
+to one of these.
             """)
         if schema.community_overrides:
             if len(schema.community_overrides) > 1:
                 raise AssertionError("""
-                    The selected parameter schema includes multiple
-                    `community_overrides` sections. The dashboard currently only
-                    supports simulating a single community at a time; please
-                    remove any excess community override sections from the JSON file.
+The selected parameter schema includes multiple `community_overrides` sections.
+The dashboard currently only supports simulating a single community at a time;
+please remove any excess community override sections from the JSON file.
                 """)
             engineSettings = schema.community_overrides[0]
             session.community = engineSettings.name
@@ -373,11 +369,10 @@ def load_config(file: BytesIO | str, loud: bool = True) -> bool:
         # Scenario parameters
         if len(schema.simulation_sets) > 1:
             raise AssertionError("""
-                The selected parameter schema includes multiple
-                `simulation_sets` objects. Parameter files for the dashboard
-                put all scenarios in a single set, such that there should
-                be only one `simulation_sets` object. Please modify the
-                JSON file so that there is only one `simulation_sets` object.
+The selected parameter schema includes multiple `simulation_sets` objects.
+Parameter files for the dashboard put all scenarios in a single set, such that
+there should be only one `simulation_sets` object. Please modify the JSON file
+so that there is only one `simulation_sets` object.
             """)
         simulationList = schema.simulation_sets[0].simulations
         scenario_count = session.get("scenario_count", 0)
@@ -389,7 +384,7 @@ def load_config(file: BytesIO | str, loud: bool = True) -> bool:
         for scenario_id, scenario in enumerate(simulationList):
             if scenario_id != 0:
                 addScenario()
-                update_param_from_schema("scenarioName", scenario.name, scenario_id)
+                session.scenario_names[scenario_id] = scenario.name
                 if scenario.override_setting:
                     scenario_params = scenario.override_setting.parameters
                     disease_load_schema(scenario_params, scenario_id)
@@ -572,11 +567,8 @@ def addScenario(openTab: Optional[str] = None):
     session["active_errors"][newCount] = {}
 
     # Ensure new name is unique
-    new_name = unique_name(
-        "New Scenario",
-        {session.get(f"scenarioName{i}", "New Scenario") for i in range(1, newCount)},
-    )
-    session[f"scenarioName{newCount}"] = new_name
+    new_name = unique_name("New Scenario", set(session.scenario_names))
+    session.scenario_names.append(new_name)
     if openTab is not None:
         session[openTab] = f"**#{newCount}** {new_name}"
         session.tabReloader = not session.get("tabReloader", False)
@@ -595,12 +587,12 @@ def deleteScenario(scenario_id: int, openTab: Optional[str] = None):
     """
     # Get set of saved params
     scenario_count = session.get("scenario_count", 0)
-    savedParams = session["scenario_set_params"]
-    savedExtraParams = session["scenario_extra_params"]
+    savedParams = session.scenario_set_params
+    savedExtraParams = session.scenario_extra_params
 
     # Shift existing values down
     for s in range(scenario_id, scenario_count):
-        paramsToConsider = savedParams[s] | savedParams[s + 1] | {"scenarioName"}
+        paramsToConsider = savedParams[s] | savedParams[s + 1]
         for param in paramsToConsider:
             new_value = id_get(param, s + 1, None)
             if new_value is None:
@@ -614,18 +606,20 @@ def deleteScenario(scenario_id: int, openTab: Optional[str] = None):
                 del session[f"{param}{s}{extra}"]
             else:
                 session[f"{param}{s}{extra}"] = new_value
-        session["scenario_set_params"][s] = savedParams[s + 1]
-        session["scenario_extra_params"][s] = savedExtraParams[s + 1]
-        session["active_errors"][s] = session["active_errors"][s + 1]
+        session.scenario_set_params[s] = savedParams[s + 1]
+        session.scenario_extra_params[s] = savedExtraParams[s + 1]
+        session.active_errors[s] = session.active_errors[s + 1]
+        session.scenario_names[s] = session.scenario_names[s + 1]
 
     # Delete duplicated end scenario params
-    for param in savedParams[scenario_count] | {"scenarioName"}:
+    for param in savedParams[scenario_count]:
         del session[f"{param}{scenario_count}"]
     for param, extra in savedExtraParams[scenario_count]:
         del session[f"{param}{scenario_count}{extra}"]
-    del session["scenario_set_params"][scenario_count]
-    del session["scenario_extra_params"][scenario_count]
-    del session["active_errors"][scenario_count]
+    del session.scenario_set_params[scenario_count]
+    del session.scenario_extra_params[scenario_count]
+    del session.active_errors[scenario_count]
+    session.scenario_names.pop()
 
     # Update selected scenarios for R0 calculation
     for widget in {"rCalibrateScenario", "calib_saved_id", "rCalculateScenario"}:
@@ -646,7 +640,7 @@ def deleteScenario(scenario_id: int, openTab: Optional[str] = None):
             openCount = (
                 scenario_id if scenario_id < scenario_count else scenario_count - 1
             )
-            session[openTab] = f"**#{openCount}** {session[f"scenarioName{openCount}"]}"
+            session[openTab] = f"**#{openCount}** {session.scenario_names[openCount]}"
             session.tabReloader = not session.get("tabReloader", False)
         st.toast("Scenario removed!", icon=":material/delete:")
 
@@ -661,7 +655,7 @@ def resetScenario(scenario_id: int, loud: bool = True):
         loud (bool): Set to true to show a notification upon resetting.
     """
     # Delete scenario parameters (excluding the name)
-    for param in session["scenario_set_params"][scenario_id] - {"scenarioName"}:
+    for param in session["scenario_set_params"][scenario_id]:
         del session[f"{param}{scenario_id}"]
     for param, extra in session["scenario_extra_params"][scenario_id]:
         del session[f"{param}{scenario_id}{extra}"]

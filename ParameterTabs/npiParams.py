@@ -251,7 +251,7 @@ social distancing interventions in the simulation.
                         Error: The age-specific social distancing
                         compliance form used by the {
                             'baseline scenario' if id == 0
-                            else f'scenario named "{session[f'scenarioName{id}']}"'
+                            else f'scenario named "{session.scenario_names[id]}"'
                         } contains duplicate age group rows. Each age group
                         should only be used in a single row of the form.
 
@@ -606,9 +606,7 @@ normal withdrawal rate.
                 Error: The work withdrawal rate during
                 withdrawal increase NPIs in the {
                     'baseline scenario' if id == 0
-                    else f'scenario named "{
-                        session[f'scenarioName{id}']
-                    }"'
+                    else f'scenario named "{session.scenario_names[id]}"'
                 } is {100 * withdrawalIncreaseAdult:0.3g}%, but the
                 standard rate is {100 * baseAdultWithdrawal:0.3g}%.
                 As such, work withdrawal rates are not increased
@@ -633,9 +631,7 @@ normal withdrawal rate.
                 Error: The school withdrawal rate during
                 withdrawal increase NPIs in the {
                     'baseline scenario' if id == 0
-                    else f'scenario named "{
-                        session[f'scenarioName{id}']
-                    }"'
+                    else f'scenario named "{session.scenario_names[id]}"'
                 } is {100 * withdrawalIncreaseChild:0.3g}%, but the
                 standard rate is {100 * baseChildWithdrawal:0.3g}%.
                 As such, school withdrawal rates are not increased
@@ -809,9 +805,7 @@ overwriting the normal maximum.
                 Error: The maximum work group size during
                 reduced group size NPIs in the {
                     'baseline scenario' if id == 0
-                    else f'scenario named "{
-                        session[f'scenarioName{id}']
-                    }"'
+                    else f'scenario named "{session.scenario_names[id]}"'
                 } is {reducedGroupSize}, but the
                 standard maximum size is {baseGroupSize}.
                 As such, work group sizes are not decreased
@@ -993,9 +987,7 @@ effect, overwriting the normal BCC rate.
                 Error: The background contact count (BCC) during
                 BCC reduction NPIs in the {
                     'baseline scenario' if id == 0
-                    else f'scenario named "{
-                        session[f'scenarioName{id}']
-                    }"'
+                    else f'scenario named "{session.scenario_names[id]}"'
                 } is {bccReducedRate} interactions per day, but the
                 standard rate is {baseBCC} interactions per day.
                 As such, BCC is not decreased while the NPI is in effect.
@@ -1146,9 +1138,7 @@ per day goes below this value.
                             Warning: The threshold rate that triggers the
                             beginning of NPIs in the {
                                 'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    session[f'scenarioName{id}']
-                                }"'
+                                else f'scenario named "{session.scenario_names[id]}"'
                             } is {rateStartThreshold} cases per day, but the
                             rate that triggers their end is {rateRelaxThreshold}
                             cases per day. As such, NPIs will stop immediately
@@ -1219,9 +1209,7 @@ Total") or in each individual school (for
                             Error: The case threshold that triggers the
                             beginning of NPIs in the {
                                 'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    session[f'scenarioName{id}']
-                                }"'
+                                else f'scenario named "{session.scenario_names[id]}"'
                             } is {caseTotalThreshold} cases, but the
                             total number of people in the simulated community
                             is {population}. As such, the entire simulation

@@ -211,15 +211,13 @@ def community_change():
         if reset_scenarios:
             # TODO: Include a link to the seeding parameters if possible
             reset_scenario_list = "\n".join(
-                f"- {session[f"scenarioName{i}"] if i else "Baseline"}"
-                for i in reset_scenarios
+                f"- {session.scenario_names[i]}" for i in reset_scenarios
             )
             st.toast(
                 f"""
-                Location-specific seeding weights in the following scenarios
-                have been reset due to the new simulated community not
-                including the previously configured locations:\n"""
-                + reset_scenario_list,
+Location-specific seeding weights in the following scenarios have been reset
+due to the new simulated community not including the previously configured
+locations:\n""" + reset_scenario_list,
                 icon=":material/wrong_location:",
                 duration="infinite",
             )
@@ -324,9 +322,9 @@ def dynamic_scale_change(
         if has_changed:
             st.toast(
                 f"""
-Some of the dynamic update points for {param_name} were outside
-of the new period where {param_name.rsplit(' ', 1)[0]} is active.
-They have been adjusted to fit the new period.
+Some of the dynamic update points for {param_name} were outside of the new
+period where {param_name.rsplit(' ', 1)[0]} is active. They have been adjusted
+to fit the new period.
             """,
                 icon=":material/timer_arrow_down:",
                 duration="infinite",

@@ -136,7 +136,7 @@ each day of the simulation is 2 cycles.
         f"""
             Error: The dynamic infection seeding form used by the {
                 'baseline scenario' if id == 0
-                else f'scenario named "{session[f'scenarioName{id}']}"'
+                else f'scenario named "{session.scenario_names[id]}"'
             } contains duplicate update points. Each row of the form
             should specify a different day of the simulation.
 
@@ -233,7 +233,7 @@ they are closed after the specified point in the simulation.
         f"""
             Error: The dynamic school closure compliance form used by the {
                 'baseline scenario' if id == 0
-                else f'scenario named "{session[f'scenarioName{id}']}"'
+                else f'scenario named "{session.scenario_names[id]}"'
             } contains duplicate update points. Each row of the form
             should specify a different day of the simulation.
 
@@ -331,7 +331,7 @@ effect, overwriting the normal BCC rate.
         f"""
             Error: The dynamic background contact count reduction form used by the {
                 'baseline scenario' if id == 0
-                else f'scenario named "{session[f'scenarioName{id}']}"'
+                else f'scenario named "{session.scenario_names[id]}"'
             } contains duplicate update points. Each row of the form
             should specify a different day of the simulation.
 

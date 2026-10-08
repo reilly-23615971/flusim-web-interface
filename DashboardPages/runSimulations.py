@@ -166,6 +166,7 @@ def runSimulationButton() -> None:
 
     # List scenarios
     scenario_count = session.get("scenario_count", 0) + 1
+    scenario_names = session.scenario_names
     if scenario_count == 1:
         st.markdown(f"""
 With the current parameters, this modelling experiment will use the
@@ -179,23 +180,13 @@ With the current parameters, this modelling experiment will use the
 community data to simulate each of the following {scenario_count} scenarios:
         """)
         with st.container() if scenario_count < 11 else st.expander("Scenario Names"):
-            st.markdown(
-                "- Baseline\n"
-                + "\n".join(
-                    f"- {session[f'scenarioName{id}']}"
-                    for id in range(1, scenario_count)
-                )
-            )
-
+            st.markdown("\n".join(f"- {name}" for name in scenario_names))
     # Display any errors
     # TODO: Hide scenario errors that are copies of baseline errors
     severe_errors_found = False
-    for id in range(scenario_count):
+    for scenario_id in range(scenario_count):
         severe_errors_found = (
-            error_checker(
-                id,
-                f"Errors in {session[f'scenarioName{id}'] if id > 0 else 'Baseline'}",
-            )
+            error_checker(scenario_id, f"Errors in {scenario_names[scenario_id]}")
             or severe_errors_found
         )
     if severe_errors_found:
@@ -258,16 +249,14 @@ already busy with a different task.
             Are you sure you want to begin running simulations with the
             selected parameters?
         """)
+        st.button(
+            "Confirm",
+            key="confirmRunButton",
+            icon="spinner" if runPending else None,
+            disabled=runPending,
+        )
 
-        if (
-            st.button(
-                "Confirm",
-                key="confirmRunButton",
-                icon="spinner" if runPending else None,
-                disabled=runPending,
-            )
-            or runPending
-        ):
+        if runPending:
             # Set params indicating model is simulating
             session.simulation_in_progress = True
             session.simulationStartTime = datetime.now()
@@ -293,9 +282,7 @@ already busy with a different task.
 
             # Save current parameter values that'll be used for
             # visualisation when the user has potentially changed them
-            scenario_names = ["Baseline"] + [
-                session[f"scenarioName{i}"] for i in range(1, scenario_count)
-            ]
+            scenario_names = session.scenario_names.copy()
             community = session.get("community", "newcastle")
             population = COMMUNITIES[community].population
             schema = json.loads(parameterJSON)
@@ -411,13 +398,14 @@ def stopSimulationButton():
         "Are you sure you want to cancel the currently running simulation?",
         icon=":material/warning:",
     )
-
-    if st.button(
+    st.button(
         "Confirm",
         key="confirmCancelButton",
         icon="spinner" if cancelPending else None,
         disabled=cancelPending,
-    ):
+    )
+
+    if cancelPending:
         # Exit immediately if there's nothing to stop
         if not session.simulation_in_progress:
             st.toast(
@@ -517,16 +505,13 @@ to the other communities.
 
 # Warn if patch parameters are set
 scenario_count = session.get("scenario_count", 0) + 1
-scenario_names = ["Baseline Scenario"] + [
-    session[f"scenarioName{i}"] for i in range(1, scenario_count)
-]
 scenarios_with_patches = []
 for i in range(scenario_count):
     current_patches = session.get(
         f"seeding_patch_form{i}", pd.DataFrame(columns=["Location"])
     )
     if current_patches["Location"].notna().any():
-        scenarios_with_patches.append(scenario_names[i])
+        scenarios_with_patches.append(session.scenario_names[i])
 if show_advanced and scenarios_with_patches:
     reset_scenario_list = ", ".join(scenarios_with_patches)
     st.warning(

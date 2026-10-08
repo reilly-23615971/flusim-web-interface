@@ -58,6 +58,7 @@ sessionParameters = {
     "showCalibProgress": False,
     "showCalcProgress": False,
     "scenario_count": 0,
+    "scenario_names": ["Baseline Scenario"],
     "scenario_extra_params": {},
     "scenario_set_params": {},
     "active_errors": {0: {}},
@@ -252,7 +253,7 @@ Simulation encountered an error; see
                 r0 = calibrationData["r0"]
                 lowCI, highCI = calibrationData["interval"]
                 beta = calibrationData["beta"]
-                scenarioName = session.get("calib_scenario_name")
+                scenario_name = session.get("calib_scenario_name")
                 session["r0Calibration"] = r0
                 session["r0CalibrationBeta"] = beta
 
@@ -262,7 +263,7 @@ Simulation encountered an error; see
 
                 st.toast(
                     f"""
-                $R_0$ of {r0} for {scenarioName} achieved with transmission value of {beta}
+                $R_0$ of {r0} for {scenario_name} achieved with transmission value of {beta}
                 """,
                     icon=":material/partner_exchange:",
                     duration="infinite",
@@ -315,7 +316,7 @@ Error calibrating $R_0$; see
             if isinstance(calculationData, dict):
                 r0 = calculationData["r0"]
                 lowCI, highCI = calculationData["interval"]
-                scenarioName = session.get("calcScenarioName")
+                scenario_name = session.get("calcScenarioName")
                 session["r0Calculation"] = r0
                 session["r0CalculationInterval"] = (lowCI, highCI)
 
@@ -324,7 +325,7 @@ Error calibrating $R_0$; see
                 # formattedTime = time_string(totalTime.total_seconds())
                 st.toast(
                     f"""
-    $R_0$ for {scenarioName} is {r0} with a 95% confidence interval of [{lowCI}, {highCI}]
+    $R_0$ for {scenario_name} is {r0} with a 95% confidence interval of [{lowCI}, {highCI}]
                     """,
                     icon=":material/calculate:",
                 )

@@ -364,7 +364,7 @@ group to contract the pathogen when interacting with infected individuals.
                     Error: The age-specific infectiousness/susceptibility
                     form used by the {
                         'baseline scenario' if id == 0
-                        else f'scenario named "{session[f'scenarioName{id}']}"'
+                        else f'scenario named "{session.scenario_names[id]}"'
                     } contains duplicate age group rows. Each age group
                     should only be used in a single row of the form.
 
@@ -498,7 +498,7 @@ the pathogen and being fully recovered/no longer infectious.
                 f"""
                     Error: The infection life cycle used by the {
                         'baseline scenario' if id == 0
-                        else f'scenario named "{session[f'scenarioName{id}']}"'
+                        else f'scenario named "{session.scenario_names[id]}"'
                     } has pre-symptomatic, symptomatic and post-symptomatic
                     periods all set to have a length of 0 days. As such,
                     there is no point where the pathogen is infectious, and
@@ -512,7 +512,7 @@ the pathogen and being fully recovered/no longer infectious.
                 f"""
                     Warning: The infection life cycle used by the {
                         'baseline scenario' if id == 0
-                        else f'scenario named "{session[f'scenarioName{id}']}"'
+                        else f'scenario named "{session.scenario_names[id]}"'
                     } has its symptomatic period set to have a length of 0 days.
                     As such, there is no point where the pathogen shows symptoms.
 
@@ -827,7 +827,7 @@ contract the infection via contact with individuals in other locations)
                     f"""
                         Error: The location-specific infection seeding form used by the {
                             'baseline scenario' if id == 0
-                            else f'scenario named "{session[f'scenarioName{id}']}"'
+                            else f'scenario named "{session.scenario_names[id]}"'
                         } contains duplicate location rows. Each location
                         should only be used in a single row of the form.
                 
@@ -1058,7 +1058,7 @@ for every 100,000 cases of the pathogen in this age group.
                     f"""
                         Error: The age-specific health burden rate form used by the {
                             'baseline scenario' if id == 0
-                            else f'scenario named "{session[f'scenarioName{id}']}"'
+                            else f'scenario named "{session.scenario_names[id]}"'
                         } contains duplicate age group rows. Each age group
                         should only be used in a single row of the form.
 

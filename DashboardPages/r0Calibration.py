@@ -44,16 +44,12 @@ def calibrateR0Button() -> None:
 
     # Get scenario to calculate
     scenario_id = session.get("rCalibrateScenario", 0)
-    scenarioName = (
-        "Baseline Scenario"
-        if scenario_id == 0
-        else session[f"scenarioName{scenario_id}"]
-    )
+    scenario_name = session.scenario_names[scenario_id]
     targetR0 = session.get("targetR", 1.5)
 
     # Display any errors
     # TODO: Hide scenario errors that are copies of baseline errors
-    severe_errors_found = error_checker(scenario_id, f"Errors in {scenarioName}")
+    severe_errors_found = error_checker(scenario_id, f"Errors in {scenario_name}")
     if severe_errors_found:
         st.error(
             """
@@ -68,7 +64,7 @@ def calibrateR0Button() -> None:
         st.markdown(f"""
             Are you sure you want to calibrate the basic reproduction
             number to a value of {targetR0} for
-            {"the baseline scenario" if scenario_id == 0 else scenarioName}?
+            {"the baseline scenario" if scenario_id == 0 else scenario_name}?
         """)
         # TODO: Should precision be a parameter on the dashboard?
         st.info(
@@ -79,12 +75,13 @@ by ±0.02.
         """,
             icon=":material/target:",
         )
-        if st.button(
+        st.button(
             "Confirm",
             key="confirmCalibrateButton",
             icon="spinner" if calibPending else None,
             disabled=calibPending,
-        ):
+        )
+        if calibPending:
             # Set params indicating model is simulating
             session.calibrationInProgress = True
             session.calibrationStartTime = datetime.now()
@@ -112,7 +109,7 @@ by ±0.02.
                 name=community, description=str(targetR0), parameters=params
             ).model_dump_json(indent=4, exclude_unset=True)
             # TODO: Just save ID instead of name?
-            session.calib_scenario_name = scenarioName
+            session.calib_scenario_name = scenario_name
             session.calib_saved_id = scenario_id
 
             # Prepare model call parameters
@@ -170,13 +167,13 @@ def stopCalibrationButton():
         "Are you sure you want to stop calibrating $R_0$?",
         icon=":material/warning:",
     )
-
-    if st.button(
+    st.button(
         "Confirm",
         key="confirmCalibCancelButton",
         icon="spinner" if cancelPending else None,
         disabled=cancelPending,
-    ):
+    )
+    if cancelPending:
         # Exit immediately if there's nothing to stop
         if not session.calibrationInProgress:
             st.toast(
@@ -218,15 +215,11 @@ def calculateR0Button() -> None:
 
     # Get scenario to calculate
     scenario_id = session.get("rCalculateScenario", 0)
-    scenarioName = (
-        "Baseline Scenario"
-        if scenario_id == 0
-        else session[f"scenarioName{scenario_id}"]
-    )
+    scenario_name = session.scenario_names[scenario_id]
 
     # Display any errors
     # TODO: Hide scenario errors that are copies of baseline errors
-    severe_errors_found = error_checker(scenario_id, f"Errors in {scenarioName}")
+    severe_errors_found = error_checker(scenario_id, f"Errors in {scenario_name}")
     if severe_errors_found:
         st.error(
             """
@@ -240,14 +233,15 @@ def calculateR0Button() -> None:
         # TODO: Estimate calculation runtime
         st.markdown(f"""
             Are you sure you want to calculate the basic reproduction number for
-            {"the baseline scenario" if scenario_id == 0 else scenarioName}?
+            {"the baseline scenario" if scenario_id == 0 else scenario_name}?
         """)
-        if st.button(
+        st.button(
             "Confirm",
             key="confirmCalculateButton",
             icon="spinner" if calcPending else None,
             disabled=calcPending,
-        ):
+        )
+        if calcPending:
             # Set params indicating model is simulating
             session.calculationInProgress = True
             session.calculationStartTime = datetime.now()
@@ -274,7 +268,7 @@ def calculateR0Button() -> None:
             schema = CommunityOverride(
                 name=community, parameters=params
             ).model_dump_json(indent=4, exclude_unset=True)
-            session.calcScenarioName = scenarioName
+            session.calcScenarioName = scenario_name
 
             # Prepare model call parameters
             statusParams = {
@@ -330,13 +324,13 @@ def stopCalculationButton():
         "Are you sure you want to stop calculating $R_0$?",
         icon=":material/warning:",
     )
-
-    if st.button(
+    st.button(
         "Confirm",
         key="confirmCalcCancelButton",
         icon="spinner" if cancelPending else None,
         disabled=cancelPending,
-    ):
+    )
+    if cancelPending:
         # Exit immediately if there's nothing to stop
         if not session.calculationInProgress:
             st.toast(
@@ -428,9 +422,7 @@ to the other communities.
 
 # Warn if patch parameters are set
 scenario_count = session.get("scenario_count", 0) + 1
-scenario_names = ["Baseline Scenario"] + [
-    session[f"scenarioName{i}"] for i in range(1, scenario_count)
-]
+scenario_names = session.scenario_names
 scenarios_with_patches = []
 for i in range(scenario_count):
     current_patches = session.get(
@@ -555,7 +547,7 @@ calibResultsContainer = st.empty()
 calibrationResults = session.get("r0Calibration")
 idToUpdate = session.get("calib_saved_id")
 if calibrationResults is not None and idToUpdate is not None:
-    scenarioName = session["calib_scenario_name"]
+    scenario_name = session["calib_scenario_name"]
     beta = session["r0CalibrationBeta"]
 
     def updateBeta():
@@ -565,19 +557,19 @@ if calibrationResults is not None and idToUpdate is not None:
         session[f"beta{idToUpdate}"] = beta
         st.toast(
             f"""
-{"The baseline scenario" if idToUpdate == 0 else scenarioName}
+{"The baseline scenario" if idToUpdate == 0 else scenario_name}
 now has a basic transmission parameter of {beta}.
             """,
             icon=":material/sync:",
         )
 
     st.button(
-        f"Update Parameters in {scenarioName}",
+        f"Update Parameters in {scenario_name}",
         icon=":material/sync:",
         on_click=updateBeta,
         help=f"""
 Update the value of the basic transmission parameter in
-{"the baseline scenario" if idToUpdate == 0 else scenarioName}
+{"the baseline scenario" if idToUpdate == 0 else scenario_name}
 to match the calibrated value above.
         """,
     )
@@ -689,18 +681,18 @@ def showR0Results():
         elif session.get("r0Calibration") is not None:
             # TODO: Save scenario ID and make descriptions sound natural
             calibContents = calibResultsContainer.container()
-            scenarioName = session["calib_scenario_name"]
+            scenario_name = session["calib_scenario_name"]
             r0 = session["r0Calibration"]
             beta = session["r0CalibrationBeta"]
             calibContents.metric(
-                f"Transmission Parameter Required for $R_0$ of {r0} in {scenarioName}",
+                f"Transmission Parameter Required for $R_0$ of {r0} in {scenario_name}",
                 beta,
                 border=True,
                 help=f"""
 The probability that the disease spreads to a new person when they interact with
 an infected individual is $1 - \\exp{{(-\\beta}}$ (before accounting for other
 factors such as age and location). If $\\beta$ is set to {beta} in the scenario
-named {scenarioName}, the disease will have a basic reproduction number equal
+named {scenario_name}, the disease will have a basic reproduction number equal
 to {r0}.
                 """,
             )
@@ -733,18 +725,18 @@ to {r0}.
         elif session.get("r0Calculation") is not None:
             # TODO: Save scenario ID and make descriptions sound natural
             calcContents = calcResultsContainer.container()
-            scenarioName = session["calcScenarioName"]
+            scenario_name = session["calcScenarioName"]
             r0 = session["r0Calculation"]
             lowCI, highCI = session["r0CalculationInterval"]
             calcContents.metric(
-                f"Basic Reproduction Number ($R_0$) for {scenarioName}",
+                f"Basic Reproduction Number ($R_0$) for {scenario_name}",
                 r0,
                 border=True,
                 delta_description=f"95% Confidence Interval: [{lowCI}, {highCI}]",
                 help=f"""
 The basic reproduction number ($R_0$) is the average number of new infections that
 will be caused by a single infected individual over the lifespan of their infection.
-The scenario named {scenarioName} has an $R_0$ of {r0}.
+The scenario named {scenario_name} has an $R_0$ of {r0}.
                 """,
             )
 

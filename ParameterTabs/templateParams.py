@@ -46,7 +46,7 @@ change the name of the scenario.
             name=(
                 "baseline scenario"
                 if scenario_id == 0
-                else f'scenario named "{session[f"scenarioName{scenario_id}"]}"'
+                else f'scenario named "{session.scenario_names[scenario_id]}"'
             ),
             template=templateName,
         )
@@ -59,12 +59,13 @@ change the name of the scenario.
             """,
             icon=":material/dataset_linked:",
         )
-    if st.button(
+    st.button(
         "Confirm",
         key="confirmTemplateButton",
         icon="spinner" if templatePending else None,
         disabled=templatePending,
-    ):
+    )
+    if templatePending:
         loadTemplate(scenario_id, templatePath)
 
 
@@ -94,8 +95,8 @@ use resetScenario for that!
     # Disable button if it's taking a while to update parameters
     templatePending = bool(session.get("confirmTemplateButton"))
 
-    current_name = session[f"scenarioName{currentID}"]
-    new_name = session[f"scenarioName{newID}"]
+    current_name = session.scenario_names[currentID]
+    new_name = session.scenario_names[newID]
     st.markdown(f"""
 Are you sure you want to replace the parameter values in the
 {"baseline scenario" if currentID == 0 else f'scenario named "{current_name}"'}
@@ -145,7 +146,7 @@ def scenarioResetButton(scenario_id: int):
 
     st.markdown(f"""
 Are you sure you want to reset the parameter values in the scenario named
-"{session[f"scenarioName{scenario_id}"]}" to the values from the baseline
+"{session.scenario_names[scenario_id]}" to the values from the baseline
 scenario? Note that this will not change the scenario's name.
     """)
     if st.button(
@@ -228,9 +229,9 @@ the "Influenza" template.
             ),
         )
         for templateID in range(1, scenario_count + 1):
-            scenarioName = session[f"scenarioName{templateID}"]
+            scenario_name = session.scenario_names[templateID]
             st.button(
-                f"Load {scenarioName} as Template",
+                f"Load {scenario_name} as Template",
                 icon=":material/list_alt_add:",
                 key=f"_scenarioTemplateButton{templateID}",
                 on_click=scenarioTemplateButton,
@@ -239,7 +240,7 @@ the "Influenza" template.
                 help=(
                     f"""
 Set the parameter values in the current scenario to match the values set in the
-scenario named {scenarioName}. Note that this will override all parameters
+scenario named {scenario_name}. Note that this will override all parameters
 currently set for this scenario.
                 """
                     if templateID != scenario_id

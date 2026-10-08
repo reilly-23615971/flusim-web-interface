@@ -233,9 +233,7 @@ there are an insufficient number of doses available.
                         Warning: The target vaccinated proportion of
                         population in the {
                             'baseline scenario' if id == 0
-                            else f'scenario named "{
-                                session[f'scenarioName{id}']
-                            }"'
+                            else f'scenario named "{session.scenario_names[id]}"'
                         } is
                         {targetVaccinated:0.5g}% of the
                         population, but the initial vaccinated
@@ -412,7 +410,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
                 f"""
                     Error: The age-specific vaccinated proportions form used by the {
                         'baseline scenario' if id == 0
-                        else f'scenario named "{session[f'scenarioName{id}']}"'
+                        else f'scenario named "{session.scenario_names[id]}"'
                     } contains duplicate age group rows. Each age group
                     should only be used in a single row of the form.
 
@@ -435,7 +433,7 @@ are vaccinated may be lower if there are an insufficient number of doses availab
                 f"""
                     Error: The age-specific vaccinated proportions form used by the {
                         'baseline scenario' if id == 0
-                        else f'scenario named "{session[f'scenarioName{id}']}"'
+                        else f'scenario named "{session.scenario_names[id]}"'
                     } contains rows where the initial vaccinated proportion is
                     greater than the target vaccinated proportion. As such,
                     the target proportion will already be met, and no new
@@ -694,7 +692,7 @@ this age group will remain healthy when exposed to the pathogen.
                             f"""
 Error: The age-specific {"initial" if waningToggle else "dose"} efficacy
 form used for the {ORDINALS[i+1].lower()} vaccine dose by the
-{'baseline scenario' if id == 0 else f'scenario named "{session[f'scenarioName{id}']}"'}
+{'baseline scenario' if id == 0 else f'scenario named "{session.scenario_names[id]}"'}
 contains duplicate age group rows. Each age group should only be used in a
 single row of the form.
 
@@ -741,9 +739,7 @@ the pathogen.
                             Error: The initial vaccine efficacy for
                             the final vaccine dose in the {
                                 'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    session[f'scenarioName{id}']
-                                }"'
+                                else f'scenario named "{session.scenario_names[id]}"'
                             } is {100 * finalInitialEfficacy:0.3g}%, but the
                             minimum efficacy is {100 * primaryWanedEfficacy:0.3g}%.
                             As such, a vaccinated person's immunity to the
@@ -830,7 +826,7 @@ healthy when exposed to the pathogen.
                         f"""
                             Error: The age-specific minimum efficacy form used by the {
                                 'baseline scenario' if id == 0
-                                else f'scenario named "{session[f'scenarioName{id}']}"'
+                                else f'scenario named "{session.scenario_names[id]}"'
                             } contains duplicate age group rows. Each age group
                             should only be used in a single row of the form.
 
@@ -883,7 +879,7 @@ healthy when exposed to the pathogen.
                             Error: The vaccine age-specific
                             efficacy forms used for the final vaccine dose by the {
                                 'baseline scenario' if id == 0
-                                else f'scenario named "{session[f'scenarioName{id}']}"'
+                                else f'scenario named "{session.scenario_names[id]}"'
                             } contains rows where the initial vaccine efficacy is
                             greater than the minimum efficacy. As such, the
                             immunity to the pathogen conferred by the vaccine will get
@@ -968,9 +964,7 @@ the pathogen.
                         f"""
                             Error: The initial vaccine efficacy in the {
                                 'baseline scenario' if id == 0
-                                else f'scenario named "{
-                                    session[f'scenarioName{id}']
-                                }"'
+                                else f'scenario named "{session.scenario_names[id]}"'
                             } is {100 * doseEfficacy:0.3g}%, but the
                             efficacy after waning is {100 * primaryWanedEfficacy:0.3g}%.
                             As such, a vaccinated person's immunity to the
@@ -1116,7 +1110,7 @@ healthy when exposed to the pathogen.
                     f"""
                         Error: The age-specific vaccine efficacy form used by the {
                             'baseline scenario' if id == 0
-                            else f'scenario named "{session[f'scenarioName{id}']}"'
+                            else f'scenario named "{session.scenario_names[id]}"'
                         } contains duplicate age group rows. Each age group
                         should only be used in a single row of the form.
 
@@ -1138,7 +1132,7 @@ healthy when exposed to the pathogen.
                     f"""
                         Error: The age-specific vaccine efficacy form used by the {
                             'baseline scenario' if id == 0
-                            else f'scenario named "{session[f'scenarioName{id}']}"'
+                            else f'scenario named "{session.scenario_names[id]}"'
                         } contains rows where the minimum vaccine efficacy is
                         greater than the initial efficacy. As such, the
                         immunity to the pathogen conferred by the vaccine will get
@@ -1273,7 +1267,7 @@ pathogen all at once.
                     f"""
                         Error: The time between booster vaccine doses used by the {
                             'baseline scenario' if id == 0
-                            else f'scenario named "{session[f'scenarioName{id}']}"'
+                            else f'scenario named "{session.scenario_names[id]}"'
                         } is longer than the time before a booster vaccine's efficacy
                         begins to wane. As such, the booster vaccines will begin waning
                         before all doses have been received.
@@ -1335,9 +1329,7 @@ healthy when exposed to the pathogen.
                     f"""
                         Error: The initial booster vaccine efficacy in the {
                             'baseline scenario' if id == 0
-                            else f'scenario named "{
-                                session[f'scenarioName{id}']
-                            }"'
+                            else f'scenario named "{session.scenario_names[id]}"'
                         } is {100 * boosterBaseEfficacy:0.3g}%, but the
                         minimum booster efficacy is {100 * boosterWanedEfficacy:0.3g}%.
                         As such, a vaccinated person's immunity to the
@@ -1445,7 +1437,7 @@ that they will remain healthy when exposed to the pathogen.
                         Error: The booster vaccine age-specific
                         efficacy form used by the {
                             'baseline scenario' if id == 0
-                            else f'scenario named "{session[f'scenarioName{id}']}"'
+                            else f'scenario named "{session.scenario_names[id]}"'
                         } contains duplicate age group rows. Each age group
                         should only be used in a single row of the form.
 
@@ -1468,7 +1460,7 @@ that they will remain healthy when exposed to the pathogen.
                         Error: The booster vaccine age-specific
                         efficacy form used by the {
                             'baseline scenario' if id == 0
-                            else f'scenario named "{session[f'scenarioName{id}']}"'
+                            else f'scenario named "{session.scenario_names[id]}"'
                         } contains rows where the initial booster efficacy is
                         greater than the minimum booster efficacy. As such, the
                         immunity to the pathogen conferred by the booster will get
@@ -2101,15 +2093,12 @@ def vaccine_load_schema(schema: Parameters, scenario_id: int = 0):
                 baseFull = baseEfficacy.Efficacy
             if setDoseCount and len(baseFull) != primary_dose_count:
                 # Throw error if dose and efficacy disagree on dose count
-                scenarioName = id_get(
-                    "scenarioName", scenario_id, f"Scenario #{scenario_id}"
-                )
                 raise AssertionError(f"""
                     Vaccine dose count is inconsistent between dose and efficacy
                     parameters for the {
                         "baseline scenario"
                         if scenario_id == 0
-                        else f"scenario named {scenarioName}"
+                        else f"scenario named {session.scenario_names[scenario_id]}"
                     }
                 """)
             primary_dose_count = len(baseFull)
