@@ -49,7 +49,7 @@ runSimLog = logging.getLogger(__name__)
 
 # Store st.session_state as variable for efficiency
 session = st.session_state
-simulationInProgress = session.simulationInProgress
+simulation_in_progress = session.simulation_in_progress
 simCancelFlag = Event()
 
 
@@ -78,7 +78,7 @@ def simRuntimeEstimate(days: int, runs: int, scenarios: int) -> int:
 
 
 def runModelProgress(
-    scenario_names: list[str], useVaccines: bool = False
+    scenario_names: list[str], use_vaccines: bool = False
 ) -> dict[str, tuple[float, str]]:
     """
     Function to generate the status dictionary used for the simulation progress bar.
@@ -86,7 +86,7 @@ def runModelProgress(
     Parameters:
         scenario_names (list of str): The names of the scenarios in the simulation.
 
-        useVaccines (bool): Set to `True` to add an extra status point for
+        use_vaccines (bool): Set to `True` to add an extra status point for
             vaccine-based infections.
 
     Returns:
@@ -116,7 +116,7 @@ def runModelProgress(
     }
     # Analysis status
     # Note that ASIR gets twice the progress length as epidemic
-    if useVaccines:
+    if use_vaccines:
         analysisSegments = (1 - PROGRESS_SPLIT_POINT - 0.02) / 6
         progressDict |= {
             "toolboxAnalysis0": (
@@ -240,8 +240,8 @@ simulation.
 
         # Get estimated simulation runtime
         cycle_count = session.get("cycle_count", 360)
-        runCount = session.get("runCount", 24)
-        estimatedTime = simRuntimeEstimate(cycle_count, runCount, scenario_count)
+        run_count = session.get("run_count", 24)
+        estimatedTime = simRuntimeEstimate(cycle_count, run_count, scenario_count)
         st.metric(
             f"Estimated Time to Run Simulation Experiment",
             value=time_string(estimatedTime),
@@ -269,7 +269,7 @@ already busy with a different task.
             or runPending
         ):
             # Set params indicating model is simulating
-            session.simulationInProgress = True
+            session.simulation_in_progress = True
             session.simulationStartTime = datetime.now()
             simCancelFlag.clear()
 
@@ -285,7 +285,7 @@ already busy with a different task.
             # Create JSON for selected parameters
             else:
                 parameterJSON = create_config(
-                    scenario_count, includeDashboard=False
+                    scenario_count, include_dashboard=False
                 ).model_dump_json(indent=4, exclude_unset=True)
                 if LOG_PARAM_JSON:
                     with open("./savedJSON.json", "w") as file:
@@ -299,9 +299,9 @@ already busy with a different task.
             community = session.get("community", "newcastle")
             population = COMMUNITIES[community].population
             schema = json.loads(parameterJSON)
-            useAdvanced = session.get("showAdvanced", False)
-            useVaccines = "+vaccine" in schema.get("middle_joint")
-            if useVaccines:
+            use_advanced = session.get("show_advanced", False)
+            use_vaccines = "+vaccine" in schema.get("middle_joint")
+            if use_vaccines:
                 analysisFormats = [
                     AnalysisFile(
                         tool="epidemic", names=scenario_names, useCumulative=True
@@ -323,7 +323,7 @@ already busy with a different task.
                     AnalysisFile(tool="asir", names=scenario_names),
                 ]
 
-            scalingFactor = session.get("scalingPopulation", population) / population
+            scalingFactor = session.get("scaling_population", population) / population
             asymptomaticRates = (
                 [
                     [
@@ -332,7 +332,7 @@ already busy with a different task.
                     ]
                     for scenario_id in range(scenario_count)
                 ]
-                if useAdvanced
+                if use_advanced
                 else [
                     [1 - id_get("asymptomaticAdult", scenario_id, 0.35)] * 2
                     for scenario_id in range(scenario_count)
@@ -340,9 +340,9 @@ already busy with a different task.
             )
             basicRates, age_rates = health_outcome_store(
                 scenario_names,
-                use_ages=useAdvanced,
+                use_ages=use_advanced,
             )
-            useWaning = useAdvanced and any(
+            useWaning = use_advanced and any(
                 id_get("naturalWaningToggle", scenario_id, False)
                 or (
                     id_get("vaccineToggle", scenario_id, False)
@@ -368,7 +368,7 @@ already busy with a different task.
             # Prepare model call parameters
             statusParams = {
                 "resultType": "zip",
-                "statusDecoder": runModelProgress(scenario_names, useVaccines),
+                "statusDecoder": runModelProgress(scenario_names, use_vaccines),
                 "request_queue": SIM_STATUS,
             }
 
@@ -379,7 +379,7 @@ already busy with a different task.
             session["simulationError"] = None
 
             # Make the model call
-            session.simulationInProgress = True
+            session.simulation_in_progress = True
             taskWrapper(
                 "Simulation Experiment",
                 "runModel",
@@ -419,7 +419,7 @@ def stopSimulationButton():
         disabled=cancelPending,
     ):
         # Exit immediately if there's nothing to stop
-        if not session.simulationInProgress:
+        if not session.simulation_in_progress:
             st.toast(
                 "No simulations are currently running; there's nothing to cancel.",
                 icon=":material/stop:",
@@ -437,7 +437,7 @@ def stopSimulationButton():
 
         # Stop the runModel thread
         simCancelFlag.set()
-        session.simulationInProgress = False
+        session.simulation_in_progress = False
         session.showSimProgress = True
 
         # Generate popup to let the user know it's cancelled
@@ -469,13 +469,13 @@ upload_download_bar()
 
 # Advanced parameters toggle
 # TODO: Move advanced parameters to either the sidebar or a separate settings page
-load_key("showAdvanced", default=False, no_zero_default=True)
-showAdvanced = st.toggle(
+load_key("show_advanced", default=False, no_zero_default=True)
+show_advanced = st.toggle(
     "Show Advanced Parameters",
     False,
     key="_showAdvanced",
     on_change=save_key,
-    args=["showAdvanced"],
+    args=["show_advanced"],
     help="""
 Toggle whether to display parameters that control more fine-grain aspects
 of the simulation environment, such as scaling population.
@@ -527,7 +527,7 @@ for i in range(scenario_count):
     )
     if current_patches["Location"].notna().any():
         scenarios_with_patches.append(scenario_names[i])
-if showAdvanced and scenarios_with_patches:
+if show_advanced and scenarios_with_patches:
     reset_scenario_list = ", ".join(scenarios_with_patches)
     st.warning(
         f"""
@@ -570,7 +570,7 @@ st.markdown("""
     the model's stochasticity to generate reliable average values and reduce the
     likelihood of outliers.
 """)
-load_key("runCount", default=24)
+load_key("run_count", default=24)
 st.slider(
     "Number of Simulation Runs",
     min_value=1,
@@ -578,7 +578,7 @@ st.slider(
     value=24,
     key="_runCount",
     on_change=save_key,
-    args=["runCount"],
+    args=["run_count"],
     help="""
 How many times each scenario will be simulated. The results
 of each individual simulation will be averaged together to
@@ -587,13 +587,13 @@ simulations but more accurate results.
     """,
 )
 
-if showAdvanced:
+if show_advanced:
     st.markdown("""
         - The starting day of the week determines what day of the week it is on the
         first day of the experiment. Individuals in the simulation visit different
         locations on weekends, so this may affect the initial spread of the disease.
     """)
-    load_key("startDay", default="Random")
+    load_key("start_day", default="Random")
     st.radio(
         "Starting Day of the Week",
         (
@@ -610,7 +610,7 @@ if showAdvanced:
         horizontal=True,
         key="_startDay",
         on_change=save_key,
-        args=["startDay"],
+        args=["start_day"],
         help="""
     The day of the week that the first day of the simulation will be. If this is "Random", the starting day will be chosen randomly for each simulation.
         """,
@@ -628,14 +628,14 @@ if showAdvanced:
         """,
         icon=":material/groups:",
     )
-    load_key("scalingPopulation", default=default_population)
+    load_key("scaling_population", default=default_population)
     st.number_input(
         "Scaling Population",
         min_value=1,
         value=default_population,
         key=f"_scalingPopulation",
         on_change=save_key,
-        args=["scalingPopulation"],
+        args=["scaling_population"],
         placeholder="Enter the size of the desired population",
         help="""
     The size of the population that all simulation results will be scaled to. The
@@ -650,19 +650,19 @@ if showAdvanced:
 st.button(
     label=(
         "Running simulations..."
-        if simulationInProgress
+        if simulation_in_progress
         else "Run Simulation Experiment"
     ),
     on_click=runSimulationButton,
-    disabled=simulationInProgress,
+    disabled=simulation_in_progress,
     type="primary",
-    icon="spinner" if simulationInProgress else ":material/motion_play:",
+    icon="spinner" if simulation_in_progress else ":material/motion_play:",
     help=(
         """
 Send a request to the *Flusim* model server to run the model
 with the specified parameters.
         """
-        if not simulationInProgress
+        if not simulation_in_progress
         else """
 A simulation is already running; please wait for it to conclude
 before running another one.
@@ -716,11 +716,11 @@ def simulationProgressBar():
             simStatus.write(newStatus)
 
 
-if simulationInProgress or session.showSimProgress:
+if simulation_in_progress or session.showSimProgress:
     simulationProgressBar()
 
 # Stop Simulation Button
-if simulationInProgress:
+if simulation_in_progress:
     st.button(
         label="Cancel Simulation",
         on_click=stopSimulationButton,

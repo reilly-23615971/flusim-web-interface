@@ -51,7 +51,7 @@ session = st.session_state
 
 # Initialise session variables used globally by the dashboard
 sessionParameters = {
-    "simulationInProgress": False,
+    "simulation_in_progress": False,
     "calibrationInProgress": False,
     "calculationInProgress": False,
     "showSimProgress": False,
@@ -148,7 +148,7 @@ def update_data() -> None:
         not SIM_STATUS.results.empty(),
         not SIM_STATUS.errors.empty(),
     )
-    if session.simulationInProgress and (simHasResults or simHasError):
+    if session.simulation_in_progress and (simHasResults or simHasError):
         if simHasResults and not simHasError:
             # Reset pending simulation variables
             # TODO: Add a check to ensure visualisations can't use the new values
@@ -231,7 +231,7 @@ Simulation encountered an error; see
             )
 
         # Re-enable running new simulations and using their data
-        session.simulationInProgress = False
+        session.simulation_in_progress = False
         session.showSimProgress = True
 
         resultsObtained = True

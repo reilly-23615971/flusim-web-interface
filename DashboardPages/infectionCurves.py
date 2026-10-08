@@ -51,7 +51,7 @@ def generateGraph():
             scenario_names=PRESET_SCENARIO_NAMES,
             analysis_formats=[],
             community=PRESET_COMMUNITY,
-            scaling_factor=session.get("scalingPopulation", 272407) / 272407,
+            scaling_factor=session.get("scaling_population", 272407) / 272407,
         )
         # Load test data from file
         with open(PRESET_DATA_PATHS[chartType], "rb") as csv:
@@ -104,7 +104,7 @@ if not current_dataExists:
     """,
         icon=":material/science_off:",
     )
-if current_dataExists and session.simulationInProgress:
+if current_dataExists and session.simulation_in_progress:
     chartErrorContainer.warning(
         """
         Warning: A new simulation is currently in progress. Since the

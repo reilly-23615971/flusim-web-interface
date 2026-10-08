@@ -91,10 +91,10 @@ by ±0.02.
             calibCancelFlag.clear()
 
             # Get relevant settings from session
-            showAdvanced = session.get("showAdvanced", False)
+            show_advanced = session.get("show_advanced", False)
             useInterventions = (
                 session.get("rCalculateInterventionsToggle", False)
-                if showAdvanced
+                if show_advanced
                 else False
             )
             community = session.get("community", "newcastle")
@@ -106,7 +106,7 @@ by ±0.02.
                     params = Parameters.model_validate_json(f.read())
             else:
                 params = createTemplate(
-                    scenario_id, includeInterventions=False, includeDashboard=False
+                    scenario_id, includeInterventions=False, include_dashboard=False
                 )
             schema = OverrideTemplate(
                 name=community, description=str(targetR0), parameters=params
@@ -254,10 +254,10 @@ def calculateR0Button() -> None:
             calcCancelFlag.clear()
 
             # Get relevant settings from session
-            showAdvanced = session.get("showAdvanced", False)
+            show_advanced = session.get("show_advanced", False)
             useInterventions = (
                 session.get("rCalculateInterventionsToggle", False)
-                if showAdvanced
+                if show_advanced
                 else False
             )
             community = session.get("community", "newcastle")
@@ -269,7 +269,7 @@ def calculateR0Button() -> None:
                     params = Parameters.model_validate_json(f.read())
             else:
                 params = createTemplate(
-                    scenario_id, includeInterventions=False, includeDashboard=False
+                    scenario_id, includeInterventions=False, include_dashboard=False
                 )
             schema = CommunityOverride(
                 name=community, parameters=params
@@ -379,13 +379,13 @@ st.markdown("""
 # Global parameters
 # Advanced parameters toggle
 # TODO: Move advanced parameters to either the sidebar or a separate settings page
-load_key("showAdvanced", default=False, no_zero_default=True)
-showAdvanced = st.toggle(
+load_key("show_advanced", default=False, no_zero_default=True)
+show_advanced = st.toggle(
     "Show Advanced Parameters",
     False,
     key="_showAdvanced",
     on_change=save_key,
-    args=["showAdvanced"],
+    args=["show_advanced"],
     help="""
 Toggle whether to include parameters that control more fine-grain aspects
 of the simulation environment (such as waning vaccine-derived immunity)
@@ -438,7 +438,7 @@ for i in range(scenario_count):
     )
     if current_patches["Location"].notna().any():
         scenarios_with_patches.append(scenario_names[i])
-if showAdvanced and scenarios_with_patches:
+if show_advanced and scenarios_with_patches:
     reset_scenario_list = ", ".join(scenarios_with_patches)
     st.warning(
         f"""
@@ -498,7 +498,7 @@ are listed by the names assigned to them.
     """,
 )
 
-if showAdvanced:
+if show_advanced:
     load_key("rCalibrateInterventionsToggle", default=False)
     rightCalib.toggle(
         "Include Vaccinations and NPIs",
@@ -611,7 +611,7 @@ are listed by the names assigned to them.
     """,
 )
 
-if showAdvanced:
+if show_advanced:
     load_key("rCalculateInterventionsToggle", default=False)
     rightCalc.toggle(
         "Include Vaccinations and NPIs",

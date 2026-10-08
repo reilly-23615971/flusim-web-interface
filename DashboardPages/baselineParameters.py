@@ -12,12 +12,12 @@ from streamlit.elements.lib.mutable_tab_container import TabContainer
 from ClientResources.DownloadFunctions import upload_download_bar
 from ClientResources.InterfaceFunctions import error_checker
 from ClientResources.ParameterFunctions import container_save, load_key
-from ParameterTabs.communityParams import buildCommunityTab
-from ParameterTabs.diseaseParams import buildDiseaseTab
-from ParameterTabs.dynamicParams import buildDynamicTab
-from ParameterTabs.npiParams import buildNPITab
+from ParameterTabs.communityParams import build_community_tab
+from ParameterTabs.diseaseParams import build_disease_tab
+from ParameterTabs.dynamicParams import build_dynamic_tab
+from ParameterTabs.npiParams import build_npi_tab
 from ParameterTabs.templateParams import buildTemplateTab
-from ParameterTabs.vaccinationParams import buildVaccinationTab
+from ParameterTabs.vaccinationParams import build_vaccination_tab
 
 # from streamlit_push_notifications import send_push, send_alert
 
@@ -59,14 +59,14 @@ upload_download_bar()
 error_checker(0, "Errors in Baseline Scenario")
 
 # Advanced parameters toggle
-load_key("showAdvanced", default=False, no_zero_default=True)
+load_key("show_advanced", default=False, no_zero_default=True)
 containersToOpen: set[str] = {"paramTabs0"}
-showAdvanced = st.toggle(
+show_advanced = st.toggle(
     "Show Advanced Parameters",
     False,
     key="_showAdvanced",
     on_change=container_save,
-    args=["showAdvanced"],
+    args=["show_advanced"],
     kwargs={"containers": containersToOpen},
     help="""
 Toggle whether to display parameters that control more fine-grain aspects
@@ -77,7 +77,7 @@ dynamic parameter updates.
 
 # Create tabs for each category of parameters
 dynamicTab: Optional[TabContainer] = None
-if showAdvanced:
+if show_advanced:
     diseaseTab, communityTab, vaccineTab, npiTab, dynamicTab, templateTab = st.tabs(
         [
             ":material/coronavirus: Pathogen",
@@ -104,13 +104,13 @@ else:
     )
 if diseaseTab.open:
     with diseaseTab:
-        buildDiseaseTab(0, showAdvanced)
+        build_disease_tab(0, show_advanced)
 if communityTab.open:
     with communityTab:
-        buildCommunityTab(0, showAdvanced)
+        build_community_tab(0, show_advanced)
 if vaccineTab.open:
     with vaccineTab:
-        buildVaccinationTab(0, showAdvanced)
+        build_vaccination_tab(0, show_advanced)
 if npiTab.open:
     containersToOpen |= {
         "npiContainer0",
@@ -120,10 +120,10 @@ if npiTab.open:
         "bccContainer0",
     }
     with npiTab:
-        buildNPITab(0, showAdvanced)
+        build_npi_tab(0, show_advanced)
 if dynamicTab is not None and dynamicTab.open:
     with dynamicTab:
-        buildDynamicTab(0)
+        build_dynamic_tab(0)
 if templateTab.open:
     with templateTab:
         buildTemplateTab(0)

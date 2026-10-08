@@ -31,7 +31,7 @@ session = st.session_state
 
 
 # @st.fragment
-def buildCommunityTab(id: int, advanced: bool = False):
+def build_community_tab(id: int, advanced: bool = False):
     """
     Function to generate the parameters for the simulation environment in a
     specified container with scenario differentiation.
@@ -357,7 +357,7 @@ def communityDescribe(scenario_id: int = 0, advanced: bool = False):
     )
 
 
-def communitySaveSchema(
+def community_save_schema(
     schema: Parameters,
     id: int = 0,
     advanced: bool = False,
@@ -391,33 +391,33 @@ def communitySaveSchema(
             raise ValueError("schema should be a Parameters object")
 
         # Scenario Parameters
-        scenarioParams = GeneralParameters()
+        scenario_params = GeneralParameters()
 
         # Withdrawals and Contact
-        scenarioParams.prob_withdrawal = id_get("withdrawalWork", id, 0.5)
-        scenarioParams.prob_school_withdrawal = id_get("withdrawalSchool", id, 0.9)
-        scenarioParams.background_contact_count = id_get("bccRate", id, 4.0)
+        scenario_params.prob_withdrawal = id_get("withdrawalWork", id, 0.5)
+        scenario_params.prob_school_withdrawal = id_get("withdrawalSchool", id, 0.9)
+        scenario_params.background_contact_count = id_get("bccRate", id, 4.0)
 
         # The Rest
         if advanced:
-            scenarioParams.diagnosis_delay = id_get("diagnosisDelay", id, 0) * 2
-            scenarioParams.prob_child_supervision = id_get("childSupervision", id, 1.0)
-            # scenarioParams.max_class_count = id_get("maxClassCount", id, 1)
-            scenarioParams.max_class_size = id_get("maxClassSize", id, 10)
-            scenarioParams.max_workgroup_size = id_get("maxWorkGroupSize", id, 10)
+            scenario_params.diagnosis_delay = id_get("diagnosisDelay", id, 0) * 2
+            scenario_params.prob_child_supervision = id_get("childSupervision", id, 1.0)
+            # scenario_params.max_class_count = id_get("maxClassCount", id, 1)
+            scenario_params.max_class_size = id_get("maxClassSize", id, 10)
+            scenario_params.max_workgroup_size = id_get("maxWorkGroupSize", id, 10)
             """
-            scenarioParams.max_adult_class_size = id_get("maxAdultClassSize", id, 10)
-            scenarioParams.max_neighbourgroup_size = id_get(
+            scenario_params.max_adult_class_size = id_get("maxAdultClassSize", id, 10)
+            scenario_params.max_neighbourgroup_size = id_get(
                 'maxNeighborGroupSize', id, 10
             )
-            scenarioParams.max_churchgroup_size = id_get(
+            scenario_params.max_churchgroup_size = id_get(
                 'maxChurchGroupSize', id, 10
             )
             """
         # Save the updated parameters, removing redundant baseline values
         if id > 0 and baseline is not None:
-            schema_remove_baseline(scenarioParams, baseline.Scenario_Parameter)
-        schema_update(schema, "Scenario_Parameter", scenarioParams)
+            schema_remove_baseline(scenario_params, baseline.Scenario_Parameter)
+        schema_update(schema, "Scenario_Parameter", scenario_params)
 
     except (ValueError, ValidationError) as e:
         communityLog.error(
@@ -429,7 +429,7 @@ def communitySaveSchema(
         raise e
 
 
-def communityLoadSchema(schema: Parameters, scenario_id: int = 0):
+def community_load_schema(schema: Parameters, scenario_id: int = 0):
     """
     Function to read community parameters from a schema and set the
     dashboard's widgets to the specified values.

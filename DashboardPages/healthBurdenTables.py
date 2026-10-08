@@ -112,11 +112,11 @@ def generateTable() -> None:
     # Debug code for loading data in testing
     if USE_PRESET_DATA:
         # Set default session_state parameters
-        useAdvanced = session.get("showAdvanced", False)
+        use_advanced = session.get("show_advanced", False)
         scenario_names = PRESET_SCENARIO_NAMES
         basicRates, age_rates = health_outcome_store(
             scenario_names,
-            use_ages=useAdvanced,
+            use_ages=use_advanced,
         )
         session.sim_params = SimParams(
             scenario_names=scenario_names,
@@ -124,7 +124,7 @@ def generateTable() -> None:
             community=PRESET_COMMUNITY,
             health_outcome_rates=basicRates,
             age_health_outcome_rates=age_rates,
-            scaling_factor=session.get("scalingPopulation", 272407) / 272407,
+            scaling_factor=session.get("scaling_population", 272407) / 272407,
             symptomatic_rates=(
                 [
                     [
@@ -133,7 +133,7 @@ def generateTable() -> None:
                     ]
                     for scenario_id in range(4)
                 ]
-                if useAdvanced
+                if use_advanced
                 else [
                     [1 - id_get("asymptomaticAdult", scenario_id, 0.35)] * 2
                     for scenario_id in range(4)
@@ -400,11 +400,11 @@ def downloadPresetTable(
     # Debug code for loading data in testing
     if USE_PRESET_DATA:
         # Set default session_state params
-        useAdvanced = session.get("showAdvanced", False)
+        use_advanced = session.get("show_advanced", False)
         scenario_names = PRESET_SCENARIO_NAMES
         basicRates, age_rates = health_outcome_store(
             scenario_names,
-            use_ages=useAdvanced,
+            use_ages=use_advanced,
         )
         session.sim_params = SimParams(
             scenario_names=scenario_names,
@@ -420,13 +420,13 @@ def downloadPresetTable(
                     ]
                     for scenario_id in range(4)
                 ]
-                if useAdvanced
+                if use_advanced
                 else [
                     [1 - id_get("asymptomaticAdult", scenario_id, 0.35)] * 2
                     for scenario_id in range(4)
                 ]
             ),
-            scaling_factor=session.get("scalingPopulation", 272407) / 272407,
+            scaling_factor=session.get("scaling_population", 272407) / 272407,
         )
 
         # Load test data from files
@@ -532,7 +532,7 @@ if not current_dataExists:
     tableButtonTooltip = """
 No simulation experiments have been completed yet, so there is no data to tabulate.
     """
-if current_dataExists and session.simulationInProgress:
+if current_dataExists and session.simulation_in_progress:
     healthOutcomeErrorContainer.warning(
         """
         Warning: A new simulation is currently in progress. Since the

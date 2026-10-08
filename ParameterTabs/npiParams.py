@@ -56,7 +56,7 @@ NPI_TAGS = ("schoolClosure", "withdrawalIncrease", "reducedGroup", "bcc")
 
 
 # @st.fragment
-def buildNPITab(id: int, advanced: bool = False):
+def build_npi_tab(id: int, advanced: bool = False):
     """
     Function to generate the parameters for NPIs in a
     specified container with scenario differentiation.
@@ -1240,12 +1240,12 @@ Total") or in each individual school (for
                     )
 
 
-def npiSaveSchema(
+def npi_save_schema(
     schema: Parameters,
     id: int = 0,
     advanced: bool = False,
     baseline: Optional[Parameters] = None,
-    includeDashboard: bool = False,
+    include_dashboard: bool = False,
 ):
     """
     Function to populate the Pydantic model schema with NPI parameters
@@ -1268,7 +1268,7 @@ def npiSaveSchema(
             to omit parameters that are already set in the baseline from the final
             scenario.
 
-        includeDashboard (bool): Set to `True` to include the dashboard-exclusive
+        include_dashboard (bool): Set to `True` to include the dashboard-exclusive
             social distancing toggle parameter.
     """
     try:
@@ -1277,7 +1277,7 @@ def npiSaveSchema(
             raise ValueError("schema should be a Parameters object")
 
         # Initialising Scenario Parameters
-        scenarioParams = GeneralParameters()
+        scenario_params = GeneralParameters()
 
         # Social Distancing
         # TODO: Pandemic alert might be necessary for SD to have an effect
@@ -1287,18 +1287,18 @@ def npiSaveSchema(
         socialDistanceToggle = id_get("socialDistancingToggle", id, False)
         globalCompliance = id_get("socialDistancingCompliance", id, 0.9)
 
-        dashboardParams = DashboardParameters()
-        if includeDashboard:
-            dashboardParams.enable_social_distancing = socialDistanceToggle
+        dashboard_params = DashboardParameters()
+        if include_dashboard:
+            dashboard_params.enable_social_distancing = socialDistanceToggle
             if id > 0 and baseline is not None:
-                schema_remove_baseline(dashboardParams, baseline.Dashboard_Parameter)
-            schema_update(schema, "Dashboard_Parameter", dashboardParams)
+                schema_remove_baseline(dashboard_params, baseline.Dashboard_Parameter)
+            schema_update(schema, "Dashboard_Parameter", dashboard_params)
         if socialDistanceToggle:
-            scenarioParams.social_distance_compliance = globalCompliance
+            scenario_params.social_distance_compliance = globalCompliance
         if advanced:
-            ageScenarioParams = AllAgesParameters()
+            age_scenario_params = AllAgesParameters()
             if socialDistanceToggle:
-                ageScenarioParams.social_distance = globalCompliance
+                age_scenario_params.social_distance = globalCompliance
                 distanceAgeForm = id_get(
                     "distanceAgeForm",
                     id,
@@ -1318,63 +1318,69 @@ def npiSaveSchema(
                             distanceAgeForm["Age Group"] == age,
                             "Social Distancing Compliance",
                         ].item()
-                        setattr(scenarioParams, f"{age}_social_distance", compliance)
+                        setattr(scenario_params, f"{age}_social_distance", compliance)
                     else:
                         setattr(
-                            scenarioParams, f"{age}_social_distance", globalCompliance
+                            scenario_params, f"{age}_social_distance", globalCompliance
                         )
             else:
-                ageScenarioParams.social_distance = 0.0
+                age_scenario_params.social_distance = 0.0
             # Save age-specific parameters
             if id > 0 and baseline is not None:
                 schema_remove_baseline(
-                    ageScenarioParams, baseline.Scenario_ParameterWithAgePrefix
+                    age_scenario_params, baseline.Scenario_ParameterWithAgePrefix
                 )
-            schema_update(schema, "Scenario_ParameterWithAgePrefix", ageScenarioParams)
+            schema_update(
+                schema, "Scenario_ParameterWithAgePrefix", age_scenario_params
+            )
 
             # Miscellaneous advanced trigger parameters
-            scenarioParams.class_dismissal = id_get("classDismissal", id, False)
-            scenarioParams.case_trigger_threshold = id_get(
+            scenario_params.class_dismissal = id_get("classDismissal", id, False)
+            scenario_params.case_trigger_threshold = id_get(
                 "caseTotalThreshold", id, 1000
             )
-            scenarioParams.rate_trigger_threshold = id_get("rateStartThreshold", id, 10)
-            scenarioParams.rate_relaxation_threshold = id_get(
+            scenario_params.rate_trigger_threshold = id_get(
+                "rateStartThreshold", id, 10
+            )
+            scenario_params.rate_relaxation_threshold = id_get(
                 "rateRelaxThreshold", id, 5
             )
-            scenarioParams.maximum_trigger_count = 250
+            scenario_params.maximum_trigger_count = 250
 
         # School Closure
         if id_get("schoolClosureToggle", id, False):
-            scenarioParams.school_closure_compliance = id_get(
+            scenario_params.school_closure_compliance = id_get(
                 "schoolClosureCompliance", id, 0.9
             )
-            scenarioParams.close_child_education = True
+            scenario_params.close_child_education = True
             schoolTrigger = (
                 id_get("schoolClosureTrigger", id, "Always") if advanced else "Always"
             )
-            scenarioParams.school_closure_trigger = TRIGGER_KEY_CONVERTER[schoolTrigger]
-            scenarioParams.school_closure_relaxation = TRIGGER_KEY_CONVERTER[
+            scenario_params.school_closure_trigger = TRIGGER_KEY_CONVERTER[
+                schoolTrigger
+            ]
+            scenario_params.school_closure_relaxation = TRIGGER_KEY_CONVERTER[
                 schoolTrigger
             ]
             if schoolTrigger == "Always":
-                scenarioParams.school_closure_delay = 0
-                scenarioParams.school_closure_duration = 9999
+                scenario_params.school_closure_delay = 0
+                scenario_params.school_closure_duration = 9999
             elif schoolTrigger == "Timed":
                 schoolPeriod = [
                     i - 1 for i in id_get("schoolClosurePeriod", id, (1, 60))
                 ]
-                scenarioParams.school_closure_delay = schoolPeriod[0] * 2
-                scenarioParams.school_closure_duration = (
+                scenario_params.school_closure_delay = schoolPeriod[0] * 2
+                scenario_params.school_closure_duration = (
                     schoolPeriod[1] - schoolPeriod[0] + 1
                 ) * 2
         else:
-            scenarioParams.school_closure_trigger = TRIGGER_KEY_CONVERTER["None"]
+            scenario_params.school_closure_trigger = TRIGGER_KEY_CONVERTER["None"]
         # Withdrawal Increase
         if id_get("withdrawalIncreaseToggle", id, False):
-            scenarioParams.increased_withdrawal = id_get(
+            scenario_params.increased_withdrawal = id_get(
                 "withdrawalIncreaseAdult", id, 0.9
             )
-            scenarioParams.increased_withdrawal_child = id_get(
+            scenario_params.increased_withdrawal_child = id_get(
                 "withdrawalIncreaseChild", id, 1.0
             )
             withdrawalTrigger = (
@@ -1382,79 +1388,79 @@ def npiSaveSchema(
                 if advanced
                 else "Always"
             )
-            scenarioParams.withdrawal_increase_trigger = TRIGGER_KEY_CONVERTER[
+            scenario_params.withdrawal_increase_trigger = TRIGGER_KEY_CONVERTER[
                 withdrawalTrigger
             ]
-            scenarioParams.withdrawal_increase_relaxation = TRIGGER_KEY_CONVERTER[
+            scenario_params.withdrawal_increase_relaxation = TRIGGER_KEY_CONVERTER[
                 withdrawalTrigger
             ]
             if withdrawalTrigger == "Always":
-                scenarioParams.withdrawal_increase_delay = 0
-                scenarioParams.withdrawal_increase_duration = 9999
+                scenario_params.withdrawal_increase_delay = 0
+                scenario_params.withdrawal_increase_duration = 9999
             elif withdrawalTrigger == "Timed":
                 withdrawalPeriod = [
                     i - 1 for i in id_get("withdrawalIncreasePeriod", id, (1, 60))
                 ]
-                scenarioParams.withdrawal_increase_delay = withdrawalPeriod[0] * 2
-                scenarioParams.withdrawal_increase_duration = (
+                scenario_params.withdrawal_increase_delay = withdrawalPeriod[0] * 2
+                scenario_params.withdrawal_increase_duration = (
                     withdrawalPeriod[1] - withdrawalPeriod[0] + 1
                 ) * 2
         else:
-            scenarioParams.withdrawal_increase_trigger = TRIGGER_KEY_CONVERTER["None"]
+            scenario_params.withdrawal_increase_trigger = TRIGGER_KEY_CONVERTER["None"]
         # Reduced Group Size
         if id_get("reducedGroupToggle", id, False):
-            scenarioParams.reduced_workgroup_size = id_get("reducedGroupSize", id, 5)
+            scenario_params.reduced_workgroup_size = id_get("reducedGroupSize", id, 5)
             reducedGroupTrigger = (
                 id_get("reducedGroupTrigger", id, "Always") if advanced else "Always"
             )
-            scenarioParams.reduced_workgroup_trigger = TRIGGER_KEY_CONVERTER[
+            scenario_params.reduced_workgroup_trigger = TRIGGER_KEY_CONVERTER[
                 reducedGroupTrigger
             ]
-            scenarioParams.reduced_workgroup_relaxation = TRIGGER_KEY_CONVERTER[
+            scenario_params.reduced_workgroup_relaxation = TRIGGER_KEY_CONVERTER[
                 reducedGroupTrigger
             ]
             if reducedGroupTrigger == "Always":
-                scenarioParams.reduced_workgroup_delay = 0
-                scenarioParams.reduced_workgroup_duration = 9999
+                scenario_params.reduced_workgroup_delay = 0
+                scenario_params.reduced_workgroup_duration = 9999
             elif reducedGroupTrigger == "Timed":
                 reducedGroupPeriod = [
                     i - 1 for i in id_get("reducedGroupPeriod", id, (1, 60))
                 ]
-                scenarioParams.reduced_workgroup_delay = reducedGroupPeriod[0] * 2
-                scenarioParams.reduced_workgroup_duration = (
+                scenario_params.reduced_workgroup_delay = reducedGroupPeriod[0] * 2
+                scenario_params.reduced_workgroup_duration = (
                     reducedGroupPeriod[1] - reducedGroupPeriod[0] + 1
                 ) * 2
         else:
-            scenarioParams.reduced_workgroup_trigger = TRIGGER_KEY_CONVERTER["None"]
+            scenario_params.reduced_workgroup_trigger = TRIGGER_KEY_CONVERTER["None"]
         # BCC Reduction
         if id_get("bccToggle", id, False):
-            scenarioParams.bcc_reduction = id_get("bccReducedRate", id, 0.2) / id_get(
+            scenario_params.bcc_reduction = id_get("bccReducedRate", id, 0.2) / id_get(
                 "bccRate", id, 4.0
             )
             bccTrigger = id_get("bccTrigger", id, "Always") if advanced else "Always"
-            scenarioParams.bcc_reduction_trigger = TRIGGER_KEY_CONVERTER[bccTrigger]
-            scenarioParams.bcc_reduction_relaxation = TRIGGER_KEY_CONVERTER[bccTrigger]
+            scenario_params.bcc_reduction_trigger = TRIGGER_KEY_CONVERTER[bccTrigger]
+            scenario_params.bcc_reduction_relaxation = TRIGGER_KEY_CONVERTER[bccTrigger]
             if bccTrigger == "Always":
-                scenarioParams.bcc_reduction_delay = 0
-                scenarioParams.bcc_reduction_duration = 9999
+                scenario_params.bcc_reduction_delay = 0
+                scenario_params.bcc_reduction_duration = 9999
             elif bccTrigger == "Timed":
                 bccPeriod = [i - 1 for i in id_get("bccPeriod", id, (1, 60))]
-                scenarioParams.bcc_reduction_delay = bccPeriod[0] * 2
-                scenarioParams.bcc_reduction_duration = (
+                scenario_params.bcc_reduction_delay = bccPeriod[0] * 2
+                scenario_params.bcc_reduction_duration = (
                     bccPeriod[1] - bccPeriod[0] + 1
                 ) * 2
         else:
-            scenarioParams.bcc_reduction_trigger = TRIGGER_KEY_CONVERTER["None"]
+            scenario_params.bcc_reduction_trigger = TRIGGER_KEY_CONVERTER["None"]
         # Other NPIs
-        scenarioParams.diagnosed_case_isolation = id_get("caseIsolation", id, False)
+        scenario_params.diagnosed_case_isolation = id_get("caseIsolation", id, False)
 
         # Save the updated parameters, removing default baseline values
         distanceTableParams = {f"{age}_social_distance" for age in AGE_GROUP_KEYS}
         if id > 0 and baseline is not None:
             schema_remove_baseline(
-                scenarioParams, baseline.Scenario_Parameter, ignore=distanceTableParams
+                scenario_params, baseline.Scenario_Parameter, ignore=distanceTableParams
             )
-        schema_update(schema, "Scenario_Parameter", scenarioParams)
+        schema_update(schema, "Scenario_Parameter", scenario_params)
     except (ValueError, ValidationError) as e:
         npiLog.error(
             (
@@ -1465,7 +1471,7 @@ def npiSaveSchema(
         raise e
 
 
-def npiLoadSchema(schema: Parameters, scenario_id: int = 0):
+def npi_load_schema(schema: Parameters, scenario_id: int = 0):
     """
     Function to read NPI parameters from a schema and set the
     dashboard's widgets to the specified values.

@@ -55,7 +55,7 @@ session = st.session_state
 
 
 # @st.fragment
-def buildDiseaseTab(id: int, advanced: bool = False):
+def build_disease_tab(id: int, advanced: bool = False):
     """
     Function to generate the parameters for the pathogen in a specified
     container with scenario differentiation
@@ -1456,7 +1456,7 @@ def diseaseDescribe(scenario_id: int = 0, advanced: bool = False):
         {highSeed:.0g} each cycle; there is a {seedRate % 1:.0%} chance that
         there will be {highSeed:.0g} seeded infection{plural(highSeed)}.
         """
-    startDay, endDay = id_get("seedPeriod", scenario_id, (1, 30))
+    start_day, endDay = id_get("seedPeriod", scenario_id, (1, 30))
     st.markdown("""
         When a simulation experiment begins, everyone within the simulation is
         healthy. Infection seeding is used to kickstart the spread of the pathogen
@@ -1467,7 +1467,7 @@ def diseaseDescribe(scenario_id: int = 0, advanced: bool = False):
         for variance between different experiment runs using the same parameters.
 
         {seedRate} Infection seeding occurs from Day {start} to Day {end} of each simulation.
-    """.format(seedRate=seedString, start=startDay, end=endDay))
+    """.format(seedRate=seedString, start=start_day, end=endDay))
 
     # Health Burdens
     st.subheader("Health Burden Outcomes")
@@ -1643,12 +1643,12 @@ def diseaseDescribe(scenario_id: int = 0, advanced: bool = False):
     """)
 
 
-def diseaseSaveSchema(
+def disease_save_schema(
     schema: Parameters,
     id: int = 0,
     advanced: bool = False,
     baseline: Optional[Parameters] = None,
-    includeDashboard: bool = False,
+    include_dashboard: bool = False,
 ):
     """
     Function to populate the Pydantic model schema with pathogen parameters
@@ -1671,7 +1671,7 @@ def diseaseSaveSchema(
             to omit parameters that are already set in the baseline from the final
             scenario.
 
-        includeDashboard (bool): Set to `True` to include dashboard-exclusive
+        include_dashboard (bool): Set to `True` to include dashboard-exclusive
             parameters like GP rate in the generated schema.
     """
     try:
@@ -1735,70 +1735,70 @@ def diseaseSaveSchema(
             ]
 
         # Scenario Parameters With Age Prefix
-        ageScenarioParams = AllAgesParameters()
-        ageScenarioParams.mort = globalDeathRate
+        age_scenario_params = AllAgesParameters()
+        age_scenario_params.mort = globalDeathRate
 
         # Scenario Parameters
-        scenarioParams = GeneralParameters()
+        scenario_params = GeneralParameters()
 
         # Advanced parameter differences
         if advanced:
-            scenarioParams.prob_asymptomatic_young = id_get(
+            scenario_params.prob_asymptomatic_young = id_get(
                 "asymptomaticChild", id, 0.35
             )
-            scenarioParams.prob_asymptomatic = id_get("asymptomaticAdult", id, 0.35)
-            scenarioParams.kappa_household = id_get("householdKappa", id, 2.2)
-            scenarioParams.kappa_child_education = id_get("schoolKappa", id, 1.0)
-            scenarioParams.kappa_workplace = id_get("workKappa", id, 1.0)
-            scenarioParams.kappa_background = id_get("backgroundKappa", id, 1.0)
+            scenario_params.prob_asymptomatic = id_get("asymptomaticAdult", id, 0.35)
+            scenario_params.kappa_household = id_get("householdKappa", id, 2.2)
+            scenario_params.kappa_child_education = id_get("schoolKappa", id, 1.0)
+            scenario_params.kappa_workplace = id_get("workKappa", id, 1.0)
+            scenario_params.kappa_background = id_get("backgroundKappa", id, 1.0)
 
             for age in AGE_GROUP_KEYS:
                 if age in burden_age_form["Age Group"].values:
                     mort = burden_age_form.loc[
                         burden_age_form["Age Group"] == age, "Mortality Rate"
                     ].item()
-                    setattr(scenarioParams, f"{age}_mort", round(mort / 100000, 10))
+                    setattr(scenario_params, f"{age}_mort", round(mort / 100000, 10))
                 else:
-                    setattr(scenarioParams, f"{age}_mort", globalDeathRate)
+                    setattr(scenario_params, f"{age}_mort", globalDeathRate)
         else:
             probAsymptomatic = id_get("asymptomaticAdult", id, 0.35)
-            scenarioParams.prob_asymptomatic_young = probAsymptomatic
-            scenarioParams.prob_asymptomatic = probAsymptomatic
+            scenario_params.prob_asymptomatic_young = probAsymptomatic
+            scenario_params.prob_asymptomatic = probAsymptomatic
 
         # Immunity Waning
         if advanced and id_get("naturalWaningToggle", id, False):
             wanedEfficacy = id_get("naturalWanedEfficacy", id, 0.5)
             waningRate = id_get("naturalWaningRate", id, 6) * 60
-            scenarioParams.infection_waning_cycle_delay = (
+            scenario_params.infection_waning_cycle_delay = (
                 id_get("naturalImmunityDuration", id, 2) * 60
             )
-            scenarioParams.infection_waned_protection = wanedEfficacy
-            scenarioParams.infection_waning_rate_per_cycle = (
+            scenario_params.infection_waned_protection = wanedEfficacy
+            scenario_params.infection_waning_rate_per_cycle = (
                 1.0 if waningRate == 0 else (1.0 - wanedEfficacy) / waningRate
             )
         else:
             # Set rate to 0
-            scenarioParams.infection_waning_rate_per_cycle = 0
+            scenario_params.infection_waning_rate_per_cycle = 0
         # Infection Seeding
-        scenarioParams.seed_rate = id_get("seedRate", id, 0.25)
-        scenarioParams.seeding_start_cycle = (seedPeriod[0] - 1) * 2
-        scenarioParams.seeding_duration = (seedPeriod[1] - seedPeriod[0] + 1) * 2
+        scenario_params.seed_rate = id_get("seedRate", id, 0.25)
+        scenario_params.seeding_start_cycle = (seedPeriod[0] - 1) * 2
+        scenario_params.seeding_duration = (seedPeriod[1] - seedPeriod[0] + 1) * 2
         # Transmission
-        scenarioParams.beta_asymptomatic = id_get("betaAsymptomatic", id, 0.55)
-        scenarioParams.beta_post_symptomatic = id_get("betaPostSymptomatic", id, 0.55)
+        scenario_params.beta_asymptomatic = id_get("betaAsymptomatic", id, 0.55)
+        scenario_params.beta_post_symptomatic = id_get("betaPostSymptomatic", id, 0.55)
         # Life Cycle
-        scenarioParams.transmissibility_delay = latencyPeriod * 2
-        scenarioParams.symptom_latency = (latencyPeriod + preSymptomPeriod) * 2
-        scenarioParams.generation_time = (
+        scenario_params.transmissibility_delay = latencyPeriod * 2
+        scenario_params.symptom_latency = (latencyPeriod + preSymptomPeriod) * 2
+        scenario_params.generation_time = (
             latencyPeriod + preSymptomPeriod + symptomPeriod
         ) * 2
-        scenarioParams.infection_duration = (
+        scenario_params.infection_duration = (
             latencyPeriod + preSymptomPeriod + symptomPeriod + postSymptomPeriod
         ) * 2
         # Health Burden Outcomes
-        scenarioParams.prob_diagnosis = round(id_get("case_ratio", id, 50.0) / 100, 6)
+        scenario_params.prob_diagnosis = round(id_get("case_ratio", id, 50.0) / 100, 6)
         hospitalRate = id_get("hospital_ratio", id, 320.0) / 100000
-        scenarioParams.prob_hospitalisation = round(hospitalRate, 10)
+        scenario_params.prob_hospitalisation = round(hospitalRate, 10)
         # Age-Specific Parameters
         transAgeForm = id_get(
             "transAgeForm",
@@ -1815,11 +1815,13 @@ def diseaseSaveSchema(
         for age in AGE_GROUP_KEYS:
             if age in transAgeForm["Age Group"].values:
                 ageRow = transAgeForm.loc[transAgeForm["Age Group"] == age]
-                setattr(scenarioParams, f"{age}_trans", ageRow["Infectiousness"].item())
-                setattr(scenarioParams, f"{age}_susc", ageRow["Susceptibility"].item())
+                setattr(
+                    scenario_params, f"{age}_trans", ageRow["Infectiousness"].item()
+                )
+                setattr(scenario_params, f"{age}_susc", ageRow["Susceptibility"].item())
             else:
-                setattr(scenarioParams, f"{age}_trans", 1.0)
-                setattr(scenarioParams, f"{age}_susc", 1.0)
+                setattr(scenario_params, f"{age}_trans", 1.0)
+                setattr(scenario_params, f"{age}_susc", 1.0)
 
         # Save the updated parameters, removing redundant baseline values
         # TODO: Find a better way to prevent needing to include every table age
@@ -1829,35 +1831,35 @@ def diseaseSaveSchema(
         )
         if baseline is not None and id > 0:
             schema_remove_baseline(
-                ageScenarioParams, baseline.Scenario_ParameterWithAgePrefix
+                age_scenario_params, baseline.Scenario_ParameterWithAgePrefix
             )
             schema_remove_baseline(
-                scenarioParams, baseline.Scenario_Parameter, ignore=ageTableParams
+                scenario_params, baseline.Scenario_Parameter, ignore=ageTableParams
             )
-        schema_update(schema, "Scenario_ParameterWithAgePrefix", ageScenarioParams)
-        schema_update(schema, "Scenario_Parameter", scenarioParams)
+        schema_update(schema, "Scenario_ParameterWithAgePrefix", age_scenario_params)
+        schema_update(schema, "Scenario_Parameter", scenario_params)
 
         # Dashboard Parameters
-        if includeDashboard:
-            dashboardParams = DashboardParameters()
-            dashboardParams.prob_gp = round(id_get("gp_ratio", id, 17.0) / 100, 6)
-            dashboardParams.prob_icu = round(id_get("icu_ratio", id, 20.0) / 100, 6)
+        if include_dashboard:
+            dashboard_params = DashboardParameters()
+            dashboard_params.prob_gp = round(id_get("gp_ratio", id, 17.0) / 100, 6)
+            dashboard_params.prob_icu = round(id_get("icu_ratio", id, 20.0) / 100, 6)
             for age in AGE_GROUP_KEYS:
                 if age in burden_age_form["Age Group"].values:
                     hosp = burden_age_form.loc[
                         burden_age_form["Age Group"] == age, "Hospitalisation Rate"
                     ].item()
-                    setattr(dashboardParams, f"{age}_hosp", round(hosp / 100000, 10))
+                    setattr(dashboard_params, f"{age}_hosp", round(hosp / 100000, 10))
                 else:
-                    setattr(dashboardParams, f"{age}_hosp", globalHospitalRate)
+                    setattr(dashboard_params, f"{age}_hosp", globalHospitalRate)
 
             if id > 0 and baseline is not None:
                 schema_remove_baseline(
-                    dashboardParams,
+                    dashboard_params,
                     baseline.Dashboard_Parameter,
                     ignore={f"{age}_hosp" for age in AGE_GROUP_KEYS},
                 )
-            schema_update(schema, "Dashboard_Parameter", dashboardParams)
+            schema_update(schema, "Dashboard_Parameter", dashboard_params)
     except (ValueError, ValidationError) as e:
         diseaseLog.error(
             (
@@ -1868,7 +1870,7 @@ def diseaseSaveSchema(
         raise e
 
 
-def diseaseLoadSchema(schema: Parameters, scenario_id: int = 0):
+def disease_load_schema(schema: Parameters, scenario_id: int = 0):
     """
     Function to read pathogen parameters from a schema and set the
     dashboard's widgets to the specified values.

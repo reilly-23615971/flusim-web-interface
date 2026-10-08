@@ -28,7 +28,7 @@ session = st.session_state
 
 
 # @st.fragment
-def buildDynamicTab(id: int):
+def build_dynamic_tab(id: int):
     """
     Function to generate the dynamic parameters in a specified container
     with scenario differentiation.
@@ -378,7 +378,7 @@ def paramCast(x: str) -> Literal[
     )
 
 
-def dynamicSaveSchema(schema: Parameters, id: int = 0):
+def dynamic_save_schema(schema: Parameters, id: int = 0):
     """
     Function to populate the Pydantic model schema with dynamic parameters
     using scenario differentiation.
@@ -448,7 +448,7 @@ def dynamicSaveSchema(schema: Parameters, id: int = 0):
         raise e
 
 
-def dynamicLoadSchema(schema: Parameters, scenario_id: int = 0):
+def dynamic_load_schema(schema: Parameters, scenario_id: int = 0):
     """
     Function to read dynamic parameters from a schema and set the
     dashboard's widgets to the specified values.

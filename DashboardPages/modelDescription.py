@@ -110,16 +110,16 @@ st.page_link(
 
 # TODO: Engine settings?
 
-showAdvanced = session.get("showAdvanced", False)
+show_advanced = session.get("show_advanced", False)
 
 # Pathogen Parameters
 with st.expander(
     "Pathogen-Related Parameters", expanded=True, icon=":material/coronavirus:"
 ):
-    diseaseDescribe(0, advanced=showAdvanced)
+    diseaseDescribe(0, advanced=show_advanced)
 with st.expander(
     "Community-Related Parameters", expanded=True, icon=":material/groups:"
 ):
-    communityDescribe(0, advanced=showAdvanced)
+    communityDescribe(0, advanced=show_advanced)
 
 st.markdown("Other parameters coming soon!")

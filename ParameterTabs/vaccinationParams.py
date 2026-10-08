@@ -47,7 +47,7 @@ session = st.session_state
 # TODO: See if the vaccination trigger parameters are fully working
 # and reimplement them if they are
 # @st.fragment
-def buildVaccinationTab(id: int, advanced: bool = False):
+def build_vaccination_tab(id: int, advanced: bool = False):
     """
     Function to generate the parameters for vaccination in a
     specified container with scenario differentiation.
@@ -1493,12 +1493,12 @@ that they will remain healthy when exposed to the pathogen.
     # TODO: Reintegrate trigger thresholds when vaccines care about them
 
 
-def vaccineSaveSchema(
+def vaccine_save_schema(
     schema: Parameters,
     id: int = 0,
     advanced: bool = False,
     baseline: Optional[Parameters] = None,
-    includeDashboard: bool = False,
+    include_dashboard: bool = False,
 ) -> bool:
     """
     Function to populate the Pydantic model schema with vaccination parameters
@@ -1521,7 +1521,7 @@ def vaccineSaveSchema(
             to omit parameters that are already set in the baseline from the final
             scenario.
 
-        includeDashboard (bool): Set to `True` to include the dashboard-exclusive
+        include_dashboard (bool): Set to `True` to include the dashboard-exclusive
             vaccine distribution parameter.
 
     Returns:
@@ -1554,14 +1554,14 @@ def vaccineSaveSchema(
                 else id_get("vaccineDistribution", id, "Static Proportions")
                 == "Live Distribution"
             )
-            if includeDashboard:
-                dashboardParams = DashboardParameters()
-                dashboardParams.live_vaccine_distribution = liveDistribution
+            if include_dashboard:
+                dashboard_params = DashboardParameters()
+                dashboard_params.live_vaccine_distribution = liveDistribution
                 if id > 0 and baseline is not None:
                     schema_remove_baseline(
-                        dashboardParams, baseline.Dashboard_Parameter
+                        dashboard_params, baseline.Dashboard_Parameter
                     )
-                schema_update(schema, "Dashboard_Parameter", dashboardParams)
+                schema_update(schema, "Dashboard_Parameter", dashboard_params)
 
             vacPropAgeForm = id_get(
                 "vacPropAgeForm",
@@ -1604,29 +1604,29 @@ def vaccineSaveSchema(
             ]
 
             # Scenario Parameters
-            scenarioParams = GeneralParameters()
+            scenario_params = GeneralParameters()
 
             # TODO: See if these can be reintegrated onto the dashboard
-            scenarioParams.vaccination_delay = 0
-            scenarioParams.vaccination_duration = 2500
-            scenarioParams.vaccination_trigger = TRIGGER_KEY_CONVERTER["Timed"]
-            scenarioParams.vaccination_relaxation = TRIGGER_KEY_CONVERTER["Always"]
+            scenario_params.vaccination_delay = 0
+            scenario_params.vaccination_duration = 2500
+            scenario_params.vaccination_trigger = TRIGGER_KEY_CONVERTER["Timed"]
+            scenario_params.vaccination_relaxation = TRIGGER_KEY_CONVERTER["Always"]
 
             # Ensure doses do not exceed the integer limit
-            scenarioParams.vaccine_doses = (
+            scenario_params.vaccine_doses = (
                 min(id_get("initialDoseReserve", id, 0), 2000000000)
                 if liveDistribution and id_get("limitDosesToggle", id, False)
                 else 99999999
             )
-            scenarioParams.vaccination_first_dose_rate = (
+            scenario_params.vaccination_first_dose_rate = (
                 min(id_get("firstDoseRate", id, 300), 2000000000)
                 if liveDistribution
                 else 99999999
             )
 
             if id > 0 and baseline is not None:
-                schema_remove_baseline(scenarioParams, baseline.Scenario_Parameter)
-            schema_update(schema, "Scenario_Parameter", scenarioParams)
+                schema_remove_baseline(scenario_params, baseline.Scenario_Parameter)
+            schema_update(schema, "Scenario_Parameter", scenario_params)
 
             # Vaccine Doses and Efficacy
             if multiDoseToggle:
@@ -1898,7 +1898,7 @@ def vaccineSaveSchema(
     return vaccineToggle
 
 
-def vaccineLoadSchema(schema: Parameters, scenario_id: int = 0):
+def vaccine_load_schema(schema: Parameters, scenario_id: int = 0):
     """
     Function to read vaccination parameters from a schema and set the
     dashboard's widgets to the specified values.
@@ -1917,7 +1917,7 @@ def vaccineLoadSchema(schema: Parameters, scenario_id: int = 0):
     # TODO: Distinguish between scenario with vaccines disabled and
     # scenario with no changes to vaccines (only relevant once
     # scenarios are more efficient with less baseline duplication)
-    useVaccines, useMultiDose, useBoosters = False, False, False
+    use_vaccines, useMultiDose, useBoosters = False, False, False
 
     # Ordering dictionary to ensure global values are checked first
     ageOrder = {
@@ -1970,7 +1970,7 @@ def vaccineLoadSchema(schema: Parameters, scenario_id: int = 0):
 
     # Vaccine Coverage Parameters
     if schemaCoverage is not None:
-        useVaccines = True
+        use_vaccines = True
         coverageTable = pd.DataFrame(
             columns=(
                 "Age Group",
@@ -2036,7 +2036,7 @@ def vaccineLoadSchema(schema: Parameters, scenario_id: int = 0):
 
     # Vaccine Dosage Parameters
     if schemaDose is not None:
-        useVaccines = True
+        use_vaccines = True
 
         # Primary vaccines
         if any(dose.DoseType == "primary" for dose in schemaDose):
@@ -2085,7 +2085,7 @@ def vaccineLoadSchema(schema: Parameters, scenario_id: int = 0):
 
     # Vaccine Efficacy Parameters
     if schemaEfficacy is not None:
-        useVaccines = True
+        use_vaccines = True
 
         # Primary Vaccines
         primaryEfficacySchema = [
@@ -2297,7 +2297,7 @@ def vaccineLoadSchema(schema: Parameters, scenario_id: int = 0):
     # Final Toggles
     # TODO: Ensure that toggles being disabled is distinguishable from
     # parameters being unchanged from baselines
-    update_param_from_schema("vaccineToggle", useVaccines, scenario_id)
+    update_param_from_schema("vaccineToggle", use_vaccines, scenario_id)
     update_param_from_schema("boosterToggle", useBoosters, scenario_id)
     update_param_from_schema("multiDoseToggle", useMultiDose, scenario_id)
 
