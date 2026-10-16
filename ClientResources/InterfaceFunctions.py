@@ -254,9 +254,9 @@ def health_outcome_store(
             base_death_rate = single_rates["Deaths"][name]
             base_icu_rate = icu_multipliers[name]
             # Format table with age-specific rates
-            burden_age_form = (
+            health_burden_age_form = (
                 id_get(
-                    "burden_age_form",
+                    "health_burden_age_form",
                     scenario_id,
                     pd.DataFrame(
                         {
@@ -270,15 +270,15 @@ def health_outcome_store(
                 .dropna()
                 .replace({"Age Group": AGE_KEY_CONVERTER})
             )
-            burden_age_form["Hospitalisation Rate"] = burden_age_form[
+            health_burden_age_form["Hospitalisation Rate"] = health_burden_age_form[
                 "Hospitalisation Rate"
             ].apply(hospital_format)
-            burden_age_form["Mortality Rate"] = burden_age_form["Mortality Rate"].apply(
-                death_format
-            )
+            health_burden_age_form["Mortality Rate"] = health_burden_age_form[
+                "Mortality Rate"
+            ].apply(death_format)
             # Convert to dictionaries with base rate as default
             hospital_age_dict = (
-                burden_age_form[["Age Group", "Hospitalisation Rate"]]
+                health_burden_age_form[["Age Group", "Hospitalisation Rate"]]
                 .set_index("Age Group")["Hospitalisation Rate"]
                 .to_dict()
             )
@@ -294,7 +294,7 @@ def health_outcome_store(
             } | icu_age_dict
 
             mort_age_dict = (
-                burden_age_form[["Age Group", "Mortality Rate"]]
+                health_burden_age_form[["Age Group", "Mortality Rate"]]
                 .set_index("Age Group")["Mortality Rate"]
                 .to_dict()
             )

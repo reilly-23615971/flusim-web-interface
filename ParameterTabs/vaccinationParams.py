@@ -149,9 +149,9 @@ The percentage of the population that will be vaccinated against the pathogen.
 
             else:
                 # Initial and target proportions
-                leftCol, rightCol = st.columns(2)
+                left_column, right_column = st.columns(2)
                 load_key("initialVaccinated", id, 0.0)
-                initialVaccinated = leftCol.number_input(
+                initialVaccinated = left_column.number_input(
                     "Initial Vaccinated Population (% Percentage)",
                     min_value=0.0,
                     max_value=100.0,
@@ -205,7 +205,7 @@ pathogen at the beginning of the simulation.
                 )
                 '''
                 load_key("targetVaccinated", id, 80.0)
-                targetVaccinated = rightCol.number_input(
+                targetVaccinated = right_column.number_input(
                     "Target Vaccinated Population (% Percentage)",
                     min_value=0.0,
                     max_value=100.0,
@@ -524,7 +524,7 @@ receive another, where a month is 30 days.
 
                 # Waning parameters
                 load_key("vaccineWaningToggle", id, False)
-                waningToggle = st.toggle(
+                waning_toggle = st.toggle(
                     "Enable Vaccine-Derived Immunity Waning",
                     value=False,
                     on_change=save_key,
@@ -537,7 +537,7 @@ infected if it has been a sufficiently long time since they received their
 final vaccine dose.
                     """,
                 )
-                if waningToggle:
+                if waning_toggle:
                     load_key("primaryDuration", id, 6)
                     st.slider(
                         "Vaccine-Derived Immunity Waning Delay (Months)",
@@ -578,7 +578,7 @@ pathogen all at once.
                 st.markdown(f"""
                     ### Individual Dose Efficacies
 
-                    Here you can set the {"initial " if waningToggle else ""}efficacy
+                    Here you can set the {"initial " if waning_toggle else ""}efficacy
                     of each vaccine dose in the schedule separately. Note that
                     changing the "Number of Vaccine Doses" parameter
                     will affect how many sections are present here.
@@ -592,7 +592,7 @@ pathogen all at once.
                             st.slider(
                                 (
                                     "Initial Dose Efficacy (Probability)"
-                                    if waningToggle
+                                    if waning_toggle
                                     else "Dose Efficacy (Probability)"
                                 ),
                                 min_value=0.0,
@@ -604,7 +604,7 @@ pathogen all at once.
                                 args=["primaryBaseEfficacy", id, f"-{i}"],
                                 key=f"_primaryBaseEfficacy{id}-{i}",
                                 help=f"""
-The {"initial " if waningToggle else ""}efficacy of this vaccine dose,
+The {"initial " if waning_toggle else ""}efficacy of this vaccine dose,
 represented as the probability that an individual that has received the
 dose will remain healthy when exposed to the pathogen.
                             """,
@@ -617,11 +617,11 @@ dose will remain healthy when exposed to the pathogen.
                         st.markdown(
                             (
                                 "##### Age-Specific Initial Efficacy"
-                                if waningToggle
+                                if waning_toggle
                                 else "##### Age-Specific Efficacy"
                             ),
                             help=f"""
-This section allows unique {"initial " if waningToggle else ""}efficacy values
+This section allows unique {"initial " if waning_toggle else ""}efficacy values
 for this dose to be defined for individual age groups in the simulation,
 overriding the global efficacy value for this dose defined above.
                             """,
@@ -662,14 +662,14 @@ overriding the global efficacy value for this dose defined above.
                                     format_func=age_display,
                                     help=f"""
 An age group that will have a specific
-{"initial " if waningToggle else ""}efficacy value defined
+{"initial " if waning_toggle else ""}efficacy value defined
 for this vaccine dose, overriding the base value.
                                     """,
                                 ),
                                 "Initial Dose Efficacy": st.column_config.NumberColumn(
                                     (
                                         "Initial Dose Efficacy (Probability)"
-                                        if waningToggle
+                                        if waning_toggle
                                         else "Dose Efficacy (Probability)"
                                     ),
                                     required=True,
@@ -678,7 +678,7 @@ for this vaccine dose, overriding the base value.
                                     max_value=100.0,
                                     format="%0.5g%%",
                                     help=f"""
-The {"initial " if waningToggle else ""}efficacy of this vaccine dose for
+The {"initial " if waning_toggle else ""}efficacy of this vaccine dose for
 this age group, represented as the probability that a vaccinated individual in
 this age group will remain healthy when exposed to the pathogen.
                                     """,
@@ -690,14 +690,14 @@ this age group will remain healthy when exposed to the pathogen.
                             id,
                             lambda: has_duplicates(vacInitialEfficacyAgeForm),
                             f"""
-Error: The age-specific {"initial" if waningToggle else "dose"} efficacy
+Error: The age-specific {"initial" if waning_toggle else "dose"} efficacy
 form used for the {ORDINALS[i+1].lower()} vaccine dose by the
 {'baseline scenario' if id == 0 else f'scenario named "{session.scenario_names[id]}"'}
 contains duplicate age group rows. Each age group should only be used in a
 single row of the form.
 
 Please remove or change any rows of the Age-Specific
-{"Initial " if waningToggle else ""}Efficacy form in the {ORDINALS[i+1]}
+{"Initial " if waning_toggle else ""}Efficacy form in the {ORDINALS[i+1]}
 Vaccine Dose section of :primary-badge[:material/vaccines: Vaccination]
 that use the same age group as another row.
                             """,
@@ -705,7 +705,7 @@ that use the same age group as another row.
                         )
 
                 # Efficacy After Waning
-                if waningToggle:
+                if waning_toggle:
                     load_key("primaryWanedEfficacy", id, 0.0)
                     primaryWanedEfficacy = st.slider(
                         "Minimum Dose Efficacy (Probability)",
@@ -902,7 +902,7 @@ healthy when exposed to the pathogen.
                 # Waning parameters (only if advanced parameters are enabled)
                 if advanced:
                     load_key("vaccineWaningToggle", id, False)
-                    waningToggle = st.toggle(
+                    waning_toggle = st.toggle(
                         "Enable Vaccine-Derived Immunity Waning",
                         value=False,
                         on_change=save_key,
@@ -915,12 +915,12 @@ infected if it has been a sufficiently long time since they were vaccinated.
                         """,
                     )
                 else:
-                    waningToggle = False
+                    waning_toggle = False
 
                 # Vaccine Efficacy for All Doses
                 load_key("primarySingleEfficacy", id, 0.5)
                 doseEfficacy = st.slider(
-                    f"{"Initial " if waningToggle else ""}Vaccine Efficacy (Probability)",
+                    f"{"Initial " if waning_toggle else ""}Vaccine Efficacy (Probability)",
                     min_value=0.0,
                     max_value=1.0,
                     value=0.5,
@@ -930,14 +930,14 @@ infected if it has been a sufficiently long time since they were vaccinated.
                     args=["primarySingleEfficacy", id],
                     key=f"_primarySingleEfficacy{id}",
                     help=f"""
-The {"initial " if waningToggle else ""}efficacy of the vaccine,
+The {"initial " if waning_toggle else ""}efficacy of the vaccine,
 represented as the probability that an
 individual that has recently received a
 dose will remain healthy when exposed to the pathogen.
                     """,
                 )
 
-                if waningToggle:
+                if waning_toggle:
                     load_key("primaryWanedEfficacy", id, 0.0)
                     primaryWanedEfficacy = st.slider(
                         "Minimum Vaccine Efficacy (Probability)",
@@ -1046,7 +1046,7 @@ for individual age groups in the simulation, overriding the efficacy defined abo
                     dataframe=True,
                 )
                 # Set N/A values from hidden columns to the current default
-                if waningToggle:
+                if waning_toggle:
                     session[f"vacSingleEfficacyAgeForm{id}"] = replace_table_na(
                         session[f"vacSingleEfficacyAgeForm{id}"],
                         {"Vaccine Efficacy After Waning": percentWanedEfficacy},
@@ -1073,20 +1073,20 @@ for it, overriding the base value.
                             """,
                         ),
                         "Vaccine Efficacy": st.column_config.NumberColumn(
-                            f"{"Initial " if waningToggle else ""}Vaccine Efficacy (Probability)",
+                            f"{"Initial " if waning_toggle else ""}Vaccine Efficacy (Probability)",
                             required=True,
                             default=percentDoseEfficacy,
                             min_value=0.0,
                             max_value=100.0,
                             format="%0.5g%%",
                             help=f"""
-The {"initial " if waningToggle else ""}efficacy of each vaccine dose for this age group, represented as the probability that a recently vaccinated individual in
+The {"initial " if waning_toggle else ""}efficacy of each vaccine dose for this age group, represented as the probability that a recently vaccinated individual in
 this age group will remain healthy when exposed to the pathogen.
                             """,
                         ),
                         "Vaccine Efficacy After Waning": (
                             None
-                            if not waningToggle
+                            if not waning_toggle
                             else st.column_config.NumberColumn(
                                 "Minimum Vaccine Efficacy (Probability)",
                                 required=True,
@@ -1124,7 +1124,7 @@ healthy when exposed to the pathogen.
                 param_error(
                     "vacSingleEfficacyAgeFormWanedAboveInitial",
                     id,
-                    lambda: waningToggle
+                    lambda: waning_toggle
                     and np.any(
                         vacEfficacyAgeForm["Vaccine Efficacy"]
                         < vacEfficacyAgeForm["Vaccine Efficacy After Waning"]
@@ -1190,9 +1190,9 @@ Toggle whether or not booster vaccines are
 administered in the simulation, overriding other booster-related parameters.
                     """,
                 )
-                leftCol, rightCol = st.columns(2)
+                left_column, right_column = st.columns(2)
                 load_key("boosterDoseCount", id, 3)
-                boosterDoseCount = leftCol.slider(
+                boosterDoseCount = left_column.slider(
                     "Number of Booster Doses",
                     1,
                     10,
@@ -1207,7 +1207,7 @@ simulation will be administered a booster vaccine.
                     """,
                 )
                 load_key("boosterDelay", id, 3)
-                boosterDelay = rightCol.slider(
+                boosterDelay = right_column.slider(
                     "Time Between Booster Doses (Months)",
                     1,
                     12,
@@ -1225,7 +1225,7 @@ to receive another, where a month is 30 days.
                     """,
                 )
                 load_key("boosterDuration", id, 4)
-                boosterDuration = leftCol.slider(
+                boosterDuration = left_column.slider(
                     "Booster Immunity Waning Delay (Months)",
                     1,
                     12,
@@ -1240,7 +1240,7 @@ before they begin losing their immunity, where a month is 30 days.
                     """,
                 )
                 load_key("boosterWaningRate", id, 6)
-                rightCol.slider(
+                right_column.slider(
                     "Booster Waning Duration (Months)",
                     0,
                     12,
@@ -1284,7 +1284,7 @@ pathogen all at once.
                     True,
                 )
                 load_key("boosterBaseEfficacy", id, 0.9)
-                boosterBaseEfficacy = leftCol.slider(
+                boosterBaseEfficacy = left_column.slider(
                     "Initial Booster Efficacy (Probability)",
                     min_value=0.0,
                     max_value=1.0,
@@ -1302,7 +1302,7 @@ booster will remain healthy when exposed to the pathogen.
                     """,
                 )
                 load_key("boosterWanedEfficacy", id, 0.6)
-                boosterWanedEfficacy = rightCol.slider(
+                boosterWanedEfficacy = right_column.slider(
                     "Minimum Booster Efficacy (Probability)",
                     min_value=0.0,
                     max_value=0.99,
@@ -1527,10 +1527,10 @@ def vaccine_save_schema(
     # Load reused parameters immediately to save time
     vaccineToggle = id_get("vaccineToggle", id, False)
     multiDoseToggle = id_get("multiDoseToggle", id, False) if advanced else False
-    waningToggle = id_get("vaccineWaningToggle", id, False) if advanced else False
+    waning_toggle = id_get("vaccineWaningToggle", id, False) if advanced else False
     boosterToggle = id_get("boosterToggle", id, False) if advanced else False
     ageNames = list(AGE_GROUP_KEYS)
-    simLength = session.get("cycle_count", 360) * 2
+    sim_length = session.get("cycle_count", 360) * 2
     initialProportion = round(id_get("initialVaccinated", id, 0.0) / 100, 6)
     targetProportion = round(id_get("targetVaccinated", id, 80.0) / 100, 6)
     try:
@@ -1631,7 +1631,7 @@ def vaccine_save_schema(
                 ]
                 # Waned is 0 if disabled since it doesn't matter
                 primWanedEfficacy = (
-                    id_get("primaryWanedEfficacy", id, 0.0) if waningToggle else 0.0
+                    id_get("primaryWanedEfficacy", id, 0.0) if waning_toggle else 0.0
                 )
 
                 # Base Primary Efficacy Values
@@ -1725,12 +1725,12 @@ def vaccine_save_schema(
                         DoseSpacingCycles=id_get("primaryDelay", id, 3) * 60,
                         WaningDelay=(
                             id_get("primaryDuration", id, 6) * 60
-                            if waningToggle
-                            else simLength
+                            if waning_toggle
+                            else sim_length
                         ),
                         WaningRatePerCycle=(
                             0.0
-                            if not waningToggle
+                            if not waning_toggle
                             else (
                                 1.0
                                 if primWaningDuration == 0
@@ -1744,7 +1744,7 @@ def vaccine_save_schema(
                 # Single Efficacy Parameters
                 singleEfficacy = id_get("primarySingleEfficacy", id, 0.5)
                 singleWanedEfficacy = (
-                    id_get("primaryWanedEfficacy", id, 0.0) if waningToggle else 0.0
+                    id_get("primaryWanedEfficacy", id, 0.0) if waning_toggle else 0.0
                 )
                 singleEfficacyAgeForm = id_get(
                     "vacSingleEfficacyAgeForm",
@@ -1775,7 +1775,7 @@ def vaccine_save_schema(
                     VaccineEfficacy(
                         DoseType="primary",
                         Age=age,
-                        WanedEfficacy=waned if waningToggle else 0.0,
+                        WanedEfficacy=waned if waning_toggle else 0.0,
                         Efficacy=[initial],
                     )
                     for age, initial, waned in zip(
@@ -1795,12 +1795,12 @@ def vaccine_save_schema(
                         DoseSpacingCycles=id_get("primaryDelay", id, 3) * 60,
                         WaningDelay=(
                             id_get("primaryDuration", id, 6) * 60
-                            if waningToggle
-                            else simLength
+                            if waning_toggle
+                            else sim_length
                         ),
                         WaningRatePerCycle=(
                             0.0
-                            if not waningToggle
+                            if not waning_toggle
                             else (
                                 1.0
                                 if primWaningDuration == 0
@@ -1930,7 +1930,7 @@ def vaccine_load_schema(schema: Parameters, scenario_id: int = 0):
     schemaDose = schema.Scenario_VaccineDose
     schemaEfficacy = schema.Scenario_VaccineDoseEfficacy
     schemaCoverage = schema.Scenario_VaccineCoverage
-    schemaDash = schema.Dashboard_Parameter
+    schema_dashboard = schema.Dashboard_Parameter
     missingParams = (
         params is None for params in (schemaDose, schemaEfficacy, schemaCoverage)
     )
@@ -1941,8 +1941,8 @@ def vaccine_load_schema(schema: Parameters, scenario_id: int = 0):
         """)
 
     # Dashboard Parameters
-    if schemaDash is not None:
-        liveDistribution = schemaDash.live_vaccine_distribution
+    if schema_dashboard is not None:
+        liveDistribution = schema_dashboard.live_vaccine_distribution
         if liveDistribution is not None:
             update_param_from_schema(
                 "vaccineDistribution",
@@ -2045,8 +2045,8 @@ def vaccine_load_schema(schema: Parameters, scenario_id: int = 0):
             update_param_from_schema(
                 "primaryDelay", primary_dose.DoseSpacingCycles // 60, scenario_id
             )
-            waningDelay = primary_dose.WaningDelay
-            update_param_from_schema("primaryDuration", waningDelay // 60, scenario_id)
+            waning_delay = primary_dose.WaningDelay
+            update_param_from_schema("primaryDuration", waning_delay // 60, scenario_id)
             # Efficacy needs to be logged so that waning rate per cycle
             # can be calculated
             primaryRatePerCycle = primary_dose.WaningRatePerCycle
@@ -2314,14 +2314,14 @@ def vaccine_load_schema(schema: Parameters, scenario_id: int = 0):
 
     # General Scenario Parameters
     # TODO: Make sure unset values are not used
-    schemaParameters = schema.Scenario_Parameter
-    if schemaParameters is not None:
+    schema_parameters = schema.Scenario_Parameter
+    if schema_parameters is not None:
         # TODO: Add other vaccine stuff if it's made configurable on the dashboard
 
         # Dose Rate
         if liveDistribution:
-            firstDoseRate = schemaParameters.vaccination_first_dose_rate
-            doseCount = schemaParameters.vaccine_doses
+            firstDoseRate = schema_parameters.vaccination_first_dose_rate
+            doseCount = schema_parameters.vaccine_doses
             if doseCount is not None:
                 update_param_from_schema(
                     "limitDosesToggle", doseCount != 99999999, scenario_id

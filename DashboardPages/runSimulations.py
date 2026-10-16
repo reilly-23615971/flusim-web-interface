@@ -329,8 +329,8 @@ already busy with a different task.
                 scenario_names,
                 use_ages=use_advanced,
             )
-            useWaning = use_advanced and any(
-                id_get("naturalWaningToggle", scenario_id, False)
+            use_waning = use_advanced and any(
+                id_get("natural_waning_toggle", scenario_id, False)
                 or (
                     id_get("vaccineToggle", scenario_id, False)
                     and (
@@ -349,7 +349,7 @@ already busy with a different task.
                 age_health_outcome_rates=age_rates,
                 community=community,
                 scaling_factor=scaling_factor,
-                waning=useWaning,
+                waning=use_waning,
             )
 
             # Prepare model call parameters

@@ -69,7 +69,7 @@ def build_npi_tab(id: int, advanced: bool = False):
         advanced (bool): Set to `True` to show more complex parameters like
             NPI trigger thresholds.
     """
-    simLength = session.get("cycle_count", 360)
+    sim_length = session.get("cycle_count", 360)
     triggerNames = list(TRIGGER_KEY_CONVERTER.keys())[1:]
 
     # Tab Content
@@ -341,7 +341,7 @@ rest of the simulation.
                     st.slider(
                         "School Closure Time Period",
                         min_value=1,
-                        max_value=simLength,
+                        max_value=sim_length,
                         value=(1, 60),
                         format="Day %i",
                         key=f"_schoolClosurePeriod{id}",
@@ -504,7 +504,7 @@ simulation.
                     st.slider(
                         "Withdrawal Increase Time Period",
                         min_value=1,
-                        max_value=simLength,
+                        max_value=sim_length,
                         value=(1, 60),
                         format="Day %i",
                         key=f"_withdrawalIncreasePeriod{id}",
@@ -726,7 +726,7 @@ reduced size for the rest of the simulation.
                     st.slider(
                         "Reduced Group Size Time Period",
                         min_value=1,
-                        max_value=simLength,
+                        max_value=sim_length,
                         value=(1, 60),
                         format="Day %i",
                         key=f"_reducedGroupPeriod{id}",
@@ -902,7 +902,7 @@ simulation.
                     st.slider(
                         "BCC Reduction Time Period",
                         min_value=1,
-                        max_value=simLength,
+                        max_value=sim_length,
                         value=(1, 60),
                         format="Day %i",
                         key=f"_bccPeriod{id}",
@@ -1474,30 +1474,33 @@ def npi_load_schema(schema: Parameters, scenario_id: int = 0):
             baseline scenario and will be treated accordingly.
     """
     # Load sim length early
-    simLength = session.get("cycle_count", 360)
+    sim_length = session.get("cycle_count", 360)
 
     # Dashboard Parameters
-    schemaDash = schema.Dashboard_Parameter
-    if schemaDash is not None and schemaDash.enable_social_distancing is not None:
+    schema_dashboard = schema.Dashboard_Parameter
+    if (
+        schema_dashboard is not None
+        and schema_dashboard.enable_social_distancing is not None
+    ):
         update_param_from_schema(
             "socialDistancingToggle",
-            schemaDash.enable_social_distancing,
+            schema_dashboard.enable_social_distancing,
             scenario_id,
         )
 
     # Global Age Parameters
-    schemaAge = schema.Scenario_ParameterWithAgePrefix
-    if schemaAge is not None and schemaAge.social_distance is not None:
-        compliance = schemaAge.social_distance
+    schema_age = schema.Scenario_ParameterWithAgePrefix
+    if schema_age is not None and schema_age.social_distance is not None:
+        compliance = schema_age.social_distance
         update_param_from_schema("socialDistancingCompliance", compliance, scenario_id)
     else:
         compliance = id_get("socialDistanceCompliance", 0, 0.9)
 
     # General Scenario Parameters
-    schemaParameters = schema.Scenario_Parameter
-    if schemaParameters is not None:
-        paramDict = schemaParameters.model_dump(exclude_unset=True, exclude_none=True)
-        paramConvert = {
+    schema_parameters = schema.Scenario_Parameter
+    if schema_parameters is not None:
+        param_dict = schema_parameters.model_dump(exclude_unset=True, exclude_none=True)
+        param_converter = {
             "class_dismissal": "classDismissal",
             "case_trigger_threshold": "caseTotalThreshold",
             "rate_trigger_threshold": "rateStartThreshold",
@@ -1509,15 +1512,17 @@ def npi_load_schema(schema: Parameters, scenario_id: int = 0):
             "social_distance_compliance": "socialDistancingCompliance",
             "diagnosed_case_isolation": "caseIsolation",
         }
-        simpleParams = {p: key for p, key in paramConvert.items() if p in paramDict}
-        for parameter, key in simpleParams.items():
-            update_param_from_schema(key, paramDict[parameter], scenario_id)
+        simple_params = {
+            p: key for p, key in param_converter.items() if p in param_dict
+        }
+        for parameter, key in simple_params.items():
+            update_param_from_schema(key, param_dict[parameter], scenario_id)
 
         # BCC Reduction
-        if "bcc_reduction" in paramDict:
+        if "bcc_reduction" in param_dict:
             update_param_from_schema(
                 "bccReducedRate",
-                paramDict["bcc_reduction"] * id_get("bccRate", scenario_id, 4.0),
+                param_dict["bcc_reduction"] * id_get("bccRate", scenario_id, 4.0),
                 scenario_id,
             )
         elif scenario_id != 0:
@@ -1546,12 +1551,12 @@ def npi_load_schema(schema: Parameters, scenario_id: int = 0):
             "per_school_cases": "Cases per School",
         }
         for npi, prefix in npiPrefixes.items():
-            npiDelay = paramDict.get(f"{npi}_delay")
-            npiDuration = paramDict.get(f"{npi}_duration")
+            npiDelay = param_dict.get(f"{npi}_delay")
+            npiDuration = param_dict.get(f"{npi}_duration")
 
             # Triggers
             # Relaxation always matches start on dashboard, so don't look for it
-            startTrigger = paramDict.get(f"{npi}_trigger")
+            startTrigger = param_dict.get(f"{npi}_trigger")
             if startTrigger is not None:
                 update_param_from_schema(
                     f"{prefix}Toggle", startTrigger != "none", scenario_id
@@ -1581,15 +1586,17 @@ def npi_load_schema(schema: Parameters, scenario_id: int = 0):
                         defined for the baseline scenario
                     """)
                 # Use baseline values to plug None gaps
-                basePeriodStart, basePeriodEnd = id_get(f"{prefix}Period", 0, (1, 60))
+                baseline_period_start, baseline_period_end = id_get(
+                    f"{prefix}Period", 0, (1, 60)
+                )
                 if npiDelay is None:
-                    npiDelay = (basePeriodStart - 1) * 2
+                    npiDelay = (baseline_period_start - 1) * 2
                 if npiDuration is None:
-                    npiDuration = (basePeriodEnd - basePeriodStart + 1) * 2
+                    npiDuration = (baseline_period_end - baseline_period_start + 1) * 2
 
                 # Calculate NPI period
                 npiPeriodStart = (npiDelay // 2) + 1
-                npiPeriodEnd = min(simLength, (npiDelay + npiDuration) // 2)
+                npiPeriodEnd = min(sim_length, (npiDelay + npiDuration) // 2)
                 update_param_from_schema(
                     f"{prefix}Period", (npiPeriodStart, npiPeriodEnd), scenario_id
                 )
@@ -1598,7 +1605,7 @@ def npi_load_schema(schema: Parameters, scenario_id: int = 0):
         # TODO: Identical-to-global values are getting kept here
         distanceParams = {
             p.removesuffix("_social_distance"): v
-            for p, v in paramDict.items()
+            for p, v in param_dict.items()
             if p.endswith("_social_distance") and v != compliance
         }
         distanceTable = pd.DataFrame(
@@ -1618,7 +1625,7 @@ def npi_load_schema(schema: Parameters, scenario_id: int = 0):
                 {
                     "Age Group": [None],
                     "Social Distancing Compliance": [
-                        paramDict.get(
+                        param_dict.get(
                             id_get("socialDistancingCompliance", scenario_id, 0.0),
                         )
                     ],

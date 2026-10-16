@@ -76,16 +76,16 @@ def build_dynamic_tab(id: int):
     """)
 
     # Get simulation length for error checking
-    simLength = session.get("cycle_count", 360)
+    sim_length = session.get("cycle_count", 360)
 
     # Infection Seeding Rate
     st.subheader("Infection Seeding Rate")
     st.markdown("Double-click a cell in this table to edit its value.")
 
-    baseSeedValue = id_get("seedRate", id, 0.25)
-    seedStart, seedEnd = id_get("seedPeriod", id, (1, 30))
+    baseSeedValue = id_get("seeding_rate", id, 0.25)
+    seeding_start, seedEnd = id_get("seeding_period", id, (1, 30))
     load_key(
-        "seedTimeForm",
+        "seeding_dynamic_form",
         id,
         pd.DataFrame(
             {
@@ -95,20 +95,20 @@ def build_dynamic_tab(id: int):
         ),
         dataframe=True,
     )
-    seedTimeForm = st.data_editor(
-        session[f"seedTimeForm{id}"],
+    seeding_dynamic_form = st.data_editor(
+        session[f"seeding_dynamic_form{id}"],
         height="content",
         num_rows="dynamic",
-        key=f"_seedTimeForm{id}",
+        key=f"_seeding_dynamic_form{id}",
         on_change=save_key,
-        args=["seedTimeForm", id],
+        args=["seeding_dynamic_form", id],
         kwargs={"dataframe": True},
         placeholder="Enter a value",
         column_config={
             "Day to Update Parameter": st.column_config.NumberColumn(
                 "Day to Update Parameter",
                 required=True,
-                min_value=seedStart,
+                min_value=seeding_start,
                 max_value=seedEnd,
                 format="Day %d",
                 help="""
@@ -132,7 +132,7 @@ each day of the simulation is 2 cycles.
     param_error(
         "seedingTimeFormDuplicates",
         id,
-        lambda: has_duplicates(seedTimeForm, "Day to Update Parameter"),
+        lambda: has_duplicates(seeding_dynamic_form, "Day to Update Parameter"),
         f"""
             Error: The dynamic infection seeding form used by the {
                 'baseline scenario' if id == 0
@@ -157,7 +157,7 @@ each day of the simulation is 2 cycles.
     closeStart, closeEnd = (
         id_get("schoolClosurePeriod", id, (1, 60))
         if id_get("schoolClosureTrigger", id, "Always") == "Timed"
-        else (1, simLength)
+        else (1, sim_length)
     )
     if not closeActive:
         st.info(
@@ -251,7 +251,7 @@ they are closed after the specified point in the simulation.
     bccStart, bccEnd = (
         id_get("bccPeriod", id, (1, 60))
         if id_get("bccTrigger", id, "Always") == "Timed"
-        else (1, simLength)
+        else (1, sim_length)
     )
     if not bccActive:
         st.info(
@@ -404,7 +404,7 @@ def dynamic_save_schema(schema: Parameters, id: int = 0):
             "seed": pd.DataFrame(
                 {
                     "Day to Update Parameter": [None],
-                    "New Infection Seeding Rate": [id_get("seedRate", id, 0.25)],
+                    "New Infection Seeding Rate": [id_get("seeding_rate", id, 0.25)],
                 },
             ),
             "close": pd.DataFrame(
@@ -480,7 +480,7 @@ def dynamic_load_schema(schema: Parameters, scenario_id: int = 0):
         ),
     }
     dynamicPeriods = {
-        "seed_rate": id_get("seedPeriod", scenario_id, (1, 30)),
+        "seed_rate": id_get("seeding_period", scenario_id, (1, 30)),
         "school_closure": id_get("schoolClosurePeriod", scenario_id, (1, 60)),
         "bcc_reduction": id_get("bccPeriod", scenario_id, (1, 60)),
     }
@@ -497,14 +497,14 @@ def dynamic_load_schema(schema: Parameters, scenario_id: int = 0):
         currentTable.loc[currentTable.shape[0]] = [time, new_value]
 
     # Set the new tables into st.session_state, if they were updated at all
-    paramConvert = {
+    param_converter = {
         "seed_rate": (
-            "seedTimeForm",
+            "seeding_dynamic_form",
             pd.DataFrame(
                 {
                     "Day to Update Parameter": [None],
                     "New Infection Seeding Rate": [
-                        id_get("seedRate", scenario_id, 0.25)
+                        id_get("seeding_rate", scenario_id, 0.25)
                     ],
                 },
             ),
@@ -532,5 +532,5 @@ def dynamic_load_schema(schema: Parameters, scenario_id: int = 0):
             ),
         ),
     }
-    for parameter, (key, default) in paramConvert.items():
+    for parameter, (key, default) in param_converter.items():
         update_table_from_schema(key, dynamicTables[parameter], scenario_id, default)

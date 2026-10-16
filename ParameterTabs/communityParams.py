@@ -443,11 +443,11 @@ def community_load_schema(schema: Parameters, scenario_id: int = 0):
             session state variables. A value of 0 means that this is the
             baseline scenario and will be treated accordingly.
     """
-    schemaParameters = schema.Scenario_Parameter
-    if schemaParameters is None:
+    schema_parameters = schema.Scenario_Parameter
+    if schema_parameters is None:
         return
     # Use dictionary to convert schema parameters into dashboard values
-    paramConvert = {
+    param_converter = {
         "prob_withdrawal": ("withdrawalWork", lambda x: x),
         "prob_school_withdrawal": ("withdrawalSchool", lambda x: x),
         "background_contact_count": ("bccRate", lambda x: x),
@@ -459,11 +459,11 @@ def community_load_schema(schema: Parameters, scenario_id: int = 0):
     # Only include non-None params that fit this tab
     validParams = {
         p: v
-        for p, v in schemaParameters.model_dump(
+        for p, v in schema_parameters.model_dump(
             exclude_unset=True, exclude_none=True
         ).items()
-        if p in paramConvert.keys()
+        if p in param_converter.keys()
     }
     for parameter, value in validParams.items():
-        key, format_func = paramConvert[parameter]
+        key, format_func = param_converter[parameter]
         update_param_from_schema(key, format_func(value), scenario_id)
