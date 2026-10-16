@@ -25,7 +25,7 @@ from ClientResources.ModelSchema import (
     Simulation,
     SimulationSet,
 )
-from ClientResources.ParameterFunctions import id_get, update_param_from_schema
+from ClientResources.ParameterFunctions import id_get
 from ClientResources.Types import COMMUNITY_NAMES
 from ParameterTabs.communityParams import (
     build_community_tab,

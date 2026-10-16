@@ -15,8 +15,8 @@ import pandas as pd
 import streamlit as st
 from streamlit.elements.lib.column_types import ColumnConfig
 
+from ClientResources.Constants import MUTED_CODES, ROUND_RESULTS
 from ClientResources.InterfaceFunctions import age_range_combiner
-from ClientResources.Constants import ROUND_RESULTS, MUTED_CODES
 from ClientResources.Types import (
     AGE_GROUPS,
     COMMUNITIES,
@@ -29,7 +29,7 @@ from ClientResources.Types import (
 )
 
 # Logging
-functionLog = logging.getLogger(__name__)
+visualisation_log = logging.getLogger(__name__)
 
 # Store st.session_state as variable for efficiency
 session = st.session_state
@@ -39,7 +39,7 @@ AGE_WITH_TOTAL: list[AgeWithTotal] = ["Total"]
 AGE_WITH_TOTAL.extend(AGE_GROUPS)
 
 
-def formatData(data: bytes, settings: AnalysisFile) -> pd.DataFrame:
+def format_data(data: bytes, settings: AnalysisFile) -> pd.DataFrame:
     """
     Wrapper function to perform the correct formatting process on CSV data.
 
@@ -52,41 +52,41 @@ def formatData(data: bytes, settings: AnalysisFile) -> pd.DataFrame:
         DataFrame: The formatted data.
     """
     if settings.tool == "epidemic":
-        return formatEpidemic(
+        return format_epidemic(
             data,
             settings.names,
             cast(HealthOutcome, settings.outcome),
-            settings.useCumulative,
-            settings.splitByAge,
+            settings.use_cumulative,
+            settings.split_by_age,
         )
     elif settings.tool == "asir":
-        return formatAsir(data, settings.names)
+        return format_asir(data, settings.names)
     else:
         raise ValueError(
             "Analysis tool was unrecognised; should be 'epidemic' or 'asir'"
         )
 
 
-def formatEpidemic(
-    rawCSV: bytes,
+def format_epidemic(
+    raw_csv: bytes,
     scenario_names: list[str],
-    outcomeName: HealthOutcome = "Symptomatic Infections",
+    outcome_name: HealthOutcome = "Symptomatic Infections",
     cumulative=False,
-    splitByAge=False,
+    split_by_age=False,
 ) -> pd.DataFrame:
     """
     Function to convert raw data from the 'epidemic' Flusim analysis tool
     into the desired dataframe format for graphs.
 
     Parameters:
-        rawCSV (bytes): The CSV output of the 'epidemic' analysis function, obtained
-            from the server after running the simulation.
+        raw_csv (bytes): The CSV output of the 'epidemic' analysis function,
+            obtained from the server after running the simulation.
 
-        scenario_names (list of str): A list of strings containing the names of the
-            different scenarios that were simulated (since the CSV just uses
+        scenario_names (list of str): A list of strings containing the names of
+            the different scenarios that were simulated (since the CSV just uses
             non-descriptive placeholders).
 
-        outcomeName (str): A string indicating the health outcome the epidemic
+        outcome_name (str): A string indicating the health outcome the epidemic
             data represents. Currently unused. Accepts any of the following values:
              - Symptomatic Infections (default)
              - Diagnosed Cases
@@ -98,16 +98,18 @@ def formatEpidemic(
         cumulative (bool): Set to `True` when the CSV contains cumulative
             data instead of individual data.
 
-        splitByAge: Set to `True` when the CSV data has separate
-            columns for each age group.
+        split_by_age: Set to `True` when the CSV data has separate
+            columns for each age group. Currently unimplemented.
 
     Returns:
-        formattedData (DataFrame): A dataframe containing the data, reshaped into
+        formatted_data (DataFrame): A dataframe containing the data, reshaped into
             a format more easily used by Altair's charts.
 
     Raises:
         ValueError: If `scenario_names` is not a list of strings or `outcome`
             is not one of the recognised health burden outcomes.
+
+        NotImplementedError: If `split_by_age` is enabled before it is implemented.
     """
 
     # Validate parameters
@@ -120,62 +122,60 @@ def formatEpidemic(
             )
         if not scenario_names:
             raise ValueError("scenario_names should not be empty.")
-        if outcomeName not in HEALTH_OUTCOMES:
+        if outcome_name not in HEALTH_OUTCOMES:
             raise ValueError(f"""
-                outcome should be either "Symptomatic Infections", "Diagnosed
-                Cases", "Hospitalisations", "ICU Visits", "GP Visits", or "Deaths";
-                was "{outcomeName}".
+outcome should be either "Symptomatic Infections", "Diagnosed Cases",
+"Hospitalisations", "ICU Visits", "GP Visits", or "Deaths"; was "{outcome_name}".
             """)
     except Exception as e:
-        functionLog.error(
-            (
-                f"[formatEpidemic] Encountered {type(e).__name__} "
-                f"while validating parameters: {e}"
-            )
+        visualisation_log.error(
+            f"[format_epidemic] Encountered {type(e).__name__} while validating parameters: {e}"
         )
         raise e
     outcome = "Infections"  # TODO: placeholder until other burdens can be graphed
     # Generate and format the dataframe
-    if splitByAge:
+    if split_by_age:
         # TODO: Complete if desired
-        return pd.DataFrame()
+        raise NotImplementedError(
+            "Separating epidemic data by age is not currently supported by the dashboard."
+        )
     else:
-        typeMapping: defaultdict[int, Any] = defaultdict(lambda: np.float64, {0: int})
-        framedData = pd.read_csv(
-            BytesIO(rawCSV),
+        type_mapping: defaultdict[int, Any] = defaultdict(lambda: np.float64, {0: int})
+        framed_data = pd.read_csv(
+            BytesIO(raw_csv),
             header=0,
             names=["Days Since First Infection"] + scenario_names,
-            dtype=typeMapping,
+            dtype=type_mapping,
         )
 
         # Fill null values
         if cumulative:
-            framedData = framedData.ffill()
+            framed_data = framed_data.ffill()
         else:
-            framedData = framedData.fillna(0.0)
+            framed_data = framed_data.fillna(0.0)
 
         # Reshape data for better Altair usage
-        valueLabel = f"Total {outcome}" if cumulative else f"{outcome} per Day"
-        meltedData = framedData.melt(
-            "Days Since First Infection", var_name="Scenario", value_name=valueLabel
+        value_label = f"Total {outcome}" if cumulative else f"{outcome} per Day"
+        melted_data = framed_data.melt(
+            "Days Since First Infection", var_name="Scenario", value_name=value_label
         )
 
         # Scale the data
-        scalingFactor = session.sim_params.scaling_factor
-        meltedData[valueLabel] = meltedData[valueLabel] * scalingFactor
+        scaling_factor = session.sim_params.scaling_factor
+        melted_data[value_label] = melted_data[value_label] * scaling_factor
 
         # Round results if necessary
         if ROUND_RESULTS:
-            return meltedData.round()
+            return melted_data.round()
         else:
-            return meltedData
+            return melted_data
 
 
-def plotEpidemic(
+def plot_epidemic(
     data: pd.DataFrame,
     scenario_names: list[str],
-    includedScenarios: list[str],
-    outcomeName: HealthOutcome = "Symptomatic Infections",
+    included_scenarios: list[str],
+    outcome_name: HealthOutcome = "Symptomatic Infections",
     cumulative=False,
 ) -> alt.LayerChart:
     """
@@ -183,16 +183,16 @@ def plotEpidemic(
     from the 'epidemic' Flusim analysis tool.
 
     Parameters:
-        data (DataFrame): A dataframe containing the epidemic data, processed with
-            the formatEpidemic function.
+        data (DataFrame): A dataframe containing the epidemic data, processed
+            with the format_epidemic function.
 
         scenario_names (list of str): An ordered list of all scenarios in
             the data, included or otherwise.
 
-        includedScenarios (list of str): A list of strings containing
+        included_scenarios (list of str): A list of strings containing
             the names of scenarios that will be included in the table.
 
-        outcomeName (str): A string indicating the health outcome the epidemic
+        outcome_name (str): A string indicating the health outcome the epidemic
             data represents. Currently unused. Accepts any of the following values:
              - Symptomatic Infections (default)
              - Diagnosed Cases
@@ -205,7 +205,7 @@ def plotEpidemic(
             cumulative data instead of individual data.
 
     Returns:
-        finalPlot (LayerChart): An Altair plot layering a line graph of the infection
+        LayerChart: An Altair plot layering a line graph of the infection
             data with a point chart that allows tooltips to appear on the line
             without needing to hover over the line exactly.
 
@@ -219,30 +219,27 @@ def plotEpidemic(
         if not isinstance(data, pd.DataFrame):
             raise ValueError(f"data should be a DataFrame, was {type(data)}")
     except Exception as e:
-        functionLog.error(
-            (
-                f"[plotEpidemic] Encountered {type(e).__name__} "
-                f"while validating parameters: {e}"
-            )
+        visualisation_log.error(
+            f"[plot_epidemic] Encountered {type(e).__name__} while validating parameters: {e}"
         )
         raise e
-    assert set(includedScenarios).issubset(
+    assert set(included_scenarios).issubset(
         scenario_names
     ), "Included scenarios not in data"
     outcome = "Infections"  # TODO: placeholder until other burdens can be graphed
 
     # Remove any scenarios/age groups not specified in the data
-    filteredData = data[data["Scenario"].isin(includedScenarios)]
-    filteredData["Scenario Index"] = filteredData["Scenario"].map(
-        includedScenarios.index
+    filtered_data = data[data["Scenario"].isin(included_scenarios)]
+    filtered_data["Scenario Index"] = filtered_data["Scenario"].map(
+        included_scenarios.index
     )
 
     # Reusable chart components
-    yLabel = f"Total {outcome}" if cumulative else f"{outcome} per Day"
-    scenarioColours = [
-        MUTED_CODES[scenario_names.index(scenario)] for scenario in includedScenarios
+    y_label = f"Total {outcome}" if cumulative else f"{outcome} per Day"
+    scenario_colours = [
+        MUTED_CODES[scenario_names.index(scenario)] for scenario in included_scenarios
     ]
-    tooltipSelection = alt.selection_point(
+    tooltip_selection = alt.selection_point(
         fields=["Days Since First Infection"],
         nearest=True,
         on="pointerover",
@@ -251,8 +248,8 @@ def plotEpidemic(
     )
 
     # Define the chart itself
-    chartBase = alt.Chart(
-        filteredData,
+    chart_base = alt.Chart(
+        filtered_data,
         title=(
             f"Cumulative Median {outcome} Over Time"
             if cumulative
@@ -266,49 +263,49 @@ def plotEpidemic(
     )
 
     # Plot the lines
-    chartLines = chartBase.mark_line(interpolate="natural").encode(
-        y=f"{yLabel}:Q",
+    chart_lines = chart_base.mark_line(interpolate="natural").encode(
+        y=f"{y_label}:Q",
         color=alt.Color("Scenario:N").scale(
-            domain=includedScenarios, range=scenarioColours
+            domain=included_scenarios, range=scenario_colours
         ),
     )
 
     # Highlight x-value at mouse with vertical rule
-    chartPoints = chartLines.mark_point().transform_filter(tooltipSelection)
-    chartRule = (
-        chartBase.transform_pivot(
-            "Scenario Index", value=yLabel, groupby=["Days Since First Infection"]
+    chart_points = chart_lines.mark_point().transform_filter(tooltip_selection)
+    chart_rule = (
+        chart_base.transform_pivot(
+            "Scenario Index", value=y_label, groupby=["Days Since First Infection"]
         )
         .mark_rule(color="grey")
         .encode(
-            opacity=alt.when(tooltipSelection)
+            opacity=alt.when(tooltip_selection)
             .then(alt.value(0.3))
             .otherwise(alt.value(0)),
             tooltip=["Days Since First Infection:Q"]
             + [
                 alt.Tooltip(str(index), type="quantitative", title=scenario)
-                for index, scenario in enumerate(includedScenarios)
+                for index, scenario in enumerate(included_scenarios)
             ],
         )
-        .add_params(tooltipSelection)
+        .add_params(tooltip_selection)
     )
 
     # Return all plots combined
-    return chartLines + chartPoints + chartRule
+    return chart_lines + chart_points + chart_rule
 
 
-def formatAsir(rawCSV: bytes, scenario_names: list[str]) -> pd.DataFrame:
+def format_asir(raw_csv: bytes, scenario_names: list[str]) -> pd.DataFrame:
     """
     Function to convert raw data from the age-specific infection rate
     ('asir') Flusim analysis tool into the desired dataframe format for
     tables and other visualisations.
 
     Parameters:
-        rawCSV (bytes): The CSV output of the 'asir' analysis function, obtained
+        raw_csv (bytes): The CSV output of the 'asir' analysis function, obtained
             from the server after running the simulation.
 
-        scenario_names (list of str): A list of strings containing the names of the
-            different scenarios that were simulated (since the CSV just uses
+        scenario_names (list of str): A list of strings containing the names of
+            the different scenarios that were simulated (since the CSV just uses
             non-descriptive placeholders). This list should contain the names
             of all scenarios in the simulation, even if not all of them will be
             included in the final table.
@@ -324,50 +321,49 @@ def formatAsir(rawCSV: bytes, scenario_names: list[str]) -> pd.DataFrame:
                 f"scenario_names should be a list of strings; was {type(scenario_names)}."
             )
     except Exception as e:
-        functionLog.error(
-            f"[generateAsir] Encountered {type(e).__name__} "
-            f"while validating parameters: {e}"
+        visualisation_log.error(
+            f"[format_asir] Encountered {type(e).__name__} while validating parameters: {e}"
         )
         raise e
 
     # Generate and format the dataframe
-    typeMapping: defaultdict[int, Any] = defaultdict(lambda: np.float64, {0: str})
-    framedData = pd.read_csv(
-        BytesIO(rawCSV),
+    type_mapping: defaultdict[int, Any] = defaultdict(lambda: np.float64, {0: str})
+    framed_data = pd.read_csv(
+        BytesIO(raw_csv),
         header=0,
         index_col=0,
-        dtype=typeMapping,
+        dtype=type_mapping,
     )
-    functionLog.info(
-        f"Scenario names are {scenario_names}; current index is {framedData.index}"
+    visualisation_log.info(
+        f"Scenario names are {scenario_names}; current index is {framed_data.index}"
     )
-    framedData.columns = pd.Index(AGE_WITH_TOTAL)
+    framed_data.columns = pd.Index(AGE_WITH_TOTAL)
 
     # Scale the data by population and symptomatic likelihood
     sim_params: SimParams = session.sim_params
-    populationScale = sim_params.scaling_factor
-    framedData.iloc[:, 0:] *= populationScale
-    asymptomaticChild, asymptomaticAdult = zip(*sim_params.symptomatic_rates)
-    framedData.loc[:, AGE_GROUPS[:6]] = framedData.loc[:, list(AGE_GROUPS[:6])].mul(
-        asymptomaticChild, axis=0
+    population_scale = sim_params.scaling_factor
+    framed_data.iloc[:, 0:] *= population_scale
+    asymptomatic_child, asymptomatic_adult = zip(*sim_params.symptomatic_rates)
+    framed_data.loc[:, AGE_GROUPS[:6]] = framed_data.loc[:, list(AGE_GROUPS[:6])].mul(
+        asymptomatic_child, axis=0
     )
-    framedData.loc[:, AGE_GROUPS[6:]] = framedData.loc[:, list(AGE_GROUPS[6:])].mul(
-        asymptomaticAdult, axis=0
+    framed_data.loc[:, AGE_GROUPS[6:]] = framed_data.loc[:, list(AGE_GROUPS[6:])].mul(
+        asymptomatic_adult, axis=0
     )
 
     # Reset indices
-    framedData.index = pd.Index(scenario_names)
-    framedData.reset_index(names="Scenario", inplace=True)
+    framed_data.index = pd.Index(scenario_names)
+    framed_data.reset_index(names="Scenario", inplace=True)
 
     # Reshape data for better Streamlit usage with placeholder infections
-    return framedData.melt("Scenario", var_name="Age Group", value_name="Base Values")
+    return framed_data.melt("Scenario", var_name="Age Group", value_name="Base Values")
 
 
-def scaleAsirColumn(
+def scale_asir_column(
     data: pd.DataFrame,
     outcome: HealthOutcome,
-    baselineData: pd.Series,
-    baselineScenario: str,
+    baseline_data: pd.Series,
+    baseline_scenario_name: str,
 ) -> tuple[pd.Series, pd.Series]:
     """
     Function to scale the values of ASIR data based on the occurrence rates
@@ -378,11 +374,11 @@ def scaleAsirColumn(
 
         outcome (str): The outcome the data must be scaled by.
 
-        baselineData (Series): A version of the data with the baseline
+        baseline_data (Series): A version of the data with the baseline
             scenario's infection rates copied over all other scenarios,
             used for calculating difference-from-baseline columns.
 
-        baselineScenario (str): The name of the baseline scenario.
+        baseline_scenario_name (str): The name of the baseline scenario.
 
     Returns:
         (tuple with 2 Series): The ASIR values scaled based on the required
@@ -390,41 +386,45 @@ def scaleAsirColumn(
             health burdens.
     """
     # TODO: see if making rates parameters is more efficient
-    healthRates = session.sim_params.health_outcome_rates
+    health_rates = session.sim_params.health_outcome_rates
     age_rates = session.sim_params.age_health_outcome_rates
     match outcome:
         case "Symptomatic Infections":
             # No scaling necessary
-            scaledColumn = data["Base Values"].copy()
-            scaledBaseline = baselineData.copy()
+            scaled_column = data["Base Values"].copy()
+            scaled_baseline = baseline_data.copy()
         case "Hospitalisations" | "ICU Visits" | "Deaths":
             # Get age-specific rates
-            burdenRates = pd.DataFrame(age_rates[outcome]).T.stack()
-            dataIndexValues = pd.MultiIndex.from_frame(data[["Scenario", "Age Group"]])
-            scaledColumn = data["Base Values"] * pd.Series(
-                dataIndexValues.map(burdenRates), index=data.index
-            ).fillna(data["Scenario"].map(healthRates[outcome]))
+            burden_rates = pd.DataFrame(age_rates[outcome]).T.stack()
+            data_index_values = pd.MultiIndex.from_frame(
+                data[["Scenario", "Age Group"]]
+            )
+            scaled_column = data["Base Values"] * pd.Series(
+                data_index_values.map(burden_rates), index=data.index
+            ).fillna(data["Scenario"].map(health_rates[outcome]))
 
-            baselineRates = age_rates[outcome][baselineScenario]
-            scaledBaseline = baselineData * (
+            baseline_rates = age_rates[outcome][baseline_scenario_name]
+            scaled_baseline = baseline_data * (
                 data["Age Group"]
-                .map(baselineRates)
-                .fillna(healthRates[outcome][baselineScenario])
+                .map(baseline_rates)
+                .fillna(health_rates[outcome][baseline_scenario_name])
             )
 
         case _:
-            scaledColumn = data["Base Values"] * data["Scenario"].map(
-                healthRates[outcome]
+            scaled_column = data["Base Values"] * data["Scenario"].map(
+                health_rates[outcome]
             )
-            scaledBaseline = baselineData * healthRates[outcome][baselineScenario]
+            scaled_baseline = (
+                baseline_data * health_rates[outcome][baseline_scenario_name]
+            )
     if ROUND_RESULTS:
-        return scaledColumn.round(), scaledBaseline.round()
+        return scaled_column.round(), scaled_baseline.round()
     else:
-        return scaledColumn, scaledBaseline
+        return scaled_column, scaled_baseline
 
 
-def recalculateTotals(
-    data: pd.Series, baselineData: pd.Series, scenario_count: int
+def recalculate_totals(
+    data: pd.Series, baseline_data: pd.Series, scenario_count: int
 ) -> tuple[pd.Series, pd.Series]:
     """
     Recalculates the first few total cells in ASIR data to account for
@@ -433,7 +433,7 @@ def recalculateTotals(
     Parameters:
         data (Series): The ASIR data to have new totals calculated.
 
-        baselineData (Series): A version of the data with the baseline
+        baseline_data (Series): A version of the data with the baseline
             scenario's infection rates copied over all other scenarios,
             used for calculating difference-from-baseline columns.
 
@@ -444,24 +444,24 @@ def recalculateTotals(
             recalculated to be accurate to the sum of the rest of the cells in
             the column.
     """
-    totalData, totalBaseline = data.copy(), baselineData.copy()
-    totalData.iloc[:scenario_count] = (
+    total_data, total_baseline = data.copy(), baseline_data.copy()
+    total_data.iloc[:scenario_count] = (
         data.groupby(data.index % scenario_count).sum() - data.iloc[:scenario_count]
     )
-    totalBaseline.iloc[:scenario_count] = totalData.iloc[0]
-    return totalData, totalBaseline
+    total_baseline.iloc[:scenario_count] = total_data.iloc[0]
+    return total_data, total_baseline
 
 
-def generateAsir(
-    baseData: pd.DataFrame,
+def generate_asir(
+    base_data: pd.DataFrame,
     scenario_names: list[str],
-    ageSeparation: Literal["Combined", "By Row", "By Column"] = "Combined",
+    age_separation: Literal["Combined", "By Row", "By Column"] = "Combined",
     columns: Sequence[ColumnDetails] = [
         ("Symptomatic Infections", [], "All", False, False)
     ],
-    includedScenarios: Optional[list[str]] = None,
-    includedAges: Optional[list[AgeWithTotal]] = None,
-    vaccinatedData: Optional[pd.DataFrame] = None,
+    included_scenarios: Optional[list[str]] = None,
+    included_ages: Optional[list[AgeWithTotal]] = None,
+    vaccinated_data: Optional[pd.DataFrame] = None,
 ) -> tuple[
     pd.DataFrame,
     dict[tuple[str, str], ColumnConfig],
@@ -473,63 +473,63 @@ def generateAsir(
     from the 'asir' Flusim analysis tool.
 
     Parameters:
-        baseData (DataFrame): A DataFrame containing the asir data, processed with
-            the formatAsir function.
+        base_data (DataFrame): A DataFrame containing the asir data, processed with
+            the format_asir function.
 
-        scenario_names (list of str): A list of strings containing the names of the
-            different scenarios that were simulated (since the CSV just uses
+        scenario_names (list of str): A list of strings containing the names of
+            the different scenarios that were simulated (since the CSV just uses
             non-descriptive placeholders). This list should contain the names
             of all scenarios in the simulation, even if not all of them will be
             included in the final table.
 
-        ageSeparation (str): A string indicating whether different age groups
+        age_separation (str): A string indicating whether different age groups
             should be represented with additional rows or columns. Can be either
             `Combined` (do not separate values by age group at all), `By Row`
-            (include extra rows for each age group), or `By Column` (use different
-            age groups for each column).
+            (include extra rows for each age group), or `By Column` (use
+            different age groups for each column).
 
         columns (sequence of tuples): A list
             of tuples representing the settings each column should have. The
             values in each tuple are as follows:
              - the health burden outcome to display
              - which age groups the column should represent (ignored if
-            `ageSeparation` is `Combined` or `By Row`)
+            `age_separation` is `Combined` or `By Row`)
              - what vaccination status the column should represent
              - whether or not the column should display percentages
              - whether or not the column should display the difference from
             the baseline scenario's values
 
-        includedScenarios (list of str, optional): A list of strings
+        included_scenarios (list of str, optional): A list of strings
             containing the names of scenarios that will be included in
             the table. If this is `None`, all scenarios will be included.
 
-        includedAges (list of str, optional): A list of strings
+        included_ages (list of str, optional): A list of strings
             containing the names of age groups that will be included in the
             table. If this is `None`, all age groups will be included. However,
-            if this is an empty list, the age group column will be omitted entirely.
-            Ignored if `ageSeparation` is `Combined` or `By Column`.
+            if this is an empty list, the age group column will be omitted
+            entirely. Ignored if `age_separation` is `Combined` or `By Column`.
 
-        vaccinatedData (Dataframe, optional): A DataFrame containing asir data
+        vaccinated_data (Dataframe, optional): A DataFrame containing asir data
             specifically for vaccinated individuals in the simulation.
 
     Returns:
-        formattedData (DataFrame): A dataframe containing the data,
+        formatted_data (DataFrame): A dataframe containing the data,
             reshaped into a format more easily used for table construction.
 
-        columnConfig (dict of str tuples and ColumnConfig): A dictionary storing
-            the configuration settings for each column in the table.
+        column_config (dict of str tuples and ColumnConfig): A dictionary
+            storing the configuration settings for each column in the table.
 
-        percentCols (set of str tuples): A set of strings holding the names of
-            each column that uses percentage formatting.
+        percent_columns (set of str tuples): A set of strings holding the names
+            of each column that uses percentage formatting.
 
-        differenceCols (set of str tuples): A set of strings holding the names of
-            each column that uses difference from baseline formatting.
+        difference_columns (set of str tuples): A set of strings holding the
+            names of each column that uses difference from baseline formatting.
 
     Raises:
         ValueError: If `scenario_names` is not a list of strings or columns
             are not formatted correctly.
     """
-    # TODO: Improve efficiency (don't calculate age rows if ageSeparation isn't By Row)
+    # TODO: Improve efficiency (don't calculate age rows if age_separation isn't By Row)
 
     # Validate parameters
     try:
@@ -553,188 +553,188 @@ def generateAsir(
         ):
             raise ValueError(f"columns was not correctly formatted; was {columns}.")
     except Exception as e:
-        functionLog.error(
-            f"[generateAsir] Encountered {type(e).__name__} "
-            f"while validating parameters: {e}"
+        visualisation_log.error(
+            f"[generate_asir] Encountered {type(e).__name__} while validating parameters: {e}"
         )
         raise e
-    # Convert None values for includedScenarios/Ages to refer to all values
-    if includedScenarios is None:
-        includedScenarios = scenario_names
-    if includedAges is None:
-        includedAges = AGE_WITH_TOTAL
+    # Convert None values for included_scenarios/Ages to refer to all values
+    if included_scenarios is None:
+        included_scenarios = scenario_names
+    if included_ages is None:
+        included_ages = AGE_WITH_TOTAL
 
-    # Empty includedAges if not doing age rows
-    if ageSeparation != "By Row":
-        includedAges = []
+    # Empty included_ages if not doing age rows
+    if age_separation != "By Row":
+        included_ages = []
 
     # Useful constants
-    fullData = baseData.copy()
-    agePops = COMMUNITIES[session.sim_params.community].age_pops
+    full_data = base_data.copy()
+    age_pops = COMMUNITIES[session.sim_params.community].age_pops
     scenario_count = len(scenario_names)
-    ageIndices = {
+    age_indices = {
         age: range(index * scenario_count, (index * scenario_count) + scenario_count)
         for index, age in enumerate(AGE_WITH_TOTAL)
     }
 
     # Generate baseline data for columns that need it
-    baselineScenario = scenario_names[0]
-    baselineRows = (
-        fullData.loc[fullData["Scenario"] == baselineScenario]
+    baseline_scenario_name = scenario_names[0]
+    baseline_rows = (
+        full_data.loc[full_data["Scenario"] == baseline_scenario_name]
         .drop("Scenario", axis=1)
         .set_index("Age Group")
     )
-    fullBaselines = fullData["Age Group"].map(baselineRows["Base Values"])
+    full_baselines = full_data["Age Group"].map(baseline_rows["Base Values"])
 
     # Generate vaccinated baseline data if needed
-    vaccinatedBaselines = pd.Series()
-    if vaccinatedData is not None:
-        vaccinatedData = vaccinatedData.copy()
-        vaccinatedBaselineRows = (
-            vaccinatedData.loc[vaccinatedData["Scenario"] == baselineScenario]
+    vaccinated_baselines = pd.Series()
+    if vaccinated_data is not None:
+        vaccinated_data = vaccinated_data.copy()
+        vaccinated_baseline_rows = (
+            vaccinated_data.loc[vaccinated_data["Scenario"] == baseline_scenario_name]
             .drop("Scenario", axis=1)
             .set_index("Age Group")
         )
-        vaccinatedBaselines = vaccinatedData["Age Group"].map(
-            vaccinatedBaselineRows["Base Values"]
+        vaccinated_baselines = vaccinated_data["Age Group"].map(
+            vaccinated_baseline_rows["Base Values"]
         )
 
     # Prepare burden-scaled columns beforehand for efficiency
-    requiredOutcomes: set[HealthOutcome] = {outcome for outcome, _, _, _, _ in columns}
-    outcomeColumns: dict[tuple[str, str], pd.Series[Any]] = {}
-    outcomeBaselines: dict[tuple[str, str], pd.Series[Any]] = {}
-    for outcome in requiredOutcomes:
+    required_outcomes: set[HealthOutcome] = {outcome for outcome, _, _, _, _ in columns}
+    outcome_columns: dict[tuple[str, str], pd.Series[Any]] = {}
+    outcome_baselines: dict[tuple[str, str], pd.Series[Any]] = {}
+    for outcome in required_outcomes:
         # Scale data and generate vaccinated/unvaccinated splits
-        scaledColumn, scaledBaseColumn = scaleAsirColumn(
-            fullData, outcome, fullBaselines, baselineScenario
+        scaled_column, scaled_baseline = scale_asir_column(
+            full_data, outcome, full_baselines, baseline_scenario_name
         )
-        scaledColumn, scaledBaseColumn = recalculateTotals(
-            scaledColumn, scaledBaseColumn, scenario_count
+        scaled_column, scaled_baseline = recalculate_totals(
+            scaled_column, scaled_baseline, scenario_count
         )
-        outcomeColumns[(outcome, "All")] = scaledColumn
-        outcomeBaselines[(outcome, "All")] = scaledBaseColumn
-        if vaccinatedData is not None:
-            vaccinatedColumn, vaccinatedBaseColumn = scaleAsirColumn(
-                vaccinatedData,
+        outcome_columns[(outcome, "All")] = scaled_column
+        outcome_baselines[(outcome, "All")] = scaled_baseline
+        if vaccinated_data is not None:
+            vaccinated_column, vaccinated_baseline = scale_asir_column(
+                vaccinated_data,
                 outcome,
-                vaccinatedBaselines,
-                baselineScenario,
+                vaccinated_baselines,
+                baseline_scenario_name,
             )
-            vaccinatedColumn, vaccinatedBaseColumn = recalculateTotals(
-                vaccinatedColumn, vaccinatedBaseColumn, scenario_count
+            vaccinated_column, vaccinated_baseline = recalculate_totals(
+                vaccinated_column, vaccinated_baseline, scenario_count
             )
-            outcomeColumns[(outcome, "Vaccinated")] = vaccinatedColumn
-            outcomeBaselines[(outcome, "Vaccinated")] = vaccinatedBaseColumn
+            outcome_columns[(outcome, "Vaccinated")] = vaccinated_column
+            outcome_baselines[(outcome, "Vaccinated")] = vaccinated_baseline
 
-            unvaccinatedColumn = scaledColumn - vaccinatedColumn
-            unvaccinatedBaseColumn = scaledBaseColumn - vaccinatedBaseColumn
-            unvaccinatedColumn, unvaccinatedBaseColumn = recalculateTotals(
-                unvaccinatedColumn, unvaccinatedBaseColumn, scenario_count
+            unvaccinated_column = scaled_column - vaccinated_column
+            unvaccinated_baseline = scaled_baseline - vaccinated_baseline
+            unvaccinated_column, unvaccinated_baseline = recalculate_totals(
+                unvaccinated_column, unvaccinated_baseline, scenario_count
             )
-            outcomeColumns[(outcome, "Unvaccinated")] = unvaccinatedColumn
-            outcomeBaselines[(outcome, "Unvaccinated")] = unvaccinatedBaseColumn
+            outcome_columns[(outcome, "Unvaccinated")] = unvaccinated_column
+            outcome_baselines[(outcome, "Unvaccinated")] = unvaccinated_baseline
 
     # Remove the base values column once it's redundant
-    fullData.drop("Base Values", axis=1, inplace=True)
+    full_data.drop("Base Values", axis=1, inplace=True)
 
     # Format as MultiIndex
-    fullData.columns = pd.MultiIndex.from_product(([""], fullData.columns))
+    full_data.columns = pd.MultiIndex.from_product(([""], full_data.columns))
 
     # Generate config data for Streamlit display
-    percentCols, differenceCols = set(), set()
-    columnConfig = {}
-    columnConfig[("", "Scenario Name")] = st.column_config.TextColumn(pinned=True)
-    columnConfig[("", "Age Group")] = st.column_config.TextColumn(pinned=True)
+    percent_columns, difference_columns = set(), set()
+    column_config = {}
+    column_config[("", "Scenario Name")] = st.column_config.TextColumn(pinned=True)
+    column_config[("", "Age Group")] = st.column_config.TextColumn(pinned=True)
 
     # Generate columns
-    for outcome, ageGroups, vaccineStatus, proportion, baselineDifference in columns:
-        currentColumn = outcomeColumns[(outcome, vaccineStatus)].copy()
-        columnBaselines = outcomeBaselines[(outcome, vaccineStatus)].copy()
-        columnName = f"{"" if vaccineStatus == "All" else vaccineStatus} {outcome}"
-        columnSuffix = ""
+    for outcome, age_groups, vaccine_status, use_proportion, use_difference in columns:
+        current_column = outcome_columns[(outcome, vaccine_status)].copy()
+        current_baseline = outcome_baselines[(outcome, vaccine_status)].copy()
+        column_name = f"{"" if vaccine_status == "All" else vaccine_status} {outcome}"
+        column_suffix = ""
 
         # Replace values with those of summed age groups
-        if ageSeparation == "By Column":
-            if set(ageGroups) == set(AGE_GROUPS):
-                ageGroups = cast(Sequence[AgeWithTotal], ["Total"])
-            filteredColumn = currentColumn.iloc[
-                np.array([index for age in ageGroups for index in ageIndices[age]])
+        if age_separation == "By Column":
+            if set(age_groups) == set(AGE_GROUPS):
+                age_groups = cast(Sequence[AgeWithTotal], ["Total"])
+            filtered_column = current_column.iloc[
+                np.array([index for age in age_groups for index in age_indices[age]])
             ]
-            columnSums = filteredColumn.groupby(
-                filteredColumn.index % scenario_count
+            column_sums = filtered_column.groupby(
+                filtered_column.index % scenario_count
             ).sum()
-            currentColumn = pd.concat([columnSums] * 11, ignore_index=True)
-            columnBaselines = pd.Series(columnSums[0], index=range(11 * scenario_count))
-            columnSuffix += f"{age_range_combiner(list(ageGroups))} "
+            current_column = pd.concat([column_sums] * 11, ignore_index=True)
+            current_baseline = pd.Series(
+                column_sums[0], index=range(11 * scenario_count)
+            )
+            column_suffix += f"{age_range_combiner(list(age_groups))} "
 
         # Apply proportion/difference modifications
-        # TODO: Either fix or disable just proportion
-        if proportion and not baselineDifference:
+        if use_proportion and not use_difference:
             # Get required total population
-            scalingFactor = session.sim_params.scaling_factor
-            if ageSeparation == "By Column":
-                populationColumn: int | pd.Series = scalingFactor * sum(
-                    agePops[age] for age in ageGroups
+            scaling_factor = session.sim_params.scaling_factor
+            if age_separation == "By Column":
+                population_column: int | pd.Series = scaling_factor * sum(
+                    age_pops[age] for age in age_groups
                 )
             else:
-                populationColumn = (
-                    fullData[("", "Age Group")].map(agePops) * scalingFactor
+                population_column = (
+                    full_data[("", "Age Group")].map(age_pops) * scaling_factor
                 )
-            currentColumn /= populationColumn
-            columnSuffix += "%"
-            percentCols.add((columnName, columnSuffix))
-        elif not proportion and baselineDifference:
-            currentColumn = columnBaselines - currentColumn
-            columnSuffix += "Averted"
-            differenceCols.add((columnName, columnSuffix))
-        elif proportion and baselineDifference:
-            currentColumn = columnBaselines - currentColumn
+            current_column /= population_column
+            column_suffix += "%"
+            percent_columns.add((column_name, column_suffix))
+        elif not use_proportion and use_difference:
+            current_column = current_baseline - current_column
+            column_suffix += "Averted"
+            difference_columns.add((column_name, column_suffix))
+        elif use_proportion and use_difference:
+            current_column = current_baseline - current_column
             # Account for potential division by 0
-            currentColumn = (currentColumn / columnBaselines).where(
-                columnBaselines != 0, other=np.nan
+            current_column = (current_column / current_baseline).where(
+                current_baseline != 0, other=np.nan
             )
-            columnSuffix += "% Averted"
-            percentCols.add((columnName, columnSuffix))
-            differenceCols.add((columnName, columnSuffix))
+            column_suffix += "% Averted"
+            percent_columns.add((column_name, column_suffix))
+            difference_columns.add((column_name, column_suffix))
         else:
-            columnSuffix += "Total"
+            column_suffix += "Total"
 
         # Formally create the column and add config details
-        fullData[(columnName, columnSuffix)] = currentColumn
-        columnConfig[(columnName, columnSuffix)] = st.column_config.NumberColumn(
-            format="percent" if proportion else "localized"
+        full_data[(column_name, column_suffix)] = current_column
+        column_config[(column_name, column_suffix)] = st.column_config.NumberColumn(
+            format="percent" if use_proportion else "localized"
         )
 
     # Remove any scenarios/age groups not specified in the data
-    if set(scenario_names) != set(includedScenarios):
-        fullData = fullData[fullData[("", "Scenario")].isin(includedScenarios)]
-    if not includedAges:
-        fullData = fullData[fullData[("", "Age Group")] == "Total"]
-        fullData = fullData.drop(("", "Age Group"), axis=1)
-    elif set(includedAges) != set(AGE_WITH_TOTAL):
-        fullData = fullData[fullData[("", "Age Group")].isin(includedAges)]
+    if set(scenario_names) != set(included_scenarios):
+        full_data = full_data[full_data[("", "Scenario")].isin(included_scenarios)]
+    if not included_ages:
+        full_data = full_data[full_data[("", "Age Group")] == "Total"]
+        full_data = full_data.drop(("", "Age Group"), axis=1)
+    elif set(included_ages) != set(AGE_WITH_TOTAL):
+        full_data = full_data[full_data[("", "Age Group")].isin(included_ages)]
 
     # Make index columns categorical
-    fullData.loc[:, ("", "Scenario")] = pd.Categorical(
-        fullData[("", "Scenario")],
+    full_data.loc[:, ("", "Scenario")] = pd.Categorical(
+        full_data[("", "Scenario")],
         categories=scenario_names,
         ordered=True,
     )
-    if includedAges:
-        fullData.loc[:, ("", "Age Group")] = pd.Categorical(
-            fullData[("", "Age Group")],
+    if included_ages:
+        full_data.loc[:, ("", "Age Group")] = pd.Categorical(
+            full_data[("", "Age Group")],
             categories=AGE_WITH_TOTAL,
             ordered=True,
         )
 
-    # Order index using order of includedScenarios/includedAges
-    if includedAges:
-        fullData = (
-            fullData.set_index([("", "Scenario"), ("", "Age Group")])
-            .reindex(includedScenarios, level=0)
-            .reindex(includedAges, level=1)
+    # Order index using order of included_scenarios/included_ages
+    if included_ages:
+        full_data = (
+            full_data.set_index([("", "Scenario"), ("", "Age Group")])
+            .reindex(included_scenarios, level=0)
+            .reindex(included_ages, level=1)
         )
     else:
-        fullData = fullData.set_index(("", "Scenario")).reindex(includedScenarios)
+        full_data = full_data.set_index(("", "Scenario")).reindex(included_scenarios)
 
-    return fullData, columnConfig, percentCols, differenceCols
+    return full_data, column_config, percent_columns, difference_columns

@@ -37,7 +37,7 @@ from ClientResources.Types import (
     HealthOutcome,
     SimParams,
 )
-from ClientResources.VisualisationFunctions import formatAsir, generateAsir
+from ClientResources.VisualisationFunctions import format_asir, generate_asir
 
 # Logging
 tableLog = logging.getLogger(__name__)
@@ -99,8 +99,8 @@ def generateTable() -> None:
     Callback function used to generate and format health burden tables.
     """
     # Throw error if no data is present
-    fullData = session.get("modelDataAsirFull")
-    if not USE_PRESET_DATA and fullData is None:
+    full_data = session.get("modelDataAsirFull")
+    if not USE_PRESET_DATA and full_data is None:
         raise FileNotFoundError("""
             No simulation ASIR data was available to plot; please run a
             simulation before attempting to generate a table.
@@ -128,14 +128,14 @@ def generateTable() -> None:
             symptomatic_rates=(
                 [
                     [
-                        1 - id_get("asymptomaticChild", scenario_id, 0.35),
-                        1 - id_get("asymptomaticAdult", scenario_id, 0.35),
+                        1 - id_get("asymptomatic_child", scenario_id, 0.35),
+                        1 - id_get("asymptomatic_adult", scenario_id, 0.35),
                     ]
                     for scenario_id in range(4)
                 ]
                 if use_advanced
                 else [
-                    [1 - id_get("asymptomaticAdult", scenario_id, 0.35)] * 2
+                    [1 - id_get("asymptomatic_adult", scenario_id, 0.35)] * 2
                     for scenario_id in range(4)
                 ]
             ),
@@ -143,10 +143,10 @@ def generateTable() -> None:
 
         # Load test data from files
         with open(PRESET_DATA_PATHS["ASIR"], "rb") as csv:
-            fullData = formatAsir(csv.read(), scenario_names)
+            full_data = format_asir(csv.read(), scenario_names)
         if PRESET_DATA_PATHS.get("ASIR") is not None:
             with open(PRESET_DATA_PATHS["Vaccinated"], "rb") as csv:
-                vaccineData = formatAsir(csv.read(), scenario_names)
+                vaccineData = format_asir(csv.read(), scenario_names)
         else:
             vaccineData = None
 
@@ -155,7 +155,7 @@ def generateTable() -> None:
         scenario_names = session.sim_params.scenario_names
         vaccineData = session.get("modelDataAsirVaccinated")
 
-    ageSeparation = session.get("healthOutcomeAgeSeparation", "Combined")
+    age_separation = session.get("healthOutcomeAgeSeparation", "Combined")
 
     healthColumnForm = replace_table_na(
         session.get(
@@ -190,11 +190,11 @@ def generateTable() -> None:
             (
                 outcome,
                 ages if ages else AGE_WITH_TOTAL,
-                vaccineStatus if vaccineData is not None else "All",
+                vaccine_status if vaccineData is not None else "All",
                 "Percentage" in options,
                 "Difference from Baseline" in options,
             )
-            for outcome, ages, vaccineStatus, options in zip(
+            for outcome, ages, vaccine_status, options in zip(
                 healthColumnForm["Health Burden Outcome"],
                 healthColumnForm["Age Groups"],
                 healthColumnForm["Vaccination Status"],
@@ -206,7 +206,7 @@ def generateTable() -> None:
     scenariosUsed = session.get("healthOutcomeScenariosToUse", scenario_names)
     agesUsed = (
         session.get("healthOutcomeAgesToUse", AGE_WITH_TOTAL)
-        if ageSeparation == "By Row"
+        if age_separation == "By Row"
         else []
     )
     useColour = session.get("colourToggle", True)
@@ -216,15 +216,15 @@ def generateTable() -> None:
         and the following columns: {columnDetails}'
     """)
 
-    assert fullData is not None, "ASIR data was not defined"
-    ageData, columnConfig, percSet, diffSet = generateAsir(
-        fullData,
+    assert full_data is not None, "ASIR data was not defined"
+    ageData, column_config, percSet, diffSet = generate_asir(
+        full_data,
         scenario_names,
-        ageSeparation,
+        age_separation,
         columnDetails,
-        includedScenarios=scenariosUsed,
-        includedAges=agesUsed,
-        vaccinatedData=vaccineData,
+        included_scenarios=scenariosUsed,
+        included_ages=agesUsed,
+        vaccinated_data=vaccineData,
     )
 
     # Format data according to column type
@@ -335,7 +335,7 @@ def generateTable() -> None:
     # Format column config to match Streamlit requirements with MultiIndex
     formattedConfig = {
         cast(int, ageData.columns.get_loc(column)) + ageData.index.nlevels: value
-        for column, value in columnConfig.items()
+        for column, value in column_config.items()
         if column in ageData.columns
     }
 
@@ -350,9 +350,9 @@ def downloadPresetTable(
     columns: Sequence[ColumnDetails] = [
         ("Symptomatic Infections", [], "All", False, False)
     ],
-    ageSeparation: Literal["Combined", "By Row", "By Column"] = "Combined",
-    includedScenarios: Optional[list[str]] = None,
-    includedAges: Optional[list[AgeWithTotal]] = None,
+    age_separation: Literal["Combined", "By Row", "By Column"] = "Combined",
+    included_scenarios: Optional[list[str]] = None,
+    included_ages: Optional[list[AgeWithTotal]] = None,
 ) -> None:
     """
     Function to create a button downloading specific table presets.
@@ -365,33 +365,33 @@ def downloadPresetTable(
             values in each tuple are as follows:
              - the health burden outcome to display
              - which age groups the column should represent (ignored if
-            `ageSeparation` is `Combined` or `By Row`)
+            `age_separation` is `Combined` or `By Row`)
              - what vaccination status the column should represent
              - whether or not the column should display percentages
              - whether or not the column should display the difference from
             the baseline scenario's values
 
-        ageSeparation (str): A string indicating whether different age groups
+        age_separation (str): A string indicating whether different age groups
             should be represented with additional rows or columns. Can be either
             `Combined` (do not separate values by age group at all), `By Row`
             (include extra rows for each age group), or `By Column` (use different
             age groups for each column).
 
-        includedScenarios (list of str, optional): A list of strings
+        included_scenarios (list of str, optional): A list of strings
             containing the names of scenarios that will be included in
             the table. If this is `None`, all scenarios will be included.
 
-        includedAges (list of str, optional): A list of strings
+        included_ages (list of str, optional): A list of strings
             containing the names of age groups that will be included in the
             table. If this is `None`, all age groups will be included. However,
             if this is an empty list, the age group column will be omitted entirely.
-            Ignored if `ageSeparation` is `Combined` or `By Column`.
+            Ignored if `age_separation` is `Combined` or `By Column`.
     """
     # TODO: Reduce redundancy with generateTable
 
     # Throw error if no data is present
-    fullData = session.get("modelDataAsirFull")
-    if not USE_PRESET_DATA and fullData is None:
+    full_data = session.get("modelDataAsirFull")
+    if not USE_PRESET_DATA and full_data is None:
         raise FileNotFoundError("""
             No simulation ASIR data was available to plot; please run a
             simulation before attempting to download a table.
@@ -415,14 +415,14 @@ def downloadPresetTable(
             symptomatic_rates=(
                 [
                     [
-                        1 - id_get("asymptomaticChild", scenario_id, 0.35),
-                        1 - id_get("asymptomaticAdult", scenario_id, 0.35),
+                        1 - id_get("asymptomatic_child", scenario_id, 0.35),
+                        1 - id_get("asymptomatic_adult", scenario_id, 0.35),
                     ]
                     for scenario_id in range(4)
                 ]
                 if use_advanced
                 else [
-                    [1 - id_get("asymptomaticAdult", scenario_id, 0.35)] * 2
+                    [1 - id_get("asymptomatic_adult", scenario_id, 0.35)] * 2
                     for scenario_id in range(4)
                 ]
             ),
@@ -431,10 +431,10 @@ def downloadPresetTable(
 
         # Load test data from files
         with open(PRESET_DATA_PATHS["ASIR"], "rb") as csv:
-            fullData = formatAsir(csv.read(), scenario_names)
+            full_data = format_asir(csv.read(), scenario_names)
         if PRESET_DATA_PATHS.get("ASIR") is not None:
             with open(PRESET_DATA_PATHS["Vaccinated"], "rb") as csv:
-                vaccineData = formatAsir(csv.read(), scenario_names)
+                vaccineData = format_asir(csv.read(), scenario_names)
         else:
             vaccineData = None
 
@@ -445,23 +445,23 @@ def downloadPresetTable(
 
     tableLog.info(f"""
         [downloadPresetTable] Formatting Asir data for the preset {name},
-        using the scenarios {includedScenarios} (of {scenario_names}),
-        the age groups {includedAges} and the following columns: {columns}'
+        using the scenarios {included_scenarios} (of {scenario_names}),
+        the age groups {included_ages} and the following columns: {columns}'
     """)
 
-    assert fullData is not None, "ASIR data was not defined"
-    ageData, _, _, _ = generateAsir(
-        fullData,
+    assert full_data is not None, "ASIR data was not defined"
+    ageData, _, _, _ = generate_asir(
+        full_data,
         scenario_names,
-        ageSeparation,
+        age_separation,
         columns,
-        includedScenarios=includedScenarios,
-        includedAges=includedAges,
-        vaccinatedData=vaccineData,
+        included_scenarios=included_scenarios,
+        included_ages=included_ages,
+        vaccinated_data=vaccineData,
     )
 
     # Create fake index columns
-    if ageSeparation == "By Row":
+    if age_separation == "By Row":
         ageData.rename_axis(index=["Scenario Index", "Age Group Index"], inplace=True)
         ageData.insert(
             0,
@@ -617,7 +617,7 @@ attempting to generate a table.
         scenariosToUse = None
 
     load_key("healthOutcomeAgeSeparation", default="Combined")
-    ageSeparation = st.radio(
+    age_separation = st.radio(
         "Age Group Separation",
         options=["Combined", "By Row", "By Column"],
         captions=[
@@ -646,7 +646,7 @@ be derived from.
         """,
     )
 
-    if ageSeparation == "By Row":
+    if age_separation == "By Row":
         load_key("healthOutcomeAgesToUse", default=AGE_WITH_TOTAL)
         agesToUse = st.multiselect(
             "Age Groups to Include in Table",
@@ -787,10 +787,10 @@ treatment as a result of the pathogen.
             ),
             "Age Groups": (
                 None
-                if ageSeparation != "By Column"
+                if age_separation != "By Column"
                 else st.column_config.MultiselectColumn(
                     "Age Groups",
-                    required=bool(ageSeparation == "By Column"),
+                    required=bool(age_separation == "By Column"),
                     default=[],
                     options=AGE_GROUPS,
                     color="auto",
@@ -877,7 +877,7 @@ add at least one column before attempting to generate a table.
         # Check for duplicates (lists must be sorted and converted to str)
         dupeColumnForm = healthColumnForm.copy()
         dupeColumnForm["Options"] = dupeColumnForm["Options"].apply(lambda x: sorted(x))
-        if ageSeparation == "By Column":
+        if age_separation == "By Column":
             dupeColumnForm["Age Groups"] = dupeColumnForm["Age Groups"].apply(
                 lambda x: sorted(x)
             )
@@ -896,7 +896,7 @@ add at least one column before attempting to generate a table.
                 icon=":material/content_copy:",
             )
         if (
-            ageSeparation == "By Column"
+            age_separation == "By Column"
             and not healthColumnForm["Age Groups"].fillna(False).all()
         ):
             st.info(
@@ -991,7 +991,7 @@ if SHOW_DEBUG_DOWNLOADS and current_dataExists:
             ("Deaths", AGE_GROUPS, "All", False, True),
             ("Deaths", AGE_GROUPS, "All", True, True),
         ],
-        ageSeparation="By Row",
+        age_separation="By Row",
     )
     downloadPresetTable(
         "AgesByColumn",
@@ -1057,5 +1057,5 @@ if SHOW_DEBUG_DOWNLOADS and current_dataExists:
             ),
             ("Deaths", AGE_GROUPS, "All", False, True),
         ],
-        ageSeparation="By Column",
+        age_separation="By Column",
     )

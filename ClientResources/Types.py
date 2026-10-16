@@ -175,24 +175,26 @@ class AnalysisFile:
         self,
         tool: Literal["epidemic", "asir"],
         names: list[str],
-        summaryValue: Literal["mean", "median"] = "median",
+        summary_value: Literal["mean", "median"] = "median",
         outcome: HealthOutcome = "Symptomatic Infections",
         **kwargs,
     ):
         self.tool = tool
         self.names = names
-        self.summaryValue = summaryValue
+        self.summary_value = summary_value
         self.outcome = outcome
         # Check required values for different tools
         if tool == "epidemic":
-            self.useCumulative = kwargs.get("useCumulative", False)
-            self.splitByAge = kwargs.get("splitByAge", False)
-            self.dataTag = f"Epidemic{"Cumulative" if self.useCumulative else "Daily"}"
+            self.use_cumulative = kwargs.get("use_cumulative", False)
+            self.split_by_age = kwargs.get("split_by_age", False)
+            self.data_tag = (
+                f"Epidemic{"Cumulative" if self.use_cumulative else "Daily"}"
+            )
         if tool == "asir":
-            self.useProportion = kwargs.get("useProportion", False)
-            self.differenceType = kwargs.get("differenceType", "")
-            self.vaccinatedOnly = kwargs.get("vaccinated", False)
-            self.dataTag = f"Asir{"Vaccinated" if self.vaccinatedOnly else "Full"}"
+            self.use_proportion = kwargs.get("use_proportion", False)
+            self.difference_type = kwargs.get("difference_type", "")
+            self.vaccinated_only = kwargs.get("vaccinated", False)
+            self.data_tag = f"Asir{"Vaccinated" if self.vaccinated_only else "Full"}"
 
 
 @dataclass

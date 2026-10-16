@@ -636,7 +636,7 @@ pathogen to others.
                 individuals take steps to avoid spreading the disease.
             """)
             if advanced:
-                load_key("asymptomaticChild", id, 0.35)
+                load_key("asymptomatic_child", id, 0.35)
                 st.slider(
                     "Probability of Young (0-24) Asymptomatic Case",
                     min_value=0.0,
@@ -644,15 +644,15 @@ pathogen to others.
                     value=0.35,
                     format="percent",
                     on_change=save_key,
-                    args=["asymptomaticChild", id],
-                    key=f"_asymptomaticChild{id}",
+                    args=["asymptomatic_child", id],
+                    key=f"_asymptomatic_child{id}",
                     help="""
 The probability that an infected young person (less than 24 years old) in
 the simulation will be asymptomatic (i.e. they never show any symptoms of the
 pathogen despite being infectious).
                     """,
                 )
-                load_key("asymptomaticAdult", id, 0.35)
+                load_key("asymptomatic_adult", id, 0.35)
                 st.slider(
                     "Probability of Adult (24+) Asymptomatic Case",
                     min_value=0.0,
@@ -660,8 +660,8 @@ pathogen despite being infectious).
                     value=0.35,
                     format="percent",
                     on_change=save_key,
-                    args=["asymptomaticAdult", id],
-                    key=f"_asymptomaticAdult{id}",
+                    args=["asymptomatic_adult", id],
+                    key=f"_asymptomatic_adult{id}",
                     help="""
 The probability that an infected adult (over 24 years old) in the
 simulation will be asymptomatic (i.e. they never show any symptoms of the
@@ -669,7 +669,7 @@ pathogen despite being infectious).
                     """,
                 )
             else:
-                load_key("asymptomaticAdult", id, 0.35)
+                load_key("asymptomatic_adult", id, 0.35)
                 st.slider(
                     "Probability of Asymptomatic Case",
                     min_value=0.0,
@@ -677,8 +677,8 @@ pathogen despite being infectious).
                     value=0.35,
                     format="percent",
                     on_change=save_key,
-                    args=["asymptomaticAdult", id],
-                    key=f"_asymptomaticAdult{id}",
+                    args=["asymptomatic_adult", id],
+                    key=f"_asymptomatic_adult{id}",
                     help="""
 The probability that an infected individual in the simulation will be
 asymptomatic (i.e. they never show any symptoms of the pathogen despite
@@ -1432,8 +1432,8 @@ def diseaseDescribe(scenario_id: int = 0, advanced: bool = False):
             infectious=day_count(
                 preSymptomPeriod + symptomPeriod + postSymptomPeriod
             ).lower(),
-            youngAsym=id_get("asymptomaticChild", scenario_id, 0.35),
-            oldAsym=id_get("asymptomaticAdult", scenario_id, 0.35),
+            youngAsym=id_get("asymptomatic_child", scenario_id, 0.35),
+            oldAsym=id_get("asymptomatic_adult", scenario_id, 0.35),
         )
     )
 
@@ -1744,9 +1744,9 @@ def disease_save_schema(
         # Advanced parameter differences
         if advanced:
             scenario_params.prob_asymptomatic_young = id_get(
-                "asymptomaticChild", id, 0.35
+                "asymptomatic_child", id, 0.35
             )
-            scenario_params.prob_asymptomatic = id_get("asymptomaticAdult", id, 0.35)
+            scenario_params.prob_asymptomatic = id_get("asymptomatic_adult", id, 0.35)
             scenario_params.kappa_household = id_get("householdKappa", id, 2.2)
             scenario_params.kappa_child_education = id_get("schoolKappa", id, 1.0)
             scenario_params.kappa_workplace = id_get("workKappa", id, 1.0)
@@ -1761,7 +1761,7 @@ def disease_save_schema(
                 else:
                     setattr(scenario_params, f"{age}_mort", globalDeathRate)
         else:
-            probAsymptomatic = id_get("asymptomaticAdult", id, 0.35)
+            probAsymptomatic = id_get("asymptomatic_adult", id, 0.35)
             scenario_params.prob_asymptomatic_young = probAsymptomatic
             scenario_params.prob_asymptomatic = probAsymptomatic
 
@@ -1963,8 +1963,8 @@ def disease_load_schema(schema: Parameters, scenario_id: int = 0):
             "kappa_child_education": ("schoolKappa", lambda x: x),
             "kappa_workplace": ("workKappa", lambda x: x),
             "kappa_background": ("backgroundKappa", lambda x: x),
-            "prob_asymptomatic": ("asymptomaticAdult", lambda x: x),
-            "prob_asymptomatic_young": ("asymptomaticChild", lambda x: x),
+            "prob_asymptomatic": ("asymptomatic_adult", lambda x: x),
+            "prob_asymptomatic_young": ("asymptomatic_child", lambda x: x),
             "prob_diagnosis": ("case_ratio", lambda x: round(x * 100, 6)),
             "prob_hospitalisation": ("hospital_ratio", lambda x: round(x * 100000, 6)),
             "infection_waning_cycle_delay": (

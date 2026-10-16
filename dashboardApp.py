@@ -17,7 +17,7 @@ from ClientResources.Types import (
     SIM_STATUS,
     SimParams,
 )
-from ClientResources.VisualisationFunctions import formatData
+from ClientResources.VisualisationFunctions import format_data
 
 # Set this early to minimise the time spent with a different page title
 st.set_page_config(
@@ -169,10 +169,12 @@ def update_data() -> None:
                 session.pop("modelDataAsirVaccinated", None)
 
             # Format data
-            formattedData = [formatData(d, f) for d, f in zip(returnedData, dataForms)]
+            formatted_data = [
+                format_data(d, f) for d, f in zip(returnedData, dataForms)
+            ]
 
             # Check for any errors in the data
-            if any(len(data) == 0 for data in formattedData):
+            if any(len(data) == 0 for data in formatted_data):
                 SIM_STATUS.errors.put(
                     (
                         "Simulation results were empty",
@@ -188,7 +190,7 @@ Please make sure your parameters do not possess any errors and try again.
             elif any(
                 form.tool == "epidemic"
                 and len(data["Scenario"].value_counts()) != scenario_count
-                for data, form in zip(formattedData, dataForms)
+                for data, form in zip(formatted_data, dataForms)
             ):
                 SIM_STATUS.errors.put(
                     (
@@ -204,8 +206,8 @@ ensure all scenarios do not possess any errors and try again.
                 simHasError = True
             else:
                 # Save the data to st.session_state
-                for data, form in zip(formattedData, dataForms):
-                    session[f"modelData{form.dataTag}"] = data
+                for data, form in zip(formatted_data, dataForms):
+                    session[f"modelData{form.data_tag}"] = data
 
                 # Tell the user what's happened
                 session.simulationEndTime = datetime.now()

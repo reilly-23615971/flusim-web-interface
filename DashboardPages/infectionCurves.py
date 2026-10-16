@@ -17,7 +17,7 @@ from ClientResources.Constants import (
 )
 from ClientResources.ParameterFunctions import load_key, save_key
 from ClientResources.Types import SimParams
-from ClientResources.VisualisationFunctions import formatEpidemic, plotEpidemic
+from ClientResources.VisualisationFunctions import format_epidemic, plot_epidemic
 
 # Logging
 graphLog = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ def generateGraph():
         )
         # Load test data from file
         with open(PRESET_DATA_PATHS[chartType], "rb") as csv:
-            epidemicData = formatEpidemic(
+            epidemicData = format_epidemic(
                 csv.read(),
                 scenario_names,
                 cumulative=chartType == "Cumulative",
@@ -72,10 +72,10 @@ def generateGraph():
         {scenariosUsed} and the data type {chartType}
     """)
     assert epidemicData is not None, "Epidemic data was not defined"
-    chartData = plotEpidemic(
+    chartData = plot_epidemic(
         epidemicData,
         scenario_names=scenario_names,
-        includedScenarios=scenariosUsed,
+        included_scenarios=scenariosUsed,
         cumulative=chartType == "Cumulative",
     )
 
@@ -258,7 +258,7 @@ graph.
             )
         elif USE_PRESET_DATA:
             with open(PRESET_DATA_PATHS[chartType], "rb") as csv:
-                epidemicData = formatEpidemic(
+                epidemicData = format_epidemic(
                     csv.read(), scenario_names, cumulative=chartType == "Cumulative"
                 )
             st.download_button(

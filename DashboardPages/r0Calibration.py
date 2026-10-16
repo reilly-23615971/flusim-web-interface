@@ -15,7 +15,7 @@ from ClientResources.DownloadFunctions import create_template
 from ClientResources.InterfaceFunctions import error_checker
 from ClientResources.ModelSchema import CommunityOverride, OverrideTemplate, Parameters
 from ClientResources.ParameterFunctions import community_change, load_key, save_key
-from ClientResources.ServerFunctions import taskWrapper
+from ClientResources.ServerFunctions import task_wrapper
 from ClientResources.Types import (
     COMMUNITY_NAMES,
     R0_CALCULATION_STATUS,
@@ -113,9 +113,9 @@ by ±0.02.
             session.calib_saved_id = scenario_id
 
             # Prepare model call parameters
-            statusParams = {
-                "resultType": "json",
-                "statusDecoder": {
+            status_params = {
+                "result_type": "json",
+                "status_decoder": {
                     "start": (0.01, "Initialising parameters..."),
                     "generatingToolbox": (0.02, "Preparing simulation engine..."),
                     "generatingConfig": (0.05, "Calibrating $R_0$..."),
@@ -137,12 +137,12 @@ by ±0.02.
 
             # Make the model call
             session.calibrationInProgress = True
-            taskWrapper(
+            task_wrapper(
                 "R0 Calibration",
                 "r0/calibrate",
                 schema,
                 calibCancelFlag,
-                statusParams,
+                status_params,
             )
 
             # Generate popup to let the user know it's pending
@@ -271,9 +271,9 @@ def calculateR0Button() -> None:
             session.calcScenarioName = scenario_name
 
             # Prepare model call parameters
-            statusParams = {
-                "resultType": "json",
-                "statusDecoder": {
+            status_params = {
+                "result_type": "json",
+                "status_decoder": {
                     "start": (0.01, "Initialising parameters..."),
                     "generatingToolbox": (0.02, "Preparing simulation engine..."),
                     "generatingConfig": (0.1, "Calculating $R_0$..."),
@@ -295,12 +295,12 @@ def calculateR0Button() -> None:
 
             # Make the model call
             session.calculationInProgress = True
-            taskWrapper(
+            task_wrapper(
                 "R0 Calculation",
                 "r0/calculate",
                 schema,
                 calcCancelFlag,
-                statusParams,
+                status_params,
             )
 
             # Generate popup to let the user know it's pending
@@ -661,7 +661,7 @@ def showR0Results():
         if progress < 0.0:
             calibContents = calibResultsContainer.container()
             # Display errors that have occurred alongside progress
-            errorTitle, errorBody, errorIcon, errorObject = session.get(
+            errorTitle, errorBody, error_icon, errorObject = session.get(
                 "calibrationError",
                 (
                     "Error occurred when calibrating $R_0$",
@@ -675,7 +675,7 @@ def showR0Results():
                 label="Calibration stopped due to error (click for more info)",
                 state="error",
             )
-            simStatus.error(f"Error: {errorBody}", icon=f":material/{errorIcon}:")
+            simStatus.error(f"Error: {errorBody}", icon=f":material/{error_icon}:")
             if errorObject is not None:
                 simStatus.exception(errorObject)
         elif session.get("r0Calibration") is not None:
@@ -705,7 +705,7 @@ to {r0}.
         if progress < 0.0:
             calcContents = calcResultsContainer.container()
             # Display errors that have occurred alongside progress
-            errorTitle, errorBody, errorIcon, errorObject = session.get(
+            errorTitle, errorBody, error_icon, errorObject = session.get(
                 "calculationError",
                 (
                     "Error occurred when calculating $R_0$",
@@ -719,7 +719,7 @@ to {r0}.
                 label="Calculation stopped due to error (click for more info)",
                 state="error",
             )
-            simStatus.error(f"Error: {errorBody}", icon=f":material/{errorIcon}:")
+            simStatus.error(f"Error: {errorBody}", icon=f":material/{error_icon}:")
             if errorObject is not None:
                 simStatus.exception(errorObject)
         elif session.get("r0Calculation") is not None:

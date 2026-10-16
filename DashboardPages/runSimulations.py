@@ -35,7 +35,7 @@ from ClientResources.ParameterFunctions import (
     save_key,
     time_scale_change,
 )
-from ClientResources.ServerFunctions import taskWrapper
+from ClientResources.ServerFunctions import task_wrapper
 from ClientResources.Types import (
     COMMUNITIES,
     COMMUNITY_NAMES,
@@ -94,7 +94,7 @@ def runModelProgress(
             a float (the percentage of the progress bar to fill) and a string
             (the description of the step represented by this status)
     """
-    # TODO: Include client side processing like formatAsir in this progress
+    # TODO: Include client side processing like format_asir in this progress
     # TODO: Fake mid-simulation progress with estimated times
     progressDict = {
         "start": (0.01, "Initialising parameters..."),
@@ -266,35 +266,35 @@ already busy with a different task.
             # Load debug parameters from file
             if USE_PRESET_PARAMS:
                 with open(PRESET_JSON_PATH, "r") as f:
-                    parameterJSON = f.read()
-                if load_config(parameterJSON, loud=False):
+                    parameter_json = f.read()
+                if load_config(parameter_json, loud=False):
                     return
                 scenario_count = session.get("scenario_count", 0) + 1
 
             # Create JSON for selected parameters
             else:
-                parameterJSON = create_config(
+                parameter_json = create_config(
                     scenario_count, include_dashboard=False
                 ).model_dump_json(indent=4, exclude_unset=True)
                 if LOG_PARAM_JSON:
                     with open("./savedJSON.json", "w") as file:
-                        file.write(parameterJSON)
+                        file.write(parameter_json)
 
             # Save current parameter values that'll be used for
             # visualisation when the user has potentially changed them
             scenario_names = session.scenario_names.copy()
             community = session.get("community", "newcastle")
             population = COMMUNITIES[community].population
-            schema = json.loads(parameterJSON)
+            schema = json.loads(parameter_json)
             use_advanced = session.get("show_advanced", False)
             use_vaccines = "+vaccine" in schema.get("middle_joint")
             if use_vaccines:
                 analysisFormats = [
                     AnalysisFile(
-                        tool="epidemic", names=scenario_names, useCumulative=True
+                        tool="epidemic", names=scenario_names, use_cumulative=True
                     ),
                     AnalysisFile(
-                        tool="epidemic", names=scenario_names, useCumulative=False
+                        tool="epidemic", names=scenario_names, use_cumulative=False
                     ),
                     AnalysisFile(tool="asir", names=scenario_names),
                     AnalysisFile(tool="asir", names=scenario_names, vaccinated=True),
@@ -302,26 +302,26 @@ already busy with a different task.
             else:
                 analysisFormats = [
                     AnalysisFile(
-                        tool="epidemic", names=scenario_names, useCumulative=True
+                        tool="epidemic", names=scenario_names, use_cumulative=True
                     ),
                     AnalysisFile(
-                        tool="epidemic", names=scenario_names, useCumulative=False
+                        tool="epidemic", names=scenario_names, use_cumulative=False
                     ),
                     AnalysisFile(tool="asir", names=scenario_names),
                 ]
 
-            scalingFactor = session.get("scaling_population", population) / population
+            scaling_factor = session.get("scaling_population", population) / population
             asymptomaticRates = (
                 [
                     [
-                        1 - id_get("asymptomaticChild", scenario_id, 0.35),
-                        1 - id_get("asymptomaticAdult", scenario_id, 0.35),
+                        1 - id_get("asymptomatic_child", scenario_id, 0.35),
+                        1 - id_get("asymptomatic_adult", scenario_id, 0.35),
                     ]
                     for scenario_id in range(scenario_count)
                 ]
                 if use_advanced
                 else [
-                    [1 - id_get("asymptomaticAdult", scenario_id, 0.35)] * 2
+                    [1 - id_get("asymptomatic_adult", scenario_id, 0.35)] * 2
                     for scenario_id in range(scenario_count)
                 ]
             )
@@ -348,14 +348,14 @@ already busy with a different task.
                 health_outcome_rates=basicRates,
                 age_health_outcome_rates=age_rates,
                 community=community,
-                scaling_factor=scalingFactor,
+                scaling_factor=scaling_factor,
                 waning=useWaning,
             )
 
             # Prepare model call parameters
-            statusParams = {
-                "resultType": "zip",
-                "statusDecoder": runModelProgress(scenario_names, use_vaccines),
+            status_params = {
+                "result_type": "zip",
+                "status_decoder": runModelProgress(scenario_names, use_vaccines),
                 "request_queue": SIM_STATUS,
             }
 
@@ -367,12 +367,12 @@ already busy with a different task.
 
             # Make the model call
             session.simulation_in_progress = True
-            taskWrapper(
+            task_wrapper(
                 "Simulation Experiment",
                 "runModel",
-                parameterJSON,
+                parameter_json,
                 simCancelFlag,
-                statusParams,
+                status_params,
             )
 
             # TODO: Remember streamlit_push_notifications
@@ -669,7 +669,7 @@ def simulationProgressBar():
         progress = 0.0
     if progress < 0.0:
         # Display errors that have occurred alongside progress
-        errorTitle, errorBody, errorIcon, errorObject = session.get(
+        errorTitle, errorBody, error_icon, errorObject = session.get(
             "simulationError",
             (
                 "Error occurred when running simulation",
@@ -685,7 +685,7 @@ def simulationProgressBar():
         )
         for newStatus in status_queue:
             simStatus.write(newStatus)
-        simStatus.error(f"Error: {errorBody}", icon=f":material/{errorIcon}:")
+        simStatus.error(f"Error: {errorBody}", icon=f":material/{error_icon}:")
         if errorObject is not None:
             simStatus.exception(errorObject)
     else:
