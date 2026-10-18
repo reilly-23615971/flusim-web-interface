@@ -16,7 +16,7 @@ from ParameterTabs.communityParams import build_community_tab
 from ParameterTabs.diseaseParams import build_disease_tab
 from ParameterTabs.dynamicParams import build_dynamic_tab
 from ParameterTabs.npiParams import build_npi_tab
-from ParameterTabs.templateParams import buildTemplateTab
+from ParameterTabs.templateParams import build_template_tab
 from ParameterTabs.vaccinationParams import build_vaccination_tab
 
 # from streamlit_push_notifications import send_push, send_alert
@@ -126,4 +126,4 @@ if dynamicTab is not None and dynamicTab.open:
         build_dynamic_tab(0)
 if templateTab.open:
     with templateTab:
-        buildTemplateTab(0)
+        build_template_tab(0)
