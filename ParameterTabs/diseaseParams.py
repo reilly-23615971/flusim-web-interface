@@ -1823,7 +1823,7 @@ def disease_save_schema(
         # Save the updated parameters, removing redundant baseline values
         # TODO: Find a better way to prevent needing to include every table age
         # (maybe omit all ages if they're empty/unchanged from baseline?)
-        age_table_params = set().union(
+        transmission_table_params = set().union(
             *[{f"{age}_trans", f"{age}_susc", f"{age}_mort"} for age in AGE_GROUP_KEYS]
         )
         if baseline is not None and scenario_id > 0:
@@ -1831,7 +1831,9 @@ def disease_save_schema(
                 age_scenario_params, baseline.Scenario_ParameterWithAgePrefix
             )
             schema_remove_baseline(
-                scenario_params, baseline.Scenario_Parameter, ignore=age_table_params
+                scenario_params,
+                baseline.Scenario_Parameter,
+                ignore=transmission_table_params,
             )
         schema_update(schema, "Scenario_ParameterWithAgePrefix", age_scenario_params)
         schema_update(schema, "Scenario_Parameter", scenario_params)

@@ -152,11 +152,11 @@ each day of the simulation is 2 cycles.
 
     # School Closure Compliance
     st.subheader("School Closure Compliance")
-    closeActive = id_get("schoolClosureToggle", id, False)
-    baseCloseValue = id_get("schoolClosureCompliance", id, 0.9)
+    closeActive = id_get("school_closure_toggle", id, False)
+    baseCloseValue = id_get("school_closure_compliance", id, 0.9)
     closeStart, closeEnd = (
-        id_get("schoolClosurePeriod", id, (1, 60))
-        if id_get("schoolClosureTrigger", id, "Always") == "Timed"
+        id_get("school_closure_period", id, (1, 60))
+        if id_get("school_closure_trigger", id, "Always") == "Timed"
         else (1, sim_length)
     )
     if not closeActive:
@@ -175,7 +175,7 @@ each day of the simulation is 2 cycles.
     else:
         st.markdown("Double-click a cell in this table to edit its value.")
     load_key(
-        "closeTimeForm",
+        "school_closure_dynamic_form",
         id,
         pd.DataFrame(
             {
@@ -185,13 +185,13 @@ each day of the simulation is 2 cycles.
         ),
         dataframe=True,
     )
-    closeTimeForm = st.data_editor(
-        session[f"closeTimeForm{id}"],
+    school_closure_dynamic_form = st.data_editor(
+        session[f"school_closure_dynamic_form{id}"],
         height="content",
         num_rows="dynamic",
-        key=f"_closeTimeForm{id}",
+        key=f"_school_closure_dynamic_form{id}",
         on_change=save_key,
-        args=["closeTimeForm", id],
+        args=["school_closure_dynamic_form", id],
         kwargs={"dataframe": True},
         placeholder=(
             "Enter a value"
@@ -226,10 +226,10 @@ they are closed after the specified point in the simulation.
         },
     )
     param_error(
-        "schoolClosureTimeFormDuplicates",
+        "school_closureTimeFormDuplicates",
         id,
         lambda: closeActive
-        and has_duplicates(closeTimeForm, "Day to Update Parameter"),
+        and has_duplicates(school_closure_dynamic_form, "Day to Update Parameter"),
         f"""
             Error: The dynamic school closure compliance form used by the {
                 'baseline scenario' if id == 0
@@ -246,11 +246,11 @@ they are closed after the specified point in the simulation.
 
     # Reduced Background Contact Count
     st.subheader("Reduced Background Contact Count")
-    bccActive = id_get("bccToggle", id, False)
-    baseBCCValue = id_get("bccReducedRate", id, 0.2)
+    bccActive = id_get("bcc_reduction_toggle", id, False)
+    base_bcc_reduction = id_get("bcc_reduced_rate", id, 0.2)
     bccStart, bccEnd = (
-        id_get("bccPeriod", id, (1, 60))
-        if id_get("bccTrigger", id, "Always") == "Timed"
+        id_get("bcc_reduction_period", id, (1, 60))
+        if id_get("bcc_reduction_trigger", id, "Always") == "Timed"
         else (1, sim_length)
     )
     if not bccActive:
@@ -269,23 +269,23 @@ they are closed after the specified point in the simulation.
     else:
         st.markdown("Double-click a cell in this table to edit its value.")
     load_key(
-        "bccTimeForm",
+        "bcc_reduction_dynamic_form",
         id,
         pd.DataFrame(
             {
                 "Day to Update Parameter": [None],
-                "New Reduced Background Contact Count": [baseBCCValue],
+                "New Reduced Background Contact Count": [base_bcc_reduction],
             },
         ),
         dataframe=True,
     )
-    bccTimeForm = st.data_editor(
-        session[f"bccTimeForm{id}"],
+    bcc_reduction_dynamic_form = st.data_editor(
+        session[f"bcc_reduction_dynamic_form{id}"],
         height="content",
         num_rows="dynamic",
-        key=f"_bccTimeForm{id}",
+        key=f"_bcc_reduction_dynamic_form{id}",
         on_change=save_key,
-        args=["bccTimeForm", id],
+        args=["bcc_reduction_dynamic_form", id],
         kwargs={"dataframe": True},
         placeholder=(
             "Enter a value"
@@ -311,7 +311,7 @@ reduced background contact count will come into effect.
                     "Number of Interactions per Person per Day)"
                 ),
                 required=True,
-                default=baseBCCValue,
+                default=base_bcc_reduction,
                 min_value=0.0,
                 max_value=8.0,
                 step=0.05,
@@ -327,7 +327,8 @@ effect, overwriting the normal BCC rate.
     param_error(
         "bccReductionTimeFormDuplicates",
         id,
-        lambda: bccActive and has_duplicates(bccTimeForm, "Day to Update Parameter"),
+        lambda: bccActive
+        and has_duplicates(bcc_reduction_dynamic_form, "Day to Update Parameter"),
         f"""
             Error: The dynamic background contact count reduction form used by the {
                 'baseline scenario' if id == 0
@@ -411,7 +412,7 @@ def dynamic_save_schema(schema: Parameters, id: int = 0):
                 {
                     "Day to Update Parameter": [None],
                     "New School Closure Compliance": [
-                        id_get("schoolClosureCompliance", id, 0.9)
+                        id_get("school_closure_compliance", id, 0.9)
                     ],
                 },
             ),
@@ -419,7 +420,7 @@ def dynamic_save_schema(schema: Parameters, id: int = 0):
                 {
                     "Day to Update Parameter": [None],
                     "New Reduced Background Contact Count": [
-                        id_get("bccReducedRate", id, 0.2)
+                        id_get("bcc_reduced_rate", id, 0.2)
                     ],
                 },
             ),
@@ -481,8 +482,8 @@ def dynamic_load_schema(schema: Parameters, scenario_id: int = 0):
     }
     dynamicPeriods = {
         "seed_rate": id_get("seeding_period", scenario_id, (1, 30)),
-        "school_closure": id_get("schoolClosurePeriod", scenario_id, (1, 60)),
-        "bcc_reduction": id_get("bccPeriod", scenario_id, (1, 60)),
+        "school_closure": id_get("school_closure_period", scenario_id, (1, 60)),
+        "bcc_reduction": id_get("bcc_reduction_period", scenario_id, (1, 60)),
     }
     for update in dynamicChanges:
         # Get value and append to correct dataframe
@@ -510,23 +511,23 @@ def dynamic_load_schema(schema: Parameters, scenario_id: int = 0):
             ),
         ),
         "school_closure": (
-            "closeTimeForm",
+            "school_closure_dynamic_form",
             pd.DataFrame(
                 {
                     "Day to Update Parameter": [None],
                     "New School Closure Compliance": [
-                        id_get("schoolClosureCompliance", scenario_id, 0.9)
+                        id_get("school_closure_compliance", scenario_id, 0.9)
                     ],
                 },
             ),
         ),
         "bcc_reduction": (
-            "bccTimeForm",
+            "bcc_reduction_dynamic_form",
             pd.DataFrame(
                 {
                     "Day to Update Parameter": [None],
                     "New Reduced Background Contact Count": [
-                        id_get("bccReducedRate", scenario_id, 0.2)
+                        id_get("bcc_reduced_rate", scenario_id, 0.2)
                     ],
                 },
             ),

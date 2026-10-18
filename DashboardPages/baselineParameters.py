@@ -113,11 +113,11 @@ if vaccineTab.open:
         build_vaccination_tab(0, show_advanced)
 if npiTab.open:
     containersToOpen |= {
-        "npiContainer0",
-        "schoolClosureContainer0",
-        "withdrawalContainer0",
-        "workGroupContainer0",
-        "bccContainer0",
+        "npi_container0",
+        "school_closure_container0",
+        "withdrawal_increase_container0",
+        "reduced_workgroup_container0",
+        "bcc_reduction_container0",
     }
     with npiTab:
         build_npi_tab(0, show_advanced)

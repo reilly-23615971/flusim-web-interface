@@ -83,7 +83,7 @@ will be vaccinated against the pathogen.
 
     # General Vaccination Policy Parameters
     # TODO: Vaccine Presets
-    # st.html(f'<span id = "vaccinationTriggerCondition{id}"></span>')
+    # st.html(f'<span id = "vaccination_trigger_condition{id}"></span>')
     with st.expander(
         "Vaccine Coverage", key=f"vaccineProgramContainer{id}", on_change="rerun"
     ) as programContainer:

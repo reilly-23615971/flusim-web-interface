@@ -15,17 +15,23 @@ session = st.session_state
 # TODO: Add additional parameters or devise a way to automate their addition
 TIME_PARAMS = [
     ("seeding_period", "Infection Seeding Time Period"),
-    ("schoolClosurePeriod", "School Closure Time Period"),
-    ("withdrawalIncreasePeriod", "Withdrawal Increase Time Period"),
-    ("reducedGroupPeriod", "Reduced Group Size Time Period"),
-    ("bccPeriod", "BCC Reduction Time Period"),
+    ("school_closure_period", "School Closure Time Period"),
+    ("withdrawal_increase_period", "Withdrawal Increase Time Period"),
+    ("reduced_workgroup_period", "Reduced Group Size Time Period"),
+    ("bcc_reduction_period", "BCC Reduction Time Period"),
 ]
 
 # List of parameters that modify dynamic parameter forms when changed
 DYNAMIC_PARAMS = {
     "seeding_period": ("seeding_dynamic_form", "Infection Seeding Rate"),
-    "schoolClosurePeriod": ("closeTimeForm", "School Closure Compliance"),
-    "bccPeriod": ("bccTimeForm", "Reduced Background Contact Count"),
+    "school_closure_period": (
+        "school_closure_dynamic_form",
+        "School Closure Compliance",
+    ),
+    "bcc_reduction_period": (
+        "bcc_reduction_dynamic_form",
+        "Reduced Background Contact Count",
+    ),
 }
 
 
