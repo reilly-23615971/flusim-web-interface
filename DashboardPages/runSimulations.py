@@ -332,10 +332,10 @@ already busy with a different task.
             use_waning = use_advanced and any(
                 id_get("natural_waning_toggle", scenario_id, False)
                 or (
-                    id_get("vaccineToggle", scenario_id, False)
+                    id_get("vaccine_toggle", scenario_id, False)
                     and (
-                        id_get("vaccineWaningToggle", scenario_id, False)
-                        or id_get("boosterToggle", scenario_id, False)
+                        id_get("vaccine_waning_toggle", scenario_id, False)
+                        or id_get("booster_vaccine_toggle", scenario_id, False)
                     )
                 )
                 for scenario_id in range(scenario_count)
