@@ -15,7 +15,7 @@ from ClientResources.InterfaceFunctions import (
     schema_remove_baseline,
     schema_update,
 )
-from ClientResources.ModelSchema import Parameters, GeneralParameters
+from ClientResources.ModelSchema import GeneralParameters, Parameters
 from ClientResources.ParameterFunctions import (
     id_get,
     load_key,
@@ -24,22 +24,22 @@ from ClientResources.ParameterFunctions import (
 )
 
 # Logging
-communityLog = logging.getLogger(__name__)
+community_log = logging.getLogger(__name__)
 
 # Store st.session_state as variable for efficiency
 session = st.session_state
 
 
 # @st.fragment
-def build_community_tab(id: int, advanced: bool = False):
+def build_community_tab(scenario_id: int, advanced: bool = False):
     """
     Function to generate the parameters for the simulation environment in a
     specified container with scenario differentiation.
 
     Parameters:
-        id (int): An integer that will be used to differentiate the parameters in
-            different instances of the tab by adding a number to the Streamlit
-            session state variables.
+        scenario_id (int): An integer that will be used to differentiate the
+            parameters in different instances of the tab by adding a number to
+            the Streamlit session state variables.
 
         advanced (bool): Set to `True` to show more complex parameters like
             child supervision rate.
@@ -48,35 +48,15 @@ def build_community_tab(id: int, advanced: bool = False):
     # Tab Content
     st.header("Community-Related Parameters")
     st.markdown("""
-        This tab contains parameters relating to the community that
-        is simulated by the model, including the likelihood of
-        different health burden outcomes, how individuals react to
-        the pathogen, and the size of groups that individuals form
-        in different locations.
+This tab contains parameters relating to the community that is simulated by the
+model, including the likelihood of different health burden outcomes, how
+individuals react to the pathogen, and the size of groups that individuals form
+in different locations.
     """)
 
     # Withdrawal and BCC
-    '''with st.expander("Withdrawals and Diagnosis"):
-        # Describe what sort of parameters are here
-        st.markdown(
-            """
-            These parameters control how individuals in the
-            community will react to symptoms of the pathogen,
-            including how likely they are to withdraw from
-            work/school and how long it takes until they have their
-            infection officially diagnosed as a case.
-
-            Note that this section does not contain parameters
-            related to social distancing and other programs
-            implemented by the government to reduce the spread of
-            the pathogen. These interventions can be configured
-            using the parameters in :primary-badge[:material/medical_mask: NPIs].
-        """
-        )'''
     st.subheader("Withdrawals and Contact", divider="grey")
-
-    # The parameters in question
-    load_key("withdrawalWork", id, 0.5)
+    load_key("withdrawal_work", scenario_id, 0.5)
     st.slider(
         "Work Withdrawal Rate (Probability)",
         min_value=0.0,
@@ -84,15 +64,14 @@ def build_community_tab(id: int, advanced: bool = False):
         value=0.5,
         format="percent",
         on_change=save_key,
-        args=["withdrawalWork", id],
-        key=f"_withdrawalWork{id}",
+        args=["withdrawal_work", scenario_id],
+        key=f"_withdrawal_work{scenario_id}",
         help="""
-The probability of an infected individual in the
-simulation not going to work after
-becoming symptomatic.
+The probability of an infected individual in the simulation not going to work
+after becoming symptomatic.
         """,
     )
-    load_key("withdrawalSchool", id, 0.9)
+    load_key("withdrawal_school", scenario_id, 0.9)
     st.slider(
         "School Withdrawal Rate (Probability)",
         min_value=0.0,
@@ -100,15 +79,14 @@ becoming symptomatic.
         value=0.9,
         format="percent",
         on_change=save_key,
-        args=["withdrawalSchool", id],
-        key=f"_withdrawalSchool{id}",
+        args=["withdrawal_school", scenario_id],
+        key=f"_withdrawal_school{scenario_id}",
         help="""
-The probability of an infected individual in the
-simulation not going to school
+The probability of an infected individual in the simulation not going to school
 after becoming symptomatic.
         """,
     )
-    load_key("bccRate", id, 4.0)
+    load_key("bcc_rate", scenario_id, 4.0)
     # Note that this is daily, not once per cycle
     st.slider(
         "Background Contact Count (Interactions per Person per Day)",
@@ -116,14 +94,14 @@ after becoming symptomatic.
         max_value=10.0,
         value=4.0,
         step=0.25,
-        key=f"_bccRate{id}",
+        key=f"_bcc_rate{scenario_id}",
         on_change=save_key,
-        args=["bccRate", id],
+        args=["bcc_rate", scenario_id],
         help="""
 The average number of other people each individual will contact in the
 background phase of each day in the simulation. This is used to emulate
-interactions that occur in locations not modelled in the simulation, such
-as public transport.
+interactions that occur in locations not modelled in the simulation, such as
+public transport.
         """,
     )
 
@@ -131,7 +109,7 @@ as public transport.
         # Other Community Parameters
         st.subheader("Advanced Community Settings", divider="grey")
 
-        load_key("diagnosisDelay", id, 0)
+        load_key("diagnosis_delay", scenario_id, 0)
         st.slider(
             "Case Diagnosis Delay (Days)",
             min_value=0.0,
@@ -140,8 +118,8 @@ as public transport.
             step=0.5,
             format="%f Day(s)",
             on_change=save_key,
-            args=["diagnosisDelay", id],
-            key=f"_diagnosisDelay{id}",
+            args=["diagnosis_delay", scenario_id],
+            key=f"_diagnosis_delay{scenario_id}",
             help="""
 The number of days after an individual begins showing symptoms of the pathogen
 before their infection can be formally diagnosed as a confirmed case. This may
@@ -150,82 +128,75 @@ come into effect.
             """,
         )
 
-        load_key("childSupervision", id, 1.0)
+        load_key("child_supervision_rate", scenario_id, 1.0)
         st.slider(
             "Child Supervision Rate (Probability)",
             min_value=0.0,
             max_value=1.0,
             value=0.5,
             format="percent",
-            key=f"_childSupervision{id}",
+            key=f"_child_supervision_rate{scenario_id}",
             on_change=save_key,
-            args=["childSupervision", id],
+            args=["child_supervision_rate", scenario_id],
             help="""
-The probability that an adult in the simulation
-will remain at their household if there is at least
-one child present and no other adults are at home.
+The probability that an adult in the simulation will remain at their household
+if there is at least one child present and no other adults are at home.
             """,
         )
 
         # Group Sizes
-        load_key("maxClassSize", id, 10)
+        load_key("max_class_size", scenario_id, 10)
         st.slider(
             "Maximum School Class Size (Number of People)",
-            0,
-            25,
-            10,
-            key=f"_maxClassSize{id}",
+            min_value=0,
+            max_value=25,
+            value=10,
+            key=f"_max_class_size{scenario_id}",
             format="%f Person(s)",
             on_change=save_key,
-            args=["maxClassSize", id],
-            help="""
-The maximum size of classes within schools in the simulation.
-            """,
+            args=["max_class_size", scenario_id],
+            help="The maximum size of classes within schools in the simulation.",
             # TODO: if childcare becomes relevant again mention it in the tooltip
         )
 
-        '''load_key("maxClassCount", id, 1)
+        '''load_key("max_class_count", scenario_id, 1)
         st.slider(
             "Number of School Class Subgroups",
-            1,
-            5,
-            1,
+            min_value=1,
+            max_value=5,
+            value=1,
             on_change=save_key,
-            args=["maxClassCount", id],
-            key=f"_maxClassCount{id}",
+            args=["max_class_count", scenario_id],
+            key=f"_max_class_count{scenario_id}",
             help="""
-The maximum number of subgroups that may exist
-within a single school class in the simulation.
-Subgroups are defined as sets of individuals that
-regularly interact with each other but not with the
-rest of the class.
+The maximum number of subgroups that may exist within a single school class in
+the simulation. Subgroups are defined as sets of individuals that regularly
+interact with each other but not with the rest of the class.
             """,
         )'''
-        load_key("maxWorkGroupSize", id, 10)
+        load_key("max_workgroup_size", scenario_id, 10)
         st.slider(
             "Maximum Work Group Size (Number of People)",
-            0,
-            25,
-            10,
+            min_value=0,
+            max_value=25,
+            value=10,
             format="%f Person(s)",
-            key=f"_maxWorkGroupSize{id}",
+            key=f"_max_workgroup_size{scenario_id}",
             on_change=save_key,
-            args=["maxWorkGroupSize", id],
-            help="""
-The maximum size of groups within workplaces in the simulation.
-            """,
+            args=["max_workgroup_size", scenario_id],
+            help="The maximum size of groups within workplaces in the simulation.",
         )
 
 
-def communityDescribe(scenario_id: int = 0, advanced: bool = False):
+def community_describe(scenario_id: int = 0, advanced: bool = False):
     """
     Function to describe the current community parameters in natural language.
 
     Parameters:
-        scenario_id (int): An integer that will be used to differentiate the parameters
-            in different instances of the tab by adding a number to the Streamlit
-            session state variables. A value of 0 means that this is the
-            baseline scenario and will be treated accordingly.
+        scenario_id (int): An integer that will be used to differentiate the
+            parameters in different instances of the tab by adding a number to
+            the Streamlit session state variables. A value of 0 means that this
+            is the baseline scenario and will be treated accordingly.
 
         advanced (bool): Set to `True` to describe more complex parameters like
             child supervision rate.
@@ -235,131 +206,128 @@ def communityDescribe(scenario_id: int = 0, advanced: bool = False):
     st.subheader("Withdrawal Rates")
     st.markdown(
         """
-        Most individuals in the simulation will attend a school or workplace every
-        day from Monday to Friday. However, if an individual shows symptoms of
-        the pathogen, they may instead remain at home to avoid infecting others.
-        
-        Children attending schools have a {child:.0%} chance of staying home if
-        they are symptomatic. Adults (and adolescents) attending work have a
-        {adult:.0%} chance of staying home if they are symptomatic.
-        """.format(
-            child=id_get("withdrawalSchool", scenario_id, 0.9),
-            adult=id_get("withdrawalWork", scenario_id, 0.5),
+Most individuals in the simulation will attend a school or workplace every day
+from Monday to Friday. However, if an individual shows symptoms of the
+pathogen, they may instead remain at home to avoid infecting others.
+
+Children attending schools have a {child:.0%} chance of staying home if they
+are symptomatic. Adults (and adolescents) attending work have a {adult:.0%}
+chance of staying home if they are symptomatic.
+    """.format(
+            child=id_get("withdrawal_school", scenario_id, 0.9),
+            adult=id_get("withdrawal_work", scenario_id, 0.5),
         )
     )
 
     # BCC and Group Size
     st.subheader("Contact Between Individuals")
-    bccRate = id_get("bccRate", scenario_id, 4.0)
-    if bccRate.is_integer():
-        bccString = f"""
-        During the simulation's background phase (i.e. once per day), every
-        individual who did not stay at home that day will interact with
-        {bccRate:.0g} random {"person" if bccRate == 1 else "people"}.
+    bcc_rate: float = id_get("bcc_rate", scenario_id, 4.0)
+    if bcc_rate.is_integer():
+        bcc_string = f"""
+During the simulation's background phase (i.e. once per day), every individual
+who did not stay at home that day will interact with {bcc_rate:.0g} random
+{"person" if bcc_rate == 1 else "people"}.
         """
     else:
-        lowBCC, highBCC = int(bccRate), -(-bccRate // 1)
-        bccString = f"""
-        During the simulation's background phase (i.e. once per day), every
-        individual who did not stay at home that day will interact with an
-        average of {bccRate:.3g} random people. The number of interactions will
-        always be either {lowBCC:.0g} or {highBCC:.0g} for each individual;
-        there is a {bccRate % 1:.0%} chance that an individual will interact
-        with {highBCC:.0g} {"person" if bccRate == 1 else "people"}.
+        bcc_minimum, bcc_maximum = int(bcc_rate), -(-bcc_rate // 1)
+        bcc_string = f"""
+During the simulation's background phase (i.e. once per day), every individual
+who did not stay at home that day will interact with an average of
+{bcc_rate:.3g} random people. The number of interactions will always be either
+{bcc_minimum:.0g} or {bcc_maximum:.0g} for each individual; there is a
+{bcc_rate % 1:.0%} chance that an individual will interact with
+{bcc_maximum:.0g} {"person" if bcc_rate == 1 else "people"}.
         """
     st.markdown(
         """
-        To give the pathogen opportunities to spread, the model simulates
-        interactions between individuals in the same location every cycle.
-        However, in real life, a person may only regularly interact with a small
-        group of people at a given location; for instance, children in schools
-        may only interact with their close friends, while employees may not
-        interact with people in other departments even if they work in the same
-        building. To recreate this behaviour in the simulation, the people in
-        each location are divided into several subgroups who can only interact
-        with other members of their subgroup.
+To give the pathogen opportunities to spread, the model simulates interactions
+between individuals in the same location every cycle. However, in real life, a
+person may only regularly interact with a small group of people at a given
+location; for instance, children in schools may only interact with their close
+friends, while employees may not interact with people in other departments even
+if they work in the same building. To recreate this behaviour in the
+simulation, the people in each location are divided into several subgroups who
+can only interact with other members of their subgroup.
 
-        Children in schools can form groups with up to {school} people; actual
-        classes in the school may have more people, but students will not interact
-        with more than {school} people within their class enough to spread the
-        disease. Individuals in workplaces can form work groups with up to {work}
-        people.
+Children in schools can form groups with up to {school} people; actual classes
+in the school may have more people, but students will not interact with more
+than {school} people within their class enough to spread the disease.
+Individuals in workplaces can form work groups with up to {work} people.
+
+In addition to interacting with people in the same location as them,
+individuals will also interact with random people anywhere in the simulation.
+These background contacts account for any interactions outside of the locations
+that are built into the simulation, such as those that occur on public
+transport or in shopping centres.
         
-        In addition to interacting with people in the same location as them,
-        individuals will also interact with random people anywhere in the simulation.
-        These background contacts account for any interactions outside of the
-        locations that are built into the simulation, such as those that occur
-        on public transport or in shopping centres.
-                
-        {bcc}
+{bcc}
         """.format(
-            school=id_get("maxClassSize", scenario_id, 10) if advanced else 10,
-            work=id_get("maxWorkGroupSize", scenario_id, 10) if advanced else 10,
-            bcc=bccString,
+            school=id_get("max_class_size", scenario_id, 10) if advanced else 10,
+            work=id_get("max_workgroup_size", scenario_id, 10) if advanced else 10,
+            bcc=bcc_string,
         )
     )
 
     # Other Community Parameters
     st.subheader("Other Community Parameters")
-    diagnosisDelay = id_get("diagnosisDelay", scenario_id, 0) if advanced else 0
-    if diagnosisDelay > 0:
+    diagnosis_delay = id_get("diagnosis_delay", scenario_id, 0) if advanced else 0
+    if diagnosis_delay > 0:
         # TODO: Note that delay may affect deployment of NPIs if they exist
-        diagnosisString = f"""
-        When an individual begins to show symptoms of the pathogen, they will not
-        be diagnosed immediately. The individual will only be counted as a
-        diagnosed case of the infection {diagnosisDelay}
-        day{plural(diagnosisDelay)} after they begin to show symptoms. This
-        means that non-pharmaceutical interventions that come into effect based
-        on the number of diagnosed cases will take longer to start than if there
-        was no delay.
+        diagnosis_string = f"""
+When an individual begins to show symptoms of the pathogen, they will not be
+diagnosed immediately. The individual will only be counted as a diagnosed case
+of the infection {diagnosis_delay} day{plural(diagnosis_delay)} after they
+begin to show symptoms. This means that non-pharmaceutical interventions that
+come into effect based on the number of diagnosed cases will take longer to
+start than if there was no delay.
         """
     else:
-        diagnosisString = f"""
-        When an individual begins to show symptoms of the pathogen, they will
-        immediately be counted as a diagnosed case of the infection. The model
-        possesses the ability to add a delay between the onset of symptoms and
-        official diagnosis; however, currently this delay is set to 0 days.
+        diagnosis_string = f"""
+When an individual begins to show symptoms of the pathogen, they will
+immediately be counted as a diagnosed case of the infection. The model
+possesses the ability to add a delay between the onset of symptoms and official
+diagnosis; however, currently this delay is set to 0 days.
         """
-    childSupervision = id_get("childSupervision", scenario_id, 1.0)
-    if childSupervision == 1:
-        supervisionString = """
-        While the locations that individuals go to are mostly determined independently
-        of other people, an exception is made when a child would be left alone
-        in a household. If every adult in a household is going to another location
-        but a child in the same household is staying at home, one of the adults
-        will also stay at home to ensure the child is not unsupervised.
+    child_supervision_rate = id_get("child_supervision_rate", scenario_id, 1.0)
+    if child_supervision_rate == 1:
+        supervision_string = """
+While the locations that individuals go to are mostly determined independently
+of other people, an exception is made when a child would be left alone in a
+household. If every adult in a household is going to another location but a
+child in the same household is staying at home, one of the adults will also
+stay at home to ensure the child is not unsupervised.
         """
-    elif childSupervision > 0:
-        supervisionString = f"""
-        While the locations that individuals go to are mostly determined independently
-        of other people, an exception is made when a child would be left alone
-        in a household. If every adult in a household is going to another location
-        but a child in the same household is staying at home, there is a
-        {childSupervision:.0%} chance that one of the adults will also stay at
-        home to ensure the child is not unsupervised.
+    elif child_supervision_rate > 0:
+        supervision_string = f"""
+While the locations that individuals go to are mostly determined independently
+of other people, an exception is made when a child would be left alone in a
+household. If every adult in a household is going to another location but a
+child in the same household is staying at home, there is a
+{child_supervision_rate:.0%} chance that one of the adults will also stay at
+home to ensure the child is not unsupervised.
         """
     else:
-        supervisionString = f"""
-        The locations that individuals go to are determined independently of other
-        people in the simulation. The model possesses the ability to allow adults
-        to stay home if children would be left unsupervised in their household;
-        however, currently the chance of this occurring is set to 0%.
+        supervision_string = f"""
+The locations that individuals go to are determined independently of other
+people in the simulation. The model possesses the ability to allow adults to
+stay home if children would be left unsupervised in their household; however,
+currently the chance of this occurring is set to 0%.
         """
     st.markdown(
         """
-        {diagnosis}
+{diagnosis}
 
-        {supervision}
+{supervision}
         """.format(
-            diagnosis=diagnosisString,
-            supervision=supervisionString,
+            diagnosis=diagnosis_string,
+            supervision=supervision_string,
         )
     )
 
 
 def community_save_schema(
     schema: Parameters,
-    id: int = 0,
+    scenario_id: int = 0,
     advanced: bool = False,
     baseline: Optional[Parameters] = None,
 ):
@@ -371,18 +339,18 @@ def community_save_schema(
         schema (Parameters): The Pydantic model (specifically an object in the
             Parameters class) that the parameters will be populated into.
 
-        id (int): An integer that will be used to differentiate the parameters in
-            different instances of the tab by adding a number to the Streamlit
-            session state variables. A value of 0 means that this is the
-            baseline scenario and will be treated accordingly.
+        scenario_id (int): An integer that will be used to differentiate the
+            parameters in different instances of the tab by adding a number to
+            the Streamlit session state variables. A value of 0 means that this
+            is the baseline scenario and will be treated accordingly.
 
         advanced (bool): Set to `True` to show more complex parameters like
             child supervision rate.
 
-        baseline (Parameters, optional): A Pydantic model representing the parameters
-            set for the baseline scenario. When `id` is not 0, this will be used
-            to omit parameters that are already set in the baseline from the final
-            scenario.
+        baseline (Parameters, optional): A Pydantic model representing the
+            parameters set for the baseline scenario. When `id` is not 0, this
+            will be used to omit parameters that are already set in the
+            baseline from the final scenario.
     """
 
     try:
@@ -394,37 +362,44 @@ def community_save_schema(
         scenario_params = GeneralParameters()
 
         # Withdrawals and Contact
-        scenario_params.prob_withdrawal = id_get("withdrawalWork", id, 0.5)
-        scenario_params.prob_school_withdrawal = id_get("withdrawalSchool", id, 0.9)
-        scenario_params.background_contact_count = id_get("bccRate", id, 4.0)
+        scenario_params.prob_withdrawal = id_get("withdrawal_work", scenario_id, 0.5)
+        scenario_params.prob_school_withdrawal = id_get(
+            "withdrawal_school", scenario_id, 0.9
+        )
+        scenario_params.background_contact_count = id_get("bcc_rate", scenario_id, 4.0)
 
         # The Rest
         if advanced:
-            scenario_params.diagnosis_delay = id_get("diagnosisDelay", id, 0) * 2
-            scenario_params.prob_child_supervision = id_get("childSupervision", id, 1.0)
-            # scenario_params.max_class_count = id_get("maxClassCount", id, 1)
-            scenario_params.max_class_size = id_get("maxClassSize", id, 10)
-            scenario_params.max_workgroup_size = id_get("maxWorkGroupSize", id, 10)
+            scenario_params.diagnosis_delay = (
+                id_get("diagnosis_delay", scenario_id, 0) * 2
+            )
+            scenario_params.prob_child_supervision = id_get(
+                "child_supervision_rate", scenario_id, 1.0
+            )
+            # scenario_params.max_class_count = id_get("max_class_count", scenario_id, 1)
+            scenario_params.max_class_size = id_get("max_class_size", scenario_id, 10)
+            scenario_params.max_workgroup_size = id_get(
+                "max_workgroup_size", scenario_id, 10
+            )
             """
-            scenario_params.max_adult_class_size = id_get("maxAdultClassSize", id, 10)
+            scenario_params.max_adult_class_size = id_get(
+                "maxAdultClassSize", scenario_id, 10
+            )
             scenario_params.max_neighbourgroup_size = id_get(
-                'maxNeighborGroupSize', id, 10
+                'maxNeighborGroupSize', scenario_id, 10
             )
             scenario_params.max_churchgroup_size = id_get(
-                'maxChurchGroupSize', id, 10
+                'maxChurchGroupSize', scenario_id, 10
             )
             """
         # Save the updated parameters, removing redundant baseline values
-        if id > 0 and baseline is not None:
+        if scenario_id > 0 and baseline is not None:
             schema_remove_baseline(scenario_params, baseline.Scenario_Parameter)
         schema_update(schema, "Scenario_Parameter", scenario_params)
 
     except (ValueError, ValidationError) as e:
-        communityLog.error(
-            (
-                f"[communityParams] Encountered {type(e).__name__} "
-                f"while validating parameters for scenario {id}: {e}"
-            )
+        community_log.error(
+            f"[communityParams] Encountered {type(e).__name__} while validating parameters for scenario {id}: {e}"
         )
         raise e
 
@@ -438,32 +413,33 @@ def community_load_schema(schema: Parameters, scenario_id: int = 0):
         schema (Parameters): The Pydantic model (specifically an object in the
             Parameters class) that the parameters will be read from.
 
-        id (int): An integer that will be used to differentiate the parameters in
-            different instances of the tab by adding a number to the Streamlit
-            session state variables. A value of 0 means that this is the
-            baseline scenario and will be treated accordingly.
+        scenario_id (int): An integer that will be used to differentiate the
+            parameters in different instances of the tab by adding a number to
+            the Streamlit session state variables. A value of 0 means that this
+            is the baseline scenario and will be treated accordingly.
     """
+
     schema_parameters = schema.Scenario_Parameter
     if schema_parameters is None:
         return
     # Use dictionary to convert schema parameters into dashboard values
     param_converter = {
-        "prob_withdrawal": ("withdrawalWork", lambda x: x),
-        "prob_school_withdrawal": ("withdrawalSchool", lambda x: x),
-        "background_contact_count": ("bccRate", lambda x: x),
-        "diagnosis_delay": ("diagnosisDelay", lambda x: round(x / 2, 1)),
-        "prob_child_supervision": ("childSupervision", lambda x: x),
-        "max_class_size": ("maxClassSize", lambda x: x),
-        "max_workgroup_size": ("maxWorkGroupSize", lambda x: x),
+        "prob_withdrawal": ("withdrawal_work", lambda x: x),
+        "prob_school_withdrawal": ("withdrawal_school", lambda x: x),
+        "background_contact_count": ("bcc_rate", lambda x: x),
+        "diagnosis_delay": ("diagnosis_delay", lambda x: round(x / 2, 1)),
+        "prob_child_supervision": ("child_supervision_rate", lambda x: x),
+        "max_class_size": ("max_class_size", lambda x: x),
+        "max_workgroup_size": ("max_workgroup_size", lambda x: x),
     }
     # Only include non-None params that fit this tab
-    validParams = {
+    valid_params = {
         p: v
         for p, v in schema_parameters.model_dump(
             exclude_unset=True, exclude_none=True
         ).items()
         if p in param_converter.keys()
     }
-    for parameter, value in validParams.items():
+    for parameter, value in valid_params.items():
         key, format_func = param_converter[parameter]
         update_param_from_schema(key, format_func(value), scenario_id)

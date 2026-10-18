@@ -5,7 +5,7 @@
 # Imports
 import streamlit as st
 
-from ParameterTabs.communityParams import communityDescribe
+from ParameterTabs.communityParams import community_describe
 from ParameterTabs.diseaseParams import disease_describe
 
 # Store st.session_state as variable for efficiency
@@ -120,6 +120,6 @@ with st.expander(
 with st.expander(
     "Community-Related Parameters", expanded=True, icon=":material/groups:"
 ):
-    communityDescribe(0, advanced=show_advanced)
+    community_describe(0, advanced=show_advanced)
 
 st.markdown("Other parameters coming soon!")

@@ -678,8 +678,8 @@ is chosen randomly each cycle such that it averages out to the desired rate.
             # TODO: Elaborate on decimal seeding rate mechanics?
             st.slider(
                 "Infection Seeding Rate (Average Individuals per Cycle)",
-                0.05,
-                5.0,
+                min_value=0.05,
+                max_value=5.0,
                 value=0.25,
                 step=0.05,
                 key=f"_seeding_rate{scenario_id}",
@@ -1068,9 +1068,9 @@ infected again after recovering from a previous infection.
                 load_key("natural_immunity_duration", scenario_id, 2)
                 st.slider(
                     "Natural Immunity Waning Delay (Months)",
-                    0,
-                    12,
-                    2,
+                    min_value=0,
+                    max_value=12,
+                    value=2,
                     disabled=not waning_toggle,
                     on_change=save_key,
                     args=["natural_immunity_duration", scenario_id],
@@ -1086,9 +1086,9 @@ diminish immediately after they recover from the disease.
                 load_key("natural_waning_rate", scenario_id, 6)
                 st.slider(
                     "Natural Immunity Waning Duration (Months)",
-                    0,
-                    12,
-                    6,
+                    min_value=0,
+                    max_value=12,
+                    value=6,
                     disabled=not waning_toggle,
                     on_change=save_key,
                     args=["natural_waning_rate", scenario_id],
@@ -1633,18 +1633,18 @@ def disease_save_schema(
         schema (Parameters): The Pydantic model (specifically an object in the
             Parameters class) that the parameters will be populated into.
 
-        scenario_id(int): An integer that will be used to differentiate the parameters in
-            different instances of the tab by adding a number to the Streamlit
-            session state variables. A value of 0 means that this is the
-            baseline scenario and will be treated accordingly.
+        scenario_id (int): An integer that will be used to differentiate the
+            parameters in different instances of the tab by adding a number to
+            the Streamlit session state variables. A value of 0 means that this
+            is the baseline scenario and will be treated accordingly.
 
-        advanced (bool): Set to `True` to account for more complex parameters like
-            location-specific transmission modifiers.
+        advanced (bool): Set to `True` to account for more complex parameters
+            like location-specific transmission modifiers.
 
-        baseline (Parameters, optional): A Pydantic model representing the parameters
-            set for the baseline scenario. When `id` is not 0, this will be used
-            to omit parameters that are already set in the baseline from the final
-            scenario.
+        baseline (Parameters, optional): A Pydantic model representing the
+            parameters set for the baseline scenario. When `id` is not 0, this
+            will be used to omit parameters that are already set in the
+            baseline from the final scenario.
 
         include_dashboard (bool): Set to `True` to include dashboard-exclusive
             parameters like GP rate in the generated schema.
@@ -1878,10 +1878,10 @@ def disease_load_schema(schema: Parameters, scenario_id: int = 0):
         schema (Parameters): The Pydantic model (specifically an object in the
             Parameters class) that the parameters will be read from.
 
-        scenario_id(int): An integer that will be used to differentiate the parameters in
-            different instances of the tab by adding a number to the Streamlit
-            session state variables. A value of 0 means that this is the
-            baseline scenario and will be treated accordingly.
+        scenario_id (int): An integer that will be used to differentiate the
+            parameters in different instances of the tab by adding a number to
+            the Streamlit session state variables. A value of 0 means that this
+            is the baseline scenario and will be treated accordingly.
 
     Raises:
         ValidationError: If some but not all of the parameters needed to

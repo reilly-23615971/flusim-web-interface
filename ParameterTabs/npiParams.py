@@ -595,8 +595,8 @@ normal withdrawal rate.
         )
 
         # Show error if initial proportion is above target
-        baseAdultWithdrawal = id_get("withdrawalWork", id, 0.5)
-        baseChildWithdrawal = id_get("withdrawalSchool", id, 0.9)
+        baseAdultWithdrawal = id_get("withdrawal_work", id, 0.5)
+        baseChildWithdrawal = id_get("withdrawal_school", id, 0.9)
         param_error(
             "withdrawalNPIBelowBaseAdult",
             id,
@@ -796,7 +796,7 @@ overwriting the normal maximum.
         )
 
         # Show error if reduced size is more than base
-        baseGroupSize = id_get("maxWorkGroupSize", id, 10)
+        baseGroupSize = id_get("max_workgroup_size", id, 10)
         param_error(
             "groupNPIAboveBase",
             id,
@@ -978,7 +978,7 @@ effect, overwriting the normal BCC rate.
         )
 
         # Show error if initial proportion is above target
-        baseBCC = id_get("bccRate", id, 4.0)
+        baseBCC = id_get("bcc_rate", id, 4.0)
         param_error(
             "bccNPIAboveBase",
             id,
@@ -1423,7 +1423,7 @@ def npi_save_schema(
         # BCC Reduction
         if id_get("bccToggle", id, False):
             scenario_params.bcc_reduction = id_get("bccReducedRate", id, 0.2) / id_get(
-                "bccRate", id, 4.0
+                "bcc_rate", id, 4.0
             )
             bccTrigger = id_get("bccTrigger", id, "Always") if advanced else "Always"
             scenario_params.bcc_reduction_trigger = TRIGGER_KEY_CONVERTER[bccTrigger]
@@ -1522,12 +1522,12 @@ def npi_load_schema(schema: Parameters, scenario_id: int = 0):
         if "bcc_reduction" in param_dict:
             update_param_from_schema(
                 "bccReducedRate",
-                param_dict["bcc_reduction"] * id_get("bccRate", scenario_id, 4.0),
+                param_dict["bcc_reduction"] * id_get("bcc_rate", scenario_id, 4.0),
                 scenario_id,
             )
         elif scenario_id != 0:
-            scenarioBCCRate = id_get("bccRate", scenario_id, 4.0)
-            baselineBCCRate = id_get("bccRate", 0, 4.0)
+            scenarioBCCRate = id_get("bcc_rate", scenario_id, 4.0)
+            baselineBCCRate = id_get("bcc_rate", 0, 4.0)
             if scenarioBCCRate != baselineBCCRate:
                 bccRatio = id_get("bccReducedRate", 0, 0.05) / baselineBCCRate
                 update_param_from_schema(
