@@ -76,8 +76,8 @@ def save_key(
     key: str,
     scenario_id: int = -1,
     extra: Optional[str] = None,
-    not_scenario=False,
-    dataframe=False,
+    not_scenario: bool = False,
+    dataframe: bool = False,
 ):
     """
     Function to save widget values into permanent `st.session_state` variables.
@@ -89,13 +89,14 @@ def save_key(
             is part of. If this is negative, no ID will be added, allowing for
             parameters that are not associated with scenarios to be saved.
 
-        extra (str, optional): An additional part of the key used to distinguish
-            variable-length forms.
+        extra (str, optional): An additional part of the key used to
+            distinguish variable-length forms.
 
-        not_scenario (bool): Set to `True` if the widget isn't a parameter for scenarios.
+        not_scenario (bool): Set to `True` if the widget isn't a parameter for
+            scenarios.
 
-        dataframe (bool): Set to `True` if the widget is a dataframe that requires
-            manual application of changes.
+        dataframe (bool): Set to `True` if the widget is a dataframe that
+            requires manual application of changes.
     """
     # TODO: See if dataframes can not reload after every change
     # TODO: See if scenario dataframes can adapt to baseline changes
@@ -142,10 +143,10 @@ def save_key(
 def load_key(
     key: str,
     scenario_id: int = -1,
-    default=None,
+    default: Any = None,
     extra: Optional[str] = None,
-    no_zero_default=False,
-    dataframe=False,
+    no_zero_default: bool = False,
+    dataframe: bool = False,
 ):
     """
     Function to update widgets with permanent session state variables.
@@ -157,7 +158,7 @@ def load_key(
             is part of. If this is negative, no ID will be added, allowing for
             parameters that are not associated with scenarios to be saved.
 
-        default: The value to use if the widget is not present.
+        default (any): The value to use if the widget is not present.
 
         extra (str, optional): An additional part of the key used to distinguish
             variable-length forms.
@@ -266,7 +267,7 @@ def dynamic_scale_change(
     param_name: str,
     scenario_id: int,
     condition: Optional[Callable[[], bool]] = None,
-    no_save=False,
+    no_save: bool = False,
 ):
     """
     Function to update the ranges of dynamic parameters.
@@ -296,7 +297,7 @@ def dynamic_scale_change(
         save_key(scale_key, scenario_id)
     if condition is None or condition():
         has_changed = False
-        new_min, new_max = id_get(scale_key, scenario_id, (1, 720))
+        new_min, new_max = id_get(scale_key, scenario_id, [1, 720])
         if scenario_id == 0:
             # Check all scenarios if the baseline was modified
             for id in range(session["scenario_count"] + 1):
@@ -337,7 +338,9 @@ to fit the new period.
             )
 
 
-def id_get(key: str, scenario_id: int, default_value, extra: Optional[str] = None):
+def id_get[KeyType](
+    key: str, scenario_id: int, default_value: KeyType, extra: Optional[str] = None
+) -> KeyType:
     """
     Simple function to get a specific session state value with a specific
     ID, checking ID 0 if the specified one doesn't exist before falling
@@ -348,11 +351,14 @@ def id_get(key: str, scenario_id: int, default_value, extra: Optional[str] = Non
 
         scenario_id (int): The integer representing the scenario the value is part of.
 
-        default_value: The value to return if neither the specified key nor the
+        default_value (any): The value to return if neither the specified key nor the
             baseline have values in `st.session_state`.
 
         extra (str, optional): An additional part of the key used to distinguish
             variable-length forms.
+
+    Returns:
+        any: The value of the parameter in the specified session.
     """
     if not extra:
         return session.get(f"{key}{scenario_id}", session.get(f"{key}0", default_value))
@@ -364,22 +370,26 @@ def id_get(key: str, scenario_id: int, default_value, extra: Optional[str] = Non
 
 
 # Variable-Length Form Functions
-def has_duplicates(df: pd.DataFrame, column: str = "Age Group"):
+def has_duplicates(df: pd.DataFrame, column: str = "Age Group") -> bool:
     """
-    Simple function to check if there are duplicates in a given dataframe row.
+    Simple function to check if there are duplicates in a given dataframe column.
 
     Parameters:
         df (DataFrame): The dataframe to check.
 
         column (str): The column to check.
+
+    Returns:
+        bool: True if the dataframe column has duplicates.
     """
-    return len(set(df[column])) != len(df[column])
+    return not df[column].is_unique
 
 
 def replace_table_na(df: pd.DataFrame, column_dict: dict[str, Any]) -> pd.DataFrame:
     """
     Function to fill NA values in specific dataframe columns, accounting for
-    values that don't work with pandas' built-in `fillna` function like the empty list.
+    values that don't work with pandas' built-in `fillna` function like the
+    empty list.
 
     Parameters:
         df (DataFrame): The dataframe to modify.
@@ -388,7 +398,7 @@ def replace_table_na(df: pd.DataFrame, column_dict: dict[str, Any]) -> pd.DataFr
             and the value to replace NA values with.
 
     Returns:
-        Dataframe: The dataframe with NA values replaced as needed.
+        DataFrame: The dataframe with NA values replaced as needed.
     """
     new_table = df.copy()
     for column, value in column_dict.items():

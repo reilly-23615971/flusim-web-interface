@@ -461,7 +461,7 @@ load_key("show_advanced", default=False, no_zero_default=True)
 show_advanced = st.toggle(
     "Show Advanced Parameters",
     False,
-    key="_showAdvanced",
+    key="_show_advanced",
     on_change=save_key,
     args=["show_advanced"],
     help="""

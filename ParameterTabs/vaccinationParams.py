@@ -1667,9 +1667,7 @@ def vaccine_save_schema(
                 ageInitialDict = {
                     age: [
                         next(
-                            iter(
-                                df.loc[df["Age Group"] == age, "Initial Dose Efficacy"]
-                            ),
+                            iter(df["Initial Dose Efficacy"][df["Age Group"] == age]),
                             default,
                         )
                         for df, default in zip(

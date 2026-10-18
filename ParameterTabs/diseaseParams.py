@@ -1737,10 +1737,11 @@ def disease_save_schema(
                 "background_kappa", scenario_id, 1.0
             )
 
+            mortality_rates = health_burden_age_form["Mortality Rate"]
             for age in AGE_GROUP_KEYS:
                 if age in health_burden_age_form["Age Group"].values:
-                    mort = health_burden_age_form.loc[
-                        health_burden_age_form["Age Group"] == age, "Mortality Rate"
+                    mort = mortality_rates[
+                        health_burden_age_form["Age Group"] == age
                     ].item()
                     setattr(scenario_params, f"{age}_mort", round(mort / 100000, 10))
                 else:
@@ -1778,14 +1779,15 @@ def disease_save_schema(
             "beta_post_symptomatic", scenario_id, 0.55
         )
         # Life Cycle
-        scenario_params.transmissibility_delay = latency_period * 2
-        scenario_params.symptom_latency = (latency_period + pre_symptom_period) * 2
-        scenario_params.generation_time = (
-            latency_period + pre_symptom_period + symptom_period
-        ) * 2
-        scenario_params.infection_duration = (
-            latency_period + pre_symptom_period + symptom_period + post_symptom_period
-        ) * 2
+        scenario_params.transmissibility_delay = int(latency_period * 2)
+        scenario_params.symptom_latency = int((latency_period + pre_symptom_period) * 2)
+        scenario_params.generation_time = int(
+            (latency_period + pre_symptom_period + symptom_period) * 2
+        )
+        scenario_params.infection_duration = int(
+            (latency_period + pre_symptom_period + symptom_period + post_symptom_period)
+            * 2
+        )
         # Health Burden Outcomes
         scenario_params.prob_diagnosis = round(
             id_get("case_ratio", scenario_id, 50.0) / 100, 6
@@ -1847,11 +1849,11 @@ def disease_save_schema(
             dashboard_params.prob_icu = round(
                 id_get("icu_ratio", scenario_id, 20.0) / 100, 6
             )
+            hospitalisation_rates = health_burden_age_form["Hospitalisation Rate"]
             for age in AGE_GROUP_KEYS:
                 if age in health_burden_age_form["Age Group"].values:
-                    hosp = health_burden_age_form.loc[
-                        health_burden_age_form["Age Group"] == age,
-                        "Hospitalisation Rate",
+                    hosp = hospitalisation_rates[
+                        health_burden_age_form["Age Group"] == age
                     ].item()
                     setattr(dashboard_params, f"{age}_hosp", round(hosp / 100000, 10))
                 else:

@@ -1165,16 +1165,15 @@ def npi_save_schema(
                         },
                     ),
                 ).copy()
-                social_distancing_age_form["Social Distancing Compliance"] = (
+                social_distancing_rates = (
                     social_distancing_age_form["Social Distancing Compliance"]
                     .div(100.0)
                     .round(6)
                 )
                 for age in AGE_GROUP_KEYS:
                     if age in social_distancing_age_form["Age Group"].values:
-                        compliance = social_distancing_age_form.loc[
-                            social_distancing_age_form["Age Group"] == age,
-                            "Social Distancing Compliance",
+                        compliance = social_distancing_rates[
+                            social_distancing_age_form["Age Group"] == age
                         ].item()
                         setattr(scenario_params, f"{age}_social_distance", compliance)
                     else:
@@ -1385,12 +1384,12 @@ def npi_load_schema(schema: Parameters, scenario_id: int = 0):
     # Global Age Parameters
     schema_age = schema.Scenario_ParameterWithAgePrefix
     if schema_age is not None and schema_age.social_distance is not None:
-        compliance = schema_age.social_distance
+        global_compliance = schema_age.social_distance
         update_param_from_schema(
-            "social_distancing_compliance", compliance, scenario_id
+            "social_distancing_compliance", global_compliance, scenario_id
         )
     else:
-        compliance = id_get("social_distancing_compliance", 0, 0.9)
+        global_compliance = id_get("social_distancing_compliance", 0, 0.9)
 
     # General Scenario Parameters
     schema_parameters = schema.Scenario_Parameter
@@ -1491,7 +1490,7 @@ scenario
         distance_params = {
             p.removesuffix("_social_distance"): v
             for p, v in param_dict.items()
-            if p.endswith("_social_distance") and v != compliance
+            if p.endswith("_social_distance") and v != global_compliance
         }
         distancing_table = pd.DataFrame(
             columns=("Age Group", "Social Distancing Compliance")
@@ -1510,9 +1509,11 @@ scenario
                 {
                     "Age Group": [None],
                     "Social Distancing Compliance": [
-                        param_dict.get(
-                            id_get("social_distancing_compliance", scenario_id, 0.0),
-                        )
+                        id_get(
+                            "social_distancing_compliance",
+                            scenario_id,
+                            global_compliance,
+                        ),
                     ],
                 },
             ),

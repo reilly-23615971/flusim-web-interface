@@ -5,12 +5,13 @@
 # Imports
 import re
 from functools import partial
-from typing import Any, Callable
+from typing import Any, Callable, Optional, cast
 
 import numpy as np
 import pandas as pd
 import streamlit as st
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
+from streamlit.delta_generator import DeltaGenerator
 
 from ClientResources.ParameterFunctions import container_save, id_get
 from ClientResources.Types import (
@@ -39,7 +40,7 @@ def param_error(
     scenario_id: int,
     condition: Callable[[], bool | np.bool],
     message: str,
-    is_severe=False,
+    is_severe: bool = False,
 ):
     """
     Function to display an error message if a condition is met.
@@ -114,7 +115,7 @@ def dual_error(
 
 
 # @st.fragment(run_every=1)
-def error_checker(scenario_id: int, name: str = "Errors in Current Scenario"):
+def error_checker(scenario_id: int, name: str = "Errors in Current Scenario") -> bool:
     """
     Fragment to list errors from a specific scenario in a dropdown container.
 
@@ -151,26 +152,35 @@ def validation_error_formatting(e: ValidationError):
     for error in e.errors():
         # TODO: Use Pydantic's method of subbing in custom messages
         # See https://pydantic.dev/docs/validation/latest/errors/errors/
-        st.error(f"Error: {error["msg"]}", icon=":material/error:")
+        st.error(
+            f"Error validating parameters: {error["msg"]}", icon=":material/error:"
+        )
 
 
 # Formatting functions
-def plural(value: int | float):
+def plural(value: int | float) -> str:
     """
     Simple function to add "s" to words when a value is not 1.
 
     Parameters:
         value (int or float): The value to check.
+
+    Returns:
+        str: An empty string if `value` equals 1, or the string "s" otherwise.
     """
     return "" if value == 1 else "s"
 
 
-def day_count(count: int | float):
+def day_count(count: int | float) -> str:
     """
     Simple function to convert a number into a string describing a number of days.
 
     Parameters:
         count (int or float): The number of days to return.
+
+    Returns:
+        str: "1 Day" if `count` equals 1, or a string in the form "`count`
+            Days" otherwise.
     """
     return "1 Day" if count == 1 else f"{count:g} Days"
 
@@ -341,7 +351,7 @@ def health_outcome_store(
 def save_name(
     key: str,
     scenario_id: int,
-    error_container,
+    error_container: DeltaGenerator,
     special_containers: dict[str, str] = {},
 ):
     """
@@ -354,7 +364,8 @@ def save_name(
         scenario_id (int): The integer representing the scenario the widget
             is naming. Should not be 0 (the baseline scenario with a fixed name).
 
-        error_container: The container in which to display the error message.
+        error_container (DeltaGenerator): The Streamlit container in which to
+            display the error message.
 
         special_containers (dict of str): String used to identify containers
             that must be set to specific values (i.e. scenario tabs whose
@@ -416,7 +427,7 @@ def load_name(key: str, scenario_id: int = -1):
     session[f"_{key_string}"] = session.scenario_names[scenario_id]
 
 
-def unique_name(current_name: str, names: set[str]):
+def unique_name(current_name: str, names: set[str]) -> str:
     """
     Function to add a suffix to a string to make it unique compared to a set.
 
@@ -424,6 +435,9 @@ def unique_name(current_name: str, names: set[str]):
         current_name (str): The string to make unique.
 
         names (set of str): The other strings to compare with.
+
+    Returns:
+        str: A name that is different from all strings in `names`.
     """
     if current_name not in names:
         return current_name
@@ -472,7 +486,7 @@ def age_sort_series(ages: pd.Series) -> pd.Series:
     return ages.map({age: index for index, age in enumerate(AGE_GROUP_KEYS)})
 
 
-def age_display(option) -> AgeGroup:
+def age_display(option: str | int | float | bool) -> AgeGroup:
     """
     Function to be passed to format_func for displaying selectbox values
 
@@ -482,8 +496,7 @@ def age_display(option) -> AgeGroup:
     Returns:
         str: The display value corresponding to the selectbox option.
     """
-
-    return AGE_KEY_CONVERTER[option]
+    return AGE_KEY_CONVERTER[cast(AgeGroupKey, str(option))]
 
 
 def age_range_string(lower: int | float, upper: int | float) -> str:
@@ -575,17 +588,19 @@ def age_range_combiner(ages: list[AgeWithTotal]) -> str:
 
 
 # Miscellaneous functions
-def schema_update(schema: Any, param_group: str, new_params: Any):
+def schema_update(schema: BaseModel, param_group: str, new_params: BaseModel):
     """
     Function to update a parameter object with new schema values
 
     Parameters:
-        schema: The object holding the current parameters.
+        schema (BaseModel): The Pydantic model holding the current parameters.
 
         param_group (str): The name of the group of parameters to be updated.
 
-        new_params: The object containing the new parameter values.
+        new_params (BaseModel): The Pydantic model containing the new parameter
+            values.
     """
+
     new_params_dict = new_params.model_dump(exclude_unset=True)
     if new_params_dict:
         if getattr(schema, param_group, None) is None:
@@ -595,9 +610,9 @@ def schema_update(schema: Any, param_group: str, new_params: Any):
             setattr(schema, param_group, new_schema)
 
 
-def schema_remove_baseline(
-    scenario: Any,
-    baseline: Any,
+def schema_remove_baseline[Model: BaseModel](
+    scenario: Model,
+    baseline: Optional[Model],
     ignore: set[str] = set(),
     defaults: dict[str, Any] = {},
 ):
@@ -605,10 +620,12 @@ def schema_remove_baseline(
     Function to remove any parameters from a scenario that are already represented in the baseline scenario.
 
     Parameters:
-        scenario: The object containing the scenario parameters.
+        scenario (BaseModel): The Pydantic model containing the scenario
+            parameters to be removed.
 
-        baseline: The object containing the baseline parameters to remove from
-            the scenario object.
+        baseline (BaseModel): The object containing the baseline parameters to
+            remove from the scenario object. The function will end immediately
+            if this is `None`.
 
         ignore (set of str): A set specifying parameters that should
             never be removed from `scenario` even if they are present in `baseline`.
@@ -617,13 +634,10 @@ def schema_remove_baseline(
             default to a specific value if they are present in the `baseline` but
             missing in `scenario`.
 
-    Returns:
-        Any: The scenario object, with any attributes shared with the baseline
-            having been removed.
-
     Raises:
         TypeError: If scenario and baseline are not part of the same object class.
     """
+
     if baseline is None:
         return
     if not (type(scenario) is type(baseline)):

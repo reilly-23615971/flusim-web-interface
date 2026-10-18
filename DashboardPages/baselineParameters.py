@@ -64,7 +64,7 @@ containersToOpen: set[str] = {"paramTabs0"}
 show_advanced = st.toggle(
     "Show Advanced Parameters",
     False,
-    key="_showAdvanced",
+    key="_show_advanced",
     on_change=container_save,
     args=["show_advanced"],
     kwargs={"containers": containersToOpen},
