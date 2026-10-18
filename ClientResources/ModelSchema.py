@@ -1357,15 +1357,18 @@ recover from the additional strain.
 
 
 # Simulation parameters whose value will change at specific times
+type DynamicParameter = Literal[
+    "work_nonattendance",
+    "bcc_reduction",
+    "school_closure",
+    "seed_rate",
+    "school_closure_delay",
+    "school_closure_duration",
+]
+
+
 class DynamicIntervention(BaseModel):
-    Name: Literal[
-        "work_nonattendance",
-        "bcc_reduction",
-        "school_closure",
-        "seed_rate",
-        "school_closure_delay",
-        "school_closure_duration",
-    ] = Field(
+    Name: DynamicParameter = Field(
         title="Parameter Name",
         description="The parameter whose value will be updated.",
     )

@@ -399,7 +399,7 @@ def community_save_schema(
 
     except (ValueError, ValidationError) as e:
         community_log.error(
-            f"[communityParams] Encountered {type(e).__name__} while validating parameters for scenario {id}: {e}"
+            f"[community_save_schema] Encountered {type(e).__name__} while validating parameters for scenario {scenario_id}: {e}"
         )
         raise e
 

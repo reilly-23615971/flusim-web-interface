@@ -876,7 +876,7 @@ overwriting the normal BCC rate.
             lambda: use_bcc_reduction and bcc_reduced_rate >= base_bcc_rate,
             f"""
 Error: The background contact count (BCC) during BCC reduction NPIs in the {
-    'baseline scenario' if id == 0
+    'baseline scenario' if scenario_id == 0
     else f'scenario named "{session.scenario_names[scenario_id]}"'
 } is {bcc_reduced_rate} interactions per day, but the standard rate is
 {base_bcc_rate} interactions per day. As such, BCC is not decreased while the
@@ -1079,7 +1079,7 @@ each individual school (for "Cases per School") exceeds this value.
                         lambda: start_threshold_total >= population,
                         f"""
 Error: The case threshold that triggers the beginning of NPIs in the {
-    'baseline scenario' if id == 0
+    'baseline scenario' if scenario_id == 0
     else f'scenario named "{session.scenario_names[scenario_id]}"'
 } is {start_threshold_total} cases, but the total number of people in the
 simulated community is {population}. As such, the entire simulation will be

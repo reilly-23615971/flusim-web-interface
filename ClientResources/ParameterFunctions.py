@@ -23,7 +23,7 @@ TIME_PARAMS = [
 
 # List of parameters that modify dynamic parameter forms when changed
 DYNAMIC_PARAMS = {
-    "seeding_period": ("seeding_dynamic_form", "Infection Seeding Rate"),
+    "seeding_period": ("seed_rate_dynamic_form", "Infection Seeding Rate"),
     "school_closure_period": (
         "school_closure_dynamic_form",
         "School Closure Compliance",

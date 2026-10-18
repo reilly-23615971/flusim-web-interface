@@ -2156,8 +2156,8 @@ def vaccine_load_schema(schema: Parameters, scenario_id: int = 0):
                     ]
                 for index, value in enumerate(base):
                     if value != baseFull[index]:
-                        currentTable = primaryEfficacyTables[index]
-                        currentTable.loc[currentTable.shape[0]] = [age, value]
+                        current_table = primaryEfficacyTables[index]
+                        current_table.loc[current_table.shape[0]] = [age, value]
 
         # Save the tables
         for index, table in enumerate(primaryEfficacyTables):

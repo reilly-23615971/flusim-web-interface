@@ -706,7 +706,7 @@ will infect 3 people 80% of the time and 4 people 20% of the time.
                 on_change=dynamic_scale_change,
                 args=[
                     "seeding_period",
-                    "seeding_dynamic_form",
+                    "seed_rate_dynamic_form",
                     "Infection Seeding Time Period",
                     scenario_id,
                 ],

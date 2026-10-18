@@ -98,7 +98,7 @@ st.button(
     type="primary",
     on_click=add_scenario,
     args=["scenarioTabs"],
-    key=f"scenarioAdd{id}",
+    key=f"scenarioAdd",
     disabled=not scenario_count < MAX_SCENARIOS,
     help=(
         """
