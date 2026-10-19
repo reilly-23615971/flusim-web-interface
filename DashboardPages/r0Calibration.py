@@ -98,12 +98,14 @@ by ±0.02.
 
             # Load JSON
             if USE_PRESET_PARAMS:
-                filename = f"default{"NoNPI" if useInterventions else ""}.json"
+                filename = f"default{"NoNPI" if not useInterventions else ""}.json"
                 with open(f"ClientResources/Templates/{filename}", "r") as f:
                     params = Parameters.model_validate_json(f.read())
             else:
                 params = create_template(
-                    scenario_id, include_interventions=False, include_dashboard=False
+                    scenario_id,
+                    include_interventions=useInterventions,
+                    include_dashboard=False,
                 )
             schema = OverrideTemplate(
                 name=community, description=str(targetR0), parameters=params
@@ -258,12 +260,14 @@ def calculateR0Button() -> None:
 
             # Load JSON
             if USE_PRESET_PARAMS:
-                filename = f"default{"NoNPI" if useInterventions else ""}.json"
+                filename = f"default{"NoNPI" if not useInterventions else ""}.json"
                 with open(f"ClientResources/Templates/{filename}", "r") as f:
                     params = Parameters.model_validate_json(f.read())
             else:
                 params = create_template(
-                    scenario_id, include_interventions=False, include_dashboard=False
+                    scenario_id,
+                    include_interventions=useInterventions,
+                    include_dashboard=False,
                 )
             schema = CommunityOverride(
                 name=community, parameters=params
