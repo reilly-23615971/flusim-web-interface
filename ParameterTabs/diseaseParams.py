@@ -1918,9 +1918,10 @@ def disease_load_schema(schema: Parameters, scenario_id: int = 0):
         for patch in schema_patch:
             name, weight = patch.Patch, patch.SeedingWeight
             if name not in valid_patches:
-                raise AssertionError("""
-Seeding weights were defined for locations that are not in the selected community
-                """)
+                raise AssertionError(
+                    "Seeding weights were defined for locations "
+                    "that are not in the selected community"
+                )
             patch_table.loc[patch_table.shape[0]] = [
                 name,
                 round(weight if weight else 1.0, 6),
@@ -2000,9 +2001,10 @@ Seeding weights were defined for locations that are not in the selected communit
             waned_efficacy = schema_parameters.infection_waned_protection
             waning_rate = schema_parameters.infection_waning_rate_per_cycle
             if None in {waned_efficacy, waning_rate} and scenario_id == 0:
-                raise AssertionError("""
-Waning efficacy parameters were only partially defined for the baseline scenario
-                """)
+                raise AssertionError(
+                    "Waning efficacy parameters were only partially "
+                    "defined for the baseline scenario"
+                )
 
             # Use baseline values to plug None gaps
             base_waned_efficacy = id_get("natural_waned_efficacy", 0, 0.5)
@@ -2035,10 +2037,10 @@ Waning efficacy parameters were only partially defined for the baseline scenario
             seeding_start = schema_parameters.seeding_start_cycle
             seeding_length = schema_parameters.seeding_duration
             if None in {seeding_start, seeding_length} and scenario_id == 0:
-                raise AssertionError("""
-Infection seeding period parameters were only partially defined for the
-baseline scenario
-                """)
+                raise AssertionError(
+                    "Infection seeding period parameters were only "
+                    "partially defined for the baseline scenario"
+                )
 
             # Use baseline values to plug None gaps
             baseline_period_start, baseline_period_end = id_get(
@@ -2080,10 +2082,10 @@ baseline scenario
                 }
                 and scenario_id == 0
             ):
-                raise AssertionError("""
-Infection life cycle parameters were only partially defined for the baseline
-scenario
-                """)
+                raise AssertionError(
+                    "Infection life cycle parameters were only "
+                    "partially defined for the baseline scenario"
+                )
 
             # Use baseline values to plug None gaps
             baseline_latency = id_get("latency_period", 0, 0.5)

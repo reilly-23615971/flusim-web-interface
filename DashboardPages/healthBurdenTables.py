@@ -101,10 +101,10 @@ def generateTable() -> None:
     # Throw error if no data is present
     full_data = session.get("modelDataAsirFull")
     if not USE_PRESET_DATA and full_data is None:
-        raise FileNotFoundError("""
-            No simulation ASIR data was available to plot; please run a
-            simulation before attempting to generate a table.
-        """)
+        raise FileNotFoundError(
+            "No simulation ASIR data was available to plot; please run a"
+            "simulation before attempting to generate a table."
+        )
     # TODO: Fix bug where latest column settings aren't stored
     # (add confirmation to generate table button?
     # Rerun page before running generateTable somehow?)
@@ -392,10 +392,10 @@ def downloadPresetTable(
     # Throw error if no data is present
     full_data = session.get("modelDataAsirFull")
     if not USE_PRESET_DATA and full_data is None:
-        raise FileNotFoundError("""
-            No simulation ASIR data was available to plot; please run a
-            simulation before attempting to download a table.
-        """)
+        raise FileNotFoundError(
+            "No simulation ASIR data was available to plot; please run a"
+            "simulation before attempting to download a table."
+        )
 
     # Debug code for loading data in testing
     if USE_PRESET_DATA:

@@ -83,8 +83,8 @@ def format_epidemic(
             obtained from the server after running the simulation.
 
         scenario_names (list of str): A list of strings containing the names of
-            the different scenarios that were simulated (since the CSV just uses
-            non-descriptive placeholders).
+            the different scenarios that were simulated (since the CSV just
+            uses non-descriptive placeholders).
 
         outcome_name (str): A string indicating the health outcome the epidemic
             data represents. Currently unused. Accepts any of the following values:
@@ -102,14 +102,15 @@ def format_epidemic(
             columns for each age group. Currently unimplemented.
 
     Returns:
-        formatted_data (DataFrame): A dataframe containing the data, reshaped into
-            a format more easily used by Altair's charts.
+        formatted_data (DataFrame): A dataframe containing the data, reshaped
+            into a format more easily used by Altair's charts.
 
     Raises:
         ValueError: If `scenario_names` is not a list of strings or `outcome`
             is not one of the recognised health burden outcomes.
 
-        NotImplementedError: If `split_by_age` is enabled before it is implemented.
+        NotImplementedError: If `split_by_age` is enabled before it is
+            implemented.
     """
 
     # Validate parameters
@@ -118,18 +119,21 @@ def format_epidemic(
             isinstance(name, str) for name in scenario_names
         ):
             raise ValueError(
-                f"scenario_names should be a list of strings; was {type(scenario_names)}."
+                "scenario_names should be a list of "
+                f"strings; was {type(scenario_names)}."
             )
         if not scenario_names:
             raise ValueError("scenario_names should not be empty.")
         if outcome_name not in HEALTH_OUTCOMES:
-            raise ValueError(f"""
-outcome should be either "Symptomatic Infections", "Diagnosed Cases",
-"Hospitalisations", "ICU Visits", "GP Visits", or "Deaths"; was "{outcome_name}".
-            """)
+            raise ValueError(
+                'outcome should be either "Symptomatic Infections", "Diagnosed'
+                ' Cases", "Hospitalisations", "ICU Visits", "GP Visits", or '
+                f'"Deaths"; was "{outcome_name}".'
+            )
     except Exception as e:
         visualisation_log.error(
-            f"[format_epidemic] Encountered {type(e).__name__} while validating parameters: {e}"
+            f"[format_epidemic] Encountered {type(e).__name__} "
+            f"while validating parameters: {e}"
         )
         raise e
     outcome = "Infections"  # TODO: placeholder until other burdens can be graphed
@@ -137,7 +141,8 @@ outcome should be either "Symptomatic Infections", "Diagnosed Cases",
     if split_by_age:
         # TODO: Complete if desired
         raise NotImplementedError(
-            "Separating epidemic data by age is not currently supported by the dashboard."
+            "Separating epidemic data by age is not "
+            "currently supported by the dashboard."
         )
     else:
         type_mapping: defaultdict[int, Any] = defaultdict(lambda: np.float64, {0: int})
@@ -220,7 +225,8 @@ def plot_epidemic(
             raise ValueError(f"data should be a DataFrame, was {type(data)}")
     except Exception as e:
         visualisation_log.error(
-            f"[plot_epidemic] Encountered {type(e).__name__} while validating parameters: {e}"
+            f"[plot_epidemic] Encountered {type(e).__name__} "
+            f"while validating parameters: {e}"
         )
         raise e
     assert set(included_scenarios).issubset(
@@ -301,14 +307,14 @@ def format_asir(raw_csv: bytes, scenario_names: list[str]) -> pd.DataFrame:
     tables and other visualisations.
 
     Parameters:
-        raw_csv (bytes): The CSV output of the 'asir' analysis function, obtained
-            from the server after running the simulation.
+        raw_csv (bytes): The CSV output of the 'asir' analysis function,
+            obtained from the server after running the simulation.
 
         scenario_names (list of str): A list of strings containing the names of
-            the different scenarios that were simulated (since the CSV just uses
-            non-descriptive placeholders). This list should contain the names
-            of all scenarios in the simulation, even if not all of them will be
-            included in the final table.
+            the different scenarios that were simulated (since the CSV just
+            uses non-descriptive placeholders). This list should contain the
+            names of all scenarios in the simulation, even if not all of them
+            will be included in the final table.
     """
     # Validate parameters
     try:
@@ -318,11 +324,13 @@ def format_asir(raw_csv: bytes, scenario_names: list[str]) -> pd.DataFrame:
             isinstance(name, str) for name in scenario_names
         ):
             raise ValueError(
-                f"scenario_names should be a list of strings; was {type(scenario_names)}."
+                "scenario_names should be a list of "
+                f"strings; was {type(scenario_names)}."
             )
     except Exception as e:
         visualisation_log.error(
-            f"[format_asir] Encountered {type(e).__name__} while validating parameters: {e}"
+            f"[format_asir] Encountered {type(e).__name__} "
+            f"while validating parameters: {e}"
         )
         raise e
 
@@ -437,7 +445,8 @@ def recalculate_totals(
             scenario's infection rates copied over all other scenarios,
             used for calculating difference-from-baseline columns.
 
-        scenario_count (str): The number of scenarios represented in the columns.
+        scenario_count (str): The number of scenarios represented in the
+            columns.
 
     Returns:
         (tuple with 2 Series): The two column inputs with their total cells
@@ -473,20 +482,20 @@ def generate_asir(
     from the 'asir' Flusim analysis tool.
 
     Parameters:
-        base_data (DataFrame): A DataFrame containing the asir data, processed with
-            the format_asir function.
+        base_data (DataFrame): A DataFrame containing the asir data, processed
+            with the format_asir function.
 
         scenario_names (list of str): A list of strings containing the names of
-            the different scenarios that were simulated (since the CSV just uses
-            non-descriptive placeholders). This list should contain the names
-            of all scenarios in the simulation, even if not all of them will be
-            included in the final table.
+            the different scenarios that were simulated (since the CSV just
+            uses non-descriptive placeholders). This list should contain the
+            names of all scenarios in the simulation, even if not all of them
+            will be included in the final table.
 
         age_separation (str): A string indicating whether different age groups
-            should be represented with additional rows or columns. Can be either
-            `Combined` (do not separate values by age group at all), `By Row`
-            (include extra rows for each age group), or `By Column` (use
-            different age groups for each column).
+            should be represented with additional rows or columns. Can be
+            either `Combined` (do not separate values by age group at all),
+            `By Row` (include extra rows for each age group), or `By Column`
+            (use different age groups for each column).
 
         columns (sequence of tuples): A list
             of tuples representing the settings each column should have. The
@@ -539,7 +548,8 @@ def generate_asir(
             isinstance(name, str) for name in scenario_names
         ):
             raise ValueError(
-                f"scenario_names should be a list of strings; was {type(scenario_names)}."
+                "scenario_names should be a list of "
+                f"strings; was {type(scenario_names)}."
             )
         if not columns:
             raise ValueError("columns should not be empty.")
@@ -554,7 +564,8 @@ def generate_asir(
             raise ValueError(f"columns was not correctly formatted; was {columns}.")
     except Exception as e:
         visualisation_log.error(
-            f"[generate_asir] Encountered {type(e).__name__} while validating parameters: {e}"
+            f"[generate_asir] Encountered {type(e).__name__} "
+            f"while validating parameters: {e}"
         )
         raise e
     # Convert None values for included_scenarios/Ages to refer to all values

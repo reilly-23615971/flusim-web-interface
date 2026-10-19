@@ -160,8 +160,8 @@ def load_key(
 
         default (any): The value to use if the widget is not present.
 
-        extra (str, optional): An additional part of the key used to distinguish
-            variable-length forms.
+        extra (str, optional): An additional part of the key used to
+            distinguish variable-length forms.
 
         no_zero_default (bool): Set to `True` if the widget shouldn't fall back
             on baseline values.
@@ -349,13 +349,14 @@ def id_get[KeyType](
     Parameters:
         key (str): The string component of the session state variable to get.
 
-        scenario_id (int): The integer representing the scenario the value is part of.
+        scenario_id (int): The integer representing the scenario the value is
+            part of.
 
-        default_value (any): The value to return if neither the specified key nor the
-            baseline have values in `st.session_state`.
+        default_value (any): The value to return if neither the specified key
+            nor the baseline have values in `st.session_state`.
 
-        extra (str, optional): An additional part of the key used to distinguish
-            variable-length forms.
+        extra (str, optional): An additional part of the key used to
+            distinguish variable-length forms.
 
     Returns:
         any: The value of the parameter in the specified session.
@@ -372,7 +373,8 @@ def id_get[KeyType](
 # Variable-Length Form Functions
 def has_duplicates(df: pd.DataFrame, column: str = "Age Group") -> bool:
     """
-    Simple function to check if there are duplicates in a given dataframe column.
+    Simple function to check if there are duplicates in a given dataframe
+    column.
 
     Parameters:
         df (DataFrame): The dataframe to check.
@@ -427,8 +429,8 @@ def update_param_from_schema(
         scenario_id (int): The integer representing the scenario the parameter
             is part of.
 
-        extra (str, optional): An additional part of the key used to distinguish
-            variable-length forms.
+        extra (str, optional): An additional part of the key used to
+            distinguish variable-length forms.
     """
     session[f"{key}{scenario_id}{extra if extra else ""}"] = value
     if scenario_id:
@@ -454,13 +456,14 @@ def update_table_from_schema(
 
         new_table (DataFrame): The new table data from the schema.
 
-        scenario_id (int): The integer representing the scenario the table is part of.
+        scenario_id (int): The integer representing the scenario the table is
+            part of.
 
         default_table (DataFrame): The table to load if neither `new_table` nor
             the baseline scenario have any data to utilise.
 
-        extra (str, optional): An additional part of the key used to distinguish
-            variable-length forms.
+        extra (str, optional): An additional part of the key used to
+            distinguish variable-length forms.
     """
     session[f"{key}{scenario_id}{extra if extra else ""}"] = (
         default_table if new_table.empty else new_table.reset_index(drop=True)

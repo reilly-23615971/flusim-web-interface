@@ -37,10 +37,12 @@ async def start_task(route: str, parameter_json: str) -> str:
     Parameters:
         route (str): The URL route to contact.
 
-        parameter_json (str): A string containing the JSON to include in the server call.
+        parameter_json (str): A string containing the JSON to include in the
+            server call.
 
     Returns:
-        str: The ID used in future requests to obtain the task's status and results.
+        str: The ID used in future requests to obtain the task's status and
+            results.
 
     Raises:
         ClientResponseError: If the server responds with an unsuccessful error
@@ -60,7 +62,8 @@ async def start_task(route: str, parameter_json: str) -> str:
                 error_text = await response.text()
                 # TODO: Unwrap Pydantic errors instead of making them AssertionErrors
                 raise AssertionError(
-                    "The provided parameters did not comply with the required schema",
+                    "The provided parameters did not "
+                    "comply with the required schema",
                     error_text,
                 )
             response_data = await response.json()
@@ -72,7 +75,8 @@ async def start_task(route: str, parameter_json: str) -> str:
 
 async def wait_for_flag(flag: Event) -> None:
     """
-    Async function to wait until the cancellation flag is set before progressing.
+    Async function to wait until the cancellation flag is set before
+    progressing.
 
     Parameters:
         flag (Event): The flag to wait for.
@@ -124,9 +128,9 @@ async def get_task_results(
             should be interpreted as.
 
     Returns:
-        list or dict: If `result_type` is `zip`, returns a list of analysis files,
-            unzipped and stored as byte data. If `result_type` is `json`, returns
-            a dictionary representation of the JSON data.
+        list or dict: If `result_type` is `zip`, returns a list of analysis
+            files, unzipped and stored as byte data. If `result_type` is
+            `json`, returns a dictionary representation of the JSON data.
 
     Raises:
         FileNotFoundError: If the server returns an empty zip file.
@@ -221,17 +225,21 @@ async def get_task_status(
                             return
                         case "error":
                             server_log.error(
-                                f"[get_task_status] Server encountered an error while running the task {task_id}"
+                                "[get_task_status] Server encountered an "
+                                f"error while running the task {task_id}"
                             )
                             raise RuntimeError(
-                                "An error occurred while the server was completing the request."
+                                "An error occurred while the server "
+                                "was completing the request."
                             )
                         case "shutdown":
                             server_log.error(
-                                f"[get_task_status] Server shut down while running the task {task_id}"
+                                "[get_task_status] Server shut down "
+                                f"while running the task {task_id}"
                             )
                             raise PythonFinalizationError(
-                                "The simulation server shut down while attempting to complete the task."
+                                "The simulation server shut down "
+                                "while attempting to complete the task."
                             )
                 case WSMsgType.CLOSE:
                     if msg.data == 1008:
@@ -260,11 +268,12 @@ async def monitor_task_websocket(
 
         task_id (str): The ID distinguishing this server task.
 
-        cancel_flag (Event): The flag to indicate that the task should be cancelled.
+        cancel_flag (Event): The flag to indicate that the task should be
+            cancelled.
 
-        status_params (dict): A dictionary compiling the parameters used for monitoring
-            the task, namely the status dictionary and the queues specific
-            to this task.
+        status_params (dict): A dictionary compiling the parameters used for
+            monitoring the task, namely the status dictionary and the queues
+            specific to this task.
     """
 
     async with ClientSession(base_url=SERVER_URL) as client:
@@ -315,11 +324,12 @@ def task_wrapper(
         parameter_json (str): A string containing the JSON representation of
             the simulation experiment to run.
 
-        cancel_flag (Event): The flag to indicate that the task should be cancelled.
+        cancel_flag (Event): The flag to indicate that the task should be
+            cancelled.
 
-        status_params (dict): A dictionary compiling the parameters used for monitoring
-            the task, namely the status dictionary and the queues specific
-            to this task.
+        status_params (dict): A dictionary compiling the parameters used for
+            monitoring the task, namely the status dictionary and the queues
+            specific to this task.
     """
 
     def thread_runner():
@@ -423,7 +433,8 @@ make sure your parameters do not possess any errors and try again.
             short_description = "Server returned no readable files"
             full_description = """
 The simulation server did not return any readable files. Ensure your
-parameters do not result in a simulation where nobody is infected and try again.
+parameters do not result in a simulation where nobody is infected and try
+again.
             """
             error_icon = "unknown_document"
         # TODO: Catch JSONDecodeError

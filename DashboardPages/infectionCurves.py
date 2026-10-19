@@ -36,10 +36,10 @@ def generateGraph():
     """
     # Throw error if no data is present
     if not USE_PRESET_DATA and session.get("modelDataEpidemicDaily") is None:
-        raise FileNotFoundError("""
-            No simulation epidemic data was available to plot; please run a
-            simulation before attempting to generate a table.
-        """)
+        raise FileNotFoundError(
+            "No simulation epidemic data was available to plot; please run a"
+            "simulation before attempting to generate a graph."
+        )
 
     chartType = session.get("chartType", "Cumulative")
 

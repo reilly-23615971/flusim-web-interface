@@ -49,8 +49,8 @@ class DashboardParameters(BaseModel):
         title="ICU Visit Probability",
         default=0.2,
         description="""
-The probability of a hospitalised individual visiting a hospital's Intensive Care
-Unit as a result of the pathogen.
+The probability of a hospitalised individual visiting a hospital's Intensive
+Care Unit as a result of the pathogen.
         """,
     )
     prob_gp: Optional[Probability] = Field(
@@ -207,7 +207,8 @@ will catch the pathogen from others.
         title="Social Distancing Compliance",
         default=None,
         description="""
-The probability of complying with social distancing procedures for all age groups.
+The probability of complying with social distancing procedures for all age
+groups.
         """,
     )
     mort: Optional[Probability] = Field(
@@ -237,8 +238,8 @@ The average number of infections to introduce into the simulation per cycle.
         ge=0,
         le=6,
         description="""
-The day of the week on cycle 0 of each simulation run as an integer. Zero-indexed
-such that Sunday is 0, Monday is 1, etc.
+The day of the week on cycle 0 of each simulation run as an integer.
+Zero-indexed such that Sunday is 0, Monday is 1, etc.
         """,
     )
     seeding_duration: Optional[int] = Field(
@@ -260,8 +261,8 @@ such that Sunday is 0, Monday is 1, etc.
         default=0.55,
         ge=0.0,
         description="""
-The probability of transmission from asymptomatic individuals will be multiplied
-by this value.
+The probability of transmission from asymptomatic individuals will be
+multiplied by this value.
         """,
     )
     beta_post_symptomatic: Optional[float] = Field(
@@ -269,8 +270,8 @@ by this value.
         default=0.55,
         ge=0.0,
         description="""
-The probability of transmission from infected individuals whose symptomatic period
-has ended will be multiplied by this value.
+The probability of transmission from infected individuals whose symptomatic
+period has ended will be multiplied by this value.
         """,
     )
     kappa_household: Optional[Kappa] = Field(
@@ -376,7 +377,8 @@ Subtracting the latent period from this value provides the infectious period.
         default=19,
         ge=0,
         description="""
-The number of cycles before an infected individual is considered to have recovered.
+The number of cycles before an infected individual is considered to have
+recovered.
         """,
     )
 
@@ -401,7 +403,8 @@ symptomatic.
         title="Hospitalisation Probability",
         default=0.0,
         description="""
-The probability of an infected individual being hospitalised if they are diagnosed.
+The probability of an infected individual being hospitalised if they are
+diagnosed.
         """,
     )
     prob_diagnosis: Optional[Probability] = Field(
@@ -477,7 +480,8 @@ education facilities.
         default=10,
         ge=0,
         description="""
-The maximum number of individuals that can be in a single workgroup within a workplace.
+The maximum number of individuals that can be in a single workgroup within a
+workplace.
         """,
     )
     max_neighbourgroup_size: Optional[int] = Field(
@@ -649,7 +653,8 @@ adult education facilities.
         ge=0,
         le=1,
         description="""
-The proportion of individuals in a school who will comply with school closure NPIs.
+The proportion of individuals in a school who will comply with school closure
+NPIs.
         """,
     )
     school_closure_trigger: Optional[TriggerCondition] = Field(
@@ -736,7 +741,8 @@ symptomatic, when a withdrawal increase NPI is in effect.
         default=1.0,
         ge=0.0,
         description="""
-The probability of an infected child withdrawing from school after becoming symptomatic, when a withdrawal increase NPI is in effect.
+The probability of an infected child withdrawing from school after becoming
+symptomatic, when a withdrawal increase NPI is in effect.
         """,
     )
 
@@ -1592,15 +1598,15 @@ has waned.
         """
         try:
             if self.DoseType == "primary" and not isinstance(self.Efficacy, list):
-                raise TypeError("""
-The efficacy in Scenario_VaccineDoseEfficacy should be a list when the dose
-type is "primary".
-                """)
+                raise TypeError(
+                    "The efficacy in Scenario_VaccineDoseEfficacy should be a "
+                    'list when the dose type is "primary".'
+                )
             elif self.DoseType == "booster" and isinstance(self.Efficacy, list):
-                raise TypeError("""
-The efficacy in Scenario_VaccineDoseEfficacy should be a single value when the
-dose type is "booster".
-                """)
+                raise TypeError(
+                    "The efficacy in Scenario_VaccineDoseEfficacy should be a "
+                    'single value when the dose type is "booster".'
+                )
             return self
         except TypeError as e:
             validation_log.error(
@@ -1620,8 +1626,9 @@ class Parameters(BaseModel):
         title="Dashboard Parameters",
         default=None,
         description="""
-Parameters not used by the simulation itself, but which are used by the dashboard
-to aid in tasks such as settings configuration or health burden calculation.
+Parameters not used by the simulation itself, but which are used by the
+dashboard to aid in tasks such as settings configuration or health burden
+calculation.
         """,
     )
     Scenario_ParameterWithAgePrefix: Optional[AllAgesParameters] = Field(
@@ -1707,7 +1714,8 @@ receives, and how often they are administered.
     )
     def null_age_serialize(self, value):
         """
-        Function to ensure that age fields where `None` is meaningful are never omitted
+        Function to ensure that age fields where `None` is meaningful are never
+        omitted
         """
         if value is None:
             return None
@@ -1736,7 +1744,15 @@ receives, and how often they are administered.
             return value
 
     # Parameter sets that require unique values
-    type UniqueListParams = CrossImmunity | PatchParameters | SeededImmunity | StrainParameters | VaccineCoverage | VaccineDose | VaccineEfficacy
+    type UniqueListParams = (
+        CrossImmunity
+        | PatchParameters
+        | SeededImmunity
+        | StrainParameters
+        | VaccineCoverage
+        | VaccineDose
+        | VaccineEfficacy
+    )
 
     @field_validator(
         "Scenario_CrossImmunity",
@@ -1909,7 +1925,8 @@ def check_patches(
         params (object): An object with the `parameters` attribute, whose
             patch-specific parameters will be examined.
 
-        valid (set of str): The patches that are part of the desired communities.
+        valid (set of str): The patches that are part of the desired
+            communities.
 
     Raises:
         ValueError: If patches that aren't in `valid` are present in `params`.
@@ -1978,7 +1995,8 @@ the simulations, after the middle joint.
     @classmethod
     def no_duplicate_names(cls, value: list[Simulation]) -> list[Simulation]:
         """
-        Validation function to detect duplicate simulation names within the same set.
+        Validation function to detect duplicate simulation names within the
+        same set.
 
         Raises:
             AssertionError: If there are duplicate simulation names.
@@ -2063,7 +2081,8 @@ different scenarios.
     @classmethod
     def listify(cls, value: Any) -> Optional[list]:
         """
-        Validation function to automatically convert single override objects into lists.
+        Validation function to automatically convert single override objects
+        into lists.
         """
         if value is not None and not isinstance(value, list):
             return [value]
@@ -2171,7 +2190,8 @@ community in `community_used`.
     )
     def scenario_serialize(self, value):
         """
-        Function that ensures non-baseline parameters can default to baseline values.
+        Function that ensures non-baseline parameters can default to baseline
+        values.
         """
         if value is None:
             return None

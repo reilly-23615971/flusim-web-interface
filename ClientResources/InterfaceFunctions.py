@@ -48,11 +48,12 @@ def param_error(
     Parameters:
         label (str): A string to identify this specific error.
 
-        scenario_id (int): The integer representing the scenario this error applies to.
+        scenario_id (int): The integer representing the scenario this error
+            applies to.
 
         condition (callable, returns bool): The criteria that must be fulfilled
-            to display the error, formatted as a function that returns `True` when
-            the criteria is met.
+            to display the error, formatted as a function that returns `True`
+            when the criteria is met.
 
         message (str): The text to display for the error message.
 
@@ -89,7 +90,8 @@ def dual_error(
     Parameters:
         label (str): A string to identify this specific error.
 
-        scenario_id (int): The integer representing the scenario this error applies to.
+        scenario_id (int): The integer representing the scenario this error
+            applies to.
 
         error_condition (callable, returns bool): The criteria for a red,
             run-blocking error, formatted as a function that returns `True`
@@ -120,7 +122,8 @@ def error_checker(scenario_id: int, name: str = "Errors in Current Scenario") ->
     Fragment to list errors from a specific scenario in a dropdown container.
 
     Parameters:
-        scenario_id (int): The integer representing the scenario to pull errors from.
+        scenario_id (int): The integer representing the scenario to pull errors
+            from.
 
         name (str): The label of the dropdown container.
 
@@ -173,7 +176,8 @@ def plural(value: int | float) -> str:
 
 def day_count(count: int | float) -> str:
     """
-    Simple function to convert a number into a string describing a number of days.
+    Simple function to convert a number into a string describing a number of
+    days.
 
     Parameters:
         count (int or float): The number of days to return.
@@ -223,8 +227,8 @@ def health_outcome_store(
             and define each of their values to be the same baseline value.
 
     Returns:
-        tuple of dicts: A pair of dictionaries storing the global and age-specific
-            health burden rates.
+        tuple of dicts: A pair of dictionaries storing the global and
+            age-specific health burden rates.
     """
     # Required values for outcome rates
     outcome_rates = {
@@ -362,7 +366,8 @@ def save_name(
         key (str): The string used to identify the name-setting widget.
 
         scenario_id (int): The integer representing the scenario the widget
-            is naming. Should not be 0 (the baseline scenario with a fixed name).
+            is naming. Should not be 0 (the baseline scenario with a fixed
+            name).
 
         error_container (DeltaGenerator): The Streamlit container in which to
             display the error message.
@@ -617,7 +622,8 @@ def schema_remove_baseline[Model: BaseModel](
     defaults: dict[str, Any] = {},
 ):
     """
-    Function to remove any parameters from a scenario that are already represented in the baseline scenario.
+    Function to remove any parameters from a scenario that are already
+    represented in the baseline scenario.
 
     Parameters:
         scenario (BaseModel): The Pydantic model containing the scenario
@@ -628,14 +634,16 @@ def schema_remove_baseline[Model: BaseModel](
             if this is `None`.
 
         ignore (set of str): A set specifying parameters that should
-            never be removed from `scenario` even if they are present in `baseline`.
+            never be removed from `scenario` even if they are present in
+            `baseline`.
 
         defaults (dict): A dictionary specifying parameters that should
-            default to a specific value if they are present in the `baseline` but
-            missing in `scenario`.
+            default to a specific value if they are present in the `baseline`
+            but missing in `scenario`.
 
     Raises:
-        TypeError: If scenario and baseline are not part of the same object class.
+        TypeError: If scenario and baseline are not part of the same object
+            class.
     """
 
     if baseline is None:

@@ -78,7 +78,8 @@ Upload a JSON file containing parameter settings for the simulation. These
 files can be downloaded from the dashboard; they should be named
 "FlusimParameterSettings_[timestamp].json". Note that any parameters currently
 set on the dashboard (including baseline parameters, scenario parameters and
-simulation engine settings) will be replaced with the values in the uploaded file.
+simulation engine settings) will be replaced with the values in the uploaded
+file.
             """,
         )
 
@@ -156,7 +157,8 @@ Upload a JSON file containing parameter settings for the simulation. These
 files can be downloaded from the dashboard; they should be named
 "FlusimParameterSettings_[timestamp].json". Note that any parameters currently
 set on the dashboard (including baseline parameters, scenario parameters and
-simulation engine settings) will be replaced with the values in the uploaded file.
+simulation engine settings) will be replaced with the values in the uploaded
+file.
         """,
     )
     if uploaded_file is not None:
@@ -434,13 +436,16 @@ def create_template(
     include_dashboard: bool = False,
 ) -> Parameters:
     """
-    Function to generate a JSON config object from a single scenario's parameters.
+    Function to generate a JSON config object from a single scenario's
+    parameters.
 
     Parameters:
-        scenario_id (int): The ID representing the scenario to make a template from.
+        scenario_id (int): The ID representing the scenario to make a template
+            from.
 
-        include_interventions (bool): Set to True to not include any vaccination or
-            NPI parameters in the template, such as when performing R0 analysis.
+        include_interventions (bool): Set to True to not include any
+            vaccination or NPI parameters in the template, such as when
+            performing R0 analysis.
 
         include_dashboard (bool): Set to `True` to include dashboard-exclusive
             parameters like GP rate in the generated schema.
@@ -483,11 +488,12 @@ def load_template(
     Function to set a single scenario's parameters to match a given template.
 
     Parameters:
-        scenario_id (int): The ID representing the scenario to make a template from.
+        scenario_id (int): The ID representing the scenario to make a template
+            from.
 
-        template (Parameters or str): Either the object containing the parameters
-            to initialise in the selected scenario, or the path to the file
-            containing said parameters.
+        template (Parameters or str): Either the object containing the
+            parameters to initialise in the selected scenario, or the path to
+            the file containing said parameters.
 
         template_name (str, optional): The name of the template being applied.
     """

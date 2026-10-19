@@ -55,16 +55,14 @@ TEMPLATES = {
     "Influenza": (
         "microbiology",
         "ClientResources/Templates/default.json",
-        """
-Parameters simulating an influenza outbreak with an existing vaccinated population.
-        """,
+        "Parameters simulating an influenza outbreak "
+        "with an existing vaccinated population.",
     ),
     "COVID-19": (
         "coronavirus",
         "ClientResources/Templates/covid.json",
-        """
-Parameters simulating a SARS-CoV-2 Delta outbreak with moderate NPIs enabled.
-        """,
+        "Parameters simulating a SARS-CoV-2 Delta "
+        "outbreak with moderate NPIs enabled.",
         # R0 is 6; should that be mentioned?
         # TODO: Replace increased withdrawal in COVID template
         # with workplace nonattendance when it's added again
