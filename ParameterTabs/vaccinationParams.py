@@ -1918,9 +1918,10 @@ def vaccine_load_schema(schema: Parameters, scenario_id: int = 0):
         params is None for params in (schema_dose, schema_efficacy, schema_coverage)
     )
     if scenario_id == 0 and any(missing_parameters) and not all(missing_parameters):
-        raise AssertionError("""
-Vaccination parameters were only partially defined for the baseline scenario
-        """)
+        raise AssertionError(
+            "Vaccination parameters were only partially "
+            "defined for the baseline scenario"
+        )
 
     # Dashboard Parameters
     if schema_dashboard is not None:
@@ -1932,10 +1933,10 @@ Vaccination parameters were only partially defined for the baseline scenario
                 scenario_id,
             )
     elif scenario_id == 0:
-        raise AssertionError("""
-Schema does not include vaccination distribution information for the baseline
-scenario
-        """)
+        raise AssertionError(
+            "Schema does not include vaccination distribution "
+            "information for the baseline scenario"
+        )
     else:
         use_live_distribution = (
             id_get("vaccine_distribution", 0, "Static Proportions")
@@ -1969,10 +1970,10 @@ scenario
                 "target_vaccinated_population", baseline_target_coverage, scenario_id
             )
         elif scenario_id == 0:
-            raise AssertionError("""
-Schema does not include general vaccine coverage proportions for the baseline
-scenario
-            """)
+            raise AssertionError(
+                "Schema does not include general vaccine "
+                "coverage proportions for the baseline scenario"
+            )
         else:
             baseline_initial_coverage = id_get("initial_vaccinated_population", 0, 0.0)
             baseline_target_coverage = id_get("target_vaccinated_population", 0, 80.0)
@@ -2050,10 +2051,10 @@ scenario
                 "vaccine_waning_toggle", bool(primary_rate_per_cycle), scenario_id
             )
         elif scenario_id == 0:
-            raise AssertionError("""
-Primary vaccine dose properties were not defined for the baseline scenario,
-despite booster properties being defined
-            """)
+            raise AssertionError(
+                "Primary vaccine dose properties were not defined for the "
+                "baseline scenario, despite booster properties being defined"
+            )
 
         # Booster Vaccines
         if any(dose.DoseType == "booster" for dose in schema_dose):
@@ -2095,14 +2096,15 @@ despite booster properties being defined
                 initial_efficacies = global_efficacy.Efficacy
             if dose_count_defined and len(initial_efficacies) != primary_dose_count:
                 # Throw error if dose and efficacy disagree on dose count
-                raise AssertionError(f"""
-                    Vaccine dose count is inconsistent between dose and efficacy
-                    parameters for the {
+                raise AssertionError(
+                    "Vaccine dose count is inconsistent between "
+                    "dose and efficacy parameters for the "
+                    + (
                         "baseline scenario"
                         if scenario_id == 0
                         else f"scenario named {session.scenario_names[scenario_id]}"
-                    }
-                """)
+                    )
+                )
             primary_dose_count = len(initial_efficacies)
             use_multiple_doses = use_multiple_doses or primary_dose_count > 1
             update_param_from_schema(
@@ -2119,10 +2121,10 @@ despite booster properties being defined
                 "primary_waned_efficacy", waned_efficacy, scenario_id
             )
         elif scenario_id == 0:
-            raise AssertionError("""
-Schema does not include general primary vaccine efficacy proportions for the
-baseline scenario
-            """)
+            raise AssertionError(
+                "Schema does not include general primary vaccine "
+                "efficacy proportions for the baseline scenario"
+            )
         else:
             initial_efficacies = [
                 id_get("primary_initial_efficacy", 0, 0.5, f"-{i}")
@@ -2230,9 +2232,10 @@ baseline scenario
         if len(booster_efficacy_schema) > 0:
             if scenario_id == 0 and not use_boosters:
                 # Throw error if baseline has efficacy params but no dose params
-                raise AssertionError("""
-Booster vaccine parameters were only partially defined for the baseline scenario
-                """)
+                raise AssertionError(
+                    "Booster vaccine parameters were only "
+                    "partially defined for the baseline scenario"
+                )
             use_boosters = True
         # Get the global values (age=None) first
         booster_efficacy_schema.sort(key=lambda x: AGE_ORDER.get(x.Age, 99))
@@ -2250,10 +2253,10 @@ Booster vaccine parameters were only partially defined for the baseline scenario
                 "booster_waned_efficacy", booster_waned_efficacy, scenario_id
             )
         elif use_boosters and scenario_id == 0:
-            raise AssertionError("""
-Schema does not include general booster vaccine efficacy proportions for the
-baseline scenario
-            """)
+            raise AssertionError(
+                "Schema does not include general booster vaccine "
+                "efficacy proportions for the baseline scenario"
+            )
         else:
             booster_initial_efficacy = id_get("booster_initial_efficacy", 0, 0.9)
             booster_waned_efficacy = id_get("booster_waned_efficacy", 0, 0.6)
