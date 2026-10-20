@@ -13,7 +13,7 @@ import streamlit as st
 
 from ClientResources.Constants import (
     LOG_PARAM_JSON,
-    PRESET_JSON_PATH,
+    PRESET_RUN_PATH,
     PROGRESS_SPLIT_POINT,
     USE_PRESET_DATA,
     USE_PRESET_PARAMS,
@@ -265,7 +265,7 @@ already busy with a different task.
             # Create the final model JSON
             # Load debug parameters from file
             if USE_PRESET_PARAMS:
-                with open(PRESET_JSON_PATH, "r") as f:
+                with open(PRESET_RUN_PATH, "r") as f:
                     parameter_json = f.read()
                 if load_config(parameter_json, loud=False):
                     return

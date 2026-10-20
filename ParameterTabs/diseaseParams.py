@@ -131,7 +131,7 @@ more enclosed than other locations.
             st.number_input(
                 "Basic Transmission Parameter (β)",
                 min_value=0.00001,
-                max_value=1.0,
+                max_value=100.0,
                 value=0.0616,
                 step=0.001,
                 format="%0.5g",

@@ -11,7 +11,8 @@ from ClientResources.Types import CommunityName
 # the parameters set by the user, for testing
 # Note that R0 calibration has its own file paths!
 USE_PRESET_PARAMS = False
-PRESET_JSON_PATH = "ClientResources/MultiStrainParams.json"
+PRESET_RUN_PATH = "ClientResources/MultiStrainParams.json"
+PRESET_R0_PATH = "ClientResources/Templates/defaultNoNPI.json"
 
 # Toggle to use built-in data instead of model output
 USE_PRESET_DATA = False

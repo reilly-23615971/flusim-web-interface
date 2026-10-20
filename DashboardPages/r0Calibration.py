@@ -10,7 +10,7 @@ from threading import Event
 import pandas as pd
 import streamlit as st
 
-from ClientResources.Constants import USE_PRESET_PARAMS
+from ClientResources.Constants import PRESET_R0_PATH, USE_PRESET_PARAMS
 from ClientResources.DownloadFunctions import create_template
 from ClientResources.InterfaceFunctions import error_checker
 from ClientResources.ModelSchema import CommunityOverride, OverrideTemplate, Parameters
@@ -75,6 +75,16 @@ by ±0.02.
         """,
             icon=":material/target:",
         )
+        if USE_PRESET_PARAMS:
+            st.warning(
+                """
+The debug settings of the dashboard are set such that $R_0$ calibration uses
+preset parameters instead of those set on the dashboard. The calibrated $R_0$
+will not match the parameters for the selected scenario, and may not respect
+the "Include Vaccinations and NPIs" toggle.
+                """,
+                icon=":material/bug_report:",
+            )
         st.button(
             "Confirm",
             key="confirmCalibrateButton",
@@ -98,8 +108,7 @@ by ±0.02.
 
             # Load JSON
             if USE_PRESET_PARAMS:
-                filename = f"default{"NoNPI" if not useInterventions else ""}.json"
-                with open(f"ClientResources/Templates/{filename}", "r") as f:
+                with open(PRESET_R0_PATH, "r") as f:
                     params = Parameters.model_validate_json(f.read())
             else:
                 params = create_template(
@@ -237,6 +246,16 @@ def calculateR0Button() -> None:
             Are you sure you want to calculate the basic reproduction number for
             {"the baseline scenario" if scenario_id == 0 else scenario_name}?
         """)
+        if USE_PRESET_PARAMS:
+            st.warning(
+                """
+The debug settings of the dashboard are set such that $R_0$ calculation uses
+preset parameters instead of those set on the dashboard. The calculated $R_0$
+will not match the parameters for the selected scenario, and may not respect
+the "Include Vaccinations and NPIs" toggle.
+                """,
+                icon=":material/bug_report:",
+            )
         st.button(
             "Confirm",
             key="confirmCalculateButton",
@@ -503,11 +522,11 @@ if show_advanced:
         on_change=save_key,
         args=["rCalibrateInterventionsToggle"],
         help="""
-    Traditionally, the basic reproduction number is calculated without the influence
-    of medical interventions such as vaccination, so they will be excluded from the
-    simulation when calculating the parameters necessary to achieve a specific $R_0$.
-    Set this toggle to `True` if you wish to match the basic reproduction number
-    with interventions in place. 
+The basic reproduction number is calculated without the influence of medical
+interventions such as vaccination, so they will be excluded from the simulation
+when calculating the parameters necessary to achieve a specific $R_0$. Set this
+toggle to `True` if you wish to include these interventions in the calibration
+process, thereby comparing the effective reproduction number $R_t$ instead.
         """,
     )
 
@@ -616,10 +635,11 @@ if show_advanced:
         on_change=save_key,
         args=["rCalculateInterventionsToggle"],
         help="""
-    Traditionally, the basic reproduction number is calculated without the influence
-    of medical interventions such as vaccination, so they will be excluded from the
-    simulation when calculating the value of $R_0$. Set this toggle to `True` if you
-    wish to calculate the basic reproduction number with interventions in place. 
+The basic reproduction number is calculated without the influence of medical
+interventions such as vaccination, so they will be excluded from the simulation
+when calculating the value of $R_0$. Set this toggle to `True` if you wish to
+include these interventions in the calculation process, thereby calculating the
+effective reproduction number $R_t$ instead.
         """,
     )
 
