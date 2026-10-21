@@ -3,8 +3,11 @@
 # Page describing the Flusim model and its parameters
 
 # Imports
+from pathlib import Path
+
 import streamlit as st
 
+from resources.constants import PAGE_DIR
 from tabs.community import community_describe
 from tabs.disease import disease_describe
 
@@ -73,7 +76,7 @@ health burden outcomes and visualisations of the results. The image below
 visualises this process of conducting simulation experiments.
 """)
 st.container(horizontal_alignment="center").image(
-    "/app/static/model_diagram.png",
+    Path("/app/static/model_diagram.png"),
     width=1000,
 )
 st.caption(
@@ -110,7 +113,7 @@ unintended or invalid behaviour. If you are familiar with the parameters on
 this dashboard, it is recommended that you resolve these errors before reading.
     """)
 st.page_link(
-    "pages/baseline_parameters.py",
+    PAGE_DIR / "baseline_parameters.py",
     label="Go to Baseline Parameters",
     icon=":material/variable_insert:",
 )

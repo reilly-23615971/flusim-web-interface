@@ -5,6 +5,8 @@
 # Imports
 import streamlit as st
 
+from resources.constants import PAGE_DIR
+
 # Create page
 st.title("Flusim Web Dashboard")
 
@@ -34,12 +36,12 @@ to change the parameters used by all simulations, or visit the
 multiple parameter sets to run at the same time.
 """)
 st.page_link(
-    "pages/baseline_parameters.py",
+    PAGE_DIR / "baseline_parameters.py",
     label="Go to Baseline Parameters",
     icon=":material/variable_insert:",
 )
 st.page_link(
-    "pages/scenario_parameters.py",
+    PAGE_DIR / "scenario_parameters.py",
     label="Go to Scenario Parameters",
     icon=":material/variable_add:",
 )
@@ -54,12 +56,12 @@ visualise the results of the simulation.
 """)
 
 st.page_link(
-    "pages/infection_curves.py",
+    PAGE_DIR / "infection_curves.py",
     label="Go to Infection Curves",
     icon=":material/chart_data:",
 )
 st.page_link(
-    "pages/health_burden_tables.py",
+    PAGE_DIR / "health_burden_tables.py",
     label="Go to Health Burden Tables",
     icon=":material/table_chart_view:",
 )

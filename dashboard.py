@@ -7,9 +7,11 @@
 import logging
 import os
 from datetime import datetime
+from pathlib import Path
 
 import streamlit as st
 
+from resources.constants import PAGE_DIR
 from resources.interface import time_string
 from resources.types import (
     R0_CALCULATION_STATUS,
@@ -37,7 +39,7 @@ https://sronpersonalpages.nl/~pault/
 # Logging config
 os.makedirs("Logs", exist_ok=True)
 logging.basicConfig(
-    filename="logs/interface_app_logs.txt",
+    filename=Path("logs/interface_app_logs.txt"),
     filemode="a",
     format="%(asctime)s,%(msecs)03d %(name)s %(levelname)s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
@@ -77,42 +79,42 @@ st.logo(image=":material/microbiology:")
 # Define application pages
 # TODO: Limit nested containers since apparently they might cause page blanking
 landing_page = st.Page(
-    "pages/landing_page.py",
+    PAGE_DIR / "landing_page.py",
     title="Main Page",
     icon=":material/home:",
 )
 model_description = st.Page(
-    "pages/model_description.py",
+    PAGE_DIR / "model_description.py",
     title="Model Description",
     icon=":material/description:",
 )
 baseline_parameters = st.Page(
-    "pages/baseline_parameters.py",
+    PAGE_DIR / "baseline_parameters.py",
     title="Baseline Parameters",
     icon=":material/variable_insert:",
 )
 scenario_parameters = st.Page(
-    "pages/scenario_parameters.py",
+    PAGE_DIR / "scenario_parameters.py",
     title="Scenario Parameters",
     icon=":material/variable_add:",
 )
 r0_calibration = st.Page(
-    "pages/r0_calibration.py",
+    PAGE_DIR / "r0_calibration.py",
     title="$R_0$ Calibration",
     icon=":material/partner_exchange:",
 )
 run_simulations = st.Page(
-    "pages/run_simulations.py",
+    PAGE_DIR / "run_simulations.py",
     title="Run Simulations",
     icon=":material/motion_play:",
 )
 infection_curves = st.Page(
-    "pages/infection_curves.py",
+    PAGE_DIR / "infection_curves.py",
     title="Infection Curves",
     icon=":material/chart_data:",
 )
 health_burden_tables = st.Page(
-    "pages/health_burden_tables.py",
+    PAGE_DIR / "health_burden_tables.py",
     title="Health Burden Tables",
     icon=":material/table_chart_view:",
 )

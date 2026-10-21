@@ -1,6 +1,6 @@
 .DS_Store
 .vscode/*
-*__pycache__/*
+*/__pycache__/*
 *logs/*
 *interface_app_logs.txt
 test_data/*

@@ -5,6 +5,7 @@
 # Imports
 import json
 from datetime import datetime
+from pathlib import Path
 from threading import Event
 
 import pandas as pd
@@ -275,7 +276,7 @@ Are you sure you want to begin running simulations with the selected parameters?
                     scenario_count, include_dashboard=False
                 ).model_dump_json(indent=4, exclude_unset=True)
                 if LOG_PARAM_JSON:
-                    with open("./savedJSON.json", "w") as file:
+                    with open(Path("savedJSON.json"), "w") as file:
                         file.write(parameter_json)
 
             # Save current parameter values that'll be used for

@@ -5,6 +5,7 @@
 # Imports
 import logging
 from operator import attrgetter
+from os import PathLike
 from typing import Annotated, Any, Literal, Optional, Self, cast, get_args
 
 from annotated_types import Ge, Le, Len
@@ -2029,7 +2030,7 @@ class ModelGuideFile(BaseModel):
         default=None,
         description="A brief description of the simulations the guide file defines.",
     )
-    output_folder: str = Field(
+    output_folder: str | PathLike = Field(
         title="Output Folder",
         default="./results/",
         description="The folder where the scenario database files will be output.",

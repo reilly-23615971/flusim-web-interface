@@ -3,6 +3,8 @@
 # Constants and debug settings used by the client application
 
 # Imports
+from pathlib import Path
+
 from resources.types import CommunityName
 
 # Debug Settings
@@ -11,8 +13,8 @@ from resources.types import CommunityName
 # the parameters set by the user, for testing
 # Note that R0 calibration has its own file paths!
 USE_PRESET_PARAMS = False
-PRESET_RUN_PATH = "resources/MultiStrainParams.json"
-PRESET_R0_PATH = "resources/templates/defaultNoNPI.json"
+PRESET_RUN_PATH = Path("test_data/MultiStrainParams.json")
+PRESET_R0_PATH = Path("resources/templates/defaultNoNPI.json")
 
 # Toggle to use built-in data instead of model output
 USE_PRESET_DATA = False
@@ -24,10 +26,10 @@ PRESET_SCENARIO_NAMES = [
 ]
 PRESET_COMMUNITY: CommunityName = "newcastle"
 PRESET_DATA_PATHS = {
-    "Cumulative": "./test_data/epidemic_median_cumulative.csv",
-    "Daily Rate": "./test_data/epidemic_median_daily.csv",
-    "ASIR": "./test_data/asir_median_absolute.csv",
-    "Vaccinated": "./test_data/asir_median_vaccinated.csv",
+    "Cumulative": Path("test_data/epidemic_median_cumulative.csv"),
+    "Daily Rate": Path("test_data/epidemic_median_daily.csv"),
+    "ASIR": Path("test_data/asir_median_absolute.csv"),
+    "Vaccinated": Path("test_data/asir_median_vaccinated.csv"),
 }
 
 # Toggle to save the JSON form of parameters as a file
@@ -40,6 +42,10 @@ ROUND_RESULTS = True
 SHOW_DEBUG_DOWNLOADS = False
 
 # Other Constants
+
+# Paths
+PAGE_DIR = Path("pages")
+TEMPLATE_DIR = Path("resources/templates")
 
 # Maximum number of additional scenarios
 MAX_SCENARIOS = 30
@@ -55,13 +61,13 @@ SERVER_URL = "http://127.0.0.1:8000/"
 TEMPLATES = {
     "Influenza": (
         "microbiology",
-        "resources/templates/default.json",
+        TEMPLATE_DIR / "default.json",
         "Parameters simulating an influenza outbreak "
         "with an existing vaccinated population.",
     ),
     "COVID-19": (
         "coronavirus",
-        "resources/templates/covid.json",
+        TEMPLATE_DIR / "covid.json",
         "Parameters simulating a SARS-CoV-2 Delta "
         "outbreak with moderate NPIs enabled.",
         # R0 is 6; should that be mentioned?
