@@ -114,7 +114,7 @@ def generateTable() -> None:
         # Set default session_state parameters
         use_advanced = session.get("show_advanced", False)
         scenario_names = PRESET_SCENARIO_NAMES
-        basicRates, age_rates = health_outcome_store(
+        basic_rates, age_rates = health_outcome_store(
             scenario_names,
             use_ages=use_advanced,
         )
@@ -122,7 +122,7 @@ def generateTable() -> None:
             scenario_names=scenario_names,
             analysis_formats=[],
             community=PRESET_COMMUNITY,
-            health_outcome_rates=basicRates,
+            health_outcome_rates=basic_rates,
             age_health_outcome_rates=age_rates,
             scaling_factor=session.get("scaling_population", 272407) / 272407,
             symptomatic_rates=(
@@ -342,7 +342,7 @@ def generateTable() -> None:
     # Save the generated table
     session.HealthOutcomeTableData = ageStyle  # .format(formatValues)
     session.HealthOutcomeTableConfig = formattedConfig
-    session.ChartGenerated = True
+    session.chart_generated = True
 
 
 def downloadPresetTable(
@@ -402,7 +402,7 @@ def downloadPresetTable(
         # Set default session_state params
         use_advanced = session.get("show_advanced", False)
         scenario_names = PRESET_SCENARIO_NAMES
-        basicRates, age_rates = health_outcome_store(
+        basic_rates, age_rates = health_outcome_store(
             scenario_names,
             use_ages=use_advanced,
         )
@@ -410,7 +410,7 @@ def downloadPresetTable(
             scenario_names=scenario_names,
             analysis_formats=[],
             community=PRESET_COMMUNITY,
-            health_outcome_rates=basicRates,
+            health_outcome_rates=basic_rates,
             age_health_outcome_rates=age_rates,
             symptomatic_rates=(
                 [

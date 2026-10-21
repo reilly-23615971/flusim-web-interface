@@ -52,11 +52,11 @@ session = st.session_state
 # Initialise session variables used globally by the dashboard
 sessionParameters = {
     "simulation_in_progress": False,
-    "calibrationInProgress": False,
-    "calculationInProgress": False,
-    "showSimProgress": False,
-    "showCalibProgress": False,
-    "showCalcProgress": False,
+    "calibration_in_progress": False,
+    "calculation_in_progress": False,
+    "show_sim_progress": False,
+    "show_calibration_progress": False,
+    "show_calculation_progress": False,
     "scenario_count": 0,
     "scenario_names": ["Baseline Scenario"],
     "scenario_extra_params": {},
@@ -96,8 +96,8 @@ scenarioParameters = st.Page(
     title="Scenario Parameters",
     icon=":material/variable_add:",
 )
-r0Calculation = st.Page(
-    "DashboardPages/r0Calibration.py",
+r0_calculation = st.Page(
+    "DashboardPages/r0_calibration.py",
     title="$R_0$ Calibration",
     icon=":material/partner_exchange:",
 )
@@ -125,7 +125,7 @@ pages = {
         baselineParameters,
         scenarioParameters,
     ],
-    "Conducting Experiments": [r0Calculation, runSimulation],
+    "Conducting Experiments": [r0_calculation, runSimulation],
     "Results Visualisation": [infectionGraphs, healthTables],
 }
 
@@ -219,10 +219,10 @@ ensure all scenarios do not possess any errors and try again.
                     duration="infinite",
                 )
                 appLog.info("[update_data] Data processing is complete.")
-                session.ChartGenerated = False
+                session.chart_generated = False
         if simHasError:
             # Notify user of errors, but leave displaying them to runSimulations
-            session["simulationError"] = SIM_STATUS.errors.get()
+            session["simulation_error"] = SIM_STATUS.errors.get()
             SIM_STATUS.progress.append(-1.0)
             st.toast(
                 """
@@ -235,7 +235,7 @@ Simulation encountered an error; see
 
         # Re-enable running new simulations and using their data
         session.simulation_in_progress = False
-        session.showSimProgress = True
+        session.show_sim_progress = True
 
         resultsObtained = True
 
@@ -244,7 +244,7 @@ Simulation encountered an error; see
         not R0_CALIBRATION_STATUS.results.empty(),
         not R0_CALIBRATION_STATUS.results.empty(),
     )
-    if session.calibrationInProgress and (calibHasResults or calibHasError):
+    if session.calibration_in_progress and (calibHasResults or calibHasError):
         if calibHasResults and not calibHasError:
             # Get calculation results
             calibrationData = R0_CALIBRATION_STATUS.results.get()
@@ -256,11 +256,11 @@ Simulation encountered an error; see
                 lowCI, highCI = calibrationData["interval"]
                 beta = calibrationData["beta"]
                 scenario_name = session.get("calib_scenario_name")
-                session["r0Calibration"] = r0
-                session["r0CalibrationBeta"] = beta
+                session["r0_calibration"] = r0
+                session["r_calibration_beta"] = beta
 
                 # session.calculationEndTime = datetime.now()
-                # totalTime = session.calculationEndTime - session.calculationStartTime
+                # totalTime = session.calculationEndTime - session.calculation_start_time
                 # formattedTime = time_string(totalTime.total_seconds())
 
                 st.toast(
@@ -286,7 +286,7 @@ is likely an error with the server; contact a developer to resolve the issue.
                 calibHasError = True
         if calibHasError:
             # Notify user of errors, but leave displaying them to runSimulations
-            session["calibrationError"] = R0_CALIBRATION_STATUS.errors.get()
+            session["calibration_error"] = R0_CALIBRATION_STATUS.errors.get()
             R0_CALIBRATION_STATUS.progress.append(-1.0)
             st.toast(
                 """
@@ -298,8 +298,8 @@ Error calibrating $R_0$; see
             )
 
         # Re-enable running new simulations and using their data
-        session.calibrationInProgress = False
-        session.showCalibProgress = True
+        session.calibration_in_progress = False
+        session.show_calibration_progress = True
 
         resultsObtained = True
 
@@ -308,7 +308,7 @@ Error calibrating $R_0$; see
         not R0_CALCULATION_STATUS.results.empty(),
         not R0_CALCULATION_STATUS.errors.empty(),
     )
-    if session.calculationInProgress and (calcHasResults or calcHasError):
+    if session.calculation_in_progress and (calcHasResults or calcHasError):
         if calcHasResults and not calcHasError:
             # Get calculation results
             calculationData = R0_CALCULATION_STATUS.results.get()
@@ -318,12 +318,12 @@ Error calibrating $R_0$; see
             if isinstance(calculationData, dict):
                 r0 = calculationData["r0"]
                 lowCI, highCI = calculationData["interval"]
-                scenario_name = session.get("calcScenarioName")
-                session["r0Calculation"] = r0
-                session["r0CalculationInterval"] = (lowCI, highCI)
+                scenario_name = session.get("calculation_scenario_name")
+                session["r0_calculation"] = r0
+                session["r0_calculationInterval"] = (lowCI, highCI)
 
                 # session.calculationEndTime = datetime.now()
-                # totalTime = session.calculationEndTime - session.calculationStartTime
+                # totalTime = session.calculationEndTime - session.calculation_start_time
                 # formattedTime = time_string(totalTime.total_seconds())
                 st.toast(
                     f"""
@@ -347,7 +347,7 @@ is likely an error with the server; contact a developer to resolve the issue.
                 calibHasError = True
         if calcHasError:
             # Notify user of errors, but leave displaying them to runSimulations
-            session["calculationError"] = R0_CALCULATION_STATUS.errors.get()
+            session["calculation_error"] = R0_CALCULATION_STATUS.errors.get()
             R0_CALCULATION_STATUS.progress.append(-1.0)
             st.toast(
                 """
@@ -358,8 +358,8 @@ Error calculating $R_0$; see
             )
 
         # Re-enable running new simulations and using their data
-        session.calculationInProgress = False
-        session.showCalcProgress = True
+        session.calculation_in_progress = False
+        session.show_calculation_progress = True
 
         resultsObtained = True
 

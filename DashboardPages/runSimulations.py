@@ -44,27 +44,26 @@ from ClientResources.Types import (
     SimParams,
 )
 
-# Logging
-runSimLog = logging.getLogger(__name__)
-
 # Store st.session_state as variable for efficiency
 session = st.session_state
 simulation_in_progress = session.simulation_in_progress
-simCancelFlag = Event()
+simulation_cancel_flag = Event()
 
 
-def simRuntimeEstimate(days: int, runs: int, scenarios: int) -> int:
+def sim_runtime_estimate(days: int, runs: int, scenarios: int) -> int:
     """
     Simple function estimating how long a simulation will take based on its
     length. This uses a linear function derived from testing at various lengths
-    with default parameters (excluding immunity waning, which is as low as possible
-    to ensure constant infections). The actual length of a given simulation is
-    dependent on the number of infections, so this estimate is only a rough guess.
+    with default parameters (excluding immunity waning, which is as low as
+    possible to ensure constant infections). The actual length of a given
+    simulation is dependent on the number of infections, so this estimate is
+    only a rough guess.
 
     Parameters:
         days (int): The number of days the simulation will run for.
 
-        runs (int): The number of simulation runs that will be done for each scenario.
+        runs (int): The number of simulation runs that will be done for each
+            scenario.
 
         scenarios (int): The number of scenarios defined in the simulation.
 
@@ -77,14 +76,16 @@ def simRuntimeEstimate(days: int, runs: int, scenarios: int) -> int:
     return round((0.02698311 * days - 2.977807971014478) * runs * scenarios)
 
 
-def runModelProgress(
+def run_model_progress(
     scenario_names: list[str], use_vaccines: bool = False
 ) -> dict[str, tuple[float, str]]:
     """
-    Function to generate the status dictionary used for the simulation progress bar.
+    Function to generate the status dictionary used for the simulation progress
+    bar.
 
     Parameters:
-        scenario_names (list of str): The names of the scenarios in the simulation.
+        scenario_names (list of str): The names of the scenarios in the
+            simulation.
 
         use_vaccines (bool): Set to `True` to add an extra status point for
             vaccine-based infections.
@@ -96,20 +97,20 @@ def runModelProgress(
     """
     # TODO: Include client side processing like format_asir in this progress
     # TODO: Fake mid-simulation progress with estimated times
-    progressDict = {
+    progress_dict = {
         "start": (0.01, "Initialising parameters..."),
-        "generatingConfig": (0.02, "Preparing simulation engine..."),
-        "zippingAnalysis": (0.98, "Compiling results..."),
+        "generating_config": (0.02, "Preparing simulation engine..."),
+        "zipping_analysis": (0.98, "Compiling results..."),
         "completed": (1.0, "Simulation complete!"),
         "error": (-1.0, "Experiment halted due to error"),
         "shutdown": (-1.0, "Server shut down before experiment could finish"),
     }
 
     # Scenario status
-    scenarioSegments = (PROGRESS_SPLIT_POINT - 0.02) / len(scenario_names)
-    progressDict |= {
-        f"runningSim{i}": (
-            scenarioSegments * i + 0.02,
+    scenario_segments = (PROGRESS_SPLIT_POINT - 0.02) / len(scenario_names)
+    progress_dict |= {
+        f"running_sim{i}": (
+            scenario_segments * i + 0.02,
             f'Running scenario "{name}"...',
         )
         for i, name in enumerate(scenario_names)
@@ -117,52 +118,52 @@ def runModelProgress(
     # Analysis status
     # Note that ASIR gets twice the progress length as epidemic
     if use_vaccines:
-        analysisSegments = (1 - PROGRESS_SPLIT_POINT - 0.02) / 6
-        progressDict |= {
-            "toolboxAnalysis0": (
+        analysis_segments = (1 - PROGRESS_SPLIT_POINT - 0.02) / 6
+        progress_dict |= {
+            "toolbox_analysis0": (
                 PROGRESS_SPLIT_POINT,
                 "Extracting cumulative infections...",
             ),
-            "toolboxAnalysis1": (
-                analysisSegments + PROGRESS_SPLIT_POINT,
+            "toolbox_analysis1": (
+                analysis_segments + PROGRESS_SPLIT_POINT,
                 "Extracting daily infections...",
             ),
-            "toolboxAnalysis2": (
-                3 * analysisSegments + PROGRESS_SPLIT_POINT,
+            "toolbox_analysis2": (
+                3 * analysis_segments + PROGRESS_SPLIT_POINT,
                 "Extracting age-based infections...",
             ),
-            "toolboxAnalysis3": (
-                5 * analysisSegments + PROGRESS_SPLIT_POINT,
+            "toolbox_analysis3": (
+                5 * analysis_segments + PROGRESS_SPLIT_POINT,
                 "Extracting vaccine-based infections...",
             ),
         }
     else:
-        analysisSegments = (1 - PROGRESS_SPLIT_POINT - 0.02) / 4
-        progressDict |= {
-            "toolboxAnalysis0": (
+        analysis_segments = (1 - PROGRESS_SPLIT_POINT - 0.02) / 4
+        progress_dict |= {
+            "toolbox_analysis0": (
                 PROGRESS_SPLIT_POINT,
                 "Extracting cumulative infections...",
             ),
-            "toolboxAnalysis1": (
-                analysisSegments + PROGRESS_SPLIT_POINT,
+            "toolbox_analysis1": (
+                analysis_segments + PROGRESS_SPLIT_POINT,
                 "Extracting daily infections...",
             ),
-            "toolboxAnalysis2": (
-                3 * analysisSegments + PROGRESS_SPLIT_POINT,
+            "toolbox_analysis2": (
+                3 * analysis_segments + PROGRESS_SPLIT_POINT,
                 "Extracting age-based infections...",
             ),
         }
-    return progressDict
+    return progress_dict
 
 
 @st.dialog("Run Simulation Experiment", width="large", icon=":material/motion_play:")
-def runSimulationButton() -> None:
+def run_simulation_button() -> None:
     """
     Callback function for the Run Simulation button, opening a dialog window
     before running the simulation itself.
     """
     # Disable button if it's taking a while to run
-    runPending = bool(session.get("confirmRunButton"))
+    run_pending = bool(session.get("confirm_run_button"))
 
     # List scenarios
     scenario_count = session.get("scenario_count", 0) + 1
@@ -170,14 +171,14 @@ def runSimulationButton() -> None:
     if scenario_count == 1:
         st.markdown(f"""
 With the current parameters, this modelling experiment will use the
-"{session.get('community', 'newcastle').capitalize()}"
-community data to simulate the baseline scenario.
+"{session.get('community', 'newcastle').capitalize()}" community data to
+simulate the baseline scenario.
         """)
     else:
         st.markdown(f"""
 With the current parameters, this modelling experiment will use the
-"{session.get('community', 'newcastle').capitalize()}"
-community data to simulate each of the following {scenario_count} scenarios:
+"{session.get('community', 'newcastle').capitalize()}" community data to
+simulate each of the following {scenario_count} scenarios:
         """)
         with st.container() if scenario_count < 11 else st.expander("Scenario Names"):
             st.markdown("\n".join(f"- {name}" for name in scenario_names))
@@ -192,8 +193,8 @@ community data to simulate each of the following {scenario_count} scenarios:
     if severe_errors_found:
         st.error(
             """
-                The simulation cannot be ran due to the errors displayed above.
-                Please correct these errors before running the simulation.
+The simulation cannot be ran due to the errors displayed above. Please correct
+these errors before running the simulation.
             """,
             icon=":material/error:",
         )
@@ -201,30 +202,29 @@ community data to simulate each of the following {scenario_count} scenarios:
         if USE_PRESET_DATA:
             st.error(
                 """
-The debug settings of the dashboard are set such that visualisations use
-preset data instead of server outputs. You will not be able to use the data
-of any simulations you run unless this setting is disabled.
+The debug settings of the dashboard are set such that visualisations use preset
+data instead of server outputs. You will not be able to use the data of any
+simulations you run unless this setting is disabled.
                 """,
                 icon=":material/bug_report:",
             )
         if USE_PRESET_PARAMS:
             st.warning(
                 """
-The debug settings of the dashboard are set such that simulations use
-preset parameters instead of those set on the dashboard. Simulations
-you run will not match the settings defined on the
+The debug settings of the dashboard are set such that simulations use preset
+parameters instead of those set on the dashboard. Simulations you run will not
+match the settings defined on the
 :primary-badge[:material/variable_insert: Baseline Parameters] and
 :primary-badge[:material/variable_add: Scenario Parameters] pages.
                 """,
                 icon=":material/bug_report:",
             )
-        if session.get("ChartGenerated"):
+        if session.get("chart_generated"):
             st.warning(
                 """
-Running a new simulation will result in future tables and graphs using
-the new simulation's data. Please make sure to save any tables or graphs
-you wish to keep with the current simulation data before running a new
-simulation.
+Running a new simulation will result in future tables and graphs using the new
+simulation's data. Please make sure to save any tables or graphs you wish to
+keep with the current simulation data before running a new simulation.
                 """,
                 icon=":material/bar_chart_off:",
             )
@@ -232,10 +232,10 @@ simulation.
         # Get estimated simulation runtime
         cycle_count = session.get("cycle_count", 360)
         run_count = session.get("run_count", 24)
-        estimatedTime = simRuntimeEstimate(cycle_count, run_count, scenario_count)
+        estimated_time = sim_runtime_estimate(cycle_count, run_count, scenario_count)
         st.metric(
             f"Estimated Time to Run Simulation Experiment",
-            value=time_string(estimatedTime),
+            value=time_string(estimated_time),
             border=True,
             help="""
 This estimate is based on the length of each simulation run, the number of runs
@@ -246,21 +246,20 @@ already busy with a different task.
             """,
         )
         st.markdown("""
-            Are you sure you want to begin running simulations with the
-            selected parameters?
+Are you sure you want to begin running simulations with the selected parameters?
         """)
         st.button(
             "Confirm",
-            key="confirmRunButton",
-            icon="spinner" if runPending else None,
-            disabled=runPending,
+            key="confirm_run_button",
+            icon="spinner" if run_pending else None,
+            disabled=run_pending,
         )
 
-        if runPending:
+        if run_pending:
             # Set params indicating model is simulating
             session.simulation_in_progress = True
             session.simulationStartTime = datetime.now()
-            simCancelFlag.clear()
+            simulation_cancel_flag.clear()
 
             # Create the final model JSON
             # Load debug parameters from file
@@ -289,7 +288,7 @@ already busy with a different task.
             use_advanced = session.get("show_advanced", False)
             use_vaccines = "+vaccine" in schema.get("middle_joint")
             if use_vaccines:
-                analysisFormats = [
+                analysis_formats = [
                     AnalysisFile(
                         tool="epidemic", names=scenario_names, use_cumulative=True
                     ),
@@ -300,7 +299,7 @@ already busy with a different task.
                     AnalysisFile(tool="asir", names=scenario_names, vaccinated=True),
                 ]
             else:
-                analysisFormats = [
+                analysis_formats = [
                     AnalysisFile(
                         tool="epidemic", names=scenario_names, use_cumulative=True
                     ),
@@ -311,7 +310,7 @@ already busy with a different task.
                 ]
 
             scaling_factor = session.get("scaling_population", population) / population
-            asymptomaticRates = (
+            asymptomatic_rates = (
                 [
                     [
                         1 - id_get("asymptomatic_child", scenario_id, 0.35),
@@ -325,7 +324,7 @@ already busy with a different task.
                     for scenario_id in range(scenario_count)
                 ]
             )
-            basicRates, age_rates = health_outcome_store(
+            basic_rates, age_rates = health_outcome_store(
                 scenario_names,
                 use_ages=use_advanced,
             )
@@ -343,9 +342,9 @@ already busy with a different task.
 
             session.pending_sim_params = SimParams(
                 scenario_names=scenario_names,
-                analysis_formats=analysisFormats,
-                symptomatic_rates=asymptomaticRates,
-                health_outcome_rates=basicRates,
+                analysis_formats=analysis_formats,
+                symptomatic_rates=asymptomatic_rates,
+                health_outcome_rates=basic_rates,
                 age_health_outcome_rates=age_rates,
                 community=community,
                 scaling_factor=scaling_factor,
@@ -355,7 +354,7 @@ already busy with a different task.
             # Prepare model call parameters
             status_params = {
                 "result_type": "zip",
-                "status_decoder": runModelProgress(scenario_names, use_vaccines),
+                "status_decoder": run_model_progress(scenario_names, use_vaccines),
                 "request_queue": SIM_STATUS,
             }
 
@@ -363,15 +362,15 @@ already busy with a different task.
             SIM_STATUS.progress.append(0.0)
             SIM_STATUS.tasks.clear()
             SIM_STATUS.tasks.append("Connecting to server...")
-            session["simulationError"] = None
+            session["simulation_error"] = None
 
             # Make the model call
             session.simulation_in_progress = True
             task_wrapper(
                 "Simulation Experiment",
-                "runModel",
+                "run_model",
                 parameter_json,
-                simCancelFlag,
+                simulation_cancel_flag,
                 status_params,
             )
 
@@ -386,13 +385,13 @@ already busy with a different task.
 
 
 @st.dialog("Cancel Simulation", width="large", icon=":material/stop_circle:")
-def stopSimulationButton():
+def stop_simulation_button():
     """
     Callback function for the Cancel Simulation button, opening a dialog window
     before cancelling the currently pending simulation.
     """
     # Disable button if it's taking a while to run
-    cancelPending = bool(session.get("confirmCancelButton"))
+    cancel_pending = bool(session.get("confirm_run_cancel_button"))
 
     st.warning(
         "Are you sure you want to cancel the currently running simulation?",
@@ -400,12 +399,12 @@ def stopSimulationButton():
     )
     st.button(
         "Confirm",
-        key="confirmCancelButton",
-        icon="spinner" if cancelPending else None,
-        disabled=cancelPending,
+        key="confirm_run_cancel_button",
+        icon="spinner" if cancel_pending else None,
+        disabled=cancel_pending,
     )
 
-    if cancelPending:
+    if cancel_pending:
         # Exit immediately if there's nothing to stop
         if not session.simulation_in_progress:
             st.toast(
@@ -415,7 +414,7 @@ def stopSimulationButton():
             st.rerun()
 
         # Display as error on the progress bar
-        session["simulationError"] = (
+        session["simulation_error"] = (
             "Simulation cancelled",
             "The simulation was manually cancelled by the user.",
             "stop_circle",
@@ -423,10 +422,10 @@ def stopSimulationButton():
         )
         SIM_STATUS.progress.append(-1.0)
 
-        # Stop the runModel thread
-        simCancelFlag.set()
+        # Stop the run_model thread
+        simulation_cancel_flag.set()
         session.simulation_in_progress = False
-        session.showSimProgress = True
+        session.show_sim_progress = True
 
         # Generate popup to let the user know it's cancelled
         st.toast(
@@ -441,15 +440,15 @@ def stopSimulationButton():
 st.title("Run Simulations")
 
 st.markdown("""
-    This page lets you configure the simulation engine's settings and
-    run the simulation experiment itself.
+This page lets you configure the simulation engine's settings and run the
+simulation experiment itself.
 """)
 
 # Global Engine Parameters
 st.header("Simulation Engine Settings")
 
 st.markdown("""
-    These parameters control various universal elements of the simulation engine.
+These parameters control various universal elements of the simulation engine.
 """)
 
 # Buttons to upload simulation parameters
@@ -465,16 +464,16 @@ show_advanced = st.toggle(
     on_change=save_key,
     args=["show_advanced"],
     help="""
-Toggle whether to display parameters that control more fine-grain aspects
-of the simulation environment, such as scaling population.
+Toggle whether to display parameters that control more fine-grain aspects of
+the simulation environment, such as scaling population.
     """,
 )
 
 # Community Selection
 st.markdown("""
-    - The community selection determines the population, demographic distribution
-    and other elements of the community that is simulated in the experiment, chosen
-    from one of two Australian cities.
+- The community selection determines the population, demographic distribution
+and other elements of the community that is simulated in the experiment, chosen
+from one of two Australian cities.
 """)
 load_key("community", default="newcastle")
 community = st.selectbox(
@@ -484,22 +483,20 @@ community = st.selectbox(
     format_func=lambda x: x.capitalize(),
     on_change=community_change,
     help="""
-The Australian city whose community data will be used as the
-basis for the population and demographic distribution in the
-simulation. Note that the data used for these communities comes
-from 2011.
+The Australian city whose community data will be used as the basis for the
+population and demographic distribution in the simulation. Note that the data
+used for these communities comes from 2011.
 
 ### Options:
-- Newcastle: A metropolitan area in New South Wales, Australia.
-It has a population of 272,407 (as of 2011 when this data was
-collected) and has a demographic distribution that more closely matches
-that of Australia as a whole compared to the other communities.
-- Cairns: A major city in Queensland, Australia. It has a population of
-140,402 and has a higher Indigenous population compared to the other
+- Newcastle: A metropolitan area in New South Wales, Australia. It has a
+population of 272,407 (as of 2011 when this data was collected) and has a
+demographic distribution that more closely matches that of Australia as a whole
+compared to the other communities.
+- Cairns: A major city in Queensland, Australia. It has a population of 140,402
+and has a higher Indigenous population compared to the other communities.
+- Albany: A major city in Western Australia. It has a population of 55,109 and
+has a higher proportion of older adults and seniors compared to the other
 communities.
-- Albany: A major city in Western Australia. It has a population of
-55,109 and has a higher proportion of older adults and seniors compared
-to the other communities.
     """,
 )
 
@@ -516,18 +513,18 @@ if show_advanced and scenarios_with_patches:
     reset_scenario_list = ", ".join(scenarios_with_patches)
     st.warning(
         f"""
-        Warning: Location-specific seeding weights defined in some scenarios
-        ({reset_scenario_list}) rely on locations that only exist in the
-        currently selected community. Changing this community will reset the
-        location-specific seeding weights for these scenarios.
+Warning: Location-specific seeding weights defined in some scenarios
+({reset_scenario_list}) rely on locations that only exist in the currently
+selected community. Changing this community will reset the location-specific
+seeding weights for these scenarios.
         """,
         icon=":material/wrong_location:",
     )
 
 st.markdown("""
-    - The length of the simulation indicates how many days that each simulation
-    run should last for. Note that individual simulation runs may end earlier if
-    no infections occur in a given cycle.
+- The length of the simulation indicates how many days that each simulation run
+should last for. Note that individual simulation runs may end earlier if no
+infections occur in a given cycle.
 """)
 load_key("cycle_count", default=360)
 st.slider(
@@ -541,19 +538,18 @@ st.slider(
     help="""
 The length of the time period that will be simulated, measured in days.
 
-Note that if you lower this value, other time-based parameters
-may have their values altered. For instance, if you go from 360
-days to 120, a NPI set to end on Day 180 will be changed to end
-on Day 120 instead.
+Note that if you lower this value, other time-based parameters may have their
+values altered. For instance, if you go from 360 days to 120, a NPI set to end
+on Day 180 will be changed to end on Day 120 instead.
     """,
 )
 
 st.markdown("""
-    - The number of simulation runs decides how many times each scenario will be
-    simulated. The results displayed on this dashboard are the median of the results
-    obtained in each simulation run. Running each scenario multiple times utilises
-    the model's stochasticity to generate reliable average values and reduce the
-    likelihood of outliers.
+- The number of simulation runs decides how many times each scenario will be
+simulated. The results displayed on this dashboard are the median of the
+results obtained in each simulation run. Running each scenario multiple times
+utilises the model's stochasticity to generate reliable average values and
+reduce the likelihood of outliers.
 """)
 load_key("run_count", default=24)
 st.slider(
@@ -561,22 +557,21 @@ st.slider(
     min_value=1,
     max_value=64,
     value=24,
-    key="_runCount",
+    key="_run_count",
     on_change=save_key,
     args=["run_count"],
     help="""
-How many times each scenario will be simulated. The results
-of each individual simulation will be averaged together to
-get the final results; higher values lead to longer
-simulations but more accurate results.
+How many times each scenario will be simulated. The results of each individual
+simulation will be averaged together to get the final results; higher values
+lead to longer simulations but more accurate results.
     """,
 )
 
 if show_advanced:
     st.markdown("""
-        - The starting day of the week determines what day of the week it is on the
-        first day of the experiment. Individuals in the simulation visit different
-        locations on weekends, so this may affect the initial spread of the disease.
+- The starting day of the week determines what day of the week it is on the
+first day of the experiment. Individuals in the simulation visit different
+locations on weekends, so this may affect the initial spread of the disease.
     """)
     load_key("start_day", default="Random")
     st.radio(
@@ -593,23 +588,27 @@ if show_advanced:
         ),
         index=0,
         horizontal=True,
-        key="_startDay",
+        key="_start_day",
         on_change=save_key,
         args=["start_day"],
         help="""
-    The day of the week that the first day of the simulation will be. If this is "Random", the starting day will be chosen randomly for each simulation.
+The day of the week that the first day of the simulation will be. If this is
+"Random", the starting day will be chosen randomly for each simulation.
         """,
     )
 
     st.markdown("""
-        - The scaling population will be used to adjust simulation results for populations larger than the simulated population. For instance, if you simulate Newcastle (whose population is 272,407) and set the scaling population to 544,814, all health burdens will be doubled to make them proportional to the new value.
+- The scaling population will be used to adjust simulation results for
+populations larger than the simulated population. For instance, if you simulate
+Newcastle (whose population is 272,407) and set the scaling population to
+544,814, all health burdens will be doubled to make them proportional to the
+new value.
     """)
     default_population = COMMUNITIES[community if community else "newcastle"].population
     st.info(
         f"""
-        The population used in the experiment for the current community
-        ({community.capitalize() if community else "Newcastle"})
-        is {default_population}.
+The population used in the experiment for the current community
+({community.capitalize() if community else "Newcastle"}) is {default_population}.
         """,
         icon=":material/groups:",
     )
@@ -618,15 +617,15 @@ if show_advanced:
         "Scaling Population",
         min_value=1,
         value=default_population,
-        key=f"_scalingPopulation",
+        key=f"_scaling_population",
         on_change=save_key,
         args=["scaling_population"],
         placeholder="Enter the size of the desired population",
         help="""
-    The size of the population that all simulation results will be scaled to. The
-    proportions of the data will not change, but all health burdens will be multiplied
-    such that they reflect the values that would be obtained in a simulation whose
-    population matches the scaling population.
+The size of the population that all simulation results will be scaled to. The
+proportions of the data will not change, but all health burdens will be
+multiplied such that they reflect the values that would be obtained in a
+simulation whose population matches the scaling population.
             """,
     )
 
@@ -638,7 +637,7 @@ st.button(
         if simulation_in_progress
         else "Run Simulation Experiment"
     ),
-    on_click=runSimulationButton,
+    on_click=run_simulation_button,
     disabled=simulation_in_progress,
     type="primary",
     icon="spinner" if simulation_in_progress else ":material/motion_play:",
@@ -657,7 +656,7 @@ before running another one.
 
 
 @st.fragment(run_every=1)
-def simulationProgressBar():
+def simulation_progress_bar():
     """
     Fragment to generate a progress bar showing how far along the simulation is
     """
@@ -669,8 +668,8 @@ def simulationProgressBar():
         progress = 0.0
     if progress < 0.0:
         # Display errors that have occurred alongside progress
-        errorTitle, errorBody, error_icon, errorObject = session.get(
-            "simulationError",
+        error_title, error_body, error_icon, error_object = session.get(
+            "simulation_error",
             (
                 "Error occurred when running simulation",
                 "An unspecified error has occurred while running the simulation.",
@@ -678,38 +677,38 @@ def simulationProgressBar():
                 None,
             ),
         )
-        st.progress(1.0, f":red[:material/error:] {errorTitle}")
+        st.progress(1.0, f":red[:material/error:] {error_title}")
         # TODO: Different label for cancellation
-        simStatus = st.status(
+        sim_status = st.status(
             label="Experiment stopped due to error (click for more info)", state="error"
         )
-        for newStatus in status_queue:
-            simStatus.write(newStatus)
-        simStatus.error(f"Error: {errorBody}", icon=f":material/{error_icon}:")
-        if errorObject is not None:
-            simStatus.exception(errorObject)
+        for new_status in status_queue:
+            sim_status.write(new_status)
+        sim_status.error(f"Error: {error_body}", icon=f":material/{error_icon}:")
+        if error_object is not None:
+            sim_status.exception(error_object)
     else:
         st.progress(
             progress,
             status_queue[-1] if status_queue else "Initialising parameters...",
         )
-        simStatus = st.status(
+        sim_status = st.status(
             "Experiment in progress..." if progress < 1.0 else "Experiment complete!",
             state="running" if progress < 1.0 else "complete",
         )
-        for newStatus in status_queue:
-            simStatus.write(newStatus)
+        for new_status in status_queue:
+            sim_status.write(new_status)
 
 
-if simulation_in_progress or session.showSimProgress:
-    simulationProgressBar()
+if simulation_in_progress or session.show_sim_progress:
+    simulation_progress_bar()
 
 # Stop Simulation Button
 if simulation_in_progress:
     st.button(
         label="Cancel Simulation",
-        on_click=stopSimulationButton,
-        key="_stopSim",
+        on_click=stop_simulation_button,
+        key="_stop_simulation",
         type="primary",
         icon=":material/stop_circle:",
         help="""
@@ -717,8 +716,3 @@ Cancel the currently running simulation, allowing you to immediately run a new
 simulation with different parameters.
         """,
     )
-
-
-# TODO: Debug
-# st.header("DEBUG ZONE", anchor="test")
-# st.write(session)

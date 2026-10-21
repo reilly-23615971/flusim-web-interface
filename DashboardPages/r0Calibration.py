@@ -22,30 +22,27 @@ from ClientResources.Types import (
     R0_CALIBRATION_STATUS,
 )
 
-# Logging
-r0Log = logging.getLogger(__name__)
-
 # Store st.session_state as variable for efficiency
 session = st.session_state
-calibrationInProgress = session.calibrationInProgress
-calculationInProgress = session.calculationInProgress
-calibCancelFlag = Event()
-calcCancelFlag = Event()
+calibration_in_progress = session.calibration_in_progress
+calculation_in_progress = session.calculation_in_progress
+calibration_cancel_flag = Event()
+calculation_cancel_flag = Event()
 
 
 @st.dialog("Calibrate $R_0$", width="large", icon=":material/partner_exchange:")
-def calibrateR0Button() -> None:
+def calibrate_r0_button() -> None:
     """
     Callback function for the Calibrate R0 button, opening a dialog window
     before performing the calibration.
     """
     # Disable button if it's taking a while to run
-    calibPending = bool(session.get("confirmCalibrateButton"))
+    calibration_pending = bool(session.get("confirm_calibration_button"))
 
     # Get scenario to calculate
     scenario_id = session.get("r_calibrate_scenario", 0)
     scenario_name = session.scenario_names[scenario_id]
-    targetR0 = session.get("targetR", 1.5)
+    target_reproduction_number = session.get("target_reproduction_number", 1.5)
 
     # Display any errors
     # TODO: Hide scenario errors that are copies of baseline errors
@@ -53,25 +50,24 @@ def calibrateR0Button() -> None:
     if severe_errors_found:
         st.error(
             """
-                The basic reproduction number cannot be calibrated due to the
-                errors displayed above. Please correct these errors before
-                calibrating $R_0$.
+The basic reproduction number cannot be calibrated due to the errors displayed
+above. Please correct these errors before calibrating $R_0$.
             """,
             icon=":material/error:",
         )
     else:
         # TODO: Estimate calibration runtime
         st.markdown(f"""
-            Are you sure you want to calibrate the basic reproduction
-            number to a value of {targetR0} for
-            {"the baseline scenario" if scenario_id == 0 else scenario_name}?
+Are you sure you want to calibrate the basic reproduction
+number to a value of {target_reproduction_number} for
+{"the baseline scenario" if scenario_id == 0 else scenario_name}?
         """)
         # TODO: Should precision be a parameter on the dashboard?
         st.info(
             f"""
 Due to the iterative methods used to calibrate $R_0$, the basic reproduction
-number achieved after calibration may differ from the target value ({targetR0})
-by ±0.02.
+number achieved after calibration may differ from the target value
+({target_reproduction_number}) by ±0.02.
         """,
             icon=":material/target:",
         )
@@ -87,20 +83,20 @@ the "Include Vaccinations and NPIs" toggle.
             )
         st.button(
             "Confirm",
-            key="confirmCalibrateButton",
-            icon="spinner" if calibPending else None,
-            disabled=calibPending,
+            key="confirm_calibration_button",
+            icon="spinner" if calibration_pending else None,
+            disabled=calibration_pending,
         )
-        if calibPending:
+        if calibration_pending:
             # Set params indicating model is simulating
-            session.calibrationInProgress = True
-            session.calibrationStartTime = datetime.now()
-            calibCancelFlag.clear()
+            session.calibration_in_progress = True
+            session.calibration_start_time = datetime.now()
+            calibration_cancel_flag.clear()
 
             # Get relevant settings from session
             show_advanced = session.get("show_advanced", False)
-            useInterventions = (
-                session.get("rCalculateInterventionsToggle", False)
+            use_interventions = (
+                session.get("r_calculate_interventions", False)
                 if show_advanced
                 else False
             )
@@ -113,11 +109,13 @@ the "Include Vaccinations and NPIs" toggle.
             else:
                 params = create_template(
                     scenario_id,
-                    include_interventions=useInterventions,
+                    include_interventions=use_interventions,
                     include_dashboard=False,
                 )
             schema = OverrideTemplate(
-                name=community, description=str(targetR0), parameters=params
+                name=community,
+                description=str(target_reproduction_number),
+                parameters=params,
             ).model_dump_json(indent=4, exclude_unset=True)
             # TODO: Just save ID instead of name?
             session.calib_scenario_name = scenario_name
@@ -128,8 +126,8 @@ the "Include Vaccinations and NPIs" toggle.
                 "result_type": "json",
                 "status_decoder": {
                     "start": (0.01, "Initialising parameters..."),
-                    "generatingToolbox": (0.02, "Preparing simulation engine..."),
-                    "generatingConfig": (0.05, "Calibrating $R_0$..."),
+                    "generating_toolbox": (0.02, "Preparing simulation engine..."),
+                    "generating_config": (0.05, "Calibrating $R_0$..."),
                     "completed": (1.0, "$R_0$ calibrated!"),
                     "error": (-1.0, "Calibration halted due to error"),
                     "shutdown": (
@@ -144,15 +142,15 @@ the "Include Vaccinations and NPIs" toggle.
             R0_CALIBRATION_STATUS.progress.append(0.0)
             R0_CALIBRATION_STATUS.tasks.clear()
             R0_CALIBRATION_STATUS.tasks.append("Connecting to server...")
-            session["calibrationError"] = None
+            session["calibration_error"] = None
 
             # Make the model call
-            session.calibrationInProgress = True
+            session.calibration_in_progress = True
             task_wrapper(
                 "R0 Calibration",
                 "r0/calibrate",
                 schema,
-                calibCancelFlag,
+                calibration_cancel_flag,
                 status_params,
             )
 
@@ -165,14 +163,14 @@ the "Include Vaccinations and NPIs" toggle.
 
 
 @st.dialog("Cancel $R_0$ Calibration", width="large", icon=":material/stop_circle:")
-def stopCalibrationButton():
+def stop_calibration_button():
     """
     Callback function for the Calibrate R0 button, opening a dialog window
     before cancelling the currently pending analysis.
     """
 
     # Disable button if it's taking a while to run
-    cancelPending = bool(session.get("confirmCalibCancelButton"))
+    cancel_pending = bool(session.get("confirm_calibration_cancel_button"))
 
     st.warning(
         "Are you sure you want to stop calibrating $R_0$?",
@@ -180,13 +178,13 @@ def stopCalibrationButton():
     )
     st.button(
         "Confirm",
-        key="confirmCalibCancelButton",
-        icon="spinner" if cancelPending else None,
-        disabled=cancelPending,
+        key="confirm_calibration_cancel_button",
+        icon="spinner" if cancel_pending else None,
+        disabled=cancel_pending,
     )
-    if cancelPending:
+    if cancel_pending:
         # Exit immediately if there's nothing to stop
-        if not session.calibrationInProgress:
+        if not session.calibration_in_progress:
             st.toast(
                 "$R_0$ is not currently being calibrated; there's nothing to cancel.",
                 icon=":material/stop:",
@@ -194,7 +192,7 @@ def stopCalibrationButton():
             st.rerun()
 
         # Display as error on the progress bar
-        session["calibrationError"] = (
+        session["calibration_error"] = (
             "Calibration cancelled",
             "The calibration was manually cancelled by the user.",
             "stop_circle",
@@ -202,10 +200,10 @@ def stopCalibrationButton():
         )
         R0_CALIBRATION_STATUS.progress.append(-1.0)
 
-        # Stop the runModel thread
-        calibCancelFlag.set()
-        session.calibrationInProgress = False
-        session.showCalibProgress = True
+        # Stop the run_model thread
+        calibration_cancel_flag.set()
+        session.calibration_in_progress = False
+        session.show_calibration_progress = True
 
         # Generate popup to let the user know it's cancelled
         st.toast(
@@ -216,13 +214,13 @@ def stopCalibrationButton():
 
 
 @st.dialog("Calculate $R_0$", width="large", icon=":material/calculate:")
-def calculateR0Button() -> None:
+def calculate_r0_button() -> None:
     """
     Callback function for the Calculate R0 button, opening a dialog window
     before running the calculation.
     """
     # Disable button if it's taking a while to run
-    calcPending = bool(session.get("confirmCalculateButton"))
+    calculation_pending = bool(session.get("confirm_calculation_button"))
 
     # Get scenario to calculate
     scenario_id = session.get("r_calculate_scenario", 0)
@@ -234,17 +232,16 @@ def calculateR0Button() -> None:
     if severe_errors_found:
         st.error(
             """
-                The basic reproduction number cannot be calculated due to the
-                errors displayed above. Please correct these errors before
-                calculating $R_0$.
+The basic reproduction number cannot be calculated due to the errors displayed
+above. Please correct these errors before calculating $R_0$.
             """,
             icon=":material/error:",
         )
     else:
         # TODO: Estimate calculation runtime
         st.markdown(f"""
-            Are you sure you want to calculate the basic reproduction number for
-            {"the baseline scenario" if scenario_id == 0 else scenario_name}?
+Are you sure you want to calculate the basic reproduction number for
+{"the baseline scenario" if scenario_id == 0 else scenario_name}?
         """)
         if USE_PRESET_PARAMS:
             st.warning(
@@ -258,20 +255,20 @@ the "Include Vaccinations and NPIs" toggle.
             )
         st.button(
             "Confirm",
-            key="confirmCalculateButton",
-            icon="spinner" if calcPending else None,
-            disabled=calcPending,
+            key="confirm_calculation_button",
+            icon="spinner" if calculation_pending else None,
+            disabled=calculation_pending,
         )
-        if calcPending:
+        if calculation_pending:
             # Set params indicating model is simulating
-            session.calculationInProgress = True
-            session.calculationStartTime = datetime.now()
-            calcCancelFlag.clear()
+            session.calculation_in_progress = True
+            session.calculation_start_time = datetime.now()
+            calculation_cancel_flag.clear()
 
             # Get relevant settings from session
             show_advanced = session.get("show_advanced", False)
-            useInterventions = (
-                session.get("rCalculateInterventionsToggle", False)
+            use_interventions = (
+                session.get("r_calculate_interventions", False)
                 if show_advanced
                 else False
             )
@@ -279,27 +276,26 @@ the "Include Vaccinations and NPIs" toggle.
 
             # Load JSON
             if USE_PRESET_PARAMS:
-                filename = f"default{"NoNPI" if not useInterventions else ""}.json"
-                with open(f"ClientResources/Templates/{filename}", "r") as f:
+                with open(PRESET_R0_PATH, "r") as f:
                     params = Parameters.model_validate_json(f.read())
             else:
                 params = create_template(
                     scenario_id,
-                    include_interventions=useInterventions,
+                    include_interventions=use_interventions,
                     include_dashboard=False,
                 )
             schema = CommunityOverride(
                 name=community, parameters=params
             ).model_dump_json(indent=4, exclude_unset=True)
-            session.calcScenarioName = scenario_name
+            session.calculation_scenario_name = scenario_name
 
             # Prepare model call parameters
             status_params = {
                 "result_type": "json",
                 "status_decoder": {
                     "start": (0.01, "Initialising parameters..."),
-                    "generatingToolbox": (0.02, "Preparing simulation engine..."),
-                    "generatingConfig": (0.1, "Calculating $R_0$..."),
+                    "generating_toolbox": (0.02, "Preparing simulation engine..."),
+                    "generating_config": (0.1, "Calculating $R_0$..."),
                     "completed": (1.0, "$R_0$ calculated!"),
                     "error": (-1.0, "Calculation halted due to error"),
                     "shutdown": (
@@ -314,15 +310,15 @@ the "Include Vaccinations and NPIs" toggle.
             R0_CALCULATION_STATUS.progress.append(0.0)
             R0_CALCULATION_STATUS.tasks.clear()
             R0_CALCULATION_STATUS.tasks.append("Connecting to server...")
-            session["calculationError"] = None
+            session["calculation_error"] = None
 
             # Make the model call
-            session.calculationInProgress = True
+            session.calculation_in_progress = True
             task_wrapper(
                 "R0 Calculation",
                 "r0/calculate",
                 schema,
-                calcCancelFlag,
+                calculation_cancel_flag,
                 status_params,
             )
 
@@ -335,13 +331,13 @@ the "Include Vaccinations and NPIs" toggle.
 
 
 @st.dialog("Cancel $R_0$ Calculation", width="large", icon=":material/stop_circle:")
-def stopCalculationButton():
+def stop_calculation_button():
     """
     Callback function for the Calculate R0 button, opening a dialog window
     before cancelling the currently pending analysis.
     """
     # Disable button if it's taking a while to run
-    cancelPending = bool(session.get("confirmCalcCancelButton"))
+    cancel_pending = bool(session.get("confirm_calculation_cancel_button"))
 
     st.warning(
         "Are you sure you want to stop calculating $R_0$?",
@@ -349,13 +345,13 @@ def stopCalculationButton():
     )
     st.button(
         "Confirm",
-        key="confirmCalcCancelButton",
-        icon="spinner" if cancelPending else None,
-        disabled=cancelPending,
+        key="confirm_calculation_cancel_button",
+        icon="spinner" if cancel_pending else None,
+        disabled=cancel_pending,
     )
-    if cancelPending:
+    if cancel_pending:
         # Exit immediately if there's nothing to stop
-        if not session.calculationInProgress:
+        if not session.calculation_in_progress:
             st.toast(
                 "$R_0$ is not currently being calculated; there's nothing to cancel.",
                 icon=":material/stop:",
@@ -363,7 +359,7 @@ def stopCalculationButton():
             st.rerun()
 
         # Display as error on the progress bar
-        session["calculationError"] = (
+        session["calculation_error"] = (
             "Calculation cancelled",
             "The calculation was manually cancelled by the user.",
             "stop_circle",
@@ -371,10 +367,10 @@ def stopCalculationButton():
         )
         R0_CALCULATION_STATUS.progress.append(-1.0)
 
-        # Stop the runModel thread
-        calcCancelFlag.set()
-        session.calculationInProgress = False
-        session.showCalcProgress = True
+        # Stop the run_model thread
+        calculation_cancel_flag.set()
+        session.calculation_in_progress = False
+        session.show_calculation_progress = True
 
         # Generate popup to let the user know it's cancelled
         st.toast(
@@ -389,8 +385,8 @@ def stopCalculationButton():
 st.title("$R_0$ Calibration")
 
 st.markdown("""
-    This page is used to configure the experiment's parameters to match a desired
-    basic reproduction number ($R_0$).
+This page is used to configure the experiment's parameters to match a desired
+basic reproduction number ($R_0$).
 """)
 
 # Global parameters
@@ -404,17 +400,17 @@ show_advanced = st.toggle(
     on_change=save_key,
     args=["show_advanced"],
     help="""
-Toggle whether to include parameters that control more fine-grain aspects
-of the simulation environment (such as waning vaccine-derived immunity)
-when calibrating or calculating R0.
+Toggle whether to include parameters that control more fine-grain aspects of
+the simulation environment (such as waning vaccine-derived immunity) when
+calibrating or calculating R0.
     """,
 )
 
 # Community Selection
 st.markdown("""
-    - The community selection determines the population, demographic distribution
-    and other elements of the community that is simulated in the calculation, chosen
-    from one of two Australian cities.
+- The community selection determines the population, demographic distribution
+and other elements of the community that is simulated in the calculation,
+chosen from one of two Australian cities.
 """)
 load_key("community", default="newcastle")
 community = st.selectbox(
@@ -424,22 +420,20 @@ community = st.selectbox(
     format_func=lambda x: x.capitalize(),
     on_change=community_change,
     help="""
-The Australian city whose community data will be used as the
-basis for the population and demographic distribution in the
-calculation. Note that the data used for these communities comes
-from 2011.
+The Australian city whose community data will be used as the basis for the
+population and demographic distribution in the calculation. Note that the data
+used for these communities comes from 2011.
 
 ### Options:
-- Newcastle: A metropolitan area in New South Wales, Australia.
-It has a population of 272,407 (as of 2011 when this data was
-collected) and has a demographic distribution that more closely matches
-that of Australia as a whole compared to the other communities.
-- Cairns: A major city in Queensland, Australia. It has a population of
-140,402 and has a higher Indigenous population compared to the other
+- Newcastle: A metropolitan area in New South Wales, Australia. It has a
+population of 272,407 (as of 2011 when this data was collected) and has a
+demographic distribution that more closely matches that of Australia as a whole
+compared to the other communities.
+- Cairns: A major city in Queensland, Australia. It has a population of 140,402
+and has a higher Indigenous population compared to the other communities.
+- Albany: A major city in Western Australia. It has a population of 55,109 and
+has a higher proportion of older adults and seniors compared to the other
 communities.
-- Albany: A major city in Western Australia. It has a population of
-55,109 and has a higher proportion of older adults and seniors compared
-to the other communities.
     """,
 )
 
@@ -457,10 +451,10 @@ if show_advanced and scenarios_with_patches:
     reset_scenario_list = ", ".join(scenarios_with_patches)
     st.warning(
         f"""
-        Warning: Location-specific seeding weights defined in some scenarios
-        ({reset_scenario_list}) rely on locations that only exist in the
-        currently selected community. Changing this community will reset the
-        location-specific seeding weights for these scenarios.
+Warning: Location-specific seeding weights defined in some scenarios
+({reset_scenario_list}) rely on locations that only exist in the currently
+selected community. Changing this community will reset the location-specific
+seeding weights for these scenarios.
         """,
         icon=":material/wrong_location:",
     )
@@ -470,33 +464,35 @@ if show_advanced and scenarios_with_patches:
 st.header("Calibrate $R_0$")
 
 st.markdown("""
-    Select a scenario to calculate the transmission parameter value necessary
-    to achieve a specific basic reproduction number.
+Select a scenario to calculate the transmission parameter value necessary to
+achieve a specific basic reproduction number.
 """)
 
-leftCalib, centerCalib, rightCalib = st.columns(3, vertical_alignment="center")
+left_calibration_column, center_calibration_column, right_calibration_column = (
+    st.columns(3, vertical_alignment="center")
+)
 
 
-load_key("targetR", default=1.5)
-leftCalib.number_input(
+load_key("target_reproduction_number", default=1.5)
+left_calibration_column.number_input(
     label="Target $R_0$",
     min_value=0.0,
     value=1.5,
     step=0.1,
     format="%0.8g",
-    key="_targetR",
+    key="_target_reproduction_number",
     on_change=save_key,
-    args=["targetR"],
+    args=["target_reproduction_number"],
     help="""
-The desired basic reproduction number, i.e. the average number of new infections
-a single infected individual will cause over the course of the infection's
-lifespan. Calibrating $R_0$ will identify the experiment parameters needed to
-simulate a disease with this basic reproduction number.
+The desired basic reproduction number, i.e. the average number of new
+infections a single infected individual will cause over the course of the
+infection's lifespan. Calibrating $R_0$ will identify the experiment parameters
+needed to simulate a disease with this basic reproduction number.
     """,
 )
 
 load_key("r_calibrate_scenario", default=0)
-centerCalib.selectbox(
+center_calibration_column.selectbox(
     "Scenario to Calibrate",
     range(len(scenario_names)),
     index=0,
@@ -506,7 +502,7 @@ centerCalib.selectbox(
     args=["r_calibrate_scenario"],
     help="""
 The scenario that the transmission parameters will be calculated for.
-"Baseline Scenario" uses the parameters defined at the
+"Baseline" uses the parameters defined at the
 :grey-badge[:material/variable_insert: Baseline Parameters] page. Scenarios
 defined at the :grey-badge[:material/variable_add: Scenario Parameters] page
 are listed by the names assigned to them.
@@ -514,13 +510,13 @@ are listed by the names assigned to them.
 )
 
 if show_advanced:
-    load_key("rCalibrateInterventionsToggle", default=False)
-    rightCalib.toggle(
+    load_key("calibration_use_interventions", default=False)
+    right_calibration_column.toggle(
         "Include Vaccinations and NPIs",
         False,
-        key="_rCalibrateInterventionsToggle",
+        key="_calibration_use_interventions",
         on_change=save_key,
-        args=["rCalibrateInterventionsToggle"],
+        args=["calibration_use_interventions"],
         help="""
 The basic reproduction number is calculated without the influence of medical
 interventions such as vaccination, so they will be excluded from the simulation
@@ -532,19 +528,19 @@ process, thereby comparing the effective reproduction number $R_t$ instead.
 
 # Button to begin calculation
 st.button(
-    label=("Calibrating $R_0$..." if calculationInProgress else "Calibrate $R_0$"),
-    on_click=calibrateR0Button,
-    key="_rCalibrateButton",
-    disabled=calibrationInProgress,
+    label=("Calibrating $R_0$..." if calculation_in_progress else "Calibrate $R_0$"),
+    on_click=calibrate_r0_button,
+    key="_r_calibration_button",
+    disabled=calibration_in_progress,
     type="primary",
-    icon="spinner" if calibrationInProgress else ":material/partner_exchange:",
+    icon="spinner" if calibration_in_progress else ":material/partner_exchange:",
     help=(
         """
-Send a request to the *Flusim* model server to run multiple simulations
-with the specified parameters, then use the results of these simulations
-to determine what transmission parameters achieve the desired $R_0$.
+Send a request to the *Flusim* model server to run multiple simulations with
+the specified parameters, then use the results of these simulations to
+determine what transmission parameters achieve the desired $R_0$.
         """
-        if not calibrationInProgress
+        if not calibration_in_progress
         else """
 $R_0$ is currently being calibrated; please wait for the process to complete.
         """
@@ -553,35 +549,35 @@ $R_0$ is currently being calibrated; please wait for the process to complete.
 
 
 # Stop Simulation Button
-if calibrationInProgress:
+if calibration_in_progress:
     st.button(
         label="Cancel $R_0$ Calibration",
-        on_click=stopCalibrationButton,
-        key="_stopCalib",
+        on_click=stop_calibration_button,
+        key="_stop_calibration",
         type="primary",
         icon=":material/stop_circle:",
         help="Stop calibrating $R_0$.",
     )
 
-calibResultsContainer = st.empty()
+calibration_results_container = st.empty()
 
 # TODO: Since buttons can't be made in fragments, find a more robust way
 # to ensure this appearance is synchronised with the fragment
-calibrationResults = session.get("r0Calibration")
-idToUpdate = session.get("calib_saved_id")
-if calibrationResults is not None and idToUpdate is not None:
+calibration_results = session.get("r0_calibration")
+id_to_update = session.get("calib_saved_id")
+if calibration_results is not None and id_to_update is not None:
     scenario_name = session["calib_scenario_name"]
-    beta = session["r0CalibrationBeta"]
+    beta = session["r_calibration_beta"]
 
-    def updateBeta():
+    def update_beta():
         """
         Simple callback to update beta to match the calibrated value
         """
-        session[f"beta{idToUpdate}"] = beta
+        session[f"beta{id_to_update}"] = beta
         st.toast(
             f"""
-{"The baseline scenario" if idToUpdate == 0 else scenario_name}
-now has a basic transmission parameter of {beta}.
+{"The baseline scenario" if id_to_update == 0 else scenario_name} now has a
+basic transmission parameter of {beta}.
             """,
             icon=":material/sync:",
         )
@@ -589,11 +585,11 @@ now has a basic transmission parameter of {beta}.
     st.button(
         f"Update Parameters in {scenario_name}",
         icon=":material/sync:",
-        on_click=updateBeta,
+        on_click=update_beta,
         help=f"""
 Update the value of the basic transmission parameter in
-{"the baseline scenario" if idToUpdate == 0 else scenario_name}
-to match the calibrated value above.
+{"the baseline scenario" if id_to_update == 0 else scenario_name} to match the
+calibrated value above.
         """,
     )
 
@@ -606,10 +602,12 @@ st.markdown("""
     with its parameter settings.
 """)
 
-leftCalc, rightCalc = st.columns(2, vertical_alignment="center")
+left_calculation_column, right_calculation_column = st.columns(
+    2, vertical_alignment="center"
+)
 
 load_key("r_calculate_scenario", default=0)
-leftCalc.selectbox(
+left_calculation_column.selectbox(
     "Scenario to Calculate",
     range(len(scenario_names)),
     index=0,
@@ -618,8 +616,8 @@ leftCalc.selectbox(
     on_change=save_key,
     args=["r_calculate_scenario"],
     help="""
-The scenario that the basic reproduction number will be
-calculated for. "Baseline Scenario" uses the parameters defined at the
+The scenario that the basic reproduction number will be calculated for.
+"Baseline Scenario" uses the parameters defined at the
 :grey-badge[:material/variable_insert: Baseline Parameters] page. Scenarios
 defined at the :grey-badge[:material/variable_add: Scenario Parameters] page
 are listed by the names assigned to them.
@@ -627,13 +625,13 @@ are listed by the names assigned to them.
 )
 
 if show_advanced:
-    load_key("rCalculateInterventionsToggle", default=False)
-    rightCalc.toggle(
+    load_key("r_calculate_interventions", default=False)
+    right_calculation_column.toggle(
         "Include Vaccinations and NPIs",
         False,
-        key="_rCalculateInterventionsToggle",
+        key="_r_calculate_interventions",
         on_change=save_key,
-        args=["rCalculateInterventionsToggle"],
+        args=["r_calculate_interventions"],
         help="""
 The basic reproduction number is calculated without the influence of medical
 interventions such as vaccination, so they will be excluded from the simulation
@@ -646,19 +644,19 @@ effective reproduction number $R_t$ instead.
 
 # Button to begin calculation
 st.button(
-    label=("Calculating $R_0$..." if calculationInProgress else "Calculate $R_0$"),
-    on_click=calculateR0Button,
-    key="_rCalculateButton",
-    disabled=calculationInProgress,
+    label=("Calculating $R_0$..." if calculation_in_progress else "Calculate $R_0$"),
+    on_click=calculate_r0_button,
+    key="_r_calculation_button",
+    disabled=calculation_in_progress,
     type="primary",
-    icon="spinner" if calculationInProgress else ":material/calculate:",
+    icon="spinner" if calculation_in_progress else ":material/calculate:",
     help=(
         """
-Send a request to the *Flusim* model server to run multiple simulations
-with the specified parameters, then use the results of these simulations
-to estimate a value for $R_0$.
+Send a request to the *Flusim* model server to run multiple simulations with
+the specified parameters, then use the results of these simulations to estimate
+a value for $R_0$.
         """
-        if not calculationInProgress
+        if not calculation_in_progress
         else """
 $R_0$ is currently being calculated; please wait for the process to complete.
         """
@@ -667,15 +665,15 @@ $R_0$ is currently being calculated; please wait for the process to complete.
 
 # TODO: Show Calib Results and dashboardApp additions
 
-calcResultsContainer = st.empty()
+calculation_results_container = st.empty()
 
 
 @st.fragment(run_every=1)
-def showR0Results():
+def show_r0_results():
     """
     Fragment to display any errors that occur when calculating R0
     """
-    if session.showCalibProgress:
+    if session.show_calibration_progress:
         try:
             progress = R0_CALIBRATION_STATUS.progress[0]
         except IndexError:
@@ -683,10 +681,10 @@ def showR0Results():
             # TODO: Use status to list the estimates that have occurred
             # already in lieu of a progress bar/estimated time
         if progress < 0.0:
-            calibContents = calibResultsContainer.container()
+            calibration_contents = calibration_results_container.container()
             # Display errors that have occurred alongside progress
-            errorTitle, errorBody, error_icon, errorObject = session.get(
-                "calibrationError",
+            error_title, error_body, error_icon, error_object = session.get(
+                "calibration_error",
                 (
                     "Error occurred when calibrating $R_0$",
                     "An unspecified error has occurred while calibrating $R_0$.",
@@ -694,43 +692,43 @@ def showR0Results():
                     None,
                 ),
             )
-            calibContents.progress(1.0, f":red[:material/error:] {errorTitle}")
-            simStatus = calibContents.status(
+            calibration_contents.progress(1.0, f":red[:material/error:] {error_title}")
+            sim_status = calibration_contents.status(
                 label="Calibration stopped due to error (click for more info)",
                 state="error",
             )
-            simStatus.error(f"Error: {errorBody}", icon=f":material/{error_icon}:")
-            if errorObject is not None:
-                simStatus.exception(errorObject)
-        elif session.get("r0Calibration") is not None:
+            sim_status.error(f"Error: {error_body}", icon=f":material/{error_icon}:")
+            if error_object is not None:
+                sim_status.exception(error_object)
+        elif session.get("r0_calibration") is not None:
             # TODO: Save scenario ID and make descriptions sound natural
-            calibContents = calibResultsContainer.container()
+            calibration_contents = calibration_results_container.container()
             scenario_name = session["calib_scenario_name"]
-            r0 = session["r0Calibration"]
-            beta = session["r0CalibrationBeta"]
-            calibContents.metric(
+            r0 = session["r0_calibration"]
+            beta = session["r_calibration_beta"]
+            calibration_contents.metric(
                 f"Transmission Parameter Required for $R_0$ of {r0} in {scenario_name}",
                 beta,
                 border=True,
                 help=f"""
-The probability that the disease spreads to a new person when they interact with
-an infected individual is $1 - \\exp{{(-\\beta}}$ (before accounting for other
-factors such as age and location). If $\\beta$ is set to {beta} in the scenario
-named {scenario_name}, the disease will have a basic reproduction number equal
-to {r0}.
+The probability that the disease spreads to a new person when they interact
+with an infected individual is $1 - \\exp{{(-\\beta}}$ (before accounting for
+other factors such as age and location). If $\\beta$ is set to {beta} in the
+scenario named {scenario_name}, the disease will have a basic reproduction
+number equal to {r0}.
                 """,
             )
 
-    if session.showCalcProgress:
+    if session.show_calculation_progress:
         try:
             progress = R0_CALCULATION_STATUS.progress[0]
         except IndexError:
             progress = 0.0
         if progress < 0.0:
-            calcContents = calcResultsContainer.container()
+            calculation_contents = calculation_results_container.container()
             # Display errors that have occurred alongside progress
-            errorTitle, errorBody, error_icon, errorObject = session.get(
-                "calculationError",
+            error_title, error_body, error_icon, error_object = session.get(
+                "calculation_error",
                 (
                     "Error occurred when calculating $R_0$",
                     "An unspecified error has occurred while calculating $R_0$.",
@@ -738,43 +736,43 @@ to {r0}.
                     None,
                 ),
             )
-            calcContents.progress(1.0, f":red[:material/error:] {errorTitle}")
-            simStatus = calcContents.status(
+            calculation_contents.progress(1.0, f":red[:material/error:] {error_title}")
+            sim_status = calculation_contents.status(
                 label="Calculation stopped due to error (click for more info)",
                 state="error",
             )
-            simStatus.error(f"Error: {errorBody}", icon=f":material/{error_icon}:")
-            if errorObject is not None:
-                simStatus.exception(errorObject)
-        elif session.get("r0Calculation") is not None:
+            sim_status.error(f"Error: {error_body}", icon=f":material/{error_icon}:")
+            if error_object is not None:
+                sim_status.exception(error_object)
+        elif session.get("r0_calculation") is not None:
             # TODO: Save scenario ID and make descriptions sound natural
-            calcContents = calcResultsContainer.container()
-            scenario_name = session["calcScenarioName"]
-            r0 = session["r0Calculation"]
-            lowCI, highCI = session["r0CalculationInterval"]
-            calcContents.metric(
+            calculation_contents = calculation_results_container.container()
+            scenario_name = session["calculation_scenario_name"]
+            r0 = session["r0_calculation"]
+            lowCI, highCI = session["r0_calculationInterval"]
+            calculation_contents.metric(
                 f"Basic Reproduction Number ($R_0$) for {scenario_name}",
                 r0,
                 border=True,
                 delta_description=f"95% Confidence Interval: [{lowCI}, {highCI}]",
                 help=f"""
-The basic reproduction number ($R_0$) is the average number of new infections that
-will be caused by a single infected individual over the lifespan of their infection.
-The scenario named {scenario_name} has an $R_0$ of {r0}.
+The basic reproduction number ($R_0$) is the average number of new infections
+that will be caused by a single infected individual over the lifespan of their
+infection. The scenario named {scenario_name} has an $R_0$ of {r0}.
                 """,
             )
 
 
 # Stop Simulation Button
-if calculationInProgress:
+if calculation_in_progress:
     st.button(
         label="Cancel $R_0$ Calculation",
-        on_click=stopCalculationButton,
-        key="_stopCalc",
+        on_click=stop_calculation_button,
+        key="_stop_calculation",
         type="primary",
         icon=":material/stop_circle:",
         help="Stop calculating $R_0$.",
     )
 
 
-showR0Results()
+show_r0_results()

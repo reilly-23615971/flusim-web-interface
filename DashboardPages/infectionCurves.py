@@ -81,7 +81,7 @@ def generateGraph():
 
     # Save the generated graph
     session.InfectionChartData = chartData
-    session.ChartGenerated = True
+    session.chart_generated = True
 
 
 st.title("Infection Curves")
