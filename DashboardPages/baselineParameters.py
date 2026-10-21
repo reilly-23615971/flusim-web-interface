@@ -19,12 +19,6 @@ from ParameterTabs.npiParams import build_npi_tab
 from ParameterTabs.templateParams import build_template_tab
 from ParameterTabs.vaccinationParams import build_vaccination_tab
 
-# from streamlit_push_notifications import send_push, send_alert
-
-
-# Logging
-baselineLog = logging.getLogger(__name__)
-
 # Store st.session_state as variable for efficiency
 session = st.session_state
 
@@ -34,21 +28,19 @@ session = st.session_state
 st.title("Baseline Parameters")
 
 st.markdown("""
-    This page allows for configuring the parameters that will be used
-    as a baseline for the simulation.
+This page allows for configuring the parameters that will be used as a baseline
+for the simulation.
 
-    Select a tab to view or modify the parameters under that category.
-    Hover your mouse over the :material/help: help icon next to a
-    parameter's input field to show an explanation of what that
-    parameter represents. Hover your mouse over any buttons to show an
-    explanation of what that button does. After moving a slider, use
-    the left and right arrow keys to fine-tune the parameter's value.
+Select a tab to view or modify the parameters under that category. Hover your
+mouse over the :material/help: help icon next to a parameter's input field to
+show an explanation of what that parameter represents. Hover your mouse over
+any buttons to show an explanation of what that button does. After moving a
+slider, use the left and right arrow keys to fine-tune the parameter's value.
 
-    All scenarios in the simulation will use the parameters on this
-    page as a baseline; however, individual scenarios can have
-    different values defined at the
-    :grey-badge[:material/variable_add: Scenario Parameters]
-    page, overwriting these base values.
+All scenarios in the simulation will use the parameters on this page as a
+baseline; however, individual scenarios can have different values defined at
+the :grey-badge[:material/variable_add: Scenario Parameters] page, overwriting
+these base values.
 """)
 
 # Buttons to upload simulation parameters
@@ -60,38 +52,40 @@ error_checker(0, "Errors in Baseline Scenario")
 
 # Advanced parameters toggle
 load_key("show_advanced", default=False, no_zero_default=True)
-containersToOpen: set[str] = {"paramTabs0"}
+containers_to_open: set[str] = {"param_tabs0"}
 show_advanced = st.toggle(
     "Show Advanced Parameters",
     False,
     key="_show_advanced",
     on_change=container_save,
     args=["show_advanced"],
-    kwargs={"containers": containersToOpen},
+    kwargs={"containers": containers_to_open},
     help="""
-Toggle whether to display parameters that control more fine-grain aspects
-of the simulation environment, such as age-specific NPI compliance or
-dynamic parameter updates.
+Toggle whether to display parameters that control more fine-grain aspects of
+the simulation environment, such as age-specific NPI compliance or dynamic
+parameter updates.
     """,
 )
 
 # Create tabs for each category of parameters
-dynamicTab: Optional[TabContainer] = None
+dynamic_tab: Optional[TabContainer] = None
 if show_advanced:
-    diseaseTab, communityTab, vaccineTab, npiTab, dynamicTab, templateTab = st.tabs(
-        [
-            ":material/coronavirus: Pathogen",
-            ":material/groups: Community",
-            ":material/vaccines: Vaccination",
-            ":material/medical_mask: NPIs",
-            ":material/manage_history: Dynamic",
-            ":material/list_alt: Templates",
-        ],
-        on_change="rerun",
-        key="paramTabs0",
+    disease_tab, community_tab, vaccine_tab, npi_tab, dynamic_tab, template_tab = (
+        st.tabs(
+            [
+                ":material/coronavirus: Pathogen",
+                ":material/groups: Community",
+                ":material/vaccines: Vaccination",
+                ":material/medical_mask: NPIs",
+                ":material/manage_history: Dynamic",
+                ":material/list_alt: Templates",
+            ],
+            on_change="rerun",
+            key="param_tabs0",
+        )
     )
 else:
-    diseaseTab, communityTab, vaccineTab, npiTab, templateTab = st.tabs(
+    disease_tab, community_tab, vaccine_tab, npi_tab, template_tab = st.tabs(
         [
             ":material/coronavirus: Pathogen",
             ":material/groups: Community",
@@ -100,30 +94,30 @@ else:
             ":material/list_alt: Templates",
         ],
         on_change="rerun",
-        key="paramTabs0",
+        key="param_tabs0",
     )
-if diseaseTab.open:
-    with diseaseTab:
+if disease_tab.open:
+    with disease_tab:
         build_disease_tab(0, show_advanced)
-if communityTab.open:
-    with communityTab:
+if community_tab.open:
+    with community_tab:
         build_community_tab(0, show_advanced)
-if vaccineTab.open:
-    with vaccineTab:
+if vaccine_tab.open:
+    with vaccine_tab:
         build_vaccination_tab(0, show_advanced)
-if npiTab.open:
-    containersToOpen |= {
+if npi_tab.open:
+    containers_to_open |= {
         "npi_container0",
         "school_closure_container0",
         "withdrawal_increase_container0",
         "reduced_workgroup_container0",
         "bcc_reduction_container0",
     }
-    with npiTab:
+    with npi_tab:
         build_npi_tab(0, show_advanced)
-if dynamicTab is not None and dynamicTab.open:
-    with dynamicTab:
+if dynamic_tab is not None and dynamic_tab.open:
+    with dynamic_tab:
         build_dynamic_tab(0)
-if templateTab.open:
-    with templateTab:
+if template_tab.open:
+    with template_tab:
         build_template_tab(0)
