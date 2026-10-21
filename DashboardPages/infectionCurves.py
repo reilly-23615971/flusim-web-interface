@@ -20,14 +20,14 @@ from ClientResources.Types import SimParams
 from ClientResources.VisualisationFunctions import format_epidemic, plot_epidemic
 
 # Logging
-graphLog = logging.getLogger(__name__)
+graph_log = logging.getLogger(__name__)
 
 # Store st.session_state as variable for efficiency
 session = st.session_state
 
 
 # Function to generate graph
-def generateGraph():
+def generate_graph():
     """
     Function to generate an infection curve with simulation data.
 
@@ -35,13 +35,13 @@ def generateGraph():
         FileNotFoundError: If there is no data to generate a graph with.
     """
     # Throw error if no data is present
-    if not USE_PRESET_DATA and session.get("modelDataEpidemicDaily") is None:
+    if not USE_PRESET_DATA and session.get("model_data_epidemic_daily") is None:
         raise FileNotFoundError(
             "No simulation epidemic data was available to plot; please run a"
             "simulation before attempting to generate a graph."
         )
 
-    chartType = session.get("chartType", "Cumulative")
+    chart_type = session.get("chart_type", "Cumulative")
 
     # Debug code for loading data in testing
     if USE_PRESET_DATA:
@@ -54,100 +54,98 @@ def generateGraph():
             scaling_factor=session.get("scaling_population", 272407) / 272407,
         )
         # Load test data from file
-        with open(PRESET_DATA_PATHS[chartType], "rb") as csv:
-            epidemicData = format_epidemic(
+        with open(PRESET_DATA_PATHS[chart_type], "rb") as csv:
+            epidemic_data = format_epidemic(
                 csv.read(),
                 scenario_names,
-                cumulative=chartType == "Cumulative",
+                cumulative=chart_type == "Cumulative",
             )
     # Load data from session_state
     else:
         scenario_names = session.sim_params.scenario_names
-        dataVarName = "Cumulative" if chartType == "Cumulative" else "Daily"
-        epidemicData = session.get(f"modelDataEpidemic{dataVarName}")
+        data_categorisation = "cumulative" if chart_type == "Cumulative" else "daily"
+        epidemic_data = session.get(f"model_data_epidemic_{data_categorisation}")
 
-    scenariosUsed = session.get("chartScenariosToUse", scenario_names)
-    graphLog.info(f"""
-        [generateGraph] Formatting epidemic data using the scenarios
-        {scenariosUsed} and the data type {chartType}
-    """)
-    assert epidemicData is not None, "Epidemic data was not defined"
-    chartData = plot_epidemic(
-        epidemicData,
+    scenarios_used = session.get("chart_scenarios_to_use", scenario_names)
+    graph_log.info(
+        "[generate_graph] Formatting epidemic data using the scenarios"
+        f"{scenarios_used} and the data type {chart_type}"
+    )
+    assert epidemic_data is not None, "Epidemic data was not defined"
+    chart_data = plot_epidemic(
+        epidemic_data,
         scenario_names=scenario_names,
-        included_scenarios=scenariosUsed,
-        cumulative=chartType == "Cumulative",
+        included_scenarios=scenarios_used,
+        cumulative=chart_type == "Cumulative",
     )
 
     # Save the generated graph
-    session.InfectionChartData = chartData
+    session.infection_chart_data = chart_data
     session.chart_generated = True
 
 
 st.title("Infection Curves")
 
 st.markdown("""
-    Here you can generate line graphs plotting infection rates over
-    time for different scenarios in the most recently run simulation.
+Here you can generate line graphs plotting infection rates over time for
+different scenarios in the most recently run simulation.
 """)
 
 # Check if there is data to tabulate
-chartErrorContainer = st.container()
-current_dataExists = USE_PRESET_DATA or session.get("modelDataAsirFull") is not None
-if not current_dataExists:
-    chartErrorContainer.warning(
+chart_error_container = st.container()
+current_data_exists = (
+    USE_PRESET_DATA or session.get("model_data_epidemic_daily") is not None
+)
+if not current_data_exists:
+    chart_error_container.warning(
         """
-        No simulation data has been generated. Click
-        :primary-badge[:material/motion_play: Run Simulation] in the
-        sidebar to run a simulation and obtain the data necessary to
-        generate a graph.
-    """,
+No simulation data has been generated. Click
+:primary-badge[:material/motion_play: Run Simulation] in the sidebar to run a
+simulation and obtain the data necessary to generate a graph.
+        """,
         icon=":material/science_off:",
     )
-if current_dataExists and session.simulation_in_progress:
-    chartErrorContainer.warning(
+if current_data_exists and session.simulation_in_progress:
+    chart_error_container.warning(
         """
-        Warning: A new simulation is currently in progress. Since the
-        data is not yet ready to process, attempting to create a graph
-        now will use the data from the previous simulation. Once the
-        in-progress simulation is complete, it will not be possible to
-        generate graphs with the previous simulation's data, though the
-        current graph will still be available to view and download
-        until you generate a new graph.
+Warning: A new simulation is currently in progress. Since the data is not yet
+ready to process, attempting to create a graph now will use the data from the
+previous simulation. Once the in-progress simulation is complete, it will not
+be possible to generate graphs with the previous simulation's data, though the
+current graph will still be available to view and download until you generate a
+new graph.
     """,
         icon=":material/av_timer:",
     )
 
 
-graphSettings = st.expander("Graph Settings")
-with graphSettings:
+graph_settings = st.expander("Graph Settings")
+with graph_settings:
     st.markdown("""
-        Use these parameters to configure how the infection curves will be generated.
-        Hover your mouse over the :material/help: help icon next to a
-        setting's input field to show an explanation of what that setting
-        does. Hover your mouse over any buttons to show an explanation of
-        what that button does.
+Use these parameters to configure how the infection curves will be generated.
+Hover your mouse over the :material/help: help icon next to a setting's input
+field to show an explanation of what that setting does. Hover your mouse over
+any buttons to show an explanation of what that button does.
     """)
 
-    load_key("chartType", default="Cumulative")
-    chartType = st.selectbox(
+    load_key("chart_type", default="Cumulative")
+    chart_type = st.selectbox(
         "Chart Type",
         ["Cumulative", "Daily Rate"],
         index=0,
-        key="_chartType",
+        key="_chart_type",
         on_change=save_key,
-        args=["chartType"],
+        args=["chart_type"],
         kwargs={"not_scenario": True},
         placeholder="Please select a data format",
         help="""
 Select what kind of data should be displayed in the graph.
 
 ### Options:
-- Cumulative: the chart will plot the total number of
-infections that have cumulatively occurred at each point of
-the simulation.
-- Daily Rate: the chart will plot the number of infections
-that occur in each day of the simulation.
+- Cumulative: the chart will plot the total number of infections that have
+cumulatively occurred at each point of the simulation.
+- Daily Rate: the chart will plot the number of infections that occur in each
+day of the simulation.
         """,
     )
 
@@ -161,131 +159,120 @@ that occur in each day of the simulation.
         ),
     )
     scenario_names = sim_params.scenario_names
-    if current_dataExists:
-        load_key("chartScenariosToUse", default=scenario_names)
-        scenariosToUse: Optional[list[str]] = st.multiselect(
+    if current_data_exists:
+        load_key("chart_scenarios_to_use", default=scenario_names)
+        scenarios_to_use: Optional[list[str]] = st.multiselect(
             "Scenarios to Include in Graph",
             scenario_names,
             default=scenario_names,
-            key="_chartScenariosToUse",
+            key="_chart_scenarios_to_use",
             on_change=save_key,
-            args=["chartScenariosToUse"],
+            args=["chart_scenarios_to_use"],
             placeholder="Please select at least 1 scenario",
             kwargs={"not_scenario": True},
             help="""
-Select which scenarios should be included in the table.
-You may select as many scenarios as you wish, but you
-must select at least one. Each scenario will be plotted onto the graph
-as its own line, showing the infections over time for that scenario.
+Select which scenarios should be included in the table. You may select as many
+scenarios as you wish, but you must select at least one. Each scenario will be
+plotted onto the graph as its own line, showing the infections over time for
+that scenario.
             """,
         )
-        if not scenariosToUse:
-            chartErrorContainer.error(
+        if not scenarios_to_use:
+            chart_error_container.error(
                 """
-            Error: No scenarios have been included in the graph. If you
-            attempt to generate the graph now, it will be empty. Please
-            select at least one scenario to include with the 'Scenarios
-            to Use' setting.
-        """,
+Error: No scenarios have been included in the graph. If you attempt to generate
+the graph now, it will be empty. Please select at least one scenario to include
+with the 'Scenarios to Use' setting.
+                """,
                 icon=":material/tab_unselected:",
             )
     else:
         st.info(
             """
-            No simulation data has been generated, so there are
-            currently no scenarios to select. Click
-            :primary-badge[:material/motion_play: Run Simulation] in
-            the sidebar to run a simulation and obtain the data
-            necessary to generate a graph.
+No simulation data has been generated, so there are currently no scenarios to
+select. Click :primary-badge[:material/motion_play: Run Simulation] in the
+sidebar to run a simulation and obtain the data necessary to generate a graph.
         """,
             icon=":material/tab_unselected:",
         )
-        scenariosToUse = None
+        scenarios_to_use = None
 
 
 # Button to generate the graph
 st.button(
     label="Create Infection Curves",
     icon=":material/chart_data:",
-    key="generateGraph",
+    key="generate_graph",
     type="primary",
-    on_click=generateGraph,
-    disabled=not (current_dataExists or scenariosToUse),
+    on_click=generate_graph,
+    disabled=not (current_data_exists or scenarios_to_use),
     help=(
         """
-Use the data from the last simulation to generate a graph
-displaying the infections in the simulation, formatted using
-the settings selected above.
+Use the data from the last simulation to generate a graph displaying the
+infections in the simulation, formatted using the settings selected above.
         """
-        if current_dataExists
-        else """
-No simulations have completed yet, so there is no data to plot.
-        """
+        if current_data_exists
+        else "No simulations have completed yet, so there is no data to plot."
     ),
 )
 
 # Display the graph itself
 # TODO: Clicking on the legend is no longer a thing; update the manual
-chartData = session.get("InfectionChartData")
-if chartData is not None:
+chart_data = session.get("infection_chart_data")
+if chart_data is not None:
     st.header("Flusim Infection Curves")
-    st.altair_chart(chartData)
+    st.altair_chart(chart_data)
 
     @st.fragment()
-    def infectionDataDownload():
+    def infection_data_download():
         """
         Fragment function to show a button that downloads the data in the chart.
         """
-        chartTypeTag = "Cumulative" if chartType == "Cumulative" else "Daily"
-        dataToDownload = session.get(f"modelDataEpidemic{chartTypeTag}")
-        if dataToDownload is not None:
+        chart_type_tag = "cumulative" if chart_type == "Cumulative" else "daily"
+        data_to_download = session.get(f"model_data_epidemic_{chart_type_tag}")
+        if data_to_download is not None:
             st.download_button(
                 "Download Infection Data",
-                dataToDownload.to_csv(index=False),
-                f"FlusimInfectionData{chartTypeTag}_{
+                data_to_download.to_csv(index=False),
+                f"FlusimInfectionData{chart_type_tag}_{
                     time.strftime('%Y.%m.%d_%I.%M.%S%p')
                 }.csv",
                 mime="text/csv",
-                key="infectionDataDownload",
+                key="infection_data_download",
                 icon=":material/download:",
                 help="""
-Download the infection data from the most recent
-simulation (the data used by the above graph) as a CSV
-file. Note that all scenarios are included in the
-returned file, even if not all were selected for the
-graph.
+Download the infection data from the most recent simulation (the data used by
+the above graph) as a CSV file. Note that all scenarios are included in the
+returned file, even if not all were selected for the graph.
                 """,
             )
         elif USE_PRESET_DATA:
-            with open(PRESET_DATA_PATHS[chartType], "rb") as csv:
-                epidemicData = format_epidemic(
-                    csv.read(), scenario_names, cumulative=chartType == "Cumulative"
+            with open(PRESET_DATA_PATHS[chart_type], "rb") as csv:
+                epidemic_data = format_epidemic(
+                    csv.read(), scenario_names, cumulative=chart_type == "Cumulative"
                 )
             st.download_button(
                 "Download Infection Data",
-                epidemicData.to_csv(index=False),
-                f"FlusimInfectionData{chartTypeTag}_{
+                epidemic_data.to_csv(index=False),
+                f"FlusimInfectionData{chart_type_tag}_{
                     time.strftime('%Y.%m.%d_%I.%M.%S%p')
                 }.csv",
                 mime="text/csv",
-                key="infectionDataDownload",
+                key="infection_data_download",
                 icon=":material/download:",
                 help="""
-Download the infection data from the most recent
-simulation (the data used by the above graph) as a CSV
-file. Note that all scenarios are included in the
-returned file, even if not all were selected for the
-graph.
+Download the infection data from the most recent simulation (the data used by
+the above graph) as a CSV file. Note that all scenarios are included in the
+returned file, even if not all were selected for the graph.
                 """,
             )
         else:
             st.error(
                 """
-            Error: The data used by the graph was empty or could not be
-            accessed. Please try regenerating the graph or rerunning
-            the simulation to fix the issue.
-        """,
+Error: The data used by the graph was empty or could not be accessed. Please
+try regenerating the graph or rerunning the simulation to fix the issue.
+                """,
                 icon=":material/error:",
             )
 
-    infectionDataDownload()
+    infection_data_download()

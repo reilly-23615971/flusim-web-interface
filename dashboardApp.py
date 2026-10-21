@@ -166,7 +166,7 @@ def update_data() -> None:
             scenario_count = len(current_params.scenario_names)
             dataForms = current_params.analysis_formats
             if len(dataForms) < 4:
-                session.pop("modelDataAsirVaccinated", None)
+                session.pop("model_data_asir_vaccinated", None)
 
             # Format data
             formatted_data = [

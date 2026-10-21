@@ -13,6 +13,14 @@ import pandas as pd
 import streamlit as st
 from matplotlib.colors import TwoSlopeNorm, to_hex
 
+from ClientResources.Constants import (
+    MUTED_CODES,
+    PRESET_COMMUNITY,
+    PRESET_DATA_PATHS,
+    PRESET_SCENARIO_NAMES,
+    SHOW_DEBUG_DOWNLOADS,
+    USE_PRESET_DATA,
+)
 from ClientResources.InterfaceFunctions import health_outcome_store
 from ClientResources.ParameterFunctions import (
     id_get,
@@ -20,33 +28,24 @@ from ClientResources.ParameterFunctions import (
     replace_table_na,
     save_key,
 )
-from ClientResources.Constants import (
-    PRESET_COMMUNITY,
-    PRESET_DATA_PATHS,
-    PRESET_SCENARIO_NAMES,
-    SHOW_DEBUG_DOWNLOADS,
-    USE_PRESET_DATA,
-    MUTED_CODES,
-)
 from ClientResources.Types import (
     AGE_GROUPS,
     AGE_WITH_TOTAL,
     HEALTH_OUTCOMES,
     AgeWithTotal,
     ColumnDetails,
-    HealthOutcome,
     SimParams,
 )
 from ClientResources.VisualisationFunctions import format_asir, generate_asir
 
 # Logging
-tableLog = logging.getLogger(__name__)
+table_log = logging.getLogger(__name__)
 
 # Store st.session_state as variable for efficiency
 session = st.session_state
 
 
-def getSlopeNorm(column: pd.Series) -> TwoSlopeNorm:
+def get_slope_norm(column: pd.Series) -> TwoSlopeNorm:
     """
     Function to generate the slope norm used for table background gradients.
 
@@ -59,24 +58,24 @@ def getSlopeNorm(column: pd.Series) -> TwoSlopeNorm:
             values as the minimum and maximum and correction for columns that
             do not cross zero or are homogenous.
     """
-    minVal, maxVal = column.min(), column.max()
+    min_value, max_value = column.min(), column.max()
     return TwoSlopeNorm(
         vcenter=0,
         vmin=(
             -1e-9
-            if minVal >= 0 or pd.isna(minVal)
-            else minVal - 1e-9 if minVal == maxVal else minVal
+            if min_value >= 0 or pd.isna(min_value)
+            else min_value - 1e-9 if min_value == max_value else min_value
         ),
         vmax=(
             1e-9
-            if maxVal <= 0 or pd.isna(maxVal)
-            else maxVal + 1e-9 if maxVal == minVal else maxVal
+            if max_value <= 0 or pd.isna(max_value)
+            else max_value + 1e-9 if max_value == min_value else max_value
         ),
     )
 
 
 # Function to choose whether dataframe cells should have white or black text
-def selectTextColour(colour: str) -> str:
+def select_text_colour(colour: str) -> str:
     """
     Function to decide whether cells in a table have black or white text.
 
@@ -89,17 +88,17 @@ def selectTextColour(colour: str) -> str:
     luminosity = (
         0.299 * int(colour[1:3], 16)  # red
         + 0.587 * int(colour[3:5], 16)  # green
-        + 0.114 * int(colour[5:], 16)
-    )  # blue
+        + 0.114 * int(colour[5:], 16)  # blue
+    )
     return "#000000" if luminosity > 135 else "#ffffff"
 
 
-def generateTable() -> None:
+def generate_table() -> None:
     """
     Callback function used to generate and format health burden tables.
     """
     # Throw error if no data is present
-    full_data = session.get("modelDataAsirFull")
+    full_data = session.get("model_data_asir_full")
     if not USE_PRESET_DATA and full_data is None:
         raise FileNotFoundError(
             "No simulation ASIR data was available to plot; please run a"
@@ -107,7 +106,7 @@ def generateTable() -> None:
         )
     # TODO: Fix bug where latest column settings aren't stored
     # (add confirmation to generate table button?
-    # Rerun page before running generateTable somehow?)
+    # Rerun page before running generate_table somehow?)
 
     # Debug code for loading data in testing
     if USE_PRESET_DATA:
@@ -146,20 +145,20 @@ def generateTable() -> None:
             full_data = format_asir(csv.read(), scenario_names)
         if PRESET_DATA_PATHS.get("ASIR") is not None:
             with open(PRESET_DATA_PATHS["Vaccinated"], "rb") as csv:
-                vaccineData = format_asir(csv.read(), scenario_names)
+                vaccine_data = format_asir(csv.read(), scenario_names)
         else:
-            vaccineData = None
+            vaccine_data = None
 
     # Load data from session_state
     else:
         scenario_names = session.sim_params.scenario_names
-        vaccineData = session.get("modelDataAsirVaccinated")
+        vaccine_data = session.get("model_data_asir_vaccinated")
 
-    age_separation = session.get("healthOutcomeAgeSeparation", "Combined")
+    age_separation = session.get("health_outcome_age_separation", "Combined")
 
-    healthColumnForm = replace_table_na(
+    health_column_form = replace_table_na(
         session.get(
-            "healthColumnForm",
+            "health_column_form",
             pd.DataFrame(
                 {
                     "Health Burden Outcome": [
@@ -184,168 +183,174 @@ def generateTable() -> None:
             "Vaccination Status": "All",
         },
     )
-    columnDetails = cast(
+    column_details = cast(
         list[ColumnDetails],
         [
             (
                 outcome,
                 ages if ages else AGE_WITH_TOTAL,
-                vaccine_status if vaccineData is not None else "All",
+                vaccine_status if vaccine_data is not None else "All",
                 "Percentage" in options,
                 "Difference from Baseline" in options,
             )
             for outcome, ages, vaccine_status, options in zip(
-                healthColumnForm["Health Burden Outcome"],
-                healthColumnForm["Age Groups"],
-                healthColumnForm["Vaccination Status"],
-                healthColumnForm["Options"],
+                health_column_form["Health Burden Outcome"],
+                health_column_form["Age Groups"],
+                health_column_form["Vaccination Status"],
+                health_column_form["Options"],
             )
             if outcome
         ],
     )
-    scenariosUsed = session.get("healthOutcomeScenariosToUse", scenario_names)
-    agesUsed = (
-        session.get("healthOutcomeAgesToUse", AGE_WITH_TOTAL)
+    scenarios_used = session.get("health_outcome_scenarios_to_use", scenario_names)
+    ages_used = (
+        session.get("health_outcome_ages_to_use", AGE_WITH_TOTAL)
         if age_separation == "By Row"
         else []
     )
-    useColour = session.get("colourToggle", True)
-    tableLog.info(f"""
-        [generateTable] Formatting Asir data using the scenarios
-        {scenariosUsed} (of {scenario_names}), the age groups {agesUsed}
-        and the following columns: {columnDetails}'
+    use_colour = session.get("colour_health_burden_tables", True)
+    table_log.info(f"""
+[generate_table] Formatting Asir data using the scenarios {scenarios_used} (of
+{scenario_names}), the age groups {ages_used} and the following columns:
+{column_details}
     """)
 
     assert full_data is not None, "ASIR data was not defined"
-    ageData, column_config, percSet, diffSet = generate_asir(
+    age_data, column_config, percentage_columns, difference_columns = generate_asir(
         full_data,
         scenario_names,
         age_separation,
-        columnDetails,
-        included_scenarios=scenariosUsed,
-        included_ages=agesUsed,
-        vaccinated_data=vaccineData,
+        column_details,
+        included_scenarios=scenarios_used,
+        included_ages=ages_used,
+        vaccinated_data=vaccine_data,
     )
 
     # Format data according to column type
     # TODO: Is + with baseline difference necessary enough to revive this?
-    """formatValues: dict[str, Any] = (
-        {column: "{:+.5n}" for column in diffSet - percSet}
-        | {column: "{:+.3%}" for column in diffSet & percSet}
-        | {column: "{:.3%}" for column in percSet - diffSet}
-        | {column: "{:.5n}" for column in set(ageData.columns) - (diffSet | percSet)}
+    """format_values: dict[str, Any] = (
+        {column: "{:+.5n}" for column in difference_columns - percentage_columns}
+        | {column: "{:+.3%}" for column in difference_columns & percentage_columns}
+        | {column: "{:.3%}" for column in percentage_columns - difference_columns}
+        | {column: "{:.5n}" for column in set(age_data.columns) - (difference_columns | percentage_columns)}
     )"""
 
     # Create fake index columns
-    if agesUsed:
-        ageData.rename_axis(index=["Scenario Index", "Age Group Index"], inplace=True)
-        ageData.insert(
+    if ages_used:
+        age_data.rename_axis(index=["Scenario Index", "Age Group Index"], inplace=True)
+        age_data.insert(
             0,
             ("", "Scenario Name"),
-            ageData.index.get_level_values("Scenario Index").values,
+            age_data.index.get_level_values("Scenario Index").values,
         )
-        ageData.insert(
+        age_data.insert(
             1,
             ("", "Age Group"),
-            ageData.index.get_level_values("Age Group Index").values,
+            age_data.index.get_level_values("Age Group Index").values,
         )
 
     else:
-        ageData.rename_axis("Scenario Index", inplace=True)
-        ageData.insert(0, ("", "Scenario Name"), ageData.index.to_series())
+        age_data.rename_axis("Scenario Index", inplace=True)
+        age_data.insert(0, ("", "Scenario Name"), age_data.index.to_series())
 
     # Initialise styler
-    ageStyle = ageData.style
+    age_style = age_data.style
 
     # Colour the index cells
-    if useColour:
+    if use_colour:
         # Set default cell colours
-        ageStyle.set_properties(
+        age_style.set_properties(
             **{"background-color": "#F7F7F7", "color": "black"}, subset=None
         )
         # Generate and map scenario colour palette
-        scenarioColourMap = MUTED_CODES[: len(scenario_names)]
-        scenarioColourDictionary = {
-            scenario: to_hex(scenarioColourMap[index])
+        scenario_colour_map = MUTED_CODES[: len(scenario_names)]
+        scenario_colour_dictionary = {
+            scenario: to_hex(scenario_colour_map[index])
             for index, scenario in enumerate(scenario_names)
         }
 
         # Apply the colours to the scenario column
-        def scenarioColourString(name) -> str:
+        def scenario_colour_string(name) -> str:
             """
-            Simple function to get colours for scenarios in pandas styling format.
+            Simple function to get colours for scenarios in pandas styling
+            format.
 
             Parameters:
                 name (str): The name of the scenario.
 
             Returns:
                 str: A string that can be used in a pandas `Styler` config to
-                    colour table cells according to the colour associated
-                    with the scenario.
+                    colour table cells according to the colour associated with
+                    the scenario.
             """
-            colour = scenarioColourDictionary[name]
-            return f"background-color: {colour}; color: {selectTextColour(colour)}"
+            colour = scenario_colour_dictionary[name]
+            return f"background-color: {colour}; color: {select_text_colour(colour)}"
 
-        ageStyle = ageStyle.map(scenarioColourString, subset=[("", "Scenario Name")])
+        age_style = age_style.map(
+            scenario_colour_string, subset=[("", "Scenario Name")]
+        )
 
         # Colour ages if present
-        if agesUsed:
-            ageColourMap = plt.get_cmap("viridis_r", 10)
-            ageColourList = [ageColourMap(value) for value in np.linspace(0, 1, 10)]
-            ageColourDictionary = {
-                age: to_hex(ageColourList[index])
+        if ages_used:
+            age_colour_map = plt.get_cmap("viridis_r", 10)
+            age_colour_list = [age_colour_map(value) for value in np.linspace(0, 1, 10)]
+            age_colour_dictionary = {
+                age: to_hex(age_colour_list[index])
                 for index, age in enumerate(AGE_GROUPS)
             }
-            ageColourDictionary["Total"] = "#000000"
+            age_colour_dictionary["Total"] = "#000000"
 
-            def ageColourString(value):
+            def age_colour_string(value):
                 """
-                Simple function to get colours for age groups in pandas styling format.
+                Simple function to get colours for age groups in pandas styling
+                format.
 
                 Parameters:
                     name (str): The name of the age group.
 
                 Returns:
-                    str: A string that can be used in a pandas `Styler` config to
-                        colour table cells according to the colour associated
-                        with the age group.
+                    str: A string that can be used in a pandas `Styler` config
+                        to colour table cells according to the colour
+                        associated with the age group.
                 """
-                colour = ageColourDictionary[value]
-                return f"background-color: {colour}; color: {selectTextColour(colour)}"
+                colour = age_colour_dictionary[value]
+                return (
+                    f"background-color: {colour}; color: {select_text_colour(colour)}"
+                )
 
-            ageStyle = ageStyle.map(ageColourString, subset=[("", "Age Group")])
+            age_style = age_style.map(age_colour_string, subset=[("", "Age Group")])
 
         # Use background gradients on difference from baseline columns
-        for column in diffSet:
-            colVals = ageData[column]
-            gradientMap = np.array(getSlopeNorm(colVals)(colVals))
-            ageStyle = ageStyle.background_gradient(
+        for column in difference_columns:
+            column_values = age_data[column]
+            gradient_map = np.array(get_slope_norm(column_values)(column_values))
+            age_style = age_style.background_gradient(
                 "RdBu",
                 vmin=0,
                 vmax=1,
                 subset=[column],
-                gmap=gradientMap,
+                gmap=gradient_map,
             )
             # Set white background for NA values to make them readable
-            ageStyle = ageStyle.map(
+            age_style = age_style.map(
                 lambda val: "background-color: #F7F7F7" if pd.isna(val) else "",
                 subset=[column],
             )
 
     # Format column config to match Streamlit requirements with MultiIndex
-    formattedConfig = {
-        cast(int, ageData.columns.get_loc(column)) + ageData.index.nlevels: value
+    formatted_config = {
+        cast(int, age_data.columns.get_loc(column)) + age_data.index.nlevels: value
         for column, value in column_config.items()
-        if column in ageData.columns
+        if column in age_data.columns
     }
 
     # Save the generated table
-    session.HealthOutcomeTableData = ageStyle  # .format(formatValues)
-    session.HealthOutcomeTableConfig = formattedConfig
+    session.health_outcome_table_data = age_style  # .format(format_values)
+    session.health_outcome_table_config = formatted_config
     session.chart_generated = True
 
 
-def downloadPresetTable(
+def download_preset_table(
     name: str,
     columns: Sequence[ColumnDetails] = [
         ("Symptomatic Infections", [], "All", False, False)
@@ -360,9 +365,9 @@ def downloadPresetTable(
     Parameters:
         name (str): The name of the file to download.
 
-        columns (sequence of tuples (str, list of str, str, bool, bool)): A list
-            of tuples representing the settings each column should have. The
-            values in each tuple are as follows:
+        columns (sequence of tuples (str, list of str, str, bool, bool)): A
+            list of tuples representing the settings each column should have.
+            The values in each tuple are as follows:
              - the health burden outcome to display
              - which age groups the column should represent (ignored if
             `age_separation` is `Combined` or `By Row`)
@@ -372,10 +377,10 @@ def downloadPresetTable(
             the baseline scenario's values
 
         age_separation (str): A string indicating whether different age groups
-            should be represented with additional rows or columns. Can be either
-            `Combined` (do not separate values by age group at all), `By Row`
-            (include extra rows for each age group), or `By Column` (use different
-            age groups for each column).
+            should be represented with additional rows or columns. Can be
+            either `Combined` (do not separate values by age group at all), `By
+            Row` (include extra rows for each age group), or `By Column` (use
+            different age groups for each column).
 
         included_scenarios (list of str, optional): A list of strings
             containing the names of scenarios that will be included in
@@ -384,13 +389,13 @@ def downloadPresetTable(
         included_ages (list of str, optional): A list of strings
             containing the names of age groups that will be included in the
             table. If this is `None`, all age groups will be included. However,
-            if this is an empty list, the age group column will be omitted entirely.
-            Ignored if `age_separation` is `Combined` or `By Column`.
+            if this is an empty list, the age group column will be omitted
+            entirely. Ignored if `age_separation` is `Combined` or `By Column`.
     """
-    # TODO: Reduce redundancy with generateTable
+    # TODO: Reduce redundancy with generate_table
 
     # Throw error if no data is present
-    full_data = session.get("modelDataAsirFull")
+    full_data = session.get("model_data_asir_full")
     if not USE_PRESET_DATA and full_data is None:
         raise FileNotFoundError(
             "No simulation ASIR data was available to plot; please run a"
@@ -434,53 +439,53 @@ def downloadPresetTable(
             full_data = format_asir(csv.read(), scenario_names)
         if PRESET_DATA_PATHS.get("ASIR") is not None:
             with open(PRESET_DATA_PATHS["Vaccinated"], "rb") as csv:
-                vaccineData = format_asir(csv.read(), scenario_names)
+                vaccine_data = format_asir(csv.read(), scenario_names)
         else:
-            vaccineData = None
+            vaccine_data = None
 
     # Load data from session_state
     else:
         scenario_names = session.sim_params.scenario_names
-        vaccineData = session.get("modelDataAsirVaccinated")
+        vaccine_data = session.get("model_data_asir_vaccinated")
 
-    tableLog.info(f"""
-        [downloadPresetTable] Formatting Asir data for the preset {name},
-        using the scenarios {included_scenarios} (of {scenario_names}),
-        the age groups {included_ages} and the following columns: {columns}'
+    table_log.info(f"""
+[download_preset_table] Formatting Asir data for the preset {name}, using the
+scenarios {included_scenarios} (of {scenario_names}), the age groups
+{included_ages} and the following columns: {columns}
     """)
 
     assert full_data is not None, "ASIR data was not defined"
-    ageData, _, _, _ = generate_asir(
+    age_data, _, _, _ = generate_asir(
         full_data,
         scenario_names,
         age_separation,
         columns,
         included_scenarios=included_scenarios,
         included_ages=included_ages,
-        vaccinated_data=vaccineData,
+        vaccinated_data=vaccine_data,
     )
 
     # Create fake index columns
     if age_separation == "By Row":
-        ageData.rename_axis(index=["Scenario Index", "Age Group Index"], inplace=True)
-        ageData.insert(
+        age_data.rename_axis(index=["Scenario Index", "Age Group Index"], inplace=True)
+        age_data.insert(
             0,
             ("", "Scenario Name"),
-            ageData.index.get_level_values("Scenario Index").values,
+            age_data.index.get_level_values("Scenario Index").values,
         )
-        ageData.insert(
+        age_data.insert(
             1,
             ("", "Age Group"),
-            ageData.index.get_level_values("Age Group Index").values,
+            age_data.index.get_level_values("Age Group Index").values,
         )
 
     else:
-        ageData.rename_axis("Scenario Index", inplace=True)
-        ageData.insert(0, ("", "Scenario Name"), ageData.index.to_series())
+        age_data.rename_axis("Scenario Index", inplace=True)
+        age_data.insert(0, ("", "Scenario Name"), age_data.index.to_series())
 
     st.download_button(
         f"Download {name}",
-        ageData.to_csv(index=False),
+        age_data.to_csv(index=False),
         f"{name}.csv",
         mime="text/csv",
         icon=":material/download:",
@@ -491,9 +496,9 @@ def downloadPresetTable(
 st.title("Health Burden Tables")
 
 st.markdown("""
-    Here you can generate and save tables comparing various health
-    burden outcomes (e.g. infections, diagnosed cases, deaths) between
-    the different scenarios from the most recently ran simulation.
+Here you can generate and save tables comparing various health burden outcomes
+(e.g. infections, diagnosed cases, deaths) between the different scenarios from
+the most recently ran simulation.
 """)
 
 # Modify CSS to avoid age group names being cut off
@@ -504,51 +509,48 @@ st.html("""
 """)
 
 # Save relevant params as variables to avoid lookups
-disableTable = False
-tableButtonTooltip = """
-Use the data from the most recent simulation to generate a table displaying different
-health outcomes on the scenarios in the simulation, with the specific columns
-displayed depending on the parameters selected above.
+disable_table = False
+table_button_tooltip = """
+Use the data from the most recent simulation to generate a table displaying
+different health outcomes on the scenarios in the simulation, with the specific
+columns displayed depending on the parameters selected above.
 """
-# healthOutcomeRowCount = session["healthOutcomeRowCount"]
-healthOutcomeErrorContainer = st.container()
+health_outcome_error_container = st.container()
 
 # Check if there is data to tabulate
-current_dataExists = USE_PRESET_DATA or session.get("modelDataAsirFull") is not None
-current_dataUsesVaccines = (
+current_data_exists = USE_PRESET_DATA or session.get("model_data_asir_full") is not None
+current_data_uses_vaccines = (
     USE_PRESET_DATA and PRESET_DATA_PATHS["Vaccinated"] is not None
-) or session.get("modelDataAsirVaccinated") is not None
-if not current_dataExists:
-    healthOutcomeErrorContainer.warning(
+) or session.get("model_data_asir_vaccinated") is not None
+if not current_data_exists:
+    health_outcome_error_container.warning(
         """
-        No simulation data has been generated. Click
-        :primary-badge[:material/motion_play: Run Simulation] in the
-        sidebar to run a simulation and obtain the data necessary to
-        generate a table.
-    """,
+No simulation data has been generated. Click
+:primary-badge[:material/motion_play: Run Simulation] in the sidebar to run a
+simulation and obtain the data necessary to generate a table.
+        """,
         icon=":material/science_off:",
     )
-    disableTable = True
-    tableButtonTooltip = """
+    disable_table = True
+    table_button_tooltip = """
 No simulation experiments have been completed yet, so there is no data to tabulate.
     """
-if current_dataExists and session.simulation_in_progress:
-    healthOutcomeErrorContainer.warning(
+if current_data_exists and session.simulation_in_progress:
+    health_outcome_error_container.warning(
         """
-        Warning: A new simulation is currently in progress. Since the
-        data is not yet ready to process, attempting to create a table
-        now will use the data from the previous simulation. Once the
-        in-progress simulation is complete, it will not be possible to
-        generate tables with the previous simulation's data, though the
-        current table will still be available to view and download
-        until you generate a new table.
+Warning: A new simulation is currently in progress. Since the data is not yet
+ready to process, attempting to create a table now will use the data from the
+previous simulation. Once the in-progress simulation is complete, it will not
+be possible to generate tables with the previous simulation's data, though the
+current table will still be available to view and download until you generate a
+new table.
     """,
         icon=":material/av_timer:",
     )
 
 # Form (container) for selecting table settings
-tableSettings = st.expander("Table Settings")
-with tableSettings:
+table_settings = st.expander("Table Settings")
+with table_settings:
     sim_params: SimParams = session.get(
         "sim_params",
         SimParams(
@@ -558,47 +560,44 @@ with tableSettings:
         ),
     )
     st.markdown("""
-        Use these parameters to configure how the table will be generated.
-        Hover your mouse over the :material/help: help icon next to a
-        setting's input field to show an explanation of what that setting
-        does. Hover your mouse over any buttons to show an explanation of
-        what that button does.
+Use these parameters to configure how the table will be generated. Hover your
+mouse over the :material/help: help icon next to a setting's input field to
+show an explanation of what that setting does. Hover your mouse over any
+buttons to show an explanation of what that button does.
     """)
 
     # Scenario and age group selection
     st.subheader("Scenario and Age Group Selection")
     scenario_names = sim_params.scenario_names
-    if current_dataExists:
-        load_key("healthOutcomeScenariosToUse", default=scenario_names)
-        scenariosToUse: Optional[list[str]] = st.multiselect(
+    if current_data_exists:
+        load_key("health_outcome_scenarios_to_use", default=scenario_names)
+        scenarios_to_use: Optional[list[str]] = st.multiselect(
             "Scenarios to Include in Table",
             scenario_names,
             default=scenario_names,
-            key="_healthOutcomeScenariosToUse",
+            key="_health_outcome_scenarios_to_use",
             on_change=save_key,
-            args=["healthOutcomeScenariosToUse"],
+            args=["health_outcome_scenarios_to_use"],
             placeholder="Please select at least 1 scenario",
             kwargs={"not_scenario": True},
             help="""
-Select which scenarios should be included in the table.
-You may select as many scenarios as you wish, but you
-must select at least one. Each scenario will have its
-own row in the table, displaying the values of the
-specified health burden outcomes in that scenario.
+Select which scenarios should be included in the table. You may select as many
+scenarios as you wish, but you must select at least one. Each scenario will
+have its own row in the table, displaying the values of the specified health
+burden outcomes in that scenario.
             """,
         )
-        if not scenariosToUse:
+        if not scenarios_to_use:
             st.error(
                 """
-            Error: No scenarios have been included in the table. If you
-            attempt to generate the table now, it will be empty. Please
-            select at least one scenario to include with the 'Scenarios
-            to Use' setting.
-        """,
+Error: No scenarios have been included in the table. If you attempt to generate
+the table now, it will be empty. Please select at least one scenario to include
+with the 'Scenarios to Use' setting.
+                """,
                 icon=":material/tab_unselected:",
             )
-            disableTable = True
-            tableButtonTooltip = """
+            disable_table = True
+            table_button_tooltip = """
 No scenarios have been selected in the Table Settings menu. Please select at
 least one scenario with the Scenarios to Include in Table setting before
 attempting to generate a table.
@@ -606,17 +605,15 @@ attempting to generate a table.
     else:
         st.info(
             """
-            No simulation data has been generated, so there are
-            currently no scenarios to select. Click
-            :primary-badge[:material/motion_play: Run Simulation] in
-            the sidebar to run a simulation and obtain the data
-            necessary to generate a table.
-        """,
+No simulation data has been generated, so there are currently no scenarios to
+select. Click :primary-badge[:material/motion_play: Run Simulation] in the
+sidebar to run a simulation and obtain the data necessary to generate a table.
+            """,
             icon=":material/tab_unselected:",
         )
-        scenariosToUse = None
+        scenarios_to_use = None
 
-    load_key("healthOutcomeAgeSeparation", default="Combined")
+    load_key("health_outcome_age_separation", default="Combined")
     age_separation = st.radio(
         "Age Group Separation",
         options=["Combined", "By Row", "By Column"],
@@ -627,78 +624,75 @@ attempting to generate a table.
         ],
         index=0,
         on_change=save_key,
-        args=["healthOutcomeAgeSeparation"],
+        args=["health_outcome_age_separation"],
         kwargs={"not_scenario": True},
-        key="_healthOutcomeAgeSeparation",
+        key="_health_outcome_age_separation",
         help="""
 Select how the health burdens in different age groups should be displayed
 within the table.
 ### Options:
 - Combined: Do not separate health burden data by age groups. The table will
 only display the combined health burden data for each scenario.
-- By Row: Separate different age groups in the simulation by rows. Each row
-of the table will display the health burden data for a specific age group in
-a specific simulation.
-- By Column: Separate different age groups in the simulation by columns.
-When editing the columns that will be generated in the table, you will be
-able to select which age groups the health burden data in that column will
-be derived from.
+- By Row: Separate different age groups in the simulation by rows. Each row of
+the table will display the health burden data for a specific age group in a
+specific simulation.
+- By Column: Separate different age groups in the simulation by columns. When
+editing the columns that will be generated in the table, you will be able to
+select which age groups the health burden data in that column will be derived
+from.
         """,
     )
 
     if age_separation == "By Row":
-        load_key("healthOutcomeAgesToUse", default=AGE_WITH_TOTAL)
-        agesToUse = st.multiselect(
+        load_key("health_outcome_ages_to_use", default=AGE_WITH_TOTAL)
+        ages_to_use = st.multiselect(
             "Age Groups to Include in Table",
             options=AGE_WITH_TOTAL,
             default=AGE_WITH_TOTAL,
-            key="_healthOutcomeAgesToUse",
+            key="_health_outcome_ages_to_use",
             on_change=save_key,
-            args=["healthOutcomeAgesToUse"],
+            args=["health_outcome_ages_to_use"],
             placeholder="Please select at least 1 age group",
             kwargs={"not_scenario": True},
             help="""
-    Select which age groups should be included in the table.
-    You may select as many groups as you wish. Each age group
-    will have its own row in the table, displaying the values
-    of the specified health burden outcomes for members of the
-    population in that age group (or for the entire population
-    in the case of the 'Total' group).
+Select which age groups should be included in the table. You may select as many
+groups as you wish. Each age group will have its own row in the table,
+displaying the values of the specified health burden outcomes for members of
+the population in that age group (or for the entire population in the case of
+the 'Total' group).
             """,
         )
-        if not agesToUse:
+        if not ages_to_use:
             st.error(
                 """
-            Error: No age groups have been included in the table. If you
-            attempt to generate the table now, it will be empty. Please
-            select at least one age group to include with the 'Age Groups
-            to Use' setting.
-        """,
+Error: No age groups have been included in the table. If you attempt to
+generate the table now, it will be empty. Please select at least one age group
+to include with the 'Age Groups to Use' setting.
+                """,
                 icon=":material/tab_unselected:",
             )
-            disableTable = True
-            tableButtonTooltip = """
+            disable_table = True
+            table_button_tooltip = """
 No age groups have been selected in the Table Settings menu. Please select at
 least one age group with the Age Groups to Include in Table setting or switch
 to a different Age Group Separation mode before attempting to generate a table.
             """
     else:
-        agesToUse = []
+        ages_to_use = []
 
     # Toggle coloured table cells
-    colourToggle = st.toggle(
+    colour_health_burden_tables = st.toggle(
         "Use Colour in Table",
         value=True,
         on_change=save_key,
-        args=["colourToggle"],
+        args=["colour_health_burden_tables"],
         kwargs={"not_scenario": True},
-        key="_colourToggle",
+        key="_colour_health_burden_tables",
         help="""
-Toggle whether cells in the table should be coloured based on their value.
-When enabled, scenario names (and age group names if Age Group Separation
-is set to "By Row") will each have a unique colour, and difference from
-baseline columns will use different shades of blue/red to indicate the
-magnitude of the difference.
+Toggle whether cells in the table should be coloured based on their value. When
+enabled, scenario names (and age group names if Age Group Separation is set to
+"By Row") will each have a unique colour, and difference from baseline columns
+will use different shades of blue/red to indicate the magnitude of the difference.
         """,
     )
 
@@ -707,10 +701,10 @@ magnitude of the difference.
     st.subheader(
         "Select Health Burden Columns",
         help="""
-This table specifies health burden outcomes to include as columns in the outcome
-table and their format. Each selected outcome will be listed for each age
-group in each scenario from the simulation. Note that if multiple columns are
-defined with identical parameters, only the first instance of them will be
+This table specifies health burden outcomes to include as columns in the
+outcome table and their format. Each selected outcome will be listed for each
+age group in each scenario from the simulation. Note that if multiple columns
+are defined with identical parameters, only the first instance of them will be
 included in the table.
         """,
     )
@@ -728,7 +722,7 @@ included in the table.
     """
 
     load_key(
-        "healthColumnForm",
+        "health_column_form",
         default=pd.DataFrame(
             {
                 "Health Burden Outcome": [
@@ -749,21 +743,21 @@ included in the table.
         ),
         dataframe=True,
     )
-    baseColumnData = replace_table_na(
-        session["healthColumnForm"],
+    base_column_data = replace_table_na(
+        session["health_column_form"],
         {
             "Age Groups": [],
             "Vaccination Status": "All",
         },
     )
     # TODO: Allow manually setting column names
-    healthColumnForm = st.data_editor(
-        baseColumnData,
+    health_column_form = st.data_editor(
+        base_column_data,
         height="content",
         num_rows="dynamic",
-        key="_healthColumnForm",
+        key="_health_column_form",
         on_change=save_key,
-        args=["healthColumnForm"],
+        args=["health_column_form"],
         kwargs={"dataframe": True},
         placeholder="Select a health burden outcome",
         column_config={
@@ -772,14 +766,17 @@ included in the table.
                 required=True,
                 options=HEALTH_OUTCOMES,
                 help="""
-Select the health burden outcome you would like to be included as a column on the table.
+Select the health burden outcome you would like to be included as a column on
+the table.
 ### Options:
-- Symptomatic Infections: the number of individuals showing symptoms of the pathogen.
-- Diagnosed Cases: the number of individuals formally diagnosed with the pathogen.
-- GP Visits: the number of individuals who visit their general practitioner
-due to symptoms of the pathogen.
-- ICU Visits: the number of individuals who are admitted to an Intensive
-Care Unit (ICU) due to the pathogen.
+- Symptomatic Infections: the number of individuals showing symptoms of the
+pathogen.
+- Diagnosed Cases: the number of individuals formally diagnosed with the
+pathogen.
+- GP Visits: the number of individuals who visit their general practitioner due
+to symptoms of the pathogen.
+- ICU Visits: the number of individuals who are admitted to an Intensive Care
+Unit (ICU) due to the pathogen.
 - Hospitalisations: the number of individuals who go to the hospital for
 treatment as a result of the pathogen.
 - Deaths: the number of individuals killed by the pathogen.
@@ -797,22 +794,23 @@ treatment as a result of the pathogen.
                     help="""
 Select which age groups should be considered for health burdens in this column.
 Multiple age groups can be selected; the column will sum the health burden
-outcomes from all selected age groups. If no age groups are selected for a column,
-all age groups will be considered.
+outcomes from all selected age groups. If no age groups are selected for a
+column, all age groups will be considered.
                 """,
                 )
             ),
             # TODO: Make advanced settings hide this when disabled
             "Vaccination Status": (
                 None
-                if not current_dataUsesVaccines
+                if not current_data_uses_vaccines
                 else st.column_config.SelectboxColumn(
                     "Vaccination Status",
                     required=True,
                     default="All",
                     options=["All", "Vaccinated", "Unvaccinated"],
                     help="""
-Select what vaccination status should be considered for health burdens in this column.
+Select what vaccination status should be considered for health burdens in this
+column.
 ### Options:
 - All: The column will include all health burden outcomes recorded in the
 simulation, regardless of vaccination status.
@@ -845,64 +843,62 @@ as the percentage increase/decrease from the baseline value.
         },
     )
     # Display any issues with the current columns
-    if healthColumnForm["Health Burden Outcome"].count() < 1:
+    if health_column_form["Health Burden Outcome"].count() < 1:
         # TODO: Specify the columns in question
         st.info(
             """
-            At least one column must be configured using this form before a
-            table can be generated. Make sure to specify which health burden
-            outcome the column will use, as this setting is required for all
-            columns.
-        """,
+At least one column must be configured using this form before a table can be
+generated. Make sure to specify which health burden outcome the column will
+use, as this setting is required for all columns.
+            """,
             icon=":material/tab_unselected:",
         )
-        disableTable = True
-        tableButtonTooltip = """
-No columns have been configured in the Table Settings menu. Please
-add at least one column before attempting to generate a table.
-"""
+        disable_table = True
+        table_button_tooltip = """
+No columns have been configured in the Table Settings menu. Please add at least
+one column before attempting to generate a table.
+        """
     else:
         if sim_params.waning:
             # TODO: Also check for percentage without baseline diff
             # TODO: Account for baseline diff change to averted burdens
             st.warning(
                 """
-                    Warning: Columns that display values as percentages without also
-                    displaying differences from baselines may be inaccurate if
-                    reinfection is possible within the simulation. Avoid using columns
-                    with percentage in tables when the simulation enables immunity waning.
+Warning: Columns that display values as percentages without also displaying
+differences from baselines may be inaccurate if reinfection is possible within
+the simulation. Avoid using columns with percentage in tables when the
+simulation enables immunity waning.
                 """,
                 icon=":material/heap_snapshot_multiple:",
             )
         # Check for duplicates (lists must be sorted and converted to str)
-        dupeColumnForm = healthColumnForm.copy()
-        dupeColumnForm["Options"] = dupeColumnForm["Options"].apply(lambda x: sorted(x))
+        duplicate_form = health_column_form.copy()
+        duplicate_form["Options"] = duplicate_form["Options"].apply(lambda x: sorted(x))
         if age_separation == "By Column":
-            dupeColumnForm["Age Groups"] = dupeColumnForm["Age Groups"].apply(
+            duplicate_form["Age Groups"] = duplicate_form["Age Groups"].apply(
                 lambda x: sorted(x)
             )
         else:
-            dupeColumnForm = dupeColumnForm.drop("Age Groups", errors="ignore")
-        if not current_dataUsesVaccines:
-            dupeColumnForm = dupeColumnForm.drop("Vaccination Status", errors="ignore")
-        if dupeColumnForm.astype(str).duplicated().any():
+            duplicate_form = duplicate_form.drop("Age Groups", errors="ignore")
+        if not current_data_uses_vaccines:
+            duplicate_form = duplicate_form.drop("Vaccination Status", errors="ignore")
+        if duplicate_form.astype(str).duplicated().any():
             st.warning(
                 """
-                    Warning: Some columns have been given the exact same settings.
-                    Since these columns will have the same name, only one column
-                    will be included in the final table unless you modify the
-                    settings such that they are no longer identical.
+Warning: Some columns have been given the exact same settings. Since these
+columns will have the same name, only one column will be included in the final
+table unless you modify the settings such that they are no longer identical.
                 """,
                 icon=":material/content_copy:",
             )
         if (
             age_separation == "By Column"
-            and not healthColumnForm["Age Groups"].fillna(False).all()
+            and not health_column_form["Age Groups"].fillna(False).all()
         ):
             st.info(
                 """
-                    Note: Any columns that do not have any age groups selected
-                    for them will default to displaying all age groups.
+Note: Any columns that do not have any age groups selected for them will
+default to displaying all age groups.
                 """,
                 icon=":material/tab_unselected:",
             )
@@ -911,54 +907,52 @@ add at least one column before attempting to generate a table.
 st.button(
     label="Create Table",
     icon=":material/backup_table:",
-    key="generateTable",
+    key="generate_table",
     type="primary",
-    on_click=generateTable,
-    disabled=disableTable,
-    help=tableButtonTooltip,
+    on_click=generate_table,
+    disabled=disable_table,
+    help=table_button_tooltip,
 )
 # Display the table itself
-tableData = session.get("HealthOutcomeTableData")
-tableConfig = session.get("HealthOutcomeTableConfig")
-if tableData is not None:
+table_data = session.get("health_outcome_table_data")
+table_config = session.get("health_outcome_table_config")
+if table_data is not None:
     st.header("Health Burden Outcome Table")
     # TODO: Fix columns being deselected when changing column settings
     # TODO: Consider increasing the default height (you'll need to measure in pixels)
     st.dataframe(
-        tableData,
+        table_data,
         height="auto",
         width="stretch",
-        column_config=tableConfig,
+        column_config=table_config,
         hide_index=True,
         placeholder="N/A",
     )
 
     @st.fragment()
-    def burdenDataDownload():
+    def burden_data_download():
         """
         Fragment function to show a button that downloads the data in the table.
         """
         # TODO: Reflect changes made to the table by the user (reordered cols etc.)
         # Or just remove this since there's a built-in download button now
-        assert tableData is not None, "Table data was not defined"
+        assert table_data is not None, "Table data was not defined"
         st.download_button(
             "Download Table Data",
-            tableData.data.to_csv(index=False),
+            table_data.data.to_csv(index=False),
             f"FlusimHealthBurdenData_{time.strftime('%Y.%m.%d_%I.%M.%S%p')}.csv",
             mime="text/csv",
-            key="infectionDataDownload",
+            key="infection_data_download",
             icon=":material/download:",
-            help="""
-Download the above table as a CSV file.
-        """,
+            help="Download the above table as a CSV file.",
         )
 
-    burdenDataDownload()
+    burden_data_download()
 
 # Debug buttons for common table downloads
-if SHOW_DEBUG_DOWNLOADS and current_dataExists:
+if SHOW_DEBUG_DOWNLOADS and current_data_exists:
     st.divider()
-    downloadPresetTable(
+    download_preset_table(
         "AllBurdens",
         columns=[
             ("Symptomatic Infections", AGE_WITH_TOTAL, "All", False, False),
@@ -975,7 +969,7 @@ if SHOW_DEBUG_DOWNLOADS and current_dataExists:
             ("Deaths", AGE_WITH_TOTAL, "All", True, True),
         ],
     )
-    downloadPresetTable(
+    download_preset_table(
         "AgesByRow",
         columns=[
             ("Symptomatic Infections", AGE_GROUPS, "All", False, False),
@@ -993,7 +987,7 @@ if SHOW_DEBUG_DOWNLOADS and current_dataExists:
         ],
         age_separation="By Row",
     )
-    downloadPresetTable(
+    download_preset_table(
         "AgesByColumn",
         columns=[
             (
