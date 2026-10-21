@@ -7,12 +7,12 @@ import logging
 
 import streamlit as st
 
-from ClientResources.DownloadFunctions import (
+from resources.download import (
     create_template,
     load_template,
     reset_scenario,
 )
-from ClientResources.Constants import TEMPLATES
+from resources.constants import TEMPLATES
 
 # Logging
 template_log = logging.getLogger(__name__)

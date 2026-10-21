@@ -20,8 +20,8 @@ from aiohttp import (
     WSMsgType,
 )
 
-from ClientResources.Constants import SERVER_URL
-from ClientResources.Types import RequestStatus
+from resources.constants import SERVER_URL
+from resources.types import RequestStatus
 
 # Logging
 server_log = logging.getLogger(__name__)

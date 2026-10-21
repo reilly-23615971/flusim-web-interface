@@ -13,8 +13,8 @@ from typing import Optional
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import unique_name, validation_error_formatting
-from ClientResources.ModelSchema import (
+from resources.interface import unique_name, validation_error_formatting
+from resources.model_schema import (
     CommandArgument,
     CommunityOverride,
     DashboardParameters,
@@ -25,29 +25,29 @@ from ClientResources.ModelSchema import (
     Simulation,
     SimulationSet,
 )
-from ClientResources.ParameterFunctions import id_get
-from ClientResources.Types import COMMUNITY_NAMES
-from ParameterTabs.communityParams import (
+from resources.parameter import id_get
+from resources.types import COMMUNITY_NAMES
+from tabs.community import (
     build_community_tab,
     community_load_schema,
     community_save_schema,
 )
-from ParameterTabs.diseaseParams import (
+from tabs.disease import (
     build_disease_tab,
     disease_load_schema,
     disease_save_schema,
 )
-from ParameterTabs.dynamicParams import (
+from tabs.dynamic import (
     build_dynamic_tab,
     dynamic_load_schema,
     dynamic_save_schema,
 )
-from ParameterTabs.npiParams import (
+from tabs.npi import (
     build_npi_tab,
     npi_load_schema,
     npi_save_schema,
 )
-from ParameterTabs.vaccinationParams import (
+from tabs.vaccination import (
     build_vaccination_tab,
     vaccine_load_schema,
     vaccine_save_schema,

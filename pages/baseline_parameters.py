@@ -3,21 +3,20 @@
 # Page where baseline parameter values can be set
 
 # Imports
-import logging
 from typing import Optional
 
 import streamlit as st
 from streamlit.elements.lib.mutable_tab_container import TabContainer
 
-from ClientResources.DownloadFunctions import upload_download_bar
-from ClientResources.InterfaceFunctions import error_checker
-from ClientResources.ParameterFunctions import container_save, load_key
-from ParameterTabs.communityParams import build_community_tab
-from ParameterTabs.diseaseParams import build_disease_tab
-from ParameterTabs.dynamicParams import build_dynamic_tab
-from ParameterTabs.npiParams import build_npi_tab
-from ParameterTabs.templateParams import build_template_tab
-from ParameterTabs.vaccinationParams import build_vaccination_tab
+from resources.download import upload_download_bar
+from resources.interface import error_checker
+from resources.parameter import container_save, load_key
+from tabs.community import build_community_tab
+from tabs.disease import build_disease_tab
+from tabs.dynamic import build_dynamic_tab
+from tabs.npi import build_npi_tab
+from tabs.template import build_template_tab
+from tabs.vaccination import build_vaccination_tab
 
 # Store st.session_state as variable for efficiency
 session = st.session_state

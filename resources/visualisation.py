@@ -15,9 +15,9 @@ import pandas as pd
 import streamlit as st
 from streamlit.elements.lib.column_types import ColumnConfig
 
-from ClientResources.Constants import MUTED_CODES, ROUND_RESULTS
-from ClientResources.InterfaceFunctions import age_range_combiner
-from ClientResources.Types import (
+from resources.constants import MUTED_CODES, ROUND_RESULTS
+from resources.interface import age_range_combiner
+from resources.types import (
     AGE_GROUPS,
     COMMUNITIES,
     HEALTH_OUTCOMES,

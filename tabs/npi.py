@@ -10,19 +10,19 @@ import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import (
+from resources.interface import (
     age_display,
     param_error,
     schema_remove_baseline,
     schema_update,
 )
-from ClientResources.ModelSchema import (
+from resources.model_schema import (
     AllAgesParameters,
     DashboardParameters,
     GeneralParameters,
     Parameters,
 )
-from ClientResources.ParameterFunctions import (
+from resources.parameter import (
     dynamic_scale_change,
     has_duplicates,
     id_get,
@@ -31,7 +31,7 @@ from ClientResources.ParameterFunctions import (
     update_param_from_schema,
     update_table_from_schema,
 )
-from ClientResources.Types import (
+from resources.types import (
     AGE_GROUP_KEYS,
     COMMUNITIES,
     TRIGGER_KEY_CONVERTER,

@@ -3,16 +3,16 @@
 # Constants and debug settings used by the client application
 
 # Imports
-from ClientResources.Types import CommunityName
+from resources.types import CommunityName
 
 # Debug Settings
 
-# Toggle to use preset JSON config with runSimulation instead of using
+# Toggle to use preset JSON config with run_simulation instead of using
 # the parameters set by the user, for testing
 # Note that R0 calibration has its own file paths!
 USE_PRESET_PARAMS = False
-PRESET_RUN_PATH = "ClientResources/MultiStrainParams.json"
-PRESET_R0_PATH = "ClientResources/Templates/defaultNoNPI.json"
+PRESET_RUN_PATH = "resources/MultiStrainParams.json"
+PRESET_R0_PATH = "resources/templates/defaultNoNPI.json"
 
 # Toggle to use built-in data instead of model output
 USE_PRESET_DATA = False
@@ -24,10 +24,10 @@ PRESET_SCENARIO_NAMES = [
 ]
 PRESET_COMMUNITY: CommunityName = "newcastle"
 PRESET_DATA_PATHS = {
-    "Cumulative": "./TestData/epidemicMedianCumulative.csv",
-    "Daily Rate": "./TestData/epidemicMedianDaily.csv",
-    "ASIR": "./TestData/asirMedianAbsolute.csv",
-    "Vaccinated": "./TestData/asirMedianVaccinated.csv",
+    "Cumulative": "./test_data/epidemic_median_cumulative.csv",
+    "Daily Rate": "./test_data/epidemic_median_daily.csv",
+    "ASIR": "./test_data/asir_median_absolute.csv",
+    "Vaccinated": "./test_data/asir_median_vaccinated.csv",
 }
 
 # Toggle to save the JSON form of parameters as a file
@@ -55,13 +55,13 @@ SERVER_URL = "http://127.0.0.1:8000/"
 TEMPLATES = {
     "Influenza": (
         "microbiology",
-        "ClientResources/Templates/default.json",
+        "resources/templates/default.json",
         "Parameters simulating an influenza outbreak "
         "with an existing vaccinated population.",
     ),
     "COVID-19": (
         "coronavirus",
-        "ClientResources/Templates/covid.json",
+        "resources/templates/covid.json",
         "Parameters simulating a SARS-CoV-2 Delta "
         "outbreak with moderate NPIs enabled.",
         # R0 is 6; should that be mentioned?

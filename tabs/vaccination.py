@@ -11,14 +11,14 @@ import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.Constants import ORDINALS
-from ClientResources.InterfaceFunctions import (
+from resources.constants import ORDINALS
+from resources.interface import (
     age_display,
     param_error,
     schema_remove_baseline,
     schema_update,
 )
-from ClientResources.ModelSchema import (
+from resources.model_schema import (
     DashboardParameters,
     GeneralParameters,
     Parameters,
@@ -26,7 +26,7 @@ from ClientResources.ModelSchema import (
     VaccineDose,
     VaccineEfficacy,
 )
-from ClientResources.ParameterFunctions import (
+from resources.parameter import (
     has_duplicates,
     id_get,
     load_key,
@@ -35,7 +35,7 @@ from ClientResources.ParameterFunctions import (
     update_param_from_schema,
     update_table_from_schema,
 )
-from ClientResources.Types import AGE_GROUP_KEYS, TRIGGER_KEY_CONVERTER
+from resources.types import AGE_GROUP_KEYS, TRIGGER_KEY_CONVERTER
 
 # Logging
 vaccine_log = logging.getLogger(__name__)

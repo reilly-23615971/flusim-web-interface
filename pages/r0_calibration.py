@@ -3,20 +3,19 @@
 # Page where the simulation can be ran (and non-scenario parameters are changed)
 
 # Imports
-import logging
 from datetime import datetime
 from threading import Event
 
 import pandas as pd
 import streamlit as st
 
-from ClientResources.Constants import PRESET_R0_PATH, USE_PRESET_PARAMS
-from ClientResources.DownloadFunctions import create_template
-from ClientResources.InterfaceFunctions import error_checker
-from ClientResources.ModelSchema import CommunityOverride, OverrideTemplate, Parameters
-from ClientResources.ParameterFunctions import community_change, load_key, save_key
-from ClientResources.ServerFunctions import task_wrapper
-from ClientResources.Types import (
+from resources.constants import PRESET_R0_PATH, USE_PRESET_PARAMS
+from resources.download import create_template
+from resources.interface import error_checker
+from resources.model_schema import CommunityOverride, OverrideTemplate, Parameters
+from resources.parameter import community_change, load_key, save_key
+from resources.server import task_wrapper
+from resources.types import (
     COMMUNITY_NAMES,
     R0_CALCULATION_STATUS,
     R0_CALIBRATION_STATUS,
@@ -749,12 +748,14 @@ number equal to {r0}.
             calculation_contents = calculation_results_container.container()
             scenario_name = session["calculation_scenario_name"]
             r0 = session["r0_calculation"]
-            lowCI, highCI = session["r0_calculationInterval"]
+            interval_lower_bound, interval_upper_bound = session[
+                "r0_calculation_interval"
+            ]
             calculation_contents.metric(
                 f"Basic Reproduction Number ($R_0$) for {scenario_name}",
                 r0,
                 border=True,
-                delta_description=f"95% Confidence Interval: [{lowCI}, {highCI}]",
+                delta_description=f"95% Confidence Interval: [{interval_lower_bound}, {interval_upper_bound}]",
                 help=f"""
 The basic reproduction number ($R_0$) is the average number of new infections
 that will be caused by a single infected individual over the lifespan of their

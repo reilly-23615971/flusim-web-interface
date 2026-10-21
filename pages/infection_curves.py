@@ -9,15 +9,15 @@ from typing import Optional
 
 import streamlit as st
 
-from ClientResources.Constants import (
+from resources.constants import (
     PRESET_COMMUNITY,
     PRESET_DATA_PATHS,
     PRESET_SCENARIO_NAMES,
     USE_PRESET_DATA,
 )
-from ClientResources.ParameterFunctions import load_key, save_key
-from ClientResources.Types import SimParams
-from ClientResources.VisualisationFunctions import format_epidemic, plot_epidemic
+from resources.parameter import load_key, save_key
+from resources.types import SimParams
+from resources.visualisation import format_epidemic, plot_epidemic
 
 # Logging
 graph_log = logging.getLogger(__name__)

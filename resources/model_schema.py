@@ -17,7 +17,7 @@ from pydantic import (
     model_validator,
 )
 
-from ClientResources.Types import (
+from resources.types import (
     COMMUNITIES,
     AgeGroupKey,
     BoosterType,

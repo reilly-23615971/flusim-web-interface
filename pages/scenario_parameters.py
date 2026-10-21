@@ -3,26 +3,25 @@
 # Page where additional parameter sets can be added
 
 # Imports
-import logging
 from typing import Optional
 
 import streamlit as st
 from streamlit.elements.lib.mutable_tab_container import TabContainer
 
-from ClientResources.Constants import MAX_SCENARIOS
-from ClientResources.DownloadFunctions import (
+from resources.constants import MAX_SCENARIOS
+from resources.download import (
     add_scenario,
     delete_scenario,
     upload_download_bar,
 )
-from ClientResources.InterfaceFunctions import error_checker, load_name, save_name
-from ClientResources.ParameterFunctions import container_save, load_key
-from ParameterTabs.communityParams import build_community_tab
-from ParameterTabs.diseaseParams import build_disease_tab
-from ParameterTabs.dynamicParams import build_dynamic_tab
-from ParameterTabs.npiParams import build_npi_tab
-from ParameterTabs.templateParams import build_template_tab
-from ParameterTabs.vaccinationParams import build_vaccination_tab
+from resources.interface import error_checker, load_name, save_name
+from resources.parameter import container_save, load_key
+from tabs.community import build_community_tab
+from tabs.disease import build_disease_tab
+from tabs.dynamic import build_dynamic_tab
+from tabs.npi import build_npi_tab
+from tabs.template import build_template_tab
+from tabs.vaccination import build_vaccination_tab
 
 # Store st.session_state as variable for efficiency
 session = st.session_state

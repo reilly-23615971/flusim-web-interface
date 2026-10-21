@@ -10,13 +10,13 @@ import numpy as np
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import (
+from resources.interface import (
     plural,
     schema_remove_baseline,
     schema_update,
 )
-from ClientResources.ModelSchema import GeneralParameters, Parameters
-from ClientResources.ParameterFunctions import (
+from resources.model_schema import GeneralParameters, Parameters
+from resources.parameter import (
     id_get,
     load_key,
     save_key,

@@ -10,13 +10,13 @@ import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
-from ClientResources.InterfaceFunctions import param_error
-from ClientResources.ModelSchema import (
+from resources.interface import param_error
+from resources.model_schema import (
     DynamicIntervention,
     DynamicParameter,
     Parameters,
 )
-from ClientResources.ParameterFunctions import (
+from resources.parameter import (
     has_duplicates,
     id_get,
     load_key,

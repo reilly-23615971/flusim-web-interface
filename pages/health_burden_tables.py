@@ -13,7 +13,7 @@ import pandas as pd
 import streamlit as st
 from matplotlib.colors import TwoSlopeNorm, to_hex
 
-from ClientResources.Constants import (
+from resources.constants import (
     MUTED_CODES,
     PRESET_COMMUNITY,
     PRESET_DATA_PATHS,
@@ -21,14 +21,14 @@ from ClientResources.Constants import (
     SHOW_DEBUG_DOWNLOADS,
     USE_PRESET_DATA,
 )
-from ClientResources.InterfaceFunctions import health_outcome_store
-from ClientResources.ParameterFunctions import (
+from resources.interface import health_outcome_store
+from resources.parameter import (
     id_get,
     load_key,
     replace_table_na,
     save_key,
 )
-from ClientResources.Types import (
+from resources.types import (
     AGE_GROUPS,
     AGE_WITH_TOTAL,
     HEALTH_OUTCOMES,
@@ -36,7 +36,7 @@ from ClientResources.Types import (
     ColumnDetails,
     SimParams,
 )
-from ClientResources.VisualisationFunctions import format_asir, generate_asir
+from resources.visualisation import format_asir, generate_asir
 
 # Logging
 table_log = logging.getLogger(__name__)

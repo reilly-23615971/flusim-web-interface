@@ -34,12 +34,12 @@ to change the parameters used by all simulations, or visit the
 multiple parameter sets to run at the same time.
 """)
 st.page_link(
-    "DashboardPages/baselineParameters.py",
+    "pages/baseline_parameters.py",
     label="Go to Baseline Parameters",
     icon=":material/variable_insert:",
 )
 st.page_link(
-    "DashboardPages/scenarioParameters.py",
+    "pages/scenario_parameters.py",
     label="Go to Scenario Parameters",
     icon=":material/variable_add:",
 )
@@ -54,12 +54,12 @@ visualise the results of the simulation.
 """)
 
 st.page_link(
-    "DashboardPages/infectionCurves.py",
+    "pages/infection_curves.py",
     label="Go to Infection Curves",
     icon=":material/chart_data:",
 )
 st.page_link(
-    "DashboardPages/healthBurdenTables.py",
+    "pages/health_burden_tables.py",
     label="Go to Health Burden Tables",
     icon=":material/table_chart_view:",
 )

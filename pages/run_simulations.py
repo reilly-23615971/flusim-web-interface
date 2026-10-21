@@ -4,39 +4,38 @@
 
 # Imports
 import json
-import logging
 from datetime import datetime
 from threading import Event
 
 import pandas as pd
 import streamlit as st
 
-from ClientResources.Constants import (
+from resources.constants import (
     LOG_PARAM_JSON,
     PRESET_RUN_PATH,
     PROGRESS_SPLIT_POINT,
     USE_PRESET_DATA,
     USE_PRESET_PARAMS,
 )
-from ClientResources.DownloadFunctions import (
+from resources.download import (
     create_config,
     load_config,
     upload_download_bar,
 )
-from ClientResources.InterfaceFunctions import (
+from resources.interface import (
     error_checker,
     health_outcome_store,
     time_string,
 )
-from ClientResources.ParameterFunctions import (
+from resources.parameter import (
     community_change,
     id_get,
     load_key,
     save_key,
     time_scale_change,
 )
-from ClientResources.ServerFunctions import task_wrapper
-from ClientResources.Types import (
+from resources.server import task_wrapper
+from resources.types import (
     COMMUNITIES,
     COMMUNITY_NAMES,
     SIM_STATUS,
@@ -258,7 +257,7 @@ Are you sure you want to begin running simulations with the selected parameters?
         if run_pending:
             # Set params indicating model is simulating
             session.simulation_in_progress = True
-            session.simulationStartTime = datetime.now()
+            session.simulation_start_time = datetime.now()
             simulation_cancel_flag.clear()
 
             # Create the final model JSON

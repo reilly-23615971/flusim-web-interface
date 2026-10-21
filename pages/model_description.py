@@ -5,8 +5,8 @@
 # Imports
 import streamlit as st
 
-from ParameterTabs.communityParams import community_describe
-from ParameterTabs.diseaseParams import disease_describe
+from tabs.community import community_describe
+from tabs.disease import disease_describe
 
 # Store st.session_state as variable for efficiency
 session = st.session_state
@@ -73,7 +73,7 @@ health burden outcomes and visualisations of the results. The image below
 visualises this process of conducting simulation experiments.
 """)
 st.container(horizontal_alignment="center").image(
-    "/app/static/modelDiagram.png",
+    "/app/static/model_diagram.png",
     width=1000,
 )
 st.caption(
@@ -110,7 +110,7 @@ unintended or invalid behaviour. If you are familiar with the parameters on
 this dashboard, it is recommended that you resolve these errors before reading.
     """)
 st.page_link(
-    "DashboardPages/baselineParameters.py",
+    "pages/baseline_parameters.py",
     label="Go to Baseline Parameters",
     icon=":material/variable_insert:",
 )

@@ -13,8 +13,8 @@ import streamlit as st
 from pydantic import BaseModel, ValidationError
 from streamlit.delta_generator import DeltaGenerator
 
-from ClientResources.ParameterFunctions import container_save, id_get
-from ClientResources.Types import (
+from resources.parameter import container_save, id_get
+from resources.types import (
     AGE_GROUP_KEYS,
     AGE_GROUPS,
     AGE_KEY_CONVERTER,
