@@ -213,7 +213,7 @@ ensure all scenarios do not possess any errors and try again.
             else:
                 # Save the data to st.session_state
                 for data, form in zip(formatted_data, data_forms):
-                    session[f"modelData{form.data_tag}"] = data
+                    session[f"model_data_{form.data_tag}"] = data
 
                 # Tell the user what's happened
                 session.simulation_end_time = datetime.now()

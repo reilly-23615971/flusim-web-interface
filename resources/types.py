@@ -188,13 +188,13 @@ class AnalysisFile:
             self.use_cumulative = kwargs.get("use_cumulative", False)
             self.split_by_age = kwargs.get("split_by_age", False)
             self.data_tag = (
-                f"Epidemic{"Cumulative" if self.use_cumulative else "Daily"}"
+                f"epidemic_{"cumulative" if self.use_cumulative else "daily"}"
             )
         if tool == "asir":
             self.use_proportion = kwargs.get("use_proportion", False)
             self.difference_type = kwargs.get("difference_type", "")
             self.vaccinated_only = kwargs.get("vaccinated", False)
-            self.data_tag = f"Asir{"Vaccinated" if self.vaccinated_only else "Full"}"
+            self.data_tag = f"asir_{"vaccinated" if self.vaccinated_only else "full"}"
 
 
 @dataclass
