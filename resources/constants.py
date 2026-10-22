@@ -44,7 +44,7 @@ SHOW_DEBUG_DOWNLOADS = False
 # Other Constants
 
 # Paths
-PAGE_DIR = Path("pages")
+PAGE_DIR = Path("web_pages")
 TEMPLATE_DIR = Path("resources/templates")
 
 # Maximum number of additional scenarios

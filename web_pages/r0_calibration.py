@@ -501,7 +501,7 @@ center_calibration_column.selectbox(
     args=["r_calibrate_scenario"],
     help="""
 The scenario that the transmission parameters will be calculated for.
-"Baseline" uses the parameters defined at the
+"Baseline Scenario" uses the parameters defined at the
 :grey-badge[:material/variable_insert: Baseline Parameters] page. Scenarios
 defined at the :grey-badge[:material/variable_add: Scenario Parameters] page
 are listed by the names assigned to them.

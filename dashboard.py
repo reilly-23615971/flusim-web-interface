@@ -37,7 +37,7 @@ https://sronpersonalpages.nl/~pault/
 )
 
 # Logging config
-os.makedirs("Logs", exist_ok=True)
+os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
     filename=Path("logs/interface_app_logs.txt"),
     filemode="a",

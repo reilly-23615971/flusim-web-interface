@@ -259,7 +259,7 @@ def create_config(
             SimulationSet(
                 name="Dashboard Simulation Set",
                 version=session_id,
-                simulations=[Simulation(name="Baseline")]
+                simulations=[Simulation(name="Baseline Scenario")]
                 + [
                     Simulation(
                         name=session.scenario_names[i],

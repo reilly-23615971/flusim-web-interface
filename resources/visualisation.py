@@ -236,7 +236,7 @@ def plot_epidemic(
 
     # Remove any scenarios/age groups not specified in the data
     filtered_data = data[data["Scenario"].isin(included_scenarios)]
-    filtered_data["Scenario Index"] = filtered_data["Scenario"].map(
+    filtered_data.loc[:, "Scenario Index"] = filtered_data["Scenario"].map(
         included_scenarios.index
     )
 
@@ -269,7 +269,7 @@ def plot_epidemic(
     )
 
     # Plot the lines
-    chart_lines = chart_base.mark_line(interpolate="natural").encode(
+    chart_lines = chart_base.mark_line(interpolate="monotone").encode(
         y=f"{y_label}:Q",
         color=alt.Color("Scenario:N").scale(
             domain=included_scenarios, range=scenario_colours

@@ -1924,7 +1924,7 @@ def disease_load_schema(schema: Parameters, scenario_id: int = 0):
                 )
             patch_table.loc[patch_table.shape[0]] = [
                 name,
-                round(weight if weight else 1.0, 6),
+                round(weight if weight is not None else 1.0, 6),
             ]
         update_table_from_schema(
             "seeding_patch_form",
