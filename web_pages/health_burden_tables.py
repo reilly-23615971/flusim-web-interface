@@ -130,12 +130,12 @@ def generate_table() -> None:
                         1 - id_get("asymptomatic_child", scenario_id, 0.35),
                         1 - id_get("asymptomatic_adult", scenario_id, 0.35),
                     ]
-                    for scenario_id in range(4)
+                    for scenario_id in range(len(PRESET_SCENARIO_NAMES))
                 ]
                 if use_advanced
                 else [
                     [1 - id_get("asymptomatic_adult", scenario_id, 0.35)] * 2
-                    for scenario_id in range(4)
+                    for scenario_id in range(len(PRESET_SCENARIO_NAMES))
                 ]
             ),
         )
@@ -423,12 +423,12 @@ def download_preset_table(
                         1 - id_get("asymptomatic_child", scenario_id, 0.35),
                         1 - id_get("asymptomatic_adult", scenario_id, 0.35),
                     ]
-                    for scenario_id in range(4)
+                    for scenario_id in range(len(PRESET_SCENARIO_NAMES))
                 ]
                 if use_advanced
                 else [
                     [1 - id_get("asymptomatic_adult", scenario_id, 0.35)] * 2
-                    for scenario_id in range(4)
+                    for scenario_id in range(len(PRESET_SCENARIO_NAMES))
                 ]
             ),
             scaling_factor=session.get("scaling_population", 272407) / 272407,
