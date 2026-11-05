@@ -39,7 +39,7 @@ https://sronpersonalpages.nl/~pault/
 # Logging config
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
-    filename=Path("logs/interface_app_logs.txt"),
+    filename=Path("interface_app_logs.txt"),
     filemode="a",
     format="%(asctime)s,%(msecs)03d %(name)s %(levelname)s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
@@ -341,6 +341,7 @@ $R_0$ for {scenario_name} is {r0} with a 95% confidence interval of
 [{interval_lower_bound}, {interval_upper_bound}]
                     """,
                     icon=":material/calculate:",
+                    duration="infinite",
                 )
                 app_log.info("[update_data] R0 calculation is complete.")
             else:

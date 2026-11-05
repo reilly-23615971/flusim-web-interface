@@ -8,6 +8,7 @@ from pathlib import Path
 import streamlit as st
 
 from resources.constants import PAGE_DIR
+from resources.types import COMMUNITIES, COMMUNITY_NAMES
 from tabs.community import community_describe
 from tabs.disease import disease_describe
 
@@ -95,6 +96,35 @@ deaths.
     """,
     text_alignment="center",
 )
+
+st.subheader("Community Details")
+st.markdown("""
+Three different Australian communities can be simulated with this dashboard:
+
+- Newcastle: A metropolitan area in New South Wales, Australia. It has a
+population of 272,407 (as of 2011 when this data was collected) and has a
+demographic distribution that more closely matches that of Australia as a whole
+compared to the other communities.
+- Cairns: A major city in Queensland, Australia. It has a population of 140,402
+and has a higher Indigenous population compared to the other communities.
+- Albany: A major city in Western Australia. It has a population of 55,109 and
+has a higher proportion of older adults and seniors compared to the other
+communities.
+
+Each community model is divided into several smaller locations, with
+transmission between residents of each location being calibrated to match
+Australian contact mixing dynamics. Below are images of the communities in
+question, with the simulated locations highlighted.
+""")
+image_tabs = st.tabs(
+    [name.capitalize() for name in COMMUNITY_NAMES],
+    default=session.community.capitalize(),
+)
+for tab, community in zip(image_tabs, COMMUNITIES.values()):
+    tab.container(horizontal_alignment="center").image(
+        community.image,
+        width=1000,
+    )
 
 # TODO: Full parameter templates
 

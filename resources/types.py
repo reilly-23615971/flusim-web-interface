@@ -5,6 +5,7 @@
 # Imports
 from collections import deque
 from dataclasses import dataclass, field
+from pathlib import Path
 from queue import Queue
 from typing import Literal, Optional, Sequence, get_args
 
@@ -53,7 +54,7 @@ type BoosterType = Literal["primary", "booster"]
 
 # Communities that can be modelled
 type CommunityName = Literal["albany", "cairns", "newcastle"]
-COMMUNITY_NAMES = get_args(CommunityName.__value__)
+COMMUNITY_NAMES: tuple[CommunityName] = get_args(CommunityName.__value__)
 
 # Health burden outcomes that can be calculated by the dashboard
 type HealthOutcome = Literal[
@@ -207,6 +208,7 @@ class CommunityData:
     population: int
     age_pops: dict[AgeWithTotal, int]
     patches: Sequence[CommunityPatch]
+    image: str | Path
 
 
 # Data for communities that can be modelled by the simulation
@@ -227,6 +229,7 @@ ALBANY = CommunityData(
         "Total": 55109,
     },
     patches=ALBANY_PATCHES,
+    image=Path("/app/static/albany_patches.png"),
 )
 CAIRNS = CommunityData(
     name="Cairns",
@@ -245,6 +248,7 @@ CAIRNS = CommunityData(
         "Total": 140402,
     },
     patches=CAIRNS_PATCHES,
+    image=Path("/app/static/cairns_patches.png"),
 )
 NEWCASTLE = CommunityData(
     name="Newcastle",
@@ -263,6 +267,7 @@ NEWCASTLE = CommunityData(
         "Total": 272407,
     },
     patches=NEWCASTLE_PATCHES,
+    image=Path("/app/static/newcastle_patches.png"),
 )
 COMMUNITIES: dict[CommunityName, CommunityData] = {
     "albany": ALBANY,

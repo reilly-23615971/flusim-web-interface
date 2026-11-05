@@ -182,7 +182,7 @@ def plot_epidemic(
     included_scenarios: list[str],
     outcome_name: HealthOutcome = "Symptomatic Infections",
     cumulative=False,
-) -> alt.LayerChart:
+) -> alt.LayerChart | alt.FacetChart:
     """
     Function to create an Altair line graph of time-series data obtained
     from the 'epidemic' Flusim analysis tool.
@@ -210,9 +210,9 @@ def plot_epidemic(
             cumulative data instead of individual data.
 
     Returns:
-        LayerChart: An Altair plot layering a line graph of the infection
-            data with a point chart that allows tooltips to appear on the line
-            without needing to hover over the line exactly.
+        LayerChart or FacetChart: An Altair plot layering a line graph of the
+            infection data with a point chart that allows tooltips to appear on
+            the line without needing to hover over the line exactly.
 
     Raises:
         ValueError: If `data` is not a `DataFrame` or `outcome` is not one of
