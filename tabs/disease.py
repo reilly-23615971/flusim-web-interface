@@ -736,7 +736,20 @@ seeded with infections more frequently. The higher a location's seeding weight
 is, the more likely it is that seeded infections will target an individual in
 that location.
                 """)
-                st.markdown("Double-click a cell in this table to edit its value.")
+                load_key("patch_seeding_toggle", scenario_id, False)
+                use_location_seeding = st.toggle(
+                    "Enable Location-Specific Infection Seeding",
+                    value=False,
+                    on_change=save_key,
+                    args=["patch_seeding_toggle", scenario_id],
+                    key=f"_patch_seeding_toggle{scenario_id}",
+                    help="""
+Toggle whether or not different locations in the simulation can be more or less
+likely to be targeted by infection seeding.
+                """,
+                )
+                if use_location_seeding:
+                    st.markdown("Double-click a cell in this table to edit its value.")
                 load_key(
                     "seeding_patch_form",
                     scenario_id,
@@ -757,6 +770,7 @@ that location.
                     on_change=save_key,
                     args=["seeding_patch_form", scenario_id],
                     kwargs={"dataframe": True},
+                    disabled=not use_location_seeding,
                     placeholder="Enter a value",
                     column_config={
                         "Location": st.column_config.SelectboxColumn(
@@ -788,7 +802,8 @@ contract the infection via contact with individuals in other locations)
                 param_error(
                     "seeding_duplicates",
                     scenario_id,
-                    lambda: has_duplicates(seeding_patch_form, column="Location"),
+                    lambda: use_location_seeding
+                    and has_duplicates(seeding_patch_form, column="Location"),
                     f"""
 Error: The location-specific infection seeding form used by the {
     'baseline scenario' if scenario_id== 0
@@ -1688,7 +1703,8 @@ def disease_save_schema(
             ]
 
         # Patch Parameters
-        if advanced:
+        use_patch_seeding = id_get("patch_seeding_toggle", scenario_id, False)
+        if advanced and use_patch_seeding:
             seeding_patch_form: pd.DataFrame = id_get(
                 "seeding_patch_form",
                 scenario_id,
@@ -1720,6 +1736,7 @@ def disease_save_schema(
 
         # Advanced parameter differences
         if advanced:
+            scenario_params.seed_by_patch = use_patch_seeding
             scenario_params.prob_asymptomatic_young = id_get(
                 "asymptomatic_child", scenario_id, 0.35
             )
@@ -1748,6 +1765,7 @@ def disease_save_schema(
                     setattr(scenario_params, f"{age}_mort", global_death_rate)
         else:
             prob_asymptomatic = id_get("asymptomatic_adult", scenario_id, 0.35)
+            scenario_params.seed_by_patch = False
             scenario_params.prob_asymptomatic_young = prob_asymptomatic
             scenario_params.prob_asymptomatic = prob_asymptomatic
 
@@ -1960,6 +1978,7 @@ def disease_load_schema(schema: Parameters, scenario_id: int = 0):
         # Use dictionary to convert schema parameters into dashboard values
         param_converter = {
             "seed_rate": ("seeding_rate", lambda x: x),
+            "seed_by_patch": ("patch_seeding_toggle", lambda x: x),
             "beta_asymptomatic": ("beta_asymptomatic", lambda x: x),
             "beta_post_symptomatic": ("beta_post_symptomatic", lambda x: x),
             "kappa_household": ("household_kappa", lambda x: x),

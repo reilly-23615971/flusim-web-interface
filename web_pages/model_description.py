@@ -116,9 +116,10 @@ transmission between residents of each location being calibrated to match
 Australian contact mixing dynamics. Below are images of the communities in
 question, with the simulated locations highlighted.
 """)
+# TODO: Check Streamlit's map functionality to see if these can become interactive
 image_tabs = st.tabs(
     [name.capitalize() for name in COMMUNITY_NAMES],
-    default=session.community.capitalize(),
+    default=session.get("community", "newcastle").capitalize(),
 )
 for tab, community in zip(image_tabs, COMMUNITIES.values()):
     tab.container(horizontal_alignment="center").image(
