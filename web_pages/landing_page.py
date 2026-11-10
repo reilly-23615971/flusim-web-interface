@@ -23,7 +23,6 @@ results.
 
 st.header("Usage")
 # TODO: Update usage instructions (or just refer to manual)
-# TODO: Replace buttons with proper st.link_buttons
 
 st.markdown("""
 - Use the sidebar on the left of the screen to navigate between the different

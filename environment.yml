@@ -13,7 +13,7 @@ dependencies:
   - pandas-stubs>=2.3.2.250926
   - pydantic>=2.10.3
   - pydeck>=0.9.0
-  - streamlit>=1.62.0
+  - streamlit>=1.65.0
   - watchdog>=4.0.2
   - pip
 # Notifications may be integrated in the future if desired

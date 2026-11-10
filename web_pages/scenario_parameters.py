@@ -129,6 +129,7 @@ if scenario_count > 0:
                     max_chars=50,
                     key=f"_scenario_name{scenario_id}",
                     autocomplete="off",
+                    required=True,
                     on_change=save_name,
                     args=["scenario_name", scenario_id, name_error],
                     kwargs={

@@ -385,13 +385,7 @@ def save_name(
         raise ValueError("id for save_name must be greater than 0")
     new_name = session.get(f"_{key}{scenario_id}")
     current_names = session.scenario_names
-    if new_name == "":
-        # TODO: Can be replaced with required keyword in Streamlit 1.65
-        error_container.error(
-            "Please enter a name.",
-            icon=":material/remove_selection:",
-        )
-    elif new_name == current_names[0]:
+    if new_name == current_names[0]:
         error_container.error(
             f"""
 The name "{new_name}" is reserved for the scenario described at the
