@@ -5,15 +5,70 @@
 # Imports
 from pathlib import Path
 
+import geopandas as gpd
+import pydeck as pdk
 import streamlit as st
+from pydeck.data_utils import assign_random_colors, compute_view
+from pydeck.types import String
 
 from resources.constants import PAGE_DIR
-from resources.types import COMMUNITIES, COMMUNITY_NAMES
+from resources.types import COMMUNITIES, COMMUNITY_NAMES, CommunityData
 from tabs.community import community_describe
 from tabs.disease import disease_describe
 
 # Store st.session_state as variable for efficiency
 session = st.session_state
+
+
+@st.cache_data(scope="session", persist="disk", show_spinner="Generating map...")
+def generate_community_map(
+    community: CommunityData, dark_mode: bool = False
+) -> pdk.Deck:
+    """
+    Constructs a map for a given community.
+
+    Parameters:
+        community (CommunityData): The community object to map out.
+
+        dark_mode (bool): Set to True to use white borders for when the
+            website is in dark mode.
+
+    Returns:
+        community_map (Deck): A PyDeck map of the desired community.
+    """
+    # Load data
+    MAP_DATA_PATH = Path("resources/SA2.gdb.zip")
+    map_data = gpd.read_file(MAP_DATA_PATH).to_crs("EPSG:4326")
+
+    # Filter to just the desired location and add colours
+    # TODO: Use the colourblind-safe colours
+    map_data = map_data[map_data["sa2_name_2016"].isin(community.patches)]
+    map_data["colour"] = map_data["sa2_name_2016"].map(
+        assign_random_colors(map_data["sa2_name_2016"])
+    )
+    map_data = map_data.explode()
+
+    return pdk.Deck(
+        map_style=None,  # type: ignore
+        layers=[
+            pdk.Layer(
+                "GeoJsonLayer",
+                data=map_data,
+                stroked=True,
+                filled=True,
+                extruded=False,
+                get_fill_color="colour",
+                get_line_color=([127, 127, 127] if dark_mode else [68, 68, 68]),
+                get_line_width=2,
+                line_width_units=String("pixels"),
+                pickable=True,
+            )
+        ],
+        initial_view_state=compute_view(map_data.geometry.get_coordinates()),
+        tooltip={"text": "{sa2_name_2016}"},  # type: ignore
+        widgets=[pdk.Widget("LoadingWidget")],
+    )
+
 
 # Create page
 st.title("Model Description")
@@ -113,19 +168,23 @@ communities.
 
 Each community model is divided into several smaller locations, with
 transmission between residents of each location being calibrated to match
-Australian contact mixing dynamics. Below are images of the communities in
+Australian contact mixing dynamics. Below are maps of the communities in
 question, with the simulated locations highlighted.
 """)
-# TODO: Check Streamlit's map functionality to see if these can become interactive
 image_tabs = st.tabs(
     [name.capitalize() for name in COMMUNITY_NAMES],
     default=session.get("community", "newcastle").capitalize(),
+    key="community_map_tabs",
+    on_change="rerun",
 )
 for tab, community in zip(image_tabs, COMMUNITIES.values()):
-    tab.container(horizontal_alignment="center").image(
-        community.image,
-        width=1000,
-    )
+    if tab.open:
+        tab.markdown(
+            "Hover your mouse over one of the segments on the map to show its name."
+        )
+        tab.pydeck_chart(
+            generate_community_map(community, st.context.theme.type == "dark")
+        )
 
 # TODO: Full parameter templates
 
