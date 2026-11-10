@@ -16,6 +16,12 @@ enableStaticServing = true
 gatherUsageStats = false
 
 [theme]
-
-# TODO: This breaks light/dark mode; see if that can be fixed
 baseFontSize = 22
+
+[theme.light]
+
+primaryColor = "#c53948"
+
+[theme.dark]
+
+primaryColor = "#cf4250"
