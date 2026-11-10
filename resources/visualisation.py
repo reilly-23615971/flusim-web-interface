@@ -15,7 +15,7 @@ import pandas as pd
 import streamlit as st
 from streamlit.elements.lib.column_types import ColumnConfig
 
-from resources.constants import MUTED_CODES, ROUND_RESULTS
+from resources.constants import MUTED_CODES, MUTED_COLOUR_COUNT, ROUND_RESULTS
 from resources.interface import age_range_combiner
 from resources.types import (
     AGE_GROUPS,
@@ -245,6 +245,16 @@ def plot_epidemic(
     scenario_colours = [
         MUTED_CODES[scenario_names.index(scenario)] for scenario in included_scenarios
     ]
+    DASH_PATTERNS = [
+        [1, 0],
+        [4, 2],
+        [2, 2],
+        [8, 2],
+        [4, 2, 1, 2],
+    ]
+    scenario_dashes = [[1, 0]] + [
+        dash for dash in DASH_PATTERNS for _ in range(MUTED_COLOUR_COUNT)
+    ]
     tooltip_selection = alt.selection_point(
         fields=["Days Since First Infection"],
         nearest=True,
@@ -273,6 +283,9 @@ def plot_epidemic(
         y=f"{y_label}:Q",
         color=alt.Color("Scenario:N").scale(
             domain=included_scenarios, range=scenario_colours
+        ),
+        strokeDash=alt.StrokeDash("Scenario:N").scale(
+            domain=included_scenarios, range=scenario_dashes
         ),
     )
 

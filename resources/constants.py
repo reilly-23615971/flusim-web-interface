@@ -104,6 +104,7 @@ MUTED_CODES = [
     "#999933",
     "#AA4499",
 ]
+MUTED_COLOUR_COUNT = len(MUTED_CODES) - 1
 
 # Extend palette list if absolutely necessary
 while len(MUTED_CODES) < MAX_SCENARIOS:

@@ -283,6 +283,7 @@ def generate_table() -> None:
                     colour table cells according to the colour associated with
                     the scenario.
             """
+            # TODO: Does Streamlit allow gradient backgrounds in a single cell?
             colour = scenario_colour_dictionary[name]
             return f"background-color: {colour}; color: {select_text_colour(colour)}"
 
