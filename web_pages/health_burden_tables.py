@@ -217,9 +217,8 @@ def generate_table() -> None:
     assert full_data is not None, "ASIR data was not defined"
     age_data, column_config, percentage_columns, difference_columns = generate_asir(
         full_data,
-        scenario_names,
-        age_separation,
         column_details,
+        age_separation,
         included_scenarios=scenarios_used,
         included_ages=ages_used,
         vaccinated_data=vaccine_data,
@@ -352,9 +351,7 @@ def generate_table() -> None:
 
 def download_preset_table(
     name: str,
-    columns: Sequence[ColumnDetails] = [
-        ("Symptomatic Infections", [], "All", False, False)
-    ],
+    columns: Sequence[ColumnDetails],
     age_separation: Literal["Combined", "By Row", "By Column"] = "Combined",
     included_scenarios: Optional[list[str]] = None,
     included_ages: Optional[list[AgeWithTotal]] = None,
@@ -444,21 +441,19 @@ def download_preset_table(
 
     # Load data from session_state
     else:
-        scenario_names = session.sim_params.scenario_names
         vaccine_data = session.get("model_data_asir_vaccinated")
 
     table_log.info(f"""
 [download_preset_table] Formatting Asir data for the preset {name}, using the
-scenarios {included_scenarios} (of {scenario_names}), the age groups
-{included_ages} and the following columns: {columns}
+scenarios {included_scenarios}, the age groups {included_ages} and the
+following columns: {columns}
     """)
 
     assert full_data is not None, "ASIR data was not defined"
     age_data, _, _, _ = generate_asir(
         full_data,
-        scenario_names,
-        age_separation,
         columns,
+        age_separation,
         included_scenarios=included_scenarios,
         included_ages=included_ages,
         vaccinated_data=vaccine_data,

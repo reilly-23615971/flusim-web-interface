@@ -358,6 +358,7 @@ def format_asir(raw_csv: bytes, scenario_names: list[str]) -> pd.DataFrame:
     framed_data.columns = pd.Index(["Total"] + list(AGE_GROUPS))
 
     # Scale the data by population and symptomatic likelihood
+    # TODO: See if symptomatic_rates can be stored in a way that makes it easier to apply
     sim_params: SimParams = session.sim_params
     population_scale = sim_params.scaling_factor
     framed_data.iloc[:, 0:] *= population_scale
@@ -406,11 +407,8 @@ def scale_asir_column(data: pd.Series, outcome: HealthOutcome) -> pd.Series:
 
 def generate_asir(
     base_data: pd.DataFrame,
-    scenario_names: list[str],
+    columns: Sequence[ColumnDetails],
     age_separation: Literal["Combined", "By Row", "By Column"] = "Combined",
-    columns: Sequence[ColumnDetails] = [
-        ("Symptomatic Infections", [], "All", False, False)
-    ],
     included_scenarios: Optional[list[str]] = None,
     included_ages: Optional[list[AgeWithTotal]] = None,
     vaccinated_data: Optional[pd.DataFrame] = None,
@@ -428,18 +426,6 @@ def generate_asir(
         base_data (DataFrame): A DataFrame containing the asir data, processed
             with the format_asir function.
 
-        scenario_names (list of str): A list of strings containing the names of
-            the different scenarios that were simulated (since the CSV just
-            uses non-descriptive placeholders). This list should contain the
-            names of all scenarios in the simulation, even if not all of them
-            will be included in the final table.
-
-        age_separation (str): A string indicating whether different age groups
-            should be represented with additional rows or columns. Can be
-            either `Combined` (do not separate values by age group at all),
-            `By Row` (include extra rows for each age group), or `By Column`
-            (use different age groups for each column).
-
         columns (sequence of tuples): A list
             of tuples representing the settings each column should have. The
             values in each tuple are as follows:
@@ -450,6 +436,12 @@ def generate_asir(
              - whether or not the column should display percentages
              - whether or not the column should display the difference from
             the baseline scenario's values
+
+        age_separation (str): A string indicating whether different age groups
+            should be represented with additional rows or columns. Can be
+            either `Combined` (do not separate values by age group at all),
+            `By Row` (include extra rows for each age group), or `By Column`
+            (use different age groups for each column).
 
         included_scenarios (list of str, optional): A list of strings
             containing the names of scenarios that will be included in
@@ -478,22 +470,23 @@ def generate_asir(
             names of each column that uses difference from baseline formatting.
 
     Raises:
-        ValueError: If `scenario_names` is not a list of strings or columns
-            are not formatted correctly.
+        ValueError: If columns are not formatted correctly.
     """
+
     # TODO: Improve efficiency (don't calculate age rows if age_separation isn't By Row)
+
+    # Relevant constants
+    SCENARIO_NAMES: list[str] = session.sim_params.scenario_names
+    BASELINE_SCENARIO_NAME = SCENARIO_NAMES[0]
+    SCALED_POPULATION = (
+        pd.Series(COMMUNITIES[session.sim_params.community].age_pops).rename_axis(
+            index="Age Group"
+        )
+        * session.sim_params.scaling_factor
+    )
 
     # Validate parameters
     try:
-        if not scenario_names:
-            raise ValueError("scenario_names should not be empty.")
-        if not isinstance(scenario_names, list) or not all(
-            isinstance(name, str) for name in scenario_names
-        ):
-            raise ValueError(
-                "scenario_names should be a list of "
-                f"strings; was {type(scenario_names)}."
-            )
         if not columns:
             raise ValueError("columns should not be empty.")
         if not all(
@@ -513,7 +506,7 @@ def generate_asir(
         raise e
     # Convert None values for included_scenarios/Ages to refer to all values
     if included_scenarios is None:
-        included_scenarios = scenario_names
+        included_scenarios = SCENARIO_NAMES
     if included_ages is None:
         included_ages = list(AGE_WITH_TOTAL)
 
@@ -522,18 +515,9 @@ def generate_asir(
         included_ages = []
 
     # Copy base data to avoid modifying the values in session_state
+    # TODO: Perform series formatting in format_asir rather than waiting until now
     infection_series = base_data.set_index(["Scenario", "Age Group"]).squeeze()
     assert isinstance(infection_series, pd.Series)
-
-    # Define population and baseline scenario name early
-    # TODO: Restructure age_pops if viable
-    scaled_population = (
-        pd.Series(COMMUNITIES[session.sim_params.community].age_pops).rename_axis(
-            index="Age Group"
-        )
-        * session.sim_params.scaling_factor
-    )
-    baseline_scenario_name = scenario_names[0]
 
     # Generate vaccinated baseline data if needed
     if vaccinated_data is not None:
@@ -600,19 +584,19 @@ def generate_asir(
         if use_proportion and not use_difference:
             # Percentage of total population (for given age group)
             if age_separation == "By Column":
-                table_column /= scaled_population[age_groups].sum()
+                table_column /= SCALED_POPULATION[age_groups].sum()
             else:
-                table_column /= scaled_population
+                table_column /= SCALED_POPULATION
             column_suffix += "%"
             percent_columns.add((column_name, column_suffix))
         elif not use_proportion and use_difference:
             # Difference from baseline scenario
-            table_column = table_column[baseline_scenario_name] - table_column
+            table_column = table_column[BASELINE_SCENARIO_NAME] - table_column
             column_suffix += "Averted"
             difference_columns.add((column_name, column_suffix))
         elif use_proportion and use_difference:
             # Percentage difference from baseline
-            column_baseline = table_column[baseline_scenario_name]
+            column_baseline = table_column[BASELINE_SCENARIO_NAME]
             table_column = (column_baseline - table_column) / column_baseline.where(
                 column_baseline != 0, other=np.nan
             )
@@ -630,7 +614,7 @@ def generate_asir(
         )
 
     # Remove any scenarios/age groups not specified in the data
-    if set(scenario_names) != set(included_scenarios):
+    if set(SCENARIO_NAMES) != set(included_scenarios):
         table_data = table_data[included_scenarios]
     if not included_ages:
         table_data = table_data.drop(list(AGE_GROUPS), level=1)
@@ -642,7 +626,7 @@ def generate_asir(
         [
             pd.Categorical(
                 table_data.index.get_level_values("Scenario"),
-                categories=scenario_names,
+                categories=SCENARIO_NAMES,
                 ordered=True,
             ),
             pd.Categorical(
