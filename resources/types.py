@@ -9,6 +9,8 @@ from pathlib import Path
 from queue import Queue
 from typing import Literal, Optional, Sequence, get_args
 
+import pandas as pd
+
 # Literal string classes
 
 # Age groups used by the simulator and displayed on the dashboard
@@ -286,8 +288,7 @@ class SimParams:
     analysis_formats: list[AnalysisFile]
     community: CommunityName
     symptomatic_rates: list[list[float]] = field(default_factory=list)
-    health_outcome_rates: dict[str, dict] = field(default_factory=dict)
-    age_health_outcome_rates: dict[str, dict] = field(default_factory=dict)
+    health_outcome_rates: dict[HealthOutcome, pd.Series] = field(default_factory=dict)
     scaling_factor: float = 1.0
     waning: bool = False
 

@@ -113,7 +113,7 @@ def generate_table() -> None:
         # Set default session_state parameters
         use_advanced = session.get("show_advanced", False)
         scenario_names = PRESET_SCENARIO_NAMES
-        basic_rates, age_rates = health_outcome_store(
+        health_outcome_rates = health_outcome_store(
             scenario_names,
             use_ages=use_advanced,
         )
@@ -121,8 +121,7 @@ def generate_table() -> None:
             scenario_names=scenario_names,
             analysis_formats=[],
             community=PRESET_COMMUNITY,
-            health_outcome_rates=basic_rates,
-            age_health_outcome_rates=age_rates,
+            health_outcome_rates=health_outcome_rates,
             scaling_factor=session.get("scaling_population", 272407) / 272407,
             symptomatic_rates=(
                 [
@@ -188,7 +187,7 @@ def generate_table() -> None:
         [
             (
                 outcome,
-                ages if ages else AGE_WITH_TOTAL,
+                ages if ages else AGE_GROUPS,
                 vaccine_status if vaccine_data is not None else "All",
                 "Percentage" in options,
                 "Difference from Baseline" in options,
@@ -237,7 +236,7 @@ def generate_table() -> None:
 
     # Create fake index columns
     if ages_used:
-        age_data.rename_axis(index=["Scenario Index", "Age Group Index"], inplace=True)
+        age_data = age_data.rename_axis(index=["Scenario Index", "Age Group Index"])
         age_data.insert(
             0,
             ("", "Scenario Name"),
@@ -250,7 +249,7 @@ def generate_table() -> None:
         )
 
     else:
-        age_data.rename_axis("Scenario Index", inplace=True)
+        age_data = age_data.rename_axis("Scenario Index")
         age_data.insert(0, ("", "Scenario Name"), age_data.index.to_series())
 
     # Initialise styler
@@ -408,7 +407,7 @@ def download_preset_table(
         # Set default session_state params
         use_advanced = session.get("show_advanced", False)
         scenario_names = PRESET_SCENARIO_NAMES
-        basic_rates, age_rates = health_outcome_store(
+        health_outcome_rates = health_outcome_store(
             scenario_names,
             use_ages=use_advanced,
         )
@@ -416,8 +415,7 @@ def download_preset_table(
             scenario_names=scenario_names,
             analysis_formats=[],
             community=PRESET_COMMUNITY,
-            health_outcome_rates=basic_rates,
-            age_health_outcome_rates=age_rates,
+            health_outcome_rates=health_outcome_rates,
             symptomatic_rates=(
                 [
                     [
@@ -468,7 +466,7 @@ scenarios {included_scenarios} (of {scenario_names}), the age groups
 
     # Create fake index columns
     if age_separation == "By Row":
-        age_data.rename_axis(index=["Scenario Index", "Age Group Index"], inplace=True)
+        age_data = age_data.rename_axis(index=["Scenario Index", "Age Group Index"])
         age_data.insert(
             0,
             ("", "Scenario Name"),
@@ -481,7 +479,7 @@ scenarios {included_scenarios} (of {scenario_names}), the age groups
         )
 
     else:
-        age_data.rename_axis("Scenario Index", inplace=True)
+        age_data = age_data.rename_axis("Scenario Index")
         age_data.insert(0, ("", "Scenario Name"), age_data.index.to_series())
 
     st.download_button(

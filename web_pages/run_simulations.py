@@ -324,7 +324,7 @@ Are you sure you want to begin running simulations with the selected parameters?
                     for scenario_id in range(scenario_count)
                 ]
             )
-            basic_rates, age_rates = health_outcome_store(
+            health_outcome_rates = health_outcome_store(
                 scenario_names,
                 use_ages=use_advanced,
             )
@@ -344,8 +344,7 @@ Are you sure you want to begin running simulations with the selected parameters?
                 scenario_names=scenario_names,
                 analysis_formats=analysis_formats,
                 symptomatic_rates=asymptomatic_rates,
-                health_outcome_rates=basic_rates,
-                age_health_outcome_rates=age_rates,
+                health_outcome_rates=health_outcome_rates,
                 community=community,
                 scaling_factor=scaling_factor,
                 waning=use_waning,

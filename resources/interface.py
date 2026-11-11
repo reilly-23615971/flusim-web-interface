@@ -5,6 +5,7 @@
 # Imports
 import re
 from functools import partial
+from itertools import product
 from typing import Any, Callable, Optional, cast
 
 import numpy as np
@@ -18,9 +19,11 @@ from resources.types import (
     AGE_GROUP_KEYS,
     AGE_GROUPS,
     AGE_KEY_CONVERTER,
+    AGE_WITH_TOTAL,
     AgeGroup,
     AgeGroupKey,
     AgeWithTotal,
+    HealthOutcome,
 )
 
 # Store st.session_state as variable for efficiency
@@ -214,7 +217,7 @@ def time_string(time: int | float) -> str:
 
 def health_outcome_store(
     scenario_names: list[str], use_ages: bool = True
-) -> tuple[dict, dict]:
+) -> dict[HealthOutcome, pd.Series]:
     """
     Function to format and store health burden outcome rates for a given set
     of scenarios.
@@ -227,47 +230,32 @@ def health_outcome_store(
             and define each of their values to be the same baseline value.
 
     Returns:
-        tuple of dicts: A pair of dictionaries storing the global and
-            age-specific health burden rates.
+        dict: A dictionary storing the age-specific health burden rates.
     """
     # Required values for outcome rates
-    outcome_rates = {
+    outcome_attributes: dict[HealthOutcome, tuple[str, float, Callable]] = {
         "Diagnosed Cases": ("case_ratio", 50.0, lambda x: x / 100),
         "GP Visits": ("gp_ratio", 17.0, lambda x: x / 100),
         "Hospitalisations": ("hospital_ratio", 320.0, lambda x: x / 100000),
         "Deaths": ("death_ratio", 12.0, lambda x: x / 100000),
     }
 
-    # Basic rates
-    single_rates = {}
-    for outcome, (key, default, format_func) in outcome_rates.items():
-        single_rates[outcome] = {
-            name: format_func(id_get(key, scenario_id, default))
-            for scenario_id, name in enumerate(scenario_names)
-        }
-
-    # ICU (dependent on hospitalisation)
-    icu_multipliers = {
-        name: id_get("icu_ratio", scenario_id, 20.0) / 100
-        for scenario_id, name in enumerate(scenario_names)
-    }
-    single_rates["ICU Visits"] = {
-        name: rate * icu_multipliers[name]
-        for name, rate in single_rates["Hospitalisations"].items()
-    }
+    outcome_rates = {}
+    # Single rates first
+    for outcome, (key, default, format_func) in outcome_attributes.items():
+        outcome_rates[outcome] = pd.Series(
+            {
+                (name, age): format_func(id_get(key, scenario_id, default))
+                for (scenario_id, name), age in product(
+                    enumerate(scenario_names), AGE_WITH_TOTAL
+                )
+            },
+        ).rename_axis(index=["Scenario", "Age Group"])
 
     # Age-specific rates
-    hospital_key, hospital_default, hospital_format = outcome_rates["Hospitalisations"]
-    death_key, death_default, death_format = outcome_rates["Deaths"]
-    age_rates = {}
     if use_ages:
-        hospital_rates, icu_rates, death_rates = {}, {}, {}
         for scenario_id, name in enumerate(scenario_names):
-            # Get previously-extracted base rates
-            base_hospital_rate = single_rates["Hospitalisations"][name]
-            base_death_rate = single_rates["Deaths"][name]
-            base_icu_rate = icu_multipliers[name]
-            # Format table with age-specific rates
+            # Extract age-based burdens from health burden form
             health_burden_age_form = (
                 id_get(
                     "health_burden_age_form",
@@ -275,8 +263,8 @@ def health_outcome_store(
                     pd.DataFrame(
                         {
                             "Age Group": [None],
-                            "Hospitalisation Rate": [base_hospital_rate],
-                            "Mortality Rate": [base_death_rate],
+                            "Hospitalisation Rate": [None],
+                            "Mortality Rate": [None],
                         },
                     ),
                 )
@@ -284,71 +272,37 @@ def health_outcome_store(
                 .dropna()
                 .replace({"Age Group": AGE_KEY_CONVERTER})
             )
-            health_burden_age_form["Hospitalisation Rate"] = health_burden_age_form[
-                "Hospitalisation Rate"
-            ].apply(hospital_format)
-            health_burden_age_form["Mortality Rate"] = health_burden_age_form[
-                "Mortality Rate"
-            ].apply(death_format)
-            # Convert to dictionaries with base rate as default
+            # Convert to dictionaries and update base rates
             hospital_age_dict = (
                 health_burden_age_form[["Age Group", "Hospitalisation Rate"]]
                 .set_index("Age Group")["Hospitalisation Rate"]
-                .to_dict()
+                .apply(outcome_attributes["Hospitalisations"][2])
             )
-            hospital_rates[name] = {
-                age: base_hospital_rate for age in AGE_GROUPS
-            } | hospital_age_dict
-
-            icu_age_dict = {
-                age: rate * base_icu_rate for age, rate in hospital_age_dict.items()
-            }
-            icu_rates[name] = {
-                age: base_hospital_rate * base_icu_rate for age in AGE_GROUPS
-            } | icu_age_dict
+            outcome_rates["Hospitalisations"].loc[name].update(hospital_age_dict)
 
             mort_age_dict = (
                 health_burden_age_form[["Age Group", "Mortality Rate"]]
                 .set_index("Age Group")["Mortality Rate"]
-                .to_dict()
+                .apply(outcome_attributes["Deaths"][2])
             )
-            death_rates[name] = {
-                age: base_death_rate for age in AGE_GROUPS
-            } | mort_age_dict
-        age_rates = {
-            "Hospitalisations": hospital_rates,
-            "ICU Visits": icu_rates,
-            "Deaths": death_rates,
-        }
-    else:
-        # Just set every age to the base rate
-        # TODO: Avoid this unnecessary iteration and just check elsewhere
-        # that there's no age-specific rates in use
-        age_rates = {
-            "Hospitalisations": {
-                scenario: {
-                    age: hospital_format(id_get(hospital_key, i, hospital_default))
-                    for age in AGE_GROUPS
-                }
-                for i, scenario in enumerate(scenario_names)
-            },
-            "Deaths": {
-                scenario: {
-                    age: death_format(id_get(death_key, i, death_default))
-                    for age in AGE_GROUPS
-                }
-                for i, scenario in enumerate(scenario_names)
-            },
-        }
-        age_rates["ICU Visits"] = {
-            name: {
-                age: rate * icu_multipliers[name]
-                for age, rate in age_rates["Hospitalisations"][name].items()
-            }
-            for name in scenario_names
-        }
+            outcome_rates["Deaths"].loc[name].update(mort_age_dict)
 
-    return single_rates, age_rates
+    # Calculate ICU rates as fraction of hospitalisation rates
+    icu_multiplier_dict = {
+        name: id_get("icu_ratio", scenario_id, 20.0) / 100
+        for scenario_id, name in enumerate(scenario_names)
+    }
+
+    outcome_rates["ICU Visits"] = pd.Series(
+        {
+            (name, age): outcome_rates["Hospitalisations"][name, age] * multiplier
+            for (name, multiplier), age in product(
+                icu_multiplier_dict.items(), AGE_WITH_TOTAL
+            )
+        }
+    ).rename_axis(index=["Scenario", "Age Group"])
+
+    return outcome_rates
 
 
 # Scenario name functions

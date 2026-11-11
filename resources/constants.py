@@ -17,7 +17,7 @@ PRESET_RUN_PATH = Path("test_data/MultiStrainParams.json")
 PRESET_R0_PATH = Path("resources/templates/defaultNoNPI.json")
 
 # Toggle to use built-in data instead of model output
-USE_PRESET_DATA = False
+USE_PRESET_DATA = True
 PRESET_SCENARIO_NAMES = [
     "Baseline",
     "School Closure",
