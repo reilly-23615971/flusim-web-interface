@@ -210,7 +210,7 @@ class CommunityData:
     population: int
     age_pops: dict[AgeWithTotal, int]
     patches: Sequence[CommunityPatch]
-    image: str | Path
+    map_data: str | Path
 
 
 # Data for communities that can be modelled by the simulation
@@ -231,7 +231,7 @@ ALBANY = CommunityData(
         "Total": 55109,
     },
     patches=ALBANY_PATCHES,
-    image=Path("/app/static/albany_patches.png"),
+    map_data=Path("resources/albany_map.gdb.zip"),
 )
 CAIRNS = CommunityData(
     name="Cairns",
@@ -250,7 +250,7 @@ CAIRNS = CommunityData(
         "Total": 140402,
     },
     patches=CAIRNS_PATCHES,
-    image=Path("/app/static/cairns_patches.png"),
+    map_data=Path("resources/cairns_map.gdb.zip"),
 )
 NEWCASTLE = CommunityData(
     name="Newcastle",
@@ -269,7 +269,7 @@ NEWCASTLE = CommunityData(
         "Total": 272407,
     },
     patches=NEWCASTLE_PATCHES,
-    image=Path("/app/static/newcastle_patches.png"),
+    map_data=Path("resources/newcastle_map.gdb.zip"),
 )
 COMMUNITIES: dict[CommunityName, CommunityData] = {
     "albany": ALBANY,

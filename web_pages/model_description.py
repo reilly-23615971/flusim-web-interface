@@ -37,8 +37,7 @@ def generate_community_map(
         community_map (Deck): A PyDeck map of the desired community.
     """
     # Load data
-    MAP_DATA_PATH = Path("resources/SA2.gdb.zip")
-    map_data = gpd.read_file(MAP_DATA_PATH).to_crs("EPSG:4326")
+    map_data = gpd.read_file(community.map_data).to_crs("EPSG:4326")
 
     # Filter to just the desired location and add colours
     # TODO: Use the colourblind-safe colours
