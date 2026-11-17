@@ -6,6 +6,7 @@
 import logging
 from collections import defaultdict
 from io import BytesIO
+from itertools import product
 from math import ceil
 from typing import Any, Literal, Optional, Sequence, cast
 
@@ -36,7 +37,7 @@ visualisation_log = logging.getLogger(__name__)
 session = st.session_state
 
 
-def format_data(data: bytes, settings: AnalysisFile) -> pd.DataFrame:
+def format_data(data: bytes, settings: AnalysisFile) -> pd.DataFrame | pd.Series:
     """
     Wrapper function to perform the correct formatting process on CSV data.
 
@@ -310,7 +311,7 @@ def plot_epidemic(
     return chart_lines + chart_points + chart_rule
 
 
-def format_asir(raw_csv: bytes, scenario_names: list[str]) -> pd.DataFrame:
+def format_asir(raw_csv: bytes, scenario_names: list[str]) -> pd.Series:
     """
     Function to convert raw data from the age-specific infection rate
     ('asir') Flusim analysis tool into the desired dataframe format for
@@ -350,18 +351,19 @@ def format_asir(raw_csv: bytes, scenario_names: list[str]) -> pd.DataFrame:
         BytesIO(raw_csv),
         header=0,
         index_col=0,
+        usecols=lambda col: col != "overall",
         dtype=type_mapping,
     )
     visualisation_log.info(
         f"Scenario names are {scenario_names}; current index is {framed_data.index}"
     )
-    framed_data.columns = pd.Index(["Total"] + list(AGE_GROUPS))
+    framed_data.columns = pd.Index(AGE_GROUPS)
 
     # Scale the data by population and symptomatic likelihood
     # TODO: See if symptomatic_rates can be stored in a way that makes it easier to apply
     sim_params: SimParams = session.sim_params
-    population_scale = sim_params.scaling_factor
-    framed_data.iloc[:, 0:] *= population_scale
+    framed_data *= sim_params.scaling_factor
+
     asymptomatic_child, asymptomatic_adult = zip(*sim_params.symptomatic_rates)
     framed_data.loc[:, AGE_GROUPS[:6]] = framed_data.loc[:, list(AGE_GROUPS[:6])].mul(
         asymptomatic_child, axis=0
@@ -370,12 +372,18 @@ def format_asir(raw_csv: bytes, scenario_names: list[str]) -> pd.DataFrame:
         asymptomatic_adult, axis=0
     )
 
-    # Reset indices
-    framed_data.index = pd.Index(scenario_names)
-    framed_data = framed_data.reset_index(names="Scenario")
+    # Reshape data for better Streamlit usage
+    framed_data["Scenario"] = scenario_names
+    framed_data = (
+        framed_data.melt("Scenario", var_name="Age Group")
+        .set_index(["Scenario", "Age Group"])
+        .squeeze()
+    )
+    assert isinstance(
+        framed_data, pd.Series
+    ), "Failed to reshape health burden table data"
 
-    # Reshape data for better Streamlit usage with placeholder infections
-    return framed_data.melt("Scenario", var_name="Age Group", value_name="Base Values")
+    return framed_data
 
 
 def scale_asir_column(data: pd.Series, outcome: HealthOutcome) -> pd.Series:
@@ -406,12 +414,12 @@ def scale_asir_column(data: pd.Series, outcome: HealthOutcome) -> pd.Series:
 
 
 def generate_asir(
-    base_data: pd.DataFrame,
+    base_data: pd.Series,
     columns: Sequence[ColumnDetails],
     age_separation: Literal["Combined", "By Row", "By Column"] = "Combined",
     included_scenarios: Optional[list[str]] = None,
     included_ages: Optional[list[AgeWithTotal]] = None,
-    vaccinated_data: Optional[pd.DataFrame] = None,
+    vaccinated_data: Optional[pd.Series] = None,
 ) -> tuple[
     pd.DataFrame,
     dict[tuple[str, str], ColumnConfig],
@@ -423,12 +431,12 @@ def generate_asir(
     from the 'asir' Flusim analysis tool.
 
     Parameters:
-        base_data (DataFrame): A DataFrame containing the asir data, processed
-            with the format_asir function.
+        base_data (Series): A Series containing the asir data, processed with
+            the format_asir function.
 
-        columns (sequence of tuples): A list
-            of tuples representing the settings each column should have. The
-            values in each tuple are as follows:
+        columns (sequence of tuples): A list of tuples representing the
+            settings each column should have. The values in each tuple are as
+            follows:
              - the health burden outcome to display
              - which age groups the column should represent (ignored if
             `age_separation` is `Combined` or `By Row`)
@@ -453,7 +461,7 @@ def generate_asir(
             if this is an empty list, the age group column will be omitted
             entirely. Ignored if `age_separation` is `Combined` or `By Column`.
 
-        vaccinated_data (Dataframe, optional): A DataFrame containing asir data
+        vaccinated_data (Series, optional): A Series containing asir data
             specifically for vaccinated individuals in the simulation.
 
     Returns:
@@ -516,15 +524,11 @@ def generate_asir(
 
     # Copy base data to avoid modifying the values in session_state
     # TODO: Perform series formatting in format_asir rather than waiting until now
-    infection_series = base_data.set_index(["Scenario", "Age Group"]).squeeze()
-    assert isinstance(infection_series, pd.Series)
+    infection_series = base_data.copy()
 
     # Generate vaccinated baseline data if needed
     if vaccinated_data is not None:
-        vaccinated_series = vaccinated_data.set_index(
-            ["Scenario", "Age Group"]
-        ).squeeze()
-        assert isinstance(vaccinated_series, pd.Series)
+        vaccinated_series = vaccinated_data.copy()
     else:
         vaccinated_series = pd.Series()
 
@@ -534,23 +538,31 @@ def generate_asir(
     for outcome in required_outcomes:
         # Scale data and generate vaccinated/unvaccinated splits
         burden_column = scale_asir_column(infection_series, outcome)
-        burden_column.loc[:, "Total"] = (
-            burden_column.loc[:, list(AGE_GROUPS)].groupby(level=0).sum()
-        )
+        burden_totals = pd.concat(
+            [burden_column.groupby(level=0).sum()],
+            keys=["Total"],
+            names=["Age Group"],
+        ).swaplevel(0, 1)
+        burden_column = pd.concat([burden_column, burden_totals])
         column_templates[(outcome, "All")] = burden_column
         if vaccinated_data is not None:
             vaccinated_column = scale_asir_column(vaccinated_series, outcome)
-            vaccinated_column.loc[:, "Total"] = (
-                vaccinated_column.loc[:, list(AGE_GROUPS)].groupby(level=0).sum()
-            )
+            vaccinated_totals = pd.concat(
+                [vaccinated_column.groupby(level=0).sum()],
+                keys=["Total"],
+                names=["Age Group"],
+            ).swaplevel(0, 1)
+            vaccinated_column = pd.concat([vaccinated_column, vaccinated_totals])
             column_templates[(outcome, "Vaccinated")] = vaccinated_column
             column_templates[(outcome, "Unvaccinated")] = (
                 burden_column - vaccinated_column
             )
 
-    # Format as MultiIndex
+    # Prepare final table
     table_data = pd.DataFrame(
-        index=infection_series.index,
+        index=pd.MultiIndex.from_product(
+            [SCENARIO_NAMES, AGE_WITH_TOTAL], names=["Scenario", "Age Group"]
+        ),
         columns=pd.MultiIndex(levels=[[]] * 2, codes=[[]] * 2),
     )
 

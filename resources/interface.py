@@ -247,7 +247,7 @@ def health_outcome_store(
             {
                 (name, age): format_func(id_get(key, scenario_id, default))
                 for (scenario_id, name), age in product(
-                    enumerate(scenario_names), AGE_WITH_TOTAL
+                    enumerate(scenario_names), AGE_GROUPS
                 )
             },
         ).rename_axis(index=["Scenario", "Age Group"])
@@ -297,7 +297,7 @@ def health_outcome_store(
         {
             (name, age): outcome_rates["Hospitalisations"][name, age] * multiplier
             for (name, multiplier), age in product(
-                icu_multiplier_dict.items(), AGE_WITH_TOTAL
+                icu_multiplier_dict.items(), AGE_GROUPS
             )
         }
     ).rename_axis(index=["Scenario", "Age Group"])
